@@ -1,7 +1,5 @@
 // Package transactions implements the ledger entries that move a wallet's
-// balance (plan.md section 4.2, 11.10). Only what registration's opening
-// balance needs exists so far — standard transaction CRUD, categories,
-// templates, and media attachment land in Fase 4/5/6 of the roadmap.
+// balance (plan.md section 4.2, 11.10).
 package transactions
 
 import (
@@ -35,6 +33,7 @@ type Transaction struct {
 	Description        *string
 	CategoryID         *uuid.UUID
 	TemplateID         *uuid.UUID
+	MediaID            *uuid.UUID
 	OccurredAt         time.Time
 	CreatedAt          time.Time
 	UpdatedAt          time.Time

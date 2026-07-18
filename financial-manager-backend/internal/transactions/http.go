@@ -69,6 +69,7 @@ type createRequest struct {
 	Description   *string `json:"description"`
 	CategoryID    string  `json:"category_id"`
 	TemplateID    string  `json:"template_id"`
+	MediaID       string  `json:"media_id"`
 	OccurredAt    string  `json:"occurred_at"`
 	DeviceSession string  `json:"-"`
 }
@@ -118,6 +119,11 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{"template_id": "UUID non valido."}))
 		return
 	}
+	mediaID, ok := parseOptionalUUID(req.MediaID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"media_id": "UUID non valido."}))
+		return
+	}
 
 	responseBody, status, err := h.service.CreateStandard(r.Context(), CreateStandardInput{
 		UserID:         userID,
@@ -128,6 +134,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Description:    req.Description,
 		CategoryID:     categoryID,
 		TemplateID:     templateID,
+		MediaID:        mediaID,
 		OccurredAt:     occurredAt,
 		SessionID:      &sessionID,
 		IdempotencyKey: idempotencyKey,
@@ -258,6 +265,7 @@ type updateRequest struct {
 	Description     *string `json:"description"`
 	CategoryID      string  `json:"category_id"`
 	TemplateID      string  `json:"template_id"`
+	MediaID         string  `json:"media_id"`
 	OccurredAt      string  `json:"occurred_at"`
 	ExpectedVersion int64   `json:"version"`
 }
@@ -298,6 +306,11 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{"template_id": "UUID non valido."}))
 		return
 	}
+	mediaID, ok := parseOptionalUUID(req.MediaID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"media_id": "UUID non valido."}))
+		return
+	}
 
 	result, err := h.service.UpdateStandard(r.Context(), UpdateStandardInput{
 		UserID:          userID,
@@ -308,6 +321,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		Description:     req.Description,
 		CategoryID:      categoryID,
 		TemplateID:      templateID,
+		MediaID:         mediaID,
 		OccurredAt:      occurredAt,
 		ExpectedVersion: req.ExpectedVersion,
 	})

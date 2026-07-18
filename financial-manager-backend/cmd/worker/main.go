@@ -1,7 +1,7 @@
-// Command worker runs asynchronous background jobs. Today that's just
-// balance reconciliation (plan.md section 13.6, 22.3); image variant
-// generation, exports, deferred account deletion, asset cleanup, and email
-// sending (section 10.8) are added alongside the features that need them.
+// Command worker runs asynchronous background jobs: balance reconciliation
+// (plan.md section 13.6, 22.3) and orphan media cleanup (section 16.6).
+// Exports, deferred account deletion, and email sending (section 10.8) are
+// added alongside the features that need them.
 package main
 
 import (
@@ -13,16 +13,25 @@ import (
 	"syscall"
 	"time"
 
+	"financial-manager-backend/internal/media"
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/config"
 	"financial-manager-backend/internal/platform/database"
 	"financial-manager-backend/internal/platform/observability"
 	"financial-manager-backend/internal/platform/redisclient"
+	"financial-manager-backend/internal/platform/storage"
 	"financial-manager-backend/internal/transactions"
 	"financial-manager-backend/internal/wallets"
 )
 
 const reconciliationInterval = time.Hour
+const mediaCleanupInterval = time.Hour
+
+// mediaOrphanGraceHours is how long an unreferenced asset survives before
+// cleanup (plan.md section 16.6: "Pulire asset orfani dopo un periodo di
+// grazia") — long enough that an in-progress "pick an image, then fill the
+// rest of the form" session never loses its upload mid-edit.
+const mediaOrphanGraceHours = 24
 
 func main() {
 	if err := run(); err != nil {
@@ -55,6 +64,17 @@ func run() error {
 	}
 	defer redisClient.Close()
 
+	objectStore, err := storage.NewMinIOStore(ctx, storage.MinIOConfig{
+		Endpoint:  cfg.ObjectStorageEndpoint,
+		AccessKey: cfg.ObjectStorageAccessKey,
+		SecretKey: cfg.ObjectStorageSecretKey,
+		Bucket:    cfg.ObjectStorageBucket,
+		UseSSL:    cfg.ObjectStorageUseSSL,
+	})
+	if err != nil {
+		return fmt.Errorf("connect object storage: %w", err)
+	}
+
 	transactionsService := transactions.NewService(transactions.Deps{
 		DB:           dbPool,
 		Transactions: transactions.NewRepository(dbPool),
@@ -63,22 +83,41 @@ func run() error {
 		Clock:        clock.System{},
 	})
 
+	mediaService := media.NewService(media.Deps{
+		Repo: media.NewRepository(dbPool), Store: objectStore,
+		MaxUploadBytes: cfg.MaxUploadBytes, AllowedImageTypes: cfg.AllowedImageTypes,
+	})
+
 	logger.Info("worker_started")
 
 	runReconciliation(ctx, logger, transactionsService)
+	runMediaCleanup(ctx, logger, mediaService)
 
-	ticker := time.NewTicker(reconciliationInterval)
-	defer ticker.Stop()
+	reconciliationTicker := time.NewTicker(reconciliationInterval)
+	defer reconciliationTicker.Stop()
+	mediaCleanupTicker := time.NewTicker(mediaCleanupInterval)
+	defer mediaCleanupTicker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			logger.Info("worker_shutdown")
 			return nil
-		case <-ticker.C:
+		case <-reconciliationTicker.C:
 			runReconciliation(ctx, logger, transactionsService)
+		case <-mediaCleanupTicker.C:
+			runMediaCleanup(ctx, logger, mediaService)
 		}
 	}
+}
+
+func runMediaCleanup(ctx context.Context, logger *slog.Logger, svc *media.Service) {
+	deleted, err := svc.CleanupOrphans(ctx, mediaOrphanGraceHours)
+	if err != nil {
+		logger.Error("media_cleanup_failed", slog.String("error", err.Error()))
+		return
+	}
+	logger.Info("media_cleanup_ok", slog.Int("deleted", deleted))
 }
 
 // runReconciliation compares every wallet's stored balance against its

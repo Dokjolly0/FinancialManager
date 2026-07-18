@@ -31,7 +31,7 @@ func (r *Repository) WithQuerier(q database.Querier) *Repository {
 
 const transactionColumns = `
 	id, wallet_id, user_id, direction, kind, amount_minor, currency,
-	title, title_normalized, description, category_id, template_id, occurred_at,
+	title, title_normalized, description, category_id, template_id, media_id, occurred_at,
 	created_at, updated_at, deleted_at, version, created_by_session_id
 `
 
@@ -39,7 +39,7 @@ func scanTransaction(row pgx.Row) (Transaction, error) {
 	var t Transaction
 	err := row.Scan(
 		&t.ID, &t.WalletID, &t.UserID, &t.Direction, &t.Kind, &t.AmountMinor, &t.Currency,
-		&t.Title, &t.TitleNormalized, &t.Description, &t.CategoryID, &t.TemplateID, &t.OccurredAt,
+		&t.Title, &t.TitleNormalized, &t.Description, &t.CategoryID, &t.TemplateID, &t.MediaID, &t.OccurredAt,
 		&t.CreatedAt, &t.UpdatedAt, &t.DeletedAt, &t.Version, &t.CreatedBySessionID,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -62,6 +62,7 @@ type CreateInput struct {
 	Description        *string
 	CategoryID         *uuid.UUID
 	TemplateID         *uuid.UUID
+	MediaID            *uuid.UUID
 	OccurredAt         time.Time
 	CreatedBySessionID *uuid.UUID
 }
@@ -73,11 +74,11 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (Transaction, e
 	row := r.db.QueryRow(ctx, `
 		INSERT INTO transactions (
 			wallet_id, user_id, direction, kind, amount_minor, currency,
-			title, title_normalized, description, category_id, template_id, occurred_at, created_by_session_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+			title, title_normalized, description, category_id, template_id, media_id, occurred_at, created_by_session_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING `+transactionColumns,
 		in.WalletID, in.UserID, in.Direction, in.Kind, in.AmountMinor, in.Currency,
-		in.Title, NormalizeTitle(in.Title), in.Description, in.CategoryID, in.TemplateID, in.OccurredAt, in.CreatedBySessionID,
+		in.Title, NormalizeTitle(in.Title), in.Description, in.CategoryID, in.TemplateID, in.MediaID, in.OccurredAt, in.CreatedBySessionID,
 	)
 	return scanTransaction(row)
 }
@@ -110,6 +111,7 @@ type UpdateInput struct {
 	Description *string
 	CategoryID  *uuid.UUID
 	TemplateID  *uuid.UUID
+	MediaID     *uuid.UUID
 	OccurredAt  time.Time
 }
 
@@ -122,12 +124,12 @@ func (r *Repository) Update(ctx context.Context, id, userID uuid.UUID, expectedV
 	row := r.db.QueryRow(ctx, `
 		UPDATE transactions SET
 			direction = $1, amount_minor = $2, title = $3, title_normalized = $4,
-			description = $5, category_id = $6, template_id = $7, occurred_at = $8,
+			description = $5, category_id = $6, template_id = $7, media_id = $8, occurred_at = $9,
 			updated_at = now(), version = version + 1
-		WHERE id = $9 AND user_id = $10 AND version = $11 AND deleted_at IS NULL
+		WHERE id = $10 AND user_id = $11 AND version = $12 AND deleted_at IS NULL
 		RETURNING `+transactionColumns,
 		in.Direction, in.AmountMinor, in.Title, NormalizeTitle(in.Title),
-		in.Description, in.CategoryID, in.TemplateID, in.OccurredAt, id, userID, expectedVersion,
+		in.Description, in.CategoryID, in.TemplateID, in.MediaID, in.OccurredAt, id, userID, expectedVersion,
 	)
 	return scanTransaction(row)
 }

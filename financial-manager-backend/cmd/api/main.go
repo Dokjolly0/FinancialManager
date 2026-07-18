@@ -19,6 +19,7 @@ import (
 	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/email"
 	"financial-manager-backend/internal/identities"
+	"financial-manager-backend/internal/media"
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/config"
 	"financial-manager-backend/internal/platform/database"
@@ -26,6 +27,7 @@ import (
 	"financial-manager-backend/internal/platform/observability"
 	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/redisclient"
+	"financial-manager-backend/internal/platform/storage"
 	"financial-manager-backend/internal/templates"
 	"financial-manager-backend/internal/transactions"
 	"financial-manager-backend/internal/users"
@@ -63,13 +65,24 @@ func run() error {
 	}
 	defer redisClient.Close()
 
+	objectStore, err := storage.NewMinIOStore(ctx, storage.MinIOConfig{
+		Endpoint:  cfg.ObjectStorageEndpoint,
+		AccessKey: cfg.ObjectStorageAccessKey,
+		SecretKey: cfg.ObjectStorageSecretKey,
+		Bucket:    cfg.ObjectStorageBucket,
+		UseSSL:    cfg.ObjectStorageUseSSL,
+	})
+	if err != nil {
+		return fmt.Errorf("connect object storage: %w", err)
+	}
+
 	checks := httpserver.HealthChecks{
 		Database: func(ctx context.Context) error { return dbPool.Ping(ctx) },
 		Redis:    func(ctx context.Context) error { return redisClient.Ping(ctx).Err() },
 	}
 
 	router := httpserver.New(logger, checks)
-	mountRoutes(router, dbPool, redisClient, cfg, logger)
+	mountRoutes(router, dbPool, redisClient, objectStore, cfg, logger)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
@@ -107,7 +120,7 @@ func run() error {
 // handlers onto the router. Kept as one function (rather than spread
 // across the module packages) so the dependency graph between modules is
 // visible in one place.
-func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Client, cfg config.Config, logger *slog.Logger) {
+func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Client, objectStore storage.Store, cfg config.Config, logger *slog.Logger) {
 	usersRepo := users.NewRepository(dbPool)
 	walletsRepo := wallets.NewRepository(dbPool)
 	transactionsRepo := transactions.NewRepository(dbPool)
@@ -153,6 +166,17 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	templatesRepo := templates.NewRepository(dbPool)
 	templatesHandler := templates.NewHandler(templates.NewService(templatesRepo))
 
+	var searchProvider media.ImageSearchProvider = media.StubImageSearchProvider{}
+	if cfg.ImageSearchProvider == "unsplash" {
+		searchProvider = media.NewUnsplashProvider(cfg.ImageSearchAPIKey)
+	}
+	mediaRepo := media.NewRepository(dbPool)
+	mediaService := media.NewService(media.Deps{
+		Repo: mediaRepo, Store: objectStore, Search: searchProvider,
+		MaxUploadBytes: cfg.MaxUploadBytes, AllowedImageTypes: cfg.AllowedImageTypes,
+	})
+	mediaHandler := media.NewHandler(mediaService, cfg.MaxUploadBytes)
+
 	transactionsService := transactions.NewService(transactions.Deps{
 		DB:           dbPool,
 		Transactions: transactionsRepo,
@@ -160,6 +184,7 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		Audit:        transactions.NewAuditRepository(dbPool),
 		Categories:   categoriesRepo,
 		Templates:    templatesRepo,
+		Media:        mediaRepo,
 		Clock:        clock.System{},
 	})
 	transactionsHandler := transactions.NewHandler(transactionsService)
@@ -173,5 +198,6 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		transactionsHandler.Mount(r)
 		categoriesHandler.Mount(r)
 		templatesHandler.Mount(r)
+		mediaHandler.Mount(r)
 	})
 }

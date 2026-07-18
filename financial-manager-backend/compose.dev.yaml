@@ -11,6 +11,14 @@ services:
     ports:
       - "127.0.0.1:10002:6379"
 
+  # Not part of the plan's required port mapping (section 21.3 only lists
+  # postgres/redis/api) — exposed so integration tests running on the host
+  # (not inside Docker) can reach MinIO directly. Port matches the endpoint
+  # .env.example already documented ahead of Fase 6.
+  object-storage:
+    ports:
+      - "127.0.0.1:9002:9000"
+
   api:
     ports:
       - "127.0.0.1:10003:8080"

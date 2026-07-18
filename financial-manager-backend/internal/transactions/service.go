@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"financial-manager-backend/internal/categories"
+	"financial-manager-backend/internal/media"
 	"financial-manager-backend/internal/platform/apierror"
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/database"
@@ -39,6 +40,7 @@ type Service struct {
 	audit        *AuditRepository
 	categories   *categories.Repository
 	templates    *templates.Repository
+	media        *media.Repository
 	clock        clock.Clock
 }
 
@@ -49,23 +51,25 @@ type Deps struct {
 	Audit        *AuditRepository
 	Categories   *categories.Repository
 	Templates    *templates.Repository
+	Media        *media.Repository
 	Clock        clock.Clock
 }
 
 func NewService(d Deps) *Service {
 	return &Service{
 		db: d.DB, transactions: d.Transactions, wallets: d.Wallets, audit: d.Audit,
-		categories: d.Categories, templates: d.Templates, clock: d.Clock,
+		categories: d.Categories, templates: d.Templates, media: d.Media, clock: d.Clock,
 	}
 }
 
-// resolveCategoryAndTemplate validates that an optional category_id is
-// visible to the user (system or owned, plan.md section 14.7) and that an
-// optional template_id belongs to the user, bumping its usage stats in the
-// same DB transaction as the mutation (plan.md section 4.4: "ordinati per
-// frequenza e utilizzo recente"). Both checks run against tx so a
-// cross-user reference rolls back the whole mutation, not just the bump.
-func (s *Service) resolveCategoryAndTemplate(ctx context.Context, tx pgx.Tx, userID uuid.UUID, categoryID, templateID *uuid.UUID) error {
+// resolveAttachments validates that an optional category_id is visible to
+// the user (system or owned, plan.md section 14.7), that an optional
+// template_id belongs to the user (bumping its usage stats, plan.md section
+// 4.4: "ordinati per frequenza e utilizzo recente"), and that an optional
+// media_id belongs to the user (bumping last_used_at, plan.md section
+// 16.6). All checks run against tx so a cross-user reference rolls back the
+// whole mutation, not just the side effect.
+func (s *Service) resolveAttachments(ctx context.Context, tx pgx.Tx, userID uuid.UUID, categoryID, templateID, mediaID *uuid.UUID) error {
 	if categoryID != nil {
 		if _, err := s.categories.WithQuerier(tx).GetByIDAndVisibility(ctx, *categoryID, userID); err != nil {
 			if errors.Is(err, categories.ErrNotFound) {
@@ -78,6 +82,14 @@ func (s *Service) resolveCategoryAndTemplate(ctx context.Context, tx pgx.Tx, use
 		if err := s.templates.WithQuerier(tx).BumpUsage(ctx, *templateID, userID); err != nil {
 			if errors.Is(err, templates.ErrNotFound) {
 				return apierror.NewValidation(map[string]string{"template_id": "Modello non trovato."})
+			}
+			return err
+		}
+	}
+	if mediaID != nil {
+		if err := s.media.WithQuerier(tx).MarkUsed(ctx, *mediaID, userID); err != nil {
+			if errors.Is(err, media.ErrNotFound) {
+				return apierror.NewValidation(map[string]string{"media_id": "Immagine non trovata."})
 			}
 			return err
 		}
@@ -97,6 +109,7 @@ type transactionResponse struct {
 	Description *string `json:"description,omitempty"`
 	CategoryID  *string `json:"category_id,omitempty"`
 	TemplateID  *string `json:"template_id,omitempty"`
+	MediaID     *string `json:"media_id,omitempty"`
 	OccurredAt  string  `json:"occurred_at"`
 	CreatedAt   string  `json:"created_at"`
 	UpdatedAt   string  `json:"updated_at"`
@@ -116,6 +129,11 @@ func toTransactionResponse(t Transaction) transactionResponse {
 		s := t.TemplateID.String()
 		templateID = &s
 	}
+	var mediaID *string
+	if t.MediaID != nil {
+		s := t.MediaID.String()
+		mediaID = &s
+	}
 	return transactionResponse{
 		ID:          t.ID.String(),
 		Direction:   t.Direction,
@@ -126,6 +144,7 @@ func toTransactionResponse(t Transaction) transactionResponse {
 		Description: t.Description,
 		CategoryID:  categoryID,
 		TemplateID:  templateID,
+		MediaID:     mediaID,
 		OccurredAt:  t.OccurredAt.Format(timeLayout),
 		CreatedAt:   t.CreatedAt.Format(timeLayout),
 		UpdatedAt:   t.UpdatedAt.Format(timeLayout),
@@ -178,6 +197,7 @@ type CreateStandardInput struct {
 	Description    *string
 	CategoryID     *uuid.UUID
 	TemplateID     *uuid.UUID
+	MediaID        *uuid.UUID
 	OccurredAt     time.Time
 	SessionID      *uuid.UUID
 	IdempotencyKey uuid.UUID
@@ -248,7 +268,7 @@ func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([
 		if in.Currency != wallet.Currency {
 			return apierror.NewValidation(map[string]string{"currency": "Deve corrispondere alla valuta del portafoglio."})
 		}
-		if err := s.resolveCategoryAndTemplate(ctx, tx, in.UserID, in.CategoryID, in.TemplateID); err != nil {
+		if err := s.resolveAttachments(ctx, tx, in.UserID, in.CategoryID, in.TemplateID, in.MediaID); err != nil {
 			return err
 		}
 
@@ -257,7 +277,7 @@ func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([
 		created, err := s.transactions.WithQuerier(tx).Create(ctx, CreateInput{
 			WalletID: wallet.ID, UserID: in.UserID, Direction: in.Direction, Kind: KindStandard,
 			AmountMinor: in.AmountMinor, Currency: in.Currency, Title: in.Title, Description: in.Description,
-			CategoryID: in.CategoryID, TemplateID: in.TemplateID,
+			CategoryID: in.CategoryID, TemplateID: in.TemplateID, MediaID: in.MediaID,
 			OccurredAt: occurredAt, CreatedBySessionID: in.SessionID,
 		})
 		if err != nil {
@@ -333,6 +353,7 @@ type UpdateStandardInput struct {
 	Description     *string
 	CategoryID      *uuid.UUID
 	TemplateID      *uuid.UUID
+	MediaID         *uuid.UUID
 	OccurredAt      time.Time
 	ExpectedVersion int64
 }
@@ -373,7 +394,7 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 			return apierror.New(http.StatusForbidden, "NOT_EDITABLE",
 				"Solo le operazioni standard possono essere modificate.")
 		}
-		if err := s.resolveCategoryAndTemplate(ctx, tx, in.UserID, in.CategoryID, in.TemplateID); err != nil {
+		if err := s.resolveAttachments(ctx, tx, in.UserID, in.CategoryID, in.TemplateID, in.MediaID); err != nil {
 			return err
 		}
 
@@ -382,7 +403,8 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 
 		updated, err := s.transactions.WithQuerier(tx).Update(ctx, in.TransactionID, in.UserID, in.ExpectedVersion, UpdateInput{
 			Direction: in.Direction, AmountMinor: in.AmountMinor, Title: in.Title,
-			Description: in.Description, CategoryID: in.CategoryID, TemplateID: in.TemplateID, OccurredAt: occurredAt,
+			Description: in.Description, CategoryID: in.CategoryID, TemplateID: in.TemplateID, MediaID: in.MediaID,
+			OccurredAt: occurredAt,
 		})
 		if errors.Is(err, ErrNotFound) {
 			// Row exists but version didn't match vs. genuinely gone.
