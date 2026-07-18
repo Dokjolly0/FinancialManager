@@ -1,0 +1,29 @@
+{
+  "@@locale": "it",
+  "appTitle": "FinancialManager",
+  "@appTitle": {
+    "description": "Nome dell'applicazione mostrato nel titolo e nell'app switcher."
+  },
+  "commonRetry": "Riprova",
+  "@commonRetry": {
+    "description": "Etichetta del pulsante per ritentare un'operazione fallita."
+  },
+  "commonCancel": "Annulla",
+  "commonConfirm": "Conferma",
+  "errorGenericTitle": "Qualcosa non ha funzionato",
+  "@errorGenericTitle": {
+    "description": "Titolo mostrato quando un errore non recuperabile non ha un messaggio più specifico."
+  },
+  "errorNetworkTitle": "Connessione assente",
+  "@errorNetworkTitle": {
+    "description": "Titolo mostrato quando la richiesta fallisce per assenza di rete."
+  },
+  "errorSessionExpiredTitle": "Sessione scaduta",
+  "@errorSessionExpiredTitle": {
+    "description": "Titolo mostrato quando il refresh del token fallisce e l'utente deve rifare login."
+  },
+  "emptyStateDefaultMessage": "Nessun elemento da mostrare.",
+  "@emptyStateDefaultMessage": {
+    "description": "Messaggio di fallback per liste vuote senza un testo specifico."
+  }
+}
