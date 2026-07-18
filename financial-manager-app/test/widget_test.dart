@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:financialmanager/app/app.dart';
 import 'package:financialmanager/features/authentication/data/providers.dart';
 import 'package:financialmanager/features/authentication/domain/models/auth_user.dart';
+import 'package:financialmanager/features/authentication/domain/models/google_sign_in_outcome.dart';
 import 'package:financialmanager/features/authentication/domain/repositories/auth_repository.dart';
 import 'package:financialmanager/features/authentication/presentation/screens/login_screen.dart';
 
@@ -23,6 +24,13 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<AuthUser> register(RegisterParams params) =>
+      throw UnimplementedError();
+
+  @override
+  Future<GoogleSignInOutcome> signInWithGoogle() => throw UnimplementedError();
+
+  @override
+  Future<AuthUser> completeGoogleRegistration(GoogleCompletionParams params) =>
       throw UnimplementedError();
 
   @override

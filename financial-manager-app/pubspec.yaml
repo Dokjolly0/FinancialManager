@@ -32,6 +32,7 @@ dependencies:
 
   # Client-generated correlation/idempotency keys (section 7.6, 9.5).
   uuid: ^4.5.1
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:

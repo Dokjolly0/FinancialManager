@@ -30,6 +30,24 @@ class AuthApi {
     return response.data!;
   }
 
+  Future<Map<String, dynamic>> googleVerify(String idToken) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/google/verify',
+      data: {'id_token': idToken},
+    );
+    return response.data!;
+  }
+
+  Future<Map<String, dynamic>> completeGoogleRegistration(
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/google/complete-registration',
+      data: body,
+    );
+    return response.data!;
+  }
+
   Future<void> logout() => _dio.post<void>('/auth/logout');
 
   Future<void> logoutAll() => _dio.post<void>('/auth/logout-all');

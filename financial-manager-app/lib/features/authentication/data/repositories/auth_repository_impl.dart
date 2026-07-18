@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 
+import '../../../../core/auth/google_sign_in_service.dart';
 import '../../../../core/auth/session_token_store.dart';
 import '../../../../core/errors/error_mapper.dart';
 import '../../domain/models/auth_user.dart';
+import '../../domain/models/google_sign_in_outcome.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../services/auth_api.dart';
 
@@ -10,11 +12,14 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
     required AuthApi authApi,
     required SessionTokenStore tokenStore,
+    required GoogleSignInService googleSignIn,
   }) : _api = authApi,
-       _tokenStore = tokenStore;
+       _tokenStore = tokenStore,
+       _googleSignIn = googleSignIn;
 
   final AuthApi _api;
   final SessionTokenStore _tokenStore;
+  final GoogleSignInService _googleSignIn;
 
   AuthUser _userFromJson(Map<String, dynamic> json) {
     return AuthUser(
@@ -76,6 +81,57 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<GoogleSignInOutcome> signInWithGoogle() async {
+    final String idToken;
+    try {
+      idToken = await _googleSignIn.signIn();
+    } on GoogleSignInCancelled {
+      return const GoogleSignInCancelledByUser();
+    }
+
+    try {
+      final response = await _api.googleVerify(idToken);
+      if (response['status'] == 'authenticated') {
+        return GoogleSignInAuthenticated(await _handleAuthResponse(response));
+      }
+
+      return GoogleSignInRegistrationRequired(
+        ticket: response['ticket'] as String,
+        email: response['email'] as String,
+        emailVerified: response['email_verified'] as bool,
+        suggestedFirstName: (response['suggested_first_name'] as String?) ?? '',
+        suggestedLastName: (response['suggested_last_name'] as String?) ?? '',
+      );
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<AuthUser> completeGoogleRegistration(
+    GoogleCompletionParams params,
+  ) async {
+    try {
+      final response = await _api.completeGoogleRegistration({
+        'ticket': params.ticket,
+        'username': params.username,
+        'password': params.password,
+        'confirm_password': params.confirmPassword,
+        'avatar_background_color': params.avatarBackgroundColor,
+        'avatar_text_color': params.avatarTextColor,
+        'initial_balance_minor': params.initialBalanceMinor,
+        'currency': params.currency,
+        'timezone': params.timezone,
+        'locale': params.locale,
+        'accepted_terms': params.acceptedTerms,
+      });
+      return await _handleAuthResponse(response);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
   Future<void> logout() async {
     try {
       await _api.logout();
@@ -83,6 +139,7 @@ class AuthRepositoryImpl implements AuthRepository {
       // Best-effort: even if the network call fails, forget the local
       // session — the user asked to log out.
     }
+    await _bestEffortGoogleSignOut();
     await _tokenStore.clear();
   }
 
@@ -93,7 +150,17 @@ class AuthRepositoryImpl implements AuthRepository {
     } on DioException {
       // Same rationale as logout().
     }
+    await _bestEffortGoogleSignOut();
     await _tokenStore.clear();
+  }
+
+  Future<void> _bestEffortGoogleSignOut() async {
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {
+      // Not linked via Google, or the platform SDK isn't reachable — the
+      // local session is cleared regardless.
+    }
   }
 
   @override

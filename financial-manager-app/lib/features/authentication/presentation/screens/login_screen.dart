@@ -3,12 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router.dart';
+import '../../../../app/session/pending_google_registration_provider.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../domain/models/google_sign_in_outcome.dart';
+import '../view_models/google_sign_in_controller.dart';
 import '../view_models/login_controller.dart';
 import '../widgets/password_field.dart';
 
-/// Login screen (plan.md section 7.2). Google sign-in is shown but
-/// disabled — that flow lands in Fase 3 of the roadmap.
+/// Login screen (plan.md section 7.2). Google is a linked identity, not a
+/// separate account (section 15.1): signing in with a Google identity
+/// that's already linked authenticates directly; a first-time Google
+/// identity is sent to the registration-completion screen instead.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -39,9 +44,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _continueWithGoogle() async {
+    final outcome = await ref
+        .read(googleSignInControllerProvider.notifier)
+        .signIn();
+    if (!mounted || outcome == null) return;
+
+    switch (outcome) {
+      case GoogleSignInAuthenticated():
+        context.go(AppRoutes.home);
+      case GoogleSignInRegistrationRequired():
+        ref.read(pendingGoogleRegistrationProvider.notifier).state = outcome;
+        context.push(AppRoutes.registerGoogleCompletion);
+      case GoogleSignInCancelledByUser():
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(loginControllerProvider);
+    final googleState = ref.watch(googleSignInControllerProvider);
     final canSubmit =
         !state.isSubmitting &&
         _usernameOrEmailController.text.isNotEmpty &&
@@ -115,15 +138,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
+              if (googleState.error != null) ...[
+                Text(
+                  googleState.error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+              ],
               OutlinedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Accesso con Google disponibile a breve.'),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.g_mobiledata),
+                onPressed: googleState.isSubmitting
+                    ? null
+                    : _continueWithGoogle,
+                icon: googleState.isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.g_mobiledata),
                 label: const Text('Continua con Google'),
               ),
               const SizedBox(height: AppSpacing.lg),

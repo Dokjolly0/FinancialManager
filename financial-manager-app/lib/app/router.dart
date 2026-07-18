@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/authentication/presentation/screens/forgot_password_screen.dart';
+import '../features/authentication/presentation/screens/google_registration_completion_screen.dart';
 import '../features/authentication/presentation/screens/login_screen.dart';
 import '../features/authentication/presentation/screens/register_screen.dart';
 import 'placeholder_screen.dart';
@@ -87,6 +88,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const ForgotPasswordScreen(),
       ),
       GoRoute(
+        path: AppRoutes.registerGoogleCompletion,
+        builder: (_, _) => const GoogleRegistrationCompletionScreen(),
+      ),
+      GoRoute(
         path: '/app/transactions/:id',
         builder: (_, state) => FeaturePlaceholderScreen(
           routeName: 'transaction ${state.pathParameters['id']}',
@@ -104,7 +109,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 });
 
 const _placeholderPaths = [
-  AppRoutes.registerGoogleCompletion,
   AppRoutes.home,
   AppRoutes.transactionsNew,
   AppRoutes.history,

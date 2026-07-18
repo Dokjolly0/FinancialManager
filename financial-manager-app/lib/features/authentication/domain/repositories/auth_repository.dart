@@ -1,4 +1,5 @@
 import '../models/auth_user.dart';
+import '../models/google_sign_in_outcome.dart';
 
 /// Parameters for registration (plan.md section 7.3). Kept as a single
 /// bag rather than positional args since the 3-step wizard collects these
@@ -35,6 +36,36 @@ class RegisterParams {
   final bool acceptedTerms;
 }
 
+/// Parameters for completing registration after a Google ticket (plan.md
+/// section 7.4). Password is optional — Google-only accounts are allowed.
+class GoogleCompletionParams {
+  const GoogleCompletionParams({
+    required this.ticket,
+    required this.username,
+    this.password = '',
+    this.confirmPassword = '',
+    required this.avatarBackgroundColor,
+    required this.avatarTextColor,
+    required this.initialBalanceMinor,
+    required this.currency,
+    required this.timezone,
+    required this.locale,
+    required this.acceptedTerms,
+  });
+
+  final String ticket;
+  final String username;
+  final String password;
+  final String confirmPassword;
+  final String avatarBackgroundColor;
+  final String avatarTextColor;
+  final int initialBalanceMinor;
+  final String currency;
+  final String timezone;
+  final String locale;
+  final bool acceptedTerms;
+}
+
 /// Domain-facing authentication operations (plan.md section 14.1). The
 /// presentation layer depends only on this interface, never on Dio or the
 /// backend's JSON shape directly.
@@ -45,6 +76,12 @@ abstract class AuthRepository {
     required String usernameOrEmail,
     required String password,
   });
+
+  /// Runs the native Google sign-in flow and verifies the resulting ID
+  /// token with the backend (plan.md section 8.2).
+  Future<GoogleSignInOutcome> signInWithGoogle();
+
+  Future<AuthUser> completeGoogleRegistration(GoogleCompletionParams params);
 
   Future<void> logout();
 
