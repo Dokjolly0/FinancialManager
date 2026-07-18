@@ -17,6 +17,18 @@ class Money {
 
   static const zeroEur = Money(minorUnits: 0, currency: 'EUR');
 
+  /// Parses a decimal amount typed by the user (accepts both `,` and `.`
+  /// as the decimal separator, e.g. "500,00" or "500.00") into minor
+  /// units. Returns null if the input isn't a valid non-negative amount —
+  /// callers use that to show a validation error rather than guessing.
+  static int? parseMinorUnits(String input) {
+    final normalized = input.trim().replaceAll(',', '.');
+    if (normalized.isEmpty) return null;
+    final value = double.tryParse(normalized);
+    if (value == null || value < 0) return null;
+    return (value * 100).round();
+  }
+
   bool get isNegative => minorUnits < 0;
   bool get isZero => minorUnits == 0;
   bool get isPositive => minorUnits > 0;

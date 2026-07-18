@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/authentication/presentation/screens/forgot_password_screen.dart';
+import '../features/authentication/presentation/screens/login_screen.dart';
+import '../features/authentication/presentation/screens/register_screen.dart';
 import 'placeholder_screen.dart';
 import 'session/session_controller.dart';
 import 'session/session_status.dart';
@@ -74,6 +77,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),
+      GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
+      GoRoute(
+        path: AppRoutes.register,
+        builder: (_, _) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (_, _) => const ForgotPasswordScreen(),
+      ),
       GoRoute(
         path: '/app/transactions/:id',
         builder: (_, state) => FeaturePlaceholderScreen(
@@ -92,10 +104,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 });
 
 const _placeholderPaths = [
-  AppRoutes.login,
-  AppRoutes.register,
   AppRoutes.registerGoogleCompletion,
-  AppRoutes.forgotPassword,
   AppRoutes.home,
   AppRoutes.transactionsNew,
   AppRoutes.history,
