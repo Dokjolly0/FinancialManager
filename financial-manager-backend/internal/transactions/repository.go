@@ -31,7 +31,7 @@ func (r *Repository) WithQuerier(q database.Querier) *Repository {
 
 const transactionColumns = `
 	id, wallet_id, user_id, direction, kind, amount_minor, currency,
-	title, title_normalized, description, occurred_at,
+	title, title_normalized, description, category_id, template_id, occurred_at,
 	created_at, updated_at, deleted_at, version, created_by_session_id
 `
 
@@ -39,7 +39,7 @@ func scanTransaction(row pgx.Row) (Transaction, error) {
 	var t Transaction
 	err := row.Scan(
 		&t.ID, &t.WalletID, &t.UserID, &t.Direction, &t.Kind, &t.AmountMinor, &t.Currency,
-		&t.Title, &t.TitleNormalized, &t.Description, &t.OccurredAt,
+		&t.Title, &t.TitleNormalized, &t.Description, &t.CategoryID, &t.TemplateID, &t.OccurredAt,
 		&t.CreatedAt, &t.UpdatedAt, &t.DeletedAt, &t.Version, &t.CreatedBySessionID,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -60,6 +60,8 @@ type CreateInput struct {
 	Currency           string
 	Title              string
 	Description        *string
+	CategoryID         *uuid.UUID
+	TemplateID         *uuid.UUID
 	OccurredAt         time.Time
 	CreatedBySessionID *uuid.UUID
 }
@@ -71,11 +73,11 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (Transaction, e
 	row := r.db.QueryRow(ctx, `
 		INSERT INTO transactions (
 			wallet_id, user_id, direction, kind, amount_minor, currency,
-			title, title_normalized, description, occurred_at, created_by_session_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			title, title_normalized, description, category_id, template_id, occurred_at, created_by_session_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING `+transactionColumns,
 		in.WalletID, in.UserID, in.Direction, in.Kind, in.AmountMinor, in.Currency,
-		in.Title, NormalizeTitle(in.Title), in.Description, in.OccurredAt, in.CreatedBySessionID,
+		in.Title, NormalizeTitle(in.Title), in.Description, in.CategoryID, in.TemplateID, in.OccurredAt, in.CreatedBySessionID,
 	)
 	return scanTransaction(row)
 }
@@ -106,6 +108,8 @@ type UpdateInput struct {
 	AmountMinor int64
 	Title       string
 	Description *string
+	CategoryID  *uuid.UUID
+	TemplateID  *uuid.UUID
 	OccurredAt  time.Time
 }
 
@@ -118,11 +122,12 @@ func (r *Repository) Update(ctx context.Context, id, userID uuid.UUID, expectedV
 	row := r.db.QueryRow(ctx, `
 		UPDATE transactions SET
 			direction = $1, amount_minor = $2, title = $3, title_normalized = $4,
-			description = $5, occurred_at = $6, updated_at = now(), version = version + 1
-		WHERE id = $7 AND user_id = $8 AND version = $9 AND deleted_at IS NULL
+			description = $5, category_id = $6, template_id = $7, occurred_at = $8,
+			updated_at = now(), version = version + 1
+		WHERE id = $9 AND user_id = $10 AND version = $11 AND deleted_at IS NULL
 		RETURNING `+transactionColumns,
 		in.Direction, in.AmountMinor, in.Title, NormalizeTitle(in.Title),
-		in.Description, in.OccurredAt, id, userID, expectedVersion,
+		in.Description, in.CategoryID, in.TemplateID, in.OccurredAt, id, userID, expectedVersion,
 	)
 	return scanTransaction(row)
 }
@@ -161,13 +166,21 @@ func (r *Repository) SumNetForWallet(ctx context.Context, walletID uuid.UUID) (i
 
 // ListFilter selects and paginates a user's ledger (plan.md section 17).
 // Cursor pagination only (no offset): stable under concurrent inserts and
-// fast on long histories.
+// fast on long histories. Always ordered by (occurred_at, id) DESC — the
+// cursor encodes exactly those two fields, so no alternative sort is
+// offered in the MVP (plan.md section 17.2 example query).
 type ListFilter struct {
-	UserID    uuid.UUID
-	Direction string // "" = any
-	Kind      string // "" = any
-	Limit     int
-	Cursor    string // opaque, from PageInfo.NextCursor
+	UserID         uuid.UUID
+	Direction      string // "" = any
+	Kind           string // "" = any
+	CategoryID     uuid.UUID
+	Title          string // prefix match against title_normalized (plan.md section 17.3)
+	AmountMinMinor int64  // 0 = no lower bound
+	AmountMaxMinor int64  // 0 = no upper bound
+	OccurredFrom   time.Time
+	OccurredTo     time.Time
+	Limit          int
+	Cursor         string // opaque, from PageInfo.NextCursor
 }
 
 type Page struct {
@@ -219,6 +232,30 @@ func (r *Repository) List(ctx context.Context, filter ListFilter) (Page, error) 
 	if filter.Kind != "" {
 		args = append(args, filter.Kind)
 		conditions = append(conditions, "kind = $"+strconv.Itoa(len(args)))
+	}
+	if filter.CategoryID != uuid.Nil {
+		args = append(args, filter.CategoryID)
+		conditions = append(conditions, "category_id = $"+strconv.Itoa(len(args)))
+	}
+	if filter.Title != "" {
+		args = append(args, NormalizeTitle(filter.Title)+"%")
+		conditions = append(conditions, "title_normalized LIKE $"+strconv.Itoa(len(args)))
+	}
+	if filter.AmountMinMinor > 0 {
+		args = append(args, filter.AmountMinMinor)
+		conditions = append(conditions, "amount_minor >= $"+strconv.Itoa(len(args)))
+	}
+	if filter.AmountMaxMinor > 0 {
+		args = append(args, filter.AmountMaxMinor)
+		conditions = append(conditions, "amount_minor <= $"+strconv.Itoa(len(args)))
+	}
+	if !filter.OccurredFrom.IsZero() {
+		args = append(args, filter.OccurredFrom)
+		conditions = append(conditions, "occurred_at >= $"+strconv.Itoa(len(args)))
+	}
+	if !filter.OccurredTo.IsZero() {
+		args = append(args, filter.OccurredTo)
+		conditions = append(conditions, "occurred_at < $"+strconv.Itoa(len(args)))
 	}
 	if filter.Cursor != "" {
 		occurredAt, id, err := decodeCursor(filter.Cursor)

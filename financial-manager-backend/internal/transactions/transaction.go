@@ -33,6 +33,8 @@ type Transaction struct {
 	Title              string
 	TitleNormalized    string
 	Description        *string
+	CategoryID         *uuid.UUID
+	TemplateID         *uuid.UUID
 	OccurredAt         time.Time
 	CreatedAt          time.Time
 	UpdatedAt          time.Time

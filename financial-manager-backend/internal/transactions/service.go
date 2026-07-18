@@ -13,10 +13,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/platform/apierror"
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/database"
 	"financial-manager-backend/internal/platform/idempotency"
+	"financial-manager-backend/internal/templates"
 	"financial-manager-backend/internal/wallets"
 )
 
@@ -35,6 +37,8 @@ type Service struct {
 	transactions *Repository
 	wallets      *wallets.Repository
 	audit        *AuditRepository
+	categories   *categories.Repository
+	templates    *templates.Repository
 	clock        clock.Clock
 }
 
@@ -43,11 +47,42 @@ type Deps struct {
 	Transactions *Repository
 	Wallets      *wallets.Repository
 	Audit        *AuditRepository
+	Categories   *categories.Repository
+	Templates    *templates.Repository
 	Clock        clock.Clock
 }
 
 func NewService(d Deps) *Service {
-	return &Service{db: d.DB, transactions: d.Transactions, wallets: d.Wallets, audit: d.Audit, clock: d.Clock}
+	return &Service{
+		db: d.DB, transactions: d.Transactions, wallets: d.Wallets, audit: d.Audit,
+		categories: d.Categories, templates: d.Templates, clock: d.Clock,
+	}
+}
+
+// resolveCategoryAndTemplate validates that an optional category_id is
+// visible to the user (system or owned, plan.md section 14.7) and that an
+// optional template_id belongs to the user, bumping its usage stats in the
+// same DB transaction as the mutation (plan.md section 4.4: "ordinati per
+// frequenza e utilizzo recente"). Both checks run against tx so a
+// cross-user reference rolls back the whole mutation, not just the bump.
+func (s *Service) resolveCategoryAndTemplate(ctx context.Context, tx pgx.Tx, userID uuid.UUID, categoryID, templateID *uuid.UUID) error {
+	if categoryID != nil {
+		if _, err := s.categories.WithQuerier(tx).GetByIDAndVisibility(ctx, *categoryID, userID); err != nil {
+			if errors.Is(err, categories.ErrNotFound) {
+				return apierror.NewValidation(map[string]string{"category_id": "Categoria non trovata."})
+			}
+			return err
+		}
+	}
+	if templateID != nil {
+		if err := s.templates.WithQuerier(tx).BumpUsage(ctx, *templateID, userID); err != nil {
+			if errors.Is(err, templates.ErrNotFound) {
+				return apierror.NewValidation(map[string]string{"template_id": "Modello non trovato."})
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 // --- DTOs shared by create/update/get/list --------------------------------
@@ -60,6 +95,8 @@ type transactionResponse struct {
 	Currency    string  `json:"currency"`
 	Title       string  `json:"title"`
 	Description *string `json:"description,omitempty"`
+	CategoryID  *string `json:"category_id,omitempty"`
+	TemplateID  *string `json:"template_id,omitempty"`
 	OccurredAt  string  `json:"occurred_at"`
 	CreatedAt   string  `json:"created_at"`
 	UpdatedAt   string  `json:"updated_at"`
@@ -69,6 +106,16 @@ type transactionResponse struct {
 const timeLayout = "2006-01-02T15:04:05Z07:00"
 
 func toTransactionResponse(t Transaction) transactionResponse {
+	var categoryID *string
+	if t.CategoryID != nil {
+		s := t.CategoryID.String()
+		categoryID = &s
+	}
+	var templateID *string
+	if t.TemplateID != nil {
+		s := t.TemplateID.String()
+		templateID = &s
+	}
 	return transactionResponse{
 		ID:          t.ID.String(),
 		Direction:   t.Direction,
@@ -77,6 +124,8 @@ func toTransactionResponse(t Transaction) transactionResponse {
 		Currency:    t.Currency,
 		Title:       t.Title,
 		Description: t.Description,
+		CategoryID:  categoryID,
+		TemplateID:  templateID,
 		OccurredAt:  t.OccurredAt.Format(timeLayout),
 		CreatedAt:   t.CreatedAt.Format(timeLayout),
 		UpdatedAt:   t.UpdatedAt.Format(timeLayout),
@@ -127,6 +176,8 @@ type CreateStandardInput struct {
 	Currency       string
 	Title          string
 	Description    *string
+	CategoryID     *uuid.UUID
+	TemplateID     *uuid.UUID
 	OccurredAt     time.Time
 	SessionID      *uuid.UUID
 	IdempotencyKey uuid.UUID
@@ -197,12 +248,16 @@ func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([
 		if in.Currency != wallet.Currency {
 			return apierror.NewValidation(map[string]string{"currency": "Deve corrispondere alla valuta del portafoglio."})
 		}
+		if err := s.resolveCategoryAndTemplate(ctx, tx, in.UserID, in.CategoryID, in.TemplateID); err != nil {
+			return err
+		}
 
 		newBalance := wallet.CurrentBalanceMinor + SignedDelta(in.Direction, in.AmountMinor)
 
 		created, err := s.transactions.WithQuerier(tx).Create(ctx, CreateInput{
 			WalletID: wallet.ID, UserID: in.UserID, Direction: in.Direction, Kind: KindStandard,
 			AmountMinor: in.AmountMinor, Currency: in.Currency, Title: in.Title, Description: in.Description,
+			CategoryID: in.CategoryID, TemplateID: in.TemplateID,
 			OccurredAt: occurredAt, CreatedBySessionID: in.SessionID,
 		})
 		if err != nil {
@@ -276,6 +331,8 @@ type UpdateStandardInput struct {
 	AmountMinor     int64
 	Title           string
 	Description     *string
+	CategoryID      *uuid.UUID
+	TemplateID      *uuid.UUID
 	OccurredAt      time.Time
 	ExpectedVersion int64
 }
@@ -316,13 +373,16 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 			return apierror.New(http.StatusForbidden, "NOT_EDITABLE",
 				"Solo le operazioni standard possono essere modificate.")
 		}
+		if err := s.resolveCategoryAndTemplate(ctx, tx, in.UserID, in.CategoryID, in.TemplateID); err != nil {
+			return err
+		}
 
 		diff := SignedDelta(in.Direction, in.AmountMinor) - SignedDelta(existing.Direction, existing.AmountMinor)
 		newBalance := wallet.CurrentBalanceMinor + diff
 
 		updated, err := s.transactions.WithQuerier(tx).Update(ctx, in.TransactionID, in.UserID, in.ExpectedVersion, UpdateInput{
 			Direction: in.Direction, AmountMinor: in.AmountMinor, Title: in.Title,
-			Description: in.Description, OccurredAt: occurredAt,
+			Description: in.Description, CategoryID: in.CategoryID, TemplateID: in.TemplateID, OccurredAt: occurredAt,
 		})
 		if errors.Is(err, ErrNotFound) {
 			// Row exists but version didn't match vs. genuinely gone.

@@ -48,12 +48,27 @@ func parseOccurredAt(raw string) (time.Time, bool) {
 	return t, err == nil
 }
 
+// parseOptionalUUID lets category_id/template_id be omitted or "" for "no
+// category/template", while still rejecting a malformed non-empty value.
+func parseOptionalUUID(raw string) (*uuid.UUID, bool) {
+	if raw == "" {
+		return nil, true
+	}
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		return nil, false
+	}
+	return &id, true
+}
+
 type createRequest struct {
 	Direction     string  `json:"direction"`
 	AmountMinor   int64   `json:"amount_minor"`
 	Currency      string  `json:"currency"`
 	Title         string  `json:"title"`
 	Description   *string `json:"description"`
+	CategoryID    string  `json:"category_id"`
+	TemplateID    string  `json:"template_id"`
 	OccurredAt    string  `json:"occurred_at"`
 	DeviceSession string  `json:"-"`
 }
@@ -93,6 +108,16 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		}))
 		return
 	}
+	categoryID, ok := parseOptionalUUID(req.CategoryID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": "UUID non valido."}))
+		return
+	}
+	templateID, ok := parseOptionalUUID(req.TemplateID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"template_id": "UUID non valido."}))
+		return
+	}
 
 	responseBody, status, err := h.service.CreateStandard(r.Context(), CreateStandardInput{
 		UserID:         userID,
@@ -101,6 +126,8 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Currency:       req.Currency,
 		Title:          req.Title,
 		Description:    req.Description,
+		CategoryID:     categoryID,
+		TemplateID:     templateID,
 		OccurredAt:     occurredAt,
 		SessionID:      &sessionID,
 		IdempotencyKey: idempotencyKey,
@@ -158,12 +185,64 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var categoryID uuid.UUID
+	if raw := query.Get("category_id"); raw != "" {
+		parsed, err := uuid.Parse(raw)
+		if err != nil {
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": "UUID non valido."}))
+			return
+		}
+		categoryID = parsed
+	}
+
+	var amountMin, amountMax int64
+	if raw := query.Get("amount_min_minor"); raw != "" {
+		parsed, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"amount_min_minor": "Deve essere un intero."}))
+			return
+		}
+		amountMin = parsed
+	}
+	if raw := query.Get("amount_max_minor"); raw != "" {
+		parsed, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"amount_max_minor": "Deve essere un intero."}))
+			return
+		}
+		amountMax = parsed
+	}
+
+	var occurredFrom, occurredTo time.Time
+	if raw := query.Get("occurred_from"); raw != "" {
+		parsed, ok := parseOccurredAt(raw)
+		if !ok {
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"occurred_from": "Deve essere una data RFC3339 valida."}))
+			return
+		}
+		occurredFrom = parsed
+	}
+	if raw := query.Get("occurred_to"); raw != "" {
+		parsed, ok := parseOccurredAt(raw)
+		if !ok {
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"occurred_to": "Deve essere una data RFC3339 valida."}))
+			return
+		}
+		occurredTo = parsed
+	}
+
 	result, err := h.service.List(r.Context(), ListFilter{
-		UserID:    userID,
-		Direction: direction,
-		Kind:      query.Get("kind"),
-		Limit:     limit,
-		Cursor:    query.Get("cursor"),
+		UserID:         userID,
+		Direction:      direction,
+		Kind:           query.Get("kind"),
+		CategoryID:     categoryID,
+		Title:          query.Get("title"),
+		AmountMinMinor: amountMin,
+		AmountMaxMinor: amountMax,
+		OccurredFrom:   occurredFrom,
+		OccurredTo:     occurredTo,
+		Limit:          limit,
+		Cursor:         query.Get("cursor"),
 	})
 	if err != nil {
 		apierror.Write(w, r, err)
@@ -177,6 +256,8 @@ type updateRequest struct {
 	AmountMinor     int64   `json:"amount_minor"`
 	Title           string  `json:"title"`
 	Description     *string `json:"description"`
+	CategoryID      string  `json:"category_id"`
+	TemplateID      string  `json:"template_id"`
 	OccurredAt      string  `json:"occurred_at"`
 	ExpectedVersion int64   `json:"version"`
 }
@@ -207,6 +288,16 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		}))
 		return
 	}
+	categoryID, ok := parseOptionalUUID(req.CategoryID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": "UUID non valido."}))
+		return
+	}
+	templateID, ok := parseOptionalUUID(req.TemplateID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"template_id": "UUID non valido."}))
+		return
+	}
 
 	result, err := h.service.UpdateStandard(r.Context(), UpdateStandardInput{
 		UserID:          userID,
@@ -215,6 +306,8 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		AmountMinor:     req.AmountMinor,
 		Title:           req.Title,
 		Description:     req.Description,
+		CategoryID:      categoryID,
+		TemplateID:      templateID,
 		OccurredAt:      occurredAt,
 		ExpectedVersion: req.ExpectedVersion,
 	})

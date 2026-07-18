@@ -16,6 +16,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"financial-manager-backend/internal/auth"
+	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/email"
 	"financial-manager-backend/internal/identities"
 	"financial-manager-backend/internal/platform/clock"
@@ -25,6 +26,7 @@ import (
 	"financial-manager-backend/internal/platform/observability"
 	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/redisclient"
+	"financial-manager-backend/internal/templates"
 	"financial-manager-backend/internal/transactions"
 	"financial-manager-backend/internal/users"
 	"financial-manager-backend/internal/wallets"
@@ -145,11 +147,19 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	usersHandler := users.NewHandler(users.NewService(usersRepo))
 	walletsHandler := wallets.NewHandler(walletsRepo)
 
+	categoriesRepo := categories.NewRepository(dbPool)
+	categoriesHandler := categories.NewHandler(categories.NewService(categoriesRepo))
+
+	templatesRepo := templates.NewRepository(dbPool)
+	templatesHandler := templates.NewHandler(templates.NewService(templatesRepo))
+
 	transactionsService := transactions.NewService(transactions.Deps{
 		DB:           dbPool,
 		Transactions: transactionsRepo,
 		Wallets:      walletsRepo,
 		Audit:        transactions.NewAuditRepository(dbPool),
+		Categories:   categoriesRepo,
+		Templates:    templatesRepo,
 		Clock:        clock.System{},
 	})
 	transactionsHandler := transactions.NewHandler(transactionsService)
@@ -161,5 +171,7 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		usersHandler.Mount(r)
 		walletsHandler.Mount(r)
 		transactionsHandler.Mount(r)
+		categoriesHandler.Mount(r)
+		templatesHandler.Mount(r)
 	})
 }

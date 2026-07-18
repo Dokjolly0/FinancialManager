@@ -10,9 +10,11 @@ import (
 
 	"github.com/google/uuid"
 
+	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/platform/apierror"
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/database"
+	"financial-manager-backend/internal/templates"
 	"financial-manager-backend/internal/transactions"
 	"financial-manager-backend/internal/users"
 	"financial-manager-backend/internal/wallets"
@@ -34,6 +36,8 @@ type harness struct {
 	service            *transactions.Service
 	wallets            *wallets.Repository
 	transactions       *transactions.Repository
+	categories         *categories.Repository
+	templates          *templates.Repository
 	userID             uuid.UUID
 	walletID           uuid.UUID
 	openingTransaction uuid.UUID // zero if openingBalanceMinor was 0
@@ -57,6 +61,8 @@ func newHarness(t *testing.T, openingBalanceMinor int64) harness {
 	walletsRepo := wallets.NewRepository(dbPool)
 	transactionsRepo := transactions.NewRepository(dbPool)
 	auditRepo := transactions.NewAuditRepository(dbPool)
+	categoriesRepo := categories.NewRepository(dbPool)
+	templatesRepo := templates.NewRepository(dbPool)
 
 	suffix := uuid.NewString()[:8]
 	user, err := usersRepo.Create(context.Background(), users.CreateInput{
@@ -99,6 +105,8 @@ func newHarness(t *testing.T, openingBalanceMinor int64) harness {
 		Transactions: transactionsRepo,
 		Wallets:      walletsRepo,
 		Audit:        auditRepo,
+		Categories:   categoriesRepo,
+		Templates:    templatesRepo,
 		Clock:        clock.System{},
 	})
 
@@ -106,6 +114,8 @@ func newHarness(t *testing.T, openingBalanceMinor int64) harness {
 		service:            service,
 		wallets:            walletsRepo,
 		transactions:       transactionsRepo,
+		categories:         categoriesRepo,
+		templates:          templatesRepo,
 		userID:             user.ID,
 		walletID:           wallet.ID,
 		openingTransaction: openingTxID,
