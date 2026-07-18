@@ -84,14 +84,29 @@ func toTransactionResponse(t Transaction) transactionResponse {
 	}
 }
 
+// walletSnapshot mirrors the shape of GET /v1/wallet (plan.md section
+// 14.4) so every endpoint that echoes the wallet back — create/update/
+// delete/balance-adjustment here, and the wallet module's own GET — uses
+// one consistent JSON shape. A partial shape here previously broke the
+// Flutter client's shared Wallet.fromJson parser.
 type walletSnapshot struct {
 	ID                  string `json:"id"`
+	Name                string `json:"name"`
+	Currency            string `json:"currency"`
 	CurrentBalanceMinor int64  `json:"current_balance_minor"`
 	Version             int64  `json:"version"`
+	UpdatedAt           string `json:"updated_at"`
 }
 
 func toWalletSnapshot(w wallets.Wallet) walletSnapshot {
-	return walletSnapshot{ID: w.ID.String(), CurrentBalanceMinor: w.CurrentBalanceMinor, Version: w.Version}
+	return walletSnapshot{
+		ID:                  w.ID.String(),
+		Name:                w.Name,
+		Currency:            w.Currency,
+		CurrentBalanceMinor: w.CurrentBalanceMinor,
+		Version:             w.Version,
+		UpdatedAt:           w.UpdatedAt.Format(timeLayout),
+	}
 }
 
 func sha256Sum(b []byte) []byte {
