@@ -101,6 +101,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 controller: _passwordController,
                 label: 'Password',
                 errorText: state.fieldErrors['password'],
+                onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => canSubmit ? _submit() : null,
               ),
               Align(

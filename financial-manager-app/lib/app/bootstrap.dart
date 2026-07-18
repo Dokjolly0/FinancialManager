@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import '../core/observability/app_logger.dart';
 
@@ -16,6 +17,7 @@ Future<void> bootstrap(Widget Function() appBuilder) async {
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      await initializeDateFormatting('it_IT');
 
       FlutterError.onError = (details) {
         logger.error(

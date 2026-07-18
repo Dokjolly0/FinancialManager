@@ -6,6 +6,10 @@ import '../features/authentication/presentation/screens/forgot_password_screen.d
 import '../features/authentication/presentation/screens/google_registration_completion_screen.dart';
 import '../features/authentication/presentation/screens/login_screen.dart';
 import '../features/authentication/presentation/screens/register_screen.dart';
+import '../features/home/presentation/screens/home_screen.dart';
+import '../features/transactions/presentation/screens/new_transaction_screen.dart';
+import '../features/transactions/presentation/screens/transaction_detail_screen.dart';
+import 'app_shell.dart';
 import 'placeholder_screen.dart';
 import 'session/session_controller.dart';
 import 'session/session_status.dart';
@@ -92,28 +96,69 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const GoogleRegistrationCompletionScreen(),
       ),
       GoRoute(
+        path: AppRoutes.transactionsNew,
+        builder: (_, _) => const NewTransactionScreen(),
+      ),
+      GoRoute(
         path: '/app/transactions/:id',
-        builder: (_, state) => FeaturePlaceholderScreen(
-          routeName: 'transaction ${state.pathParameters['id']}',
-        ),
+        builder: (_, state) =>
+            TransactionDetailScreen(transactionId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/app/transactions/:id/edit',
-        builder: (_, state) => FeaturePlaceholderScreen(
-          routeName: 'edit transaction ${state.pathParameters['id']}',
-        ),
+        builder: (_, state) =>
+            NewTransactionScreen(editTransactionId: state.pathParameters['id']),
       ),
       ..._placeholderRoutes,
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            AppShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.home,
+                builder: (_, _) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.history,
+                builder: (_, _) => const FeaturePlaceholderScreen(
+                  routeName: AppRoutes.history,
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.reports,
+                builder: (_, _) => const FeaturePlaceholderScreen(
+                  routeName: AppRoutes.reports,
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.account,
+                builder: (_, _) => const FeaturePlaceholderScreen(
+                  routeName: AppRoutes.account,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     ],
   );
 });
 
 const _placeholderPaths = [
-  AppRoutes.home,
-  AppRoutes.transactionsNew,
-  AppRoutes.history,
-  AppRoutes.reports,
-  AppRoutes.account,
   AppRoutes.accountProfile,
   AppRoutes.accountSecurity,
   AppRoutes.accountLinkedAccounts,

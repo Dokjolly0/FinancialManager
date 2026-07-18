@@ -9,6 +9,7 @@ class PasswordField extends StatefulWidget {
     this.errorText,
     this.textInputAction = TextInputAction.done,
     this.onSubmitted,
+    this.onChanged,
   });
 
   final TextEditingController controller;
@@ -16,6 +17,7 @@ class PasswordField extends StatefulWidget {
   final String? errorText;
   final TextInputAction textInputAction;
   final void Function(String)? onSubmitted;
+  final void Function(String)? onChanged;
 
   @override
   State<PasswordField> createState() => _PasswordFieldState();
@@ -31,6 +33,7 @@ class _PasswordFieldState extends State<PasswordField> {
       obscureText: _obscure,
       textInputAction: widget.textInputAction,
       onSubmitted: widget.onSubmitted,
+      onChanged: widget.onChanged,
       decoration: InputDecoration(
         labelText: widget.label,
         errorText: widget.errorText,
