@@ -5,11 +5,15 @@ import 'package:intl/intl.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/amount_field.dart';
 import '../../../../core/widgets/direction_segmented_control.dart';
+import '../../../categories/data/providers.dart';
+import '../../../categories/domain/models/category.dart';
+import '../../../categories/presentation/widgets/category_picker_sheet.dart';
+import '../../domain/models/transaction_direction.dart';
 import '../view_models/transaction_form_controller.dart';
+import '../widgets/title_autocomplete_field.dart';
 
 /// New / edit operation (plan.md section 7.6, 7.11 — the same form).
-/// Category and title-autocomplete-from-templates are deferred to Fase 5
-/// (categories, transaction templates); image attachment to Fase 6 (media).
+/// Image attachment is deferred to Fase 6 (media).
 class NewTransactionScreen extends ConsumerStatefulWidget {
   const NewTransactionScreen({super.key, this.editTransactionId});
 
@@ -58,6 +62,21 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
         );
   }
 
+  Future<void> _pickCategory(
+    BuildContext context,
+    TransactionDirection direction,
+  ) async {
+    final controller = ref.read(
+      transactionFormControllerProvider(widget.editTransactionId).notifier,
+    );
+    final selected = await CategoryPickerSheet.show(
+      context,
+      direction: direction,
+    );
+    if (!mounted) return;
+    controller.setCategory(selected);
+  }
+
   Future<void> _submit() async {
     final controller = ref.read(
       transactionFormControllerProvider(widget.editTransactionId).notifier,
@@ -79,6 +98,7 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
     final controller = ref.read(
       transactionFormControllerProvider(widget.editTransactionId).notifier,
     );
+    final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
 
     if (!_controllersSynced && !state.isLoadingExisting) {
       _amountController.text = state.amountInput;
@@ -88,6 +108,15 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
     }
 
     final occurredAt = state.occurredAt ?? DateTime.now();
+    final direction = state.isCredit
+        ? TransactionDirection.credit
+        : TransactionDirection.debit;
+
+    Category? selectedCategory;
+    if (state.categoryId != null) {
+      final matches = categories.where((c) => c.id == state.categoryId);
+      selectedCategory = matches.isEmpty ? null : matches.first;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -114,14 +143,37 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
                     errorText: state.fieldErrors['amount_minor'],
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  TextField(
+                  TitleAutocompleteField(
                     controller: _titleController,
-                    decoration: InputDecoration(
-                      labelText: 'Titolo',
-                      errorText: state.fieldErrors['title'],
-                    ),
+                    direction: direction,
+                    errorText: state.fieldErrors['title'],
+                    onChanged: controller.setTitle,
+                    onSuggestionSelected: (template) {
+                      final matches = categories.where(
+                        (c) => c.id == template.defaultCategoryId,
+                      );
+                      controller.applyTemplate(
+                        template,
+                        matches.isEmpty ? null : matches.first,
+                      );
+                      _descriptionController.text = ref
+                          .read(
+                            transactionFormControllerProvider(
+                              widget.editTransactionId,
+                            ),
+                          )
+                          .description;
+                    },
                   ),
                   const SizedBox(height: AppSpacing.sm),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.label_outline),
+                    title: Text(selectedCategory?.name ?? 'Nessuna categoria'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _pickCategory(context, direction),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Data e ora'),
@@ -138,6 +190,18 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Descrizione (facoltativa)',
                     ),
+                    onChanged: controller.setDescription,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      state.selectedTemplateId != null
+                          ? 'Aggiorna anche il modello'
+                          : 'Salva come modello',
+                    ),
+                    value: state.saveAsTemplate,
+                    onChanged: controller.setSaveAsTemplate,
                   ),
                   if (state.generalError != null) ...[
                     const SizedBox(height: AppSpacing.sm),

@@ -4,6 +4,9 @@ import '../../../../core/errors/app_error.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/formatting/money.dart';
 import '../../../../core/state/ledger_revision_provider.dart';
+import '../../../categories/domain/models/category.dart';
+import '../../../templates/data/providers.dart';
+import '../../../templates/domain/models/transaction_template.dart';
 import '../../data/providers.dart';
 import '../../domain/models/transaction_direction.dart';
 import '../../domain/repositories/transaction_repository.dart';
@@ -34,6 +37,8 @@ class TransactionFormController
         amountInput: (existing.amount.minorUnits / 100).toStringAsFixed(2),
         title: existing.title,
         description: existing.description ?? '',
+        categoryId: existing.categoryId,
+        clearCategory: existing.categoryId == null,
         occurredAt: existing.occurredAt.toLocal(),
         expectedVersion: existing.version,
       );
@@ -54,14 +59,49 @@ class TransactionFormController
     generalError: null,
   );
 
-  void setTitle(String value) =>
-      state = state.copyWith(title: value, fieldErrors: {});
+  /// Setting the title manually breaks the link to a previously selected
+  /// template the moment it stops matching that template's title (plan.md
+  /// section 4.4: "Se l'utente modifica un campo dopo aver selezionato un
+  /// modello, la transazione può divergere senza modificare automaticamente
+  /// il modello").
+  void setTitle(String value) {
+    final diverged =
+        state.selectedTemplateId != null &&
+        normalizeTemplateTitle(value) != normalizeTemplateTitle(state.title);
+    state = state.copyWith(
+      title: value,
+      fieldErrors: {},
+      clearSelectedTemplate: diverged,
+    );
+  }
 
   void setDescription(String value) =>
       state = state.copyWith(description: value);
 
   void setOccurredAt(DateTime value) =>
       state = state.copyWith(occurredAt: value);
+
+  void setCategory(Category? category) {
+    state = state.copyWith(
+      categoryId: category?.id,
+      clearCategory: category == null,
+    );
+  }
+
+  void setSaveAsTemplate(bool value) =>
+      state = state.copyWith(saveAsTemplate: value);
+
+  /// Applies an autocomplete suggestion (plan.md section 7.6: "Selezionando
+  /// un suggerimento vengono precompilati i valori associati").
+  void applyTemplate(TransactionTemplate template, Category? category) {
+    state = state.copyWith(
+      title: template.title,
+      selectedTemplateId: template.id,
+      description: template.defaultDescription ?? state.description,
+      categoryId: category?.id,
+      clearCategory: category == null,
+    );
+  }
 
   Future<bool> submit() async {
     final amountMinor = Money.parseMinorUnits(state.amountInput);
@@ -90,6 +130,9 @@ class TransactionFormController
     final description = state.description.trim().isEmpty
         ? null
         : state.description.trim();
+    final title = state.title.trim();
+    final categoryId = state.categoryId;
+    final templateId = state.selectedTemplateId;
 
     try {
       if (state.isEditMode) {
@@ -100,8 +143,10 @@ class TransactionFormController
               UpdateTransactionParams(
                 direction: direction,
                 amountMinor: amountMinor!,
-                title: state.title.trim(),
+                title: title,
                 description: description,
+                categoryId: categoryId,
+                templateId: templateId,
                 occurredAt: occurredAt,
                 expectedVersion: state.expectedVersion!,
               ),
@@ -114,14 +159,19 @@ class TransactionFormController
                 direction: direction,
                 amountMinor: amountMinor!,
                 currency: 'EUR',
-                title: state.title.trim(),
+                title: title,
                 description: description,
+                categoryId: categoryId,
+                templateId: templateId,
                 occurredAt: occurredAt,
               ),
             );
       }
       state = state.copyWith(isSubmitting: false);
       ref.bumpLedgerRevision();
+      if (state.saveAsTemplate) {
+        await _persistTemplate(direction, title, categoryId, description);
+      }
       return true;
     } on AppError catch (e) {
       final presentation = presentError(e);
@@ -131,6 +181,39 @@ class TransactionFormController
         fieldErrors: presentation.fieldErrors,
       );
       return false;
+    }
+  }
+
+  /// Best-effort: the ledger mutation already succeeded, so a failure here
+  /// (e.g. a race with another device creating the same-titled template)
+  /// must never surface as an error to the user (plan.md section 4.4:
+  /// "Dopo il salvataggio può essere offerta l'azione 'Aggiorna anche il
+  /// modello'" — a convenience, not part of the financial operation).
+  Future<void> _persistTemplate(
+    TransactionDirection direction,
+    String title,
+    String? categoryId,
+    String? description,
+  ) async {
+    try {
+      final templates = ref.read(templateRepositoryProvider);
+      if (state.selectedTemplateId != null) {
+        await templates.update(
+          state.selectedTemplateId!,
+          title: title,
+          defaultCategoryId: categoryId,
+          defaultDescription: description,
+        );
+      } else {
+        await templates.create(
+          direction: direction,
+          title: title,
+          defaultCategoryId: categoryId,
+          defaultDescription: description,
+        );
+      }
+    } catch (_) {
+      // Swallowed by design — see doc comment above.
     }
   }
 }

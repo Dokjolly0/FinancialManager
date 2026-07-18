@@ -5,6 +5,9 @@ class TransactionFormState {
     this.amountInput = '',
     this.title = '',
     this.description = '',
+    this.categoryId,
+    this.selectedTemplateId,
+    this.saveAsTemplate = false,
     this.occurredAt,
     this.expectedVersion,
     this.isSubmitting = false,
@@ -17,6 +20,9 @@ class TransactionFormState {
   final String amountInput;
   final String title;
   final String description;
+  final String? categoryId;
+  final String? selectedTemplateId;
+  final bool saveAsTemplate;
   final DateTime? occurredAt;
   final int? expectedVersion;
   final bool isSubmitting;
@@ -31,6 +37,11 @@ class TransactionFormState {
     String? amountInput,
     String? title,
     String? description,
+    String? categoryId,
+    bool clearCategory = false,
+    String? selectedTemplateId,
+    bool clearSelectedTemplate = false,
+    bool? saveAsTemplate,
     DateTime? occurredAt,
     int? expectedVersion,
     bool? isSubmitting,
@@ -43,6 +54,11 @@ class TransactionFormState {
       amountInput: amountInput ?? this.amountInput,
       title: title ?? this.title,
       description: description ?? this.description,
+      categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
+      selectedTemplateId: clearSelectedTemplate
+          ? null
+          : (selectedTemplateId ?? this.selectedTemplateId),
+      saveAsTemplate: saveAsTemplate ?? this.saveAsTemplate,
       occurredAt: occurredAt ?? this.occurredAt,
       expectedVersion: expectedVersion ?? this.expectedVersion,
       isSubmitting: isSubmitting ?? this.isSubmitting,

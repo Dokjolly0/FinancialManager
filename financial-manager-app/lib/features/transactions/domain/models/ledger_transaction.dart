@@ -9,6 +9,8 @@ class LedgerTransaction {
     required this.amount,
     required this.title,
     this.description,
+    this.categoryId,
+    this.templateId,
     required this.occurredAt,
     required this.createdAt,
     required this.updatedAt,
@@ -21,6 +23,8 @@ class LedgerTransaction {
   final Money amount;
   final String title;
   final String? description;
+  final String? categoryId;
+  final String? templateId;
   final DateTime occurredAt;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -39,6 +43,8 @@ class LedgerTransaction {
       ),
       title: json['title'] as String,
       description: json['description'] as String?,
+      categoryId: json['category_id'] as String?,
+      templateId: json['template_id'] as String?,
       occurredAt: DateTime.parse(json['occurred_at'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),

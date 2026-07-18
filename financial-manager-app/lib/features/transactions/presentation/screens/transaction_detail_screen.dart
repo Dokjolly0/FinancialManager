@@ -8,6 +8,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/semantic_colors.dart';
 import '../../../../core/widgets/confirmation_sheet.dart';
 import '../../../../core/widgets/inline_error.dart';
+import '../../../categories/data/providers.dart';
 import '../../domain/models/transaction_direction.dart';
 import '../view_models/transaction_detail_controller.dart';
 
@@ -96,6 +97,13 @@ class _Detail extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
     final dateFormat = DateFormat('d MMMM y, HH:mm', 'it_IT');
 
+    String? categoryName;
+    if (transaction.categoryId != null) {
+      final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+      final matches = categories.where((c) => c.id == transaction.categoryId);
+      categoryName = matches.isEmpty ? null : matches.first.name;
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -109,6 +117,8 @@ class _Detail extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           _Row(label: 'Titolo', value: transaction.title),
+          if (categoryName != null)
+            _Row(label: 'Categoria', value: categoryName),
           _Row(label: 'Origine', value: _kindLabel(transaction.kind)),
           _Row(
             label: 'Data e ora',

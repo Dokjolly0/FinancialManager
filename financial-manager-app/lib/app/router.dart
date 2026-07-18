@@ -6,6 +6,7 @@ import '../features/authentication/presentation/screens/forgot_password_screen.d
 import '../features/authentication/presentation/screens/google_registration_completion_screen.dart';
 import '../features/authentication/presentation/screens/login_screen.dart';
 import '../features/authentication/presentation/screens/register_screen.dart';
+import '../features/history/presentation/screens/history_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 import '../features/transactions/presentation/screens/new_transaction_screen.dart';
 import '../features/transactions/presentation/screens/transaction_detail_screen.dart';
@@ -126,9 +127,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.history,
-                builder: (_, _) => const FeaturePlaceholderScreen(
-                  routeName: AppRoutes.history,
-                ),
+                builder: (_, _) => const HistoryScreen(),
               ),
             ],
           ),

@@ -27,6 +27,13 @@ class TransactionApi {
     String? cursor,
     required int limit,
     String? direction,
+    String? kind,
+    String? categoryId,
+    String? title,
+    int? amountMinMinor,
+    int? amountMaxMinor,
+    DateTime? occurredFrom,
+    DateTime? occurredTo,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/transactions',
@@ -34,6 +41,15 @@ class TransactionApi {
         'limit': limit,
         if (cursor != null) 'cursor': cursor,
         if (direction != null) 'direction': direction,
+        if (kind != null) 'kind': kind,
+        if (categoryId != null) 'category_id': categoryId,
+        if (title != null && title.isNotEmpty) 'title': title,
+        if (amountMinMinor != null) 'amount_min_minor': amountMinMinor,
+        if (amountMaxMinor != null) 'amount_max_minor': amountMaxMinor,
+        if (occurredFrom != null)
+          'occurred_from': occurredFrom.toUtc().toIso8601String(),
+        if (occurredTo != null)
+          'occurred_to': occurredTo.toUtc().toIso8601String(),
       },
     );
     return response.data!;

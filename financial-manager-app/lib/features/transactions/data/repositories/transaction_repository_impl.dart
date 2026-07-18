@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 
 import '../../../../core/errors/error_mapper.dart';
 import '../../domain/models/ledger_transaction.dart';
-import '../../domain/models/transaction_direction.dart';
 import '../../domain/models/transaction_page.dart';
 import '../../domain/models/wallet.dart';
 import '../../domain/repositories/transaction_repository.dart';
@@ -34,6 +33,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         'currency': params.currency,
         'title': params.title,
         'description': params.description,
+        'category_id': params.categoryId,
+        'template_id': params.templateId,
         'occurred_at': params.occurredAt.toUtc().toIso8601String(),
       });
       return _parseWithWallet(response);
@@ -51,17 +52,39 @@ class TransactionRepositoryImpl implements TransactionRepository {
     }
   }
 
+  /// Maps the "tutte/uscite/entrate/rettifiche" type filter (plan.md
+  /// section 7.9) onto the backend's direction/kind query params. Standard
+  /// transactions are filtered by direction; adjustments are a kind
+  /// regardless of direction; "all" leaves both unset so OPENING_BALANCE
+  /// and BALANCE_ADJUSTMENT rows still show up with their own tile style.
+  (String?, String?) _directionAndKindFor(TransactionTypeFilter type) {
+    return switch (type) {
+      TransactionTypeFilter.all => (null, null),
+      TransactionTypeFilter.debit => ('DEBIT', 'STANDARD'),
+      TransactionTypeFilter.credit => ('CREDIT', 'STANDARD'),
+      TransactionTypeFilter.adjustments => (null, 'BALANCE_ADJUSTMENT'),
+    };
+  }
+
   @override
   Future<TransactionPage> listTransactions({
     String? cursor,
     int limit = 20,
-    TransactionDirection? direction,
+    TransactionListFilter filter = const TransactionListFilter(),
   }) async {
     try {
+      final (direction, kind) = _directionAndKindFor(filter.type);
       final response = await _api.list(
         cursor: cursor,
         limit: limit,
-        direction: direction?.toApi(),
+        direction: direction,
+        kind: kind,
+        categoryId: filter.categoryId,
+        title: filter.title,
+        amountMinMinor: filter.amountMinMinor,
+        amountMaxMinor: filter.amountMaxMinor,
+        occurredFrom: filter.occurredFrom,
+        occurredTo: filter.occurredTo,
       );
       final rawTransactions = response['transactions'] as List<dynamic>? ?? [];
       return TransactionPage(
@@ -89,6 +112,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         'amount_minor': params.amountMinor,
         'title': params.title,
         'description': params.description,
+        'category_id': params.categoryId,
+        'template_id': params.templateId,
         'occurred_at': params.occurredAt.toUtc().toIso8601String(),
         'version': params.expectedVersion,
       });

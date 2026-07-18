@@ -10,6 +10,8 @@ class CreateTransactionParams {
     required this.currency,
     required this.title,
     this.description,
+    this.categoryId,
+    this.templateId,
     required this.occurredAt,
   });
 
@@ -18,6 +20,8 @@ class CreateTransactionParams {
   final String currency;
   final String title;
   final String? description;
+  final String? categoryId;
+  final String? templateId;
   final DateTime occurredAt;
 }
 
@@ -27,6 +31,8 @@ class UpdateTransactionParams {
     required this.amountMinor,
     required this.title,
     this.description,
+    this.categoryId,
+    this.templateId,
     required this.occurredAt,
     required this.expectedVersion,
   });
@@ -35,8 +41,85 @@ class UpdateTransactionParams {
   final int amountMinor;
   final String title;
   final String? description;
+  final String? categoryId;
+  final String? templateId;
   final DateTime occurredAt;
   final int expectedVersion;
+}
+
+/// Which transaction kinds a history query should include (plan.md section
+/// 7.9 "Tipo: tutte, uscite, entrate, rettifiche"). [all] means no
+/// direction/kind filter at all — STANDARD, OPENING_BALANCE, and
+/// BALANCE_ADJUSTMENT rows all show up, each with their own tile styling.
+enum TransactionTypeFilter { all, debit, credit, adjustments }
+
+/// Filters for [TransactionRepository.listTransactions] (plan.md section
+/// 7.9, 17.1). All fields are optional; a `null`/empty field means
+/// "unfiltered" for that dimension.
+class TransactionListFilter {
+  const TransactionListFilter({
+    this.type = TransactionTypeFilter.all,
+    this.title,
+    this.categoryId,
+    this.amountMinMinor,
+    this.amountMaxMinor,
+    this.occurredFrom,
+    this.occurredTo,
+  });
+
+  final TransactionTypeFilter type;
+  final String? title;
+  final String? categoryId;
+  final int? amountMinMinor;
+  final int? amountMaxMinor;
+  final DateTime? occurredFrom;
+  final DateTime? occurredTo;
+
+  int get activeCount {
+    var count = 0;
+    if (type != TransactionTypeFilter.all) count++;
+    if (title != null && title!.isNotEmpty) count++;
+    if (categoryId != null) count++;
+    if (amountMinMinor != null) count++;
+    if (amountMaxMinor != null) count++;
+    if (occurredFrom != null) count++;
+    if (occurredTo != null) count++;
+    return count;
+  }
+
+  /// Each optional field has a matching `clearX` flag since `?? this.x`
+  /// alone can't distinguish "leave unchanged" from "clear back to null".
+  TransactionListFilter copyWith({
+    TransactionTypeFilter? type,
+    String? title,
+    bool clearTitle = false,
+    String? categoryId,
+    bool clearCategoryId = false,
+    int? amountMinMinor,
+    bool clearAmountMinMinor = false,
+    int? amountMaxMinor,
+    bool clearAmountMaxMinor = false,
+    DateTime? occurredFrom,
+    bool clearOccurredFrom = false,
+    DateTime? occurredTo,
+    bool clearOccurredTo = false,
+  }) {
+    return TransactionListFilter(
+      type: type ?? this.type,
+      title: clearTitle ? null : (title ?? this.title),
+      categoryId: clearCategoryId ? null : (categoryId ?? this.categoryId),
+      amountMinMinor: clearAmountMinMinor
+          ? null
+          : (amountMinMinor ?? this.amountMinMinor),
+      amountMaxMinor: clearAmountMaxMinor
+          ? null
+          : (amountMaxMinor ?? this.amountMaxMinor),
+      occurredFrom: clearOccurredFrom
+          ? null
+          : (occurredFrom ?? this.occurredFrom),
+      occurredTo: clearOccurredTo ? null : (occurredTo ?? this.occurredTo),
+    );
+  }
 }
 
 /// Domain-facing ledger operations (plan.md section 14.5). The
@@ -50,7 +133,7 @@ abstract class TransactionRepository {
   Future<TransactionPage> listTransactions({
     String? cursor,
     int limit = 20,
-    TransactionDirection? direction,
+    TransactionListFilter filter = const TransactionListFilter(),
   });
 
   Future<TransactionWithWallet> updateStandard(

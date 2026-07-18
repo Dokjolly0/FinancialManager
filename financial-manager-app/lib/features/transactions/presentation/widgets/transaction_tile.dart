@@ -9,10 +9,21 @@ import '../../domain/models/transaction_direction.dart';
 /// 7.5, 7.9). Direction is conveyed by icon, sign, and position — not
 /// color alone (plan.md section 6.7).
 class TransactionTile extends StatelessWidget {
-  const TransactionTile({super.key, required this.transaction, this.onTap});
+  const TransactionTile({
+    super.key,
+    required this.transaction,
+    this.onTap,
+    this.categoryName,
+  });
 
   final LedgerTransaction transaction;
   final VoidCallback? onTap;
+
+  /// Resolved from the transaction's category_id by the caller (plan.md
+  /// section 7.9: "Ogni riga mostra ... titolo, categoria, ora e
+  /// importo") — this widget doesn't know how to look categories up
+  /// itself, so it stays usable without a Riverpod context in tests.
+  final String? categoryName;
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +34,11 @@ class TransactionTile extends StatelessWidget {
 
     final amountColor = isCredit ? semantic.credit : semantic.debit;
     final sign = isCredit ? '+' : '−';
+
+    final time = DateFormat.Hm().format(transaction.occurredAt.toLocal());
+    final subtitle = isSpecial
+        ? _kindLabel(transaction.kind)
+        : (categoryName != null ? '$categoryName · $time' : time);
 
     return ListTile(
       onTap: onTap,
@@ -40,12 +56,7 @@ class TransactionTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Text(
-        isSpecial
-            ? _kindLabel(transaction.kind)
-            : DateFormat.Hm().format(transaction.occurredAt.toLocal()),
-        style: textTheme.bodySmall,
-      ),
+      subtitle: Text(subtitle, style: textTheme.bodySmall),
       trailing: Text(
         '$sign ${transaction.amount.format()}',
         style: textTheme.bodyLarge?.copyWith(
