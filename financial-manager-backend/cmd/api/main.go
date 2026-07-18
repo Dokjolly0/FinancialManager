@@ -12,11 +12,21 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
+
+	"financial-manager-backend/internal/auth"
+	"financial-manager-backend/internal/email"
+	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/config"
 	"financial-manager-backend/internal/platform/database"
 	"financial-manager-backend/internal/platform/httpserver"
 	"financial-manager-backend/internal/platform/observability"
+	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/redisclient"
+	"financial-manager-backend/internal/transactions"
+	"financial-manager-backend/internal/users"
+	"financial-manager-backend/internal/wallets"
 )
 
 func main() {
@@ -56,6 +66,7 @@ func run() error {
 	}
 
 	router := httpserver.New(logger, checks)
+	mountRoutes(router, dbPool, redisClient, cfg, logger)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
@@ -87,4 +98,47 @@ func run() error {
 
 	logger.Info("shutdown_complete")
 	return nil
+}
+
+// mountRoutes wires each module's repositories, services, and HTTP
+// handlers onto the router. Kept as one function (rather than spread
+// across the module packages) so the dependency graph between modules is
+// visible in one place.
+func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Client, cfg config.Config, logger *slog.Logger) {
+	usersRepo := users.NewRepository(dbPool)
+	walletsRepo := wallets.NewRepository(dbPool)
+	transactionsRepo := transactions.NewRepository(dbPool)
+	credentialsRepo := auth.NewCredentialsRepository(dbPool)
+	sessionsRepo := auth.NewSessionRepository(dbPool)
+	emailVerifyRepo := auth.NewEmailVerificationTokenRepository(dbPool)
+	passwordResetRepo := auth.NewPasswordResetTokenRepository(dbPool)
+
+	authService := auth.NewService(auth.Deps{
+		DB:              dbPool,
+		Users:           usersRepo,
+		Credentials:     credentialsRepo,
+		Sessions:        sessionsRepo,
+		EmailVerify:     emailVerifyRepo,
+		PasswordReset:   passwordResetRepo,
+		Wallets:         walletsRepo,
+		Transactions:    transactionsRepo,
+		RateLimiter:     ratelimit.New(redisClient),
+		EmailSender:     email.DevLogSender{Logger: logger},
+		Clock:           clock.System{},
+		JWTSigningKey:   cfg.JWTSigningKey,
+		AccessTokenTTL:  cfg.AccessTokenTTL,
+		RefreshTokenTTL: cfg.RefreshTokenTTL,
+	})
+	authHandler := auth.NewHandler(authService)
+	authHandler.MountPublic(router)
+
+	usersHandler := users.NewHandler(users.NewService(usersRepo))
+	walletsHandler := wallets.NewHandler(walletsRepo)
+
+	router.Group(func(r chi.Router) {
+		r.Use(auth.Middleware(cfg.JWTSigningKey))
+		authHandler.MountProtected(r)
+		usersHandler.Mount(r)
+		walletsHandler.Mount(r)
+	})
 }
