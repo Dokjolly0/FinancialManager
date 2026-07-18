@@ -1,0 +1,18 @@
+# Local development overrides. Host ports are fixed by the plan (section
+# 21.3): PostgreSQL 10001, Redis 10002, API 10003. Bound to loopback only —
+# no reason to expose dev databases on the LAN either.
+
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:10001:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:10002:6379"
+
+  api:
+    ports:
+      - "127.0.0.1:10003:8080"
+    environment:
+      APP_ENV: local

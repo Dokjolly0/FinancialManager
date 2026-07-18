@@ -1,0 +1,60 @@
+openapi: 3.1.0
+info:
+  title: FinancialManager API
+  version: "1"
+  description: >
+    REST API for the FinancialManager app (plan.md section 14). This
+    document grows alongside each backend module as it is implemented;
+    only platform/health endpoints exist so far.
+servers:
+  - url: /v1
+
+paths:
+  /health/live:
+    get:
+      summary: Liveness probe. Never depends on external services.
+      operationId: getHealthLive
+      tags: [health]
+      responses:
+        "200":
+          description: Process is running.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [live]
+  /health/ready:
+    get:
+      summary: Readiness probe. Checks PostgreSQL and Redis connectivity.
+      operationId: getHealthReady
+      tags: [health]
+      responses:
+        "200":
+          description: Ready to serve traffic.
+        "503":
+          description: One or more dependencies are unavailable.
+
+components:
+  schemas:
+    Error:
+      type: object
+      description: Uniform error envelope (plan.md section 10.6).
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            field_errors:
+              type: object
+              additionalProperties:
+                type: string
+            request_id:
+              type: string

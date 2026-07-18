@@ -1,0 +1,24 @@
+# Production overrides. PostgreSQL and Redis are not published at all —
+# only services on backend_internal can reach them. If an operational
+# requirement ever forces host ports for debugging, bind to 127.0.0.1 only
+# (plan.md section 21.3), never 0.0.0.0.
+
+services:
+  api:
+    environment:
+      APP_ENV: production
+    restart: unless-stopped
+
+  worker:
+    environment:
+      APP_ENV: production
+    restart: unless-stopped
+
+  postgres:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  object-storage:
+    restart: unless-stopped

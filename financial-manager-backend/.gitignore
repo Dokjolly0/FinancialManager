@@ -1,0 +1,13 @@
+# Build artifacts
+/bin/
+/tmp/
+
+# Environment secrets — never commit real values, only .env.example
+.env
+.env.*
+!.env.example
+
+# Go
+*.test
+*.out
+vendor/
