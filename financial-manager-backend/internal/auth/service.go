@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"financial-manager-backend/internal/email"
+	"financial-manager-backend/internal/identities"
 	"financial-manager-backend/internal/platform/apierror"
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/database"
@@ -52,6 +53,9 @@ type Service struct {
 	passwordReset     *PasswordResetTokenRepository
 	wallets           *wallets.Repository
 	transactions      *transactions.Repository
+	identities        *identities.Repository
+	googleVerifier    identities.GoogleIDTokenVerifier
+	ticketStore       *identities.TicketStore
 	rateLimiter       *ratelimit.Limiter
 	emailSender       email.Sender
 	clock             clock.Clock
@@ -69,6 +73,9 @@ type Deps struct {
 	PasswordReset   *PasswordResetTokenRepository
 	Wallets         *wallets.Repository
 	Transactions    *transactions.Repository
+	Identities      *identities.Repository
+	GoogleVerifier  identities.GoogleIDTokenVerifier
+	TicketStore     *identities.TicketStore
 	RateLimiter     *ratelimit.Limiter
 	EmailSender     email.Sender
 	Clock           clock.Clock
@@ -87,6 +94,9 @@ func NewService(d Deps) *Service {
 		passwordReset:     d.PasswordReset,
 		wallets:           d.Wallets,
 		transactions:      d.Transactions,
+		identities:        d.Identities,
+		googleVerifier:    d.GoogleVerifier,
+		ticketStore:       d.TicketStore,
 		rateLimiter:       d.RateLimiter,
 		emailSender:       d.EmailSender,
 		clock:             d.Clock,

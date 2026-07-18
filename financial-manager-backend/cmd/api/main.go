@@ -17,6 +17,7 @@ import (
 
 	"financial-manager-backend/internal/auth"
 	"financial-manager-backend/internal/email"
+	"financial-manager-backend/internal/identities"
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/config"
 	"financial-manager-backend/internal/platform/database"
@@ -112,6 +113,11 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	sessionsRepo := auth.NewSessionRepository(dbPool)
 	emailVerifyRepo := auth.NewEmailVerificationTokenRepository(dbPool)
 	passwordResetRepo := auth.NewPasswordResetTokenRepository(dbPool)
+	identitiesRepo := identities.NewRepository(dbPool)
+
+	var googleVerifier identities.GoogleIDTokenVerifier = identities.RealGoogleIDTokenVerifier{
+		Audiences: cfg.GoogleClientIDs,
+	}
 
 	authService := auth.NewService(auth.Deps{
 		DB:              dbPool,
@@ -122,6 +128,9 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		PasswordReset:   passwordResetRepo,
 		Wallets:         walletsRepo,
 		Transactions:    transactionsRepo,
+		Identities:      identitiesRepo,
+		GoogleVerifier:  googleVerifier,
+		TicketStore:     identities.NewTicketStore(redisClient),
 		RateLimiter:     ratelimit.New(redisClient),
 		EmailSender:     email.DevLogSender{Logger: logger},
 		Clock:           clock.System{},
@@ -131,6 +140,7 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	})
 	authHandler := auth.NewHandler(authService)
 	authHandler.MountPublic(router)
+	authHandler.MountGooglePublic(router)
 
 	usersHandler := users.NewHandler(users.NewService(usersRepo))
 	walletsHandler := wallets.NewHandler(walletsRepo)
@@ -138,6 +148,7 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	router.Group(func(r chi.Router) {
 		r.Use(auth.Middleware(cfg.JWTSigningKey))
 		authHandler.MountProtected(r)
+		authHandler.MountGoogleProtected(r)
 		usersHandler.Mount(r)
 		walletsHandler.Mount(r)
 	})
