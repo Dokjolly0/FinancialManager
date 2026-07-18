@@ -1,7 +1,7 @@
-// Command worker runs asynchronous background jobs (image variant
-// generation, exports, deferred account deletion, asset cleanup, email
-// sending — see plan.md section 10.8). For now it only establishes
-// connectivity and idles; job handlers are added as those features land.
+// Command worker runs asynchronous background jobs. Today that's just
+// balance reconciliation (plan.md section 13.6, 22.3); image variant
+// generation, exports, deferred account deletion, asset cleanup, and email
+// sending (section 10.8) are added alongside the features that need them.
 package main
 
 import (
@@ -11,12 +11,18 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/config"
 	"financial-manager-backend/internal/platform/database"
 	"financial-manager-backend/internal/platform/observability"
 	"financial-manager-backend/internal/platform/redisclient"
+	"financial-manager-backend/internal/transactions"
+	"financial-manager-backend/internal/wallets"
 )
+
+const reconciliationInterval = time.Hour
 
 func main() {
 	if err := run(); err != nil {
@@ -49,8 +55,53 @@ func run() error {
 	}
 	defer redisClient.Close()
 
+	transactionsService := transactions.NewService(transactions.Deps{
+		DB:           dbPool,
+		Transactions: transactions.NewRepository(dbPool),
+		Wallets:      wallets.NewRepository(dbPool),
+		Audit:        transactions.NewAuditRepository(dbPool),
+		Clock:        clock.System{},
+	})
+
 	logger.Info("worker_started")
-	<-ctx.Done()
-	logger.Info("worker_shutdown")
-	return nil
+
+	runReconciliation(ctx, logger, transactionsService)
+
+	ticker := time.NewTicker(reconciliationInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("worker_shutdown")
+			return nil
+		case <-ticker.C:
+			runReconciliation(ctx, logger, transactionsService)
+		}
+	}
+}
+
+// runReconciliation compares every wallet's stored balance against its
+// ledger and logs (never silently auto-corrects — plan.md section 13.6:
+// "non correggere automaticamente senza audit") any mismatch found.
+func runReconciliation(ctx context.Context, logger *slog.Logger, svc *transactions.Service) {
+	mismatches, err := svc.Reconcile(ctx)
+	if err != nil {
+		logger.Error("reconciliation_failed", slog.String("error", err.Error()))
+		return
+	}
+
+	if len(mismatches) == 0 {
+		logger.Info("reconciliation_ok")
+		return
+	}
+
+	for _, m := range mismatches {
+		logger.Warn("reconciliation_mismatch",
+			slog.String("wallet_id", m.WalletID.String()),
+			slog.String("user_id", m.UserID.String()),
+			slog.Int64("stored_balance_minor", m.StoredBalance),
+			slog.Int64("recalculated_sum_minor", m.RecalculatedSum),
+		)
+	}
 }

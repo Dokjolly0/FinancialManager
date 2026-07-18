@@ -145,11 +145,21 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	usersHandler := users.NewHandler(users.NewService(usersRepo))
 	walletsHandler := wallets.NewHandler(walletsRepo)
 
+	transactionsService := transactions.NewService(transactions.Deps{
+		DB:           dbPool,
+		Transactions: transactionsRepo,
+		Wallets:      walletsRepo,
+		Audit:        transactions.NewAuditRepository(dbPool),
+		Clock:        clock.System{},
+	})
+	transactionsHandler := transactions.NewHandler(transactionsService)
+
 	router.Group(func(r chi.Router) {
 		r.Use(auth.Middleware(cfg.JWTSigningKey))
 		authHandler.MountProtected(r)
 		authHandler.MountGoogleProtected(r)
 		usersHandler.Mount(r)
 		walletsHandler.Mount(r)
+		transactionsHandler.Mount(r)
 	})
 }

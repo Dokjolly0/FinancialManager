@@ -73,3 +73,18 @@ func (r *Repository) LockForUpdate(ctx context.Context, userID uuid.UUID) (Walle
 	)
 	return scanWallet(row)
 }
+
+// UpdateBalance applies the new denormalized balance. expectedVersion is
+// the version read under the same row lock (LockForUpdate) — since no
+// concurrent writer can have changed it in between, a mismatch here would
+// indicate a logic bug, not a real race, but checking costs nothing and
+// keeps the invariant explicit.
+func (r *Repository) UpdateBalance(ctx context.Context, walletID uuid.UUID, newBalanceMinor int64, expectedVersion int64) (Wallet, error) {
+	row := r.db.QueryRow(ctx, `
+		UPDATE wallets SET current_balance_minor = $1, updated_at = now(), version = version + 1
+		WHERE id = $2 AND version = $3
+		RETURNING `+walletColumns,
+		newBalanceMinor, walletID, expectedVersion,
+	)
+	return scanWallet(row)
+}
