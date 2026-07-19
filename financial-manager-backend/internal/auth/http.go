@@ -39,6 +39,7 @@ func (h *Handler) MountProtected(r chi.Router) {
 	r.Post("/v1/auth/password/change", h.changePassword)
 	r.Get("/v1/me/sessions", h.listSessions)
 	r.Delete("/v1/me/sessions/{session_id}", h.revokeSession)
+	r.Delete("/v1/me", h.deleteAccount)
 }
 
 func clientIPHash(r *http.Request) []byte {
@@ -346,6 +347,29 @@ func (h *Handler) revokeSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.RevokeSession(r.Context(), userID, sessionID); err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type deleteAccountRequest struct {
+	CurrentPassword string `json:"current_password"`
+}
+
+func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+
+	var req deleteAccountRequest
+	// A body is only required when the account has a password to verify;
+	// a Google-only account may send none at all.
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	if err := h.service.DeleteAccount(r.Context(), userID, req.CurrentPassword); err != nil {
 		apierror.Write(w, r, err)
 		return
 	}

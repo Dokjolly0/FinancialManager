@@ -138,6 +138,32 @@ func (r *Repository) List(ctx context.Context, filter ListFilter) ([]Asset, erro
 	return out, rows.Err()
 }
 
+// ListAllForOwner returns every non-deleted asset owned by userID,
+// regardless of status or count (plan.md section 20.3 account deletion —
+// unlike List, this has no page limit since it must be exhaustive for a
+// purge to actually remove everything).
+func (r *Repository) ListAllForOwner(ctx context.Context, ownerUserID uuid.UUID) ([]Asset, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT `+assetColumns+`
+		FROM media_assets
+		WHERE owner_user_id = $1 AND deleted_at IS NULL
+	`, ownerUserID)
+	if err != nil {
+		return nil, fmt.Errorf("list all media assets for owner: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Asset
+	for rows.Next() {
+		a, err := scanAsset(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
 // MarkUsed bumps last_used_at (plan.md section 16.6: "Aggiornare
 // last_used_at quando assegnato" — called whenever the asset is attached to
 // a transaction, category, or profile).

@@ -413,6 +413,10 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (AuthResponse, error
 		// password is wrong (plan.md section 15.5: avoid enumeration).
 		return AuthResponse{}, apierror.ErrInvalidLogin
 	}
+	if user.Status != users.StatusActive {
+		return AuthResponse{}, apierror.New(http.StatusForbidden, "ACCOUNT_DELETION_PENDING",
+			"Questo account è in fase di cancellazione.")
+	}
 
 	creds, err := s.credentials.GetByUserID(ctx, user.ID)
 	if err != nil {
@@ -601,6 +605,36 @@ func (s *Service) ChangePassword(ctx context.Context, userID, currentSessionID u
 	}
 
 	return s.sessions.RevokeAllForUserExcept(ctx, userID, currentSessionID)
+}
+
+// --- Account deletion ---------------------------------------------------------
+
+// DeleteAccount implements the immediate steps of plan.md section 20.3's
+// flow: verifying "recent authentication" (the current password, when the
+// account has one — a Google-only account has none, mirroring how
+// UnlinkGoogle/LinkGoogle already treat that case), revoking every
+// session, unlinking every provider, and marking the account
+// pending_deletion. The actual data purge (step 7) runs later, once its
+// grace period has elapsed — see users.Repository.Purge, run by the
+// worker.
+func (s *Service) DeleteAccount(ctx context.Context, userID uuid.UUID, currentPassword string) error {
+	creds, err := s.credentials.GetByUserID(ctx, userID)
+	if err == nil {
+		ok, verifyErr := passwordhash.Verify(creds.PasswordHash, currentPassword)
+		if verifyErr != nil || !ok {
+			return apierror.New(http.StatusUnauthorized, "INVALID_CURRENT_PASSWORD", "La password attuale non è corretta.")
+		}
+	} else if !errors.Is(err, ErrCredentialsNotFound) {
+		return err
+	}
+
+	if err := s.sessions.RevokeAllForUser(ctx, userID); err != nil {
+		return err
+	}
+	if err := s.identities.DeleteAllForUser(ctx, userID); err != nil {
+		return err
+	}
+	return s.users.MarkPendingDeletion(ctx, userID)
 }
 
 // --- Password reset -------------------------------------------------------

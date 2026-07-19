@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -150,4 +152,68 @@ func (r *Repository) UpdateProfile(ctx context.Context, userID uuid.UUID, expect
 		userID, expectedVersion,
 	)
 	return scanUser(row)
+}
+
+// MarkPendingDeletion is step 6 of plan.md section 20.3's deletion flow —
+// immediate, unlike the actual data purge which waits out a grace period
+// (handled by the worker, see ListPendingDeletionOlderThan/Purge).
+func (r *Repository) MarkPendingDeletion(ctx context.Context, userID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE users SET status = $1, updated_at = now() WHERE id = $2 AND deleted_at IS NULL
+	`, StatusPendingDeletion, userID)
+	if err != nil {
+		return fmt.Errorf("mark user pending deletion: %w", err)
+	}
+	return nil
+}
+
+// ListPendingDeletionOlderThan finds accounts whose grace period has
+// elapsed (plan.md section 20.3 "possibile periodo di grazia"), for the
+// worker's purge job.
+func (r *Repository) ListPendingDeletionOlderThan(ctx context.Context, cutoff time.Time) ([]User, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT `+userColumns+` FROM users WHERE status = $1 AND updated_at < $2 AND deleted_at IS NULL`,
+		StatusPendingDeletion, cutoff,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list users pending deletion: %w", err)
+	}
+	defer rows.Close()
+
+	var out []User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
+// Purge anonymizes a pending-deletion account's PII and marks it deleted
+// (plan.md section 20.3 step "job di rimozione dati e asset"). The ledger
+// itself is retained — only personally-identifying fields and the image
+// reference are scrubbed; callers must clear every other media_id
+// reference (transactions, category icons) before calling this, since
+// avatar_media_id alone isn't the only thing pinning an asset in place.
+// The financial ledger (transactions/wallet) is intentionally kept,
+// consistent with common accounting-record retention practice.
+func (r *Repository) Purge(ctx context.Context, userID uuid.UUID) error {
+	// "deleted_" (8 chars) + a 32-char hex UUID = 40 chars, exactly at the
+	// username column's limit — a dash-bearing UUID string would overflow it.
+	placeholder := "deleted_" + strings.ReplaceAll(userID.String(), "-", "")
+	_, err := r.db.Exec(ctx, `
+		UPDATE users SET
+			first_name = 'Utente', last_name = 'Eliminato',
+			username = $1, username_normalized = $1,
+			email = $2, email_normalized = $2,
+			avatar_mode = 'generated', avatar_media_id = NULL,
+			status = $3, deleted_at = now(), updated_at = now(), version = version + 1
+		WHERE id = $4
+	`, placeholder, placeholder+"@deleted.invalid", StatusDeleted, userID)
+	if err != nil {
+		return fmt.Errorf("purge user: %w", err)
+	}
+	return nil
 }

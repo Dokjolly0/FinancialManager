@@ -158,3 +158,43 @@ func TestRevokeSession_CannotRevokeAnotherUsersSession(t *testing.T) {
 		t.Errorf("user A's session must survive a cross-user revoke attempt; got %d active", len(stillActive))
 	}
 }
+
+func TestDeleteAccount_WrongCurrentPasswordIsRejected(t *testing.T) {
+	h := newTestHarness(t)
+	ctx := context.Background()
+	userID, _ := registerTestUser(t, h)
+
+	if err := h.service.DeleteAccount(ctx, userID, "totally-wrong"); err == nil {
+		t.Fatal("expected an error for a wrong current password")
+	}
+
+	sessions, err := h.service.ListSessions(ctx, userID)
+	if err != nil {
+		t.Fatalf("ListSessions() error = %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Errorf("a rejected deletion request must not revoke any session; got %d active", len(sessions))
+	}
+}
+
+func TestDeleteAccount_RevokesSessionsAndBlocksFutureLogin(t *testing.T) {
+	h := newTestHarness(t)
+	ctx := context.Background()
+	userID, email := registerTestUser(t, h)
+
+	if err := h.service.DeleteAccount(ctx, userID, testUserPassword); err != nil {
+		t.Fatalf("DeleteAccount() error = %v", err)
+	}
+
+	sessions, err := h.service.ListSessions(ctx, userID)
+	if err != nil {
+		t.Fatalf("ListSessions() error = %v", err)
+	}
+	if len(sessions) != 0 {
+		t.Errorf("got %d active sessions after DeleteAccount, want 0", len(sessions))
+	}
+
+	if _, err := h.service.Login(ctx, auth.LoginInput{UsernameOrEmail: email, Password: testUserPassword}); err == nil {
+		t.Error("expected Login() to fail for a pending_deletion account")
+	}
+}

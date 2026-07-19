@@ -193,6 +193,18 @@ func (r *Repository) ListAllForExport(ctx context.Context, userID uuid.UUID) ([]
 	return out, rows.Err()
 }
 
+// ClearMediaForUser detaches every transaction's image reference for
+// userID (plan.md section 20.3 account deletion: media must become
+// unreferenced before it can be purged — see media.Repository.IsReferenced).
+// The transactions themselves are kept; only the image link is cleared.
+func (r *Repository) ClearMediaForUser(ctx context.Context, userID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `UPDATE transactions SET media_id = NULL WHERE user_id = $1`, userID)
+	if err != nil {
+		return fmt.Errorf("clear transaction media for user: %w", err)
+	}
+	return nil
+}
+
 // ListFilter selects and paginates a user's ledger (plan.md section 17).
 // Cursor pagination only (no offset): stable under concurrent inserts and
 // fast on long histories. Always ordered by (occurred_at, id) DESC — the

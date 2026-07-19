@@ -106,3 +106,13 @@ func (r *Repository) DeleteByUserIDAndProvider(ctx context.Context, userID uuid.
 	}
 	return nil
 }
+
+// DeleteAllForUser unlinks every provider (plan.md section 20.3 account
+// deletion step "scollegamento provider").
+func (r *Repository) DeleteAllForUser(ctx context.Context, userID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM external_identities WHERE user_id = $1`, userID)
+	if err != nil {
+		return fmt.Errorf("delete all external identities for user: %w", err)
+	}
+	return nil
+}

@@ -120,6 +120,17 @@ func (r *Repository) Update(ctx context.Context, id, userID uuid.UUID, in Update
 	return scanCategory(row)
 }
 
+// ClearIconMediaForOwner detaches every custom-category icon reference for
+// userID (plan.md section 20.3 account deletion — see
+// media.Repository.IsReferenced, mirroring transactions.ClearMediaForUser).
+func (r *Repository) ClearIconMediaForOwner(ctx context.Context, userID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `UPDATE categories SET icon_media_id = NULL WHERE owner_user_id = $1`, userID)
+	if err != nil {
+		return fmt.Errorf("clear category icon media for owner: %w", err)
+	}
+	return nil
+}
+
 // Archive soft-deletes a user-owned category. Existing transactions keep
 // their category_id reference; only future selection lists exclude it.
 func (r *Repository) Archive(ctx context.Context, id, userID uuid.UUID) error {
