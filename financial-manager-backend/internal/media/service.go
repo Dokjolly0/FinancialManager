@@ -10,19 +10,33 @@ import (
 	"net/http"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
 	"financial-manager-backend/internal/platform/apierror"
+	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/storage"
 )
 
+// Rate limits for search/upload (plan.md section 19.5: "upload e ricerca
+// immagini") — search hits an external provider per call, upload runs the
+// decode/resize/re-encode pipeline, so both are worth bounding per user
+// beyond just the shared decompression-bomb/size guards.
+const (
+	searchPerWindow = 30
+	searchWindow    = time.Minute
+	uploadPerWindow = 20
+	uploadWindow    = time.Hour
+)
+
 type Service struct {
-	repo      *Repository
-	store     storage.Store
-	search    ImageSearchProvider
-	maxBytes  int64
-	allowlist map[string]bool
+	repo        *Repository
+	store       storage.Store
+	search      ImageSearchProvider
+	maxBytes    int64
+	allowlist   map[string]bool
+	rateLimiter *ratelimit.Limiter
 }
 
 type Deps struct {
@@ -31,6 +45,7 @@ type Deps struct {
 	Search            ImageSearchProvider
 	MaxUploadBytes    int64
 	AllowedImageTypes []string
+	RateLimiter       *ratelimit.Limiter
 }
 
 func NewService(d Deps) *Service {
@@ -38,7 +53,21 @@ func NewService(d Deps) *Service {
 	for _, t := range d.AllowedImageTypes {
 		allowlist[t] = true
 	}
-	return &Service{repo: d.Repo, store: d.Store, search: d.Search, maxBytes: d.MaxUploadBytes, allowlist: allowlist}
+	return &Service{
+		repo: d.Repo, store: d.Store, search: d.Search, maxBytes: d.MaxUploadBytes,
+		allowlist: allowlist, rateLimiter: d.RateLimiter,
+	}
+}
+
+func (s *Service) checkRateLimit(ctx context.Context, scope string, ownerUserID uuid.UUID, limit int, window time.Duration) error {
+	if s.rateLimiter == nil {
+		return nil
+	}
+	result, err := s.rateLimiter.Allow(ctx, "ratelimit:media-"+scope+":user:"+ownerUserID.String(), limit, window)
+	if err == nil && !result.Allowed {
+		return apierror.ErrRateLimited
+	}
+	return nil
 }
 
 type assetResponse struct {
@@ -144,6 +173,9 @@ type UploadInput struct {
 }
 
 func (s *Service) Upload(ctx context.Context, in UploadInput) (assetResponse, error) {
+	if err := s.checkRateLimit(ctx, "upload", in.OwnerUserID, uploadPerWindow, uploadWindow); err != nil {
+		return assetResponse{}, err
+	}
 	if int64(len(in.Content)) > s.maxBytes {
 		return assetResponse{}, apierror.New(http.StatusRequestEntityTooLarge, "UPLOAD_TOO_LARGE", "Il file supera la dimensione massima consentita.")
 	}
@@ -166,6 +198,9 @@ type SelectFromSearchInput struct {
 // SelectFromSearch fetches the actual image bytes only now — at selection
 // time, not for every search result shown (plan.md section 16.6).
 func (s *Service) SelectFromSearch(ctx context.Context, in SelectFromSearchInput) (assetResponse, error) {
+	if err := s.checkRateLimit(ctx, "upload", in.OwnerUserID, uploadPerWindow, uploadWindow); err != nil {
+		return assetResponse{}, err
+	}
 	if in.Provider != "unsplash" {
 		return assetResponse{}, apierror.NewValidation(map[string]string{"provider": "Provider non supportato."})
 	}
@@ -191,9 +226,10 @@ func (s *Service) SelectFromSearch(ctx context.Context, in SelectFromSearchInput
 }
 
 type SearchInput struct {
-	Query string
-	Page  int
-	Limit int
+	UserID uuid.UUID
+	Query  string
+	Page   int
+	Limit  int
 }
 
 type searchResponse struct {
@@ -205,6 +241,9 @@ type searchResponse struct {
 }
 
 func (s *Service) Search(ctx context.Context, in SearchInput) ([]searchResponse, error) {
+	if err := s.checkRateLimit(ctx, "search", in.UserID, searchPerWindow, searchWindow); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(in.Query) == "" {
 		return nil, apierror.NewValidation(map[string]string{"q": "Campo obbligatorio."})
 	}

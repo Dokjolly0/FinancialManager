@@ -137,6 +137,8 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		Audiences: cfg.GoogleClientIDs,
 	}
 
+	rateLimiter := ratelimit.New(redisClient)
+
 	authService := auth.NewService(auth.Deps{
 		DB:              dbPool,
 		Users:           usersRepo,
@@ -149,7 +151,7 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		Identities:      identitiesRepo,
 		GoogleVerifier:  googleVerifier,
 		TicketStore:     identities.NewTicketStore(redisClient),
-		RateLimiter:     ratelimit.New(redisClient),
+		RateLimiter:     rateLimiter,
 		EmailSender:     email.DevLogSender{Logger: logger},
 		Clock:           clock.System{},
 		JWTSigningKey:   cfg.JWTSigningKey,
@@ -177,6 +179,7 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	mediaService := media.NewService(media.Deps{
 		Repo: mediaRepo, Store: objectStore, Search: searchProvider,
 		MaxUploadBytes: cfg.MaxUploadBytes, AllowedImageTypes: cfg.AllowedImageTypes,
+		RateLimiter: rateLimiter,
 	})
 	mediaHandler := media.NewHandler(mediaService, cfg.MaxUploadBytes)
 

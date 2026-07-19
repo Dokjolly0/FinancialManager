@@ -37,6 +37,15 @@ const (
 	lockoutThreshold        = 8
 	lockoutDuration         = 15 * time.Minute
 
+	// passwordReauthPerWindow/Window bound ChangePassword, DeleteAccount,
+	// and LinkGoogle — each re-verifies the current password outside the
+	// login flow's own lockout, so without a separate limit here an
+	// attacker holding a stolen access token could brute-force the
+	// password unboundedly (plan.md section 19.5/23.8: "brute force e
+	// rate limit").
+	passwordReauthPerWindow = 5
+	passwordReauthWindow    = 15 * time.Minute
+
 	emailVerificationTTL = 24 * time.Hour
 	passwordResetTTL     = 30 * time.Minute
 	idempotencyTTL       = 24 * time.Hour
@@ -572,6 +581,20 @@ func (s *Service) RevokeSession(ctx context.Context, userID, sessionID uuid.UUID
 
 // --- Change password (authenticated) ----------------------------------------
 
+// checkPasswordReauthLimit throttles endpoints that re-verify the current
+// password outside the login flow's own lockout (ChangePassword,
+// DeleteAccount, LinkGoogle) — plan.md section 19.5/23.8.
+func (s *Service) checkPasswordReauthLimit(ctx context.Context, userID uuid.UUID) error {
+	if s.rateLimiter == nil {
+		return nil
+	}
+	result, err := s.rateLimiter.Allow(ctx, "ratelimit:password-reauth:user:"+userID.String(), passwordReauthPerWindow, passwordReauthWindow)
+	if err == nil && !result.Allowed {
+		return apierror.ErrRateLimited
+	}
+	return nil
+}
+
 // ChangePassword verifies the current password before setting a new one
 // (this verification is itself the "recent authentication" proof — plan.md
 // section 7.13). Every other session is revoked afterwards so a leaked
@@ -581,6 +604,9 @@ func (s *Service) RevokeSession(ctx context.Context, userID, sessionID uuid.UUID
 func (s *Service) ChangePassword(ctx context.Context, userID, currentSessionID uuid.UUID, currentPassword, newPassword string) error {
 	if len(newPassword) < 8 {
 		return apierror.NewValidation(map[string]string{"new_password": "Deve avere almeno 8 caratteri."})
+	}
+	if err := s.checkPasswordReauthLimit(ctx, userID); err != nil {
+		return err
 	}
 
 	creds, err := s.credentials.GetByUserID(ctx, userID)
@@ -618,6 +644,10 @@ func (s *Service) ChangePassword(ctx context.Context, userID, currentSessionID u
 // grace period has elapsed — see users.Repository.Purge, run by the
 // worker.
 func (s *Service) DeleteAccount(ctx context.Context, userID uuid.UUID, currentPassword string) error {
+	if err := s.checkPasswordReauthLimit(ctx, userID); err != nil {
+		return err
+	}
+
 	creds, err := s.credentials.GetByUserID(ctx, userID)
 	if err == nil {
 		ok, verifyErr := passwordhash.Verify(creds.PasswordHash, currentPassword)

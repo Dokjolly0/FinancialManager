@@ -327,6 +327,10 @@ func (s *Service) CompleteGoogleRegistration(ctx context.Context, in CompleteGoo
 // --- Link / unlink / list identities ---------------------------------------
 
 func (s *Service) LinkGoogle(ctx context.Context, userID uuid.UUID, idToken, currentPassword string) error {
+	if err := s.checkPasswordReauthLimit(ctx, userID); err != nil {
+		return err
+	}
+
 	creds, err := s.credentials.GetByUserID(ctx, userID)
 	if err != nil {
 		return apierror.ErrUnauthorized

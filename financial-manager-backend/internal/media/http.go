@@ -63,7 +63,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
-	if _, ok := reqctx.UserID(r.Context()); !ok {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
 		apierror.Write(w, r, apierror.ErrUnauthorized)
 		return
 	}
@@ -72,7 +73,7 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 	page, _ := strconv.Atoi(query.Get("page"))
 	limit, _ := strconv.Atoi(query.Get("limit"))
 
-	results, err := h.service.Search(r.Context(), SearchInput{Query: query.Get("q"), Page: page, Limit: limit})
+	results, err := h.service.Search(r.Context(), SearchInput{UserID: userID, Query: query.Get("q"), Page: page, Limit: limit})
 	if err != nil {
 		apierror.Write(w, r, err)
 		return

@@ -17,6 +17,8 @@ import (
 	"financial-manager-backend/internal/platform/apierror"
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/database"
+	"financial-manager-backend/internal/platform/ratelimit"
+	"financial-manager-backend/internal/platform/redisclient"
 	"financial-manager-backend/internal/platform/storage"
 	"financial-manager-backend/internal/transactions"
 	"financial-manager-backend/internal/users"
@@ -47,6 +49,8 @@ func newHarness(t *testing.T) harness {
 
 	databaseURL := envOrDefault("TEST_DATABASE_URL", "postgres://financial_manager:financial_manager@localhost:10001/financial_manager?sslmode=disable")
 	objectStorageEndpoint := envOrDefault("TEST_OBJECT_STORAGE_ENDPOINT", "localhost:9002")
+	redisAddr := envOrDefault("TEST_REDIS_ADDR", "localhost:10002")
+	redisPassword := envOrDefault("TEST_REDIS_PASSWORD", "financial_manager")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -64,6 +68,12 @@ func newHarness(t *testing.T) harness {
 	if err != nil {
 		t.Skipf("skipping: dev MinIO not reachable at %s: %v", objectStorageEndpoint, err)
 	}
+
+	redisClient, err := redisclient.Connect(ctx, redisAddr, redisPassword)
+	if err != nil {
+		t.Skipf("skipping: dev Redis not reachable at %s: %v", redisAddr, err)
+	}
+	t.Cleanup(func() { _ = redisClient.Close() })
 
 	usersRepo := users.NewRepository(dbPool)
 	suffix := uuid.NewString()[:8]
@@ -85,6 +95,7 @@ func newHarness(t *testing.T) harness {
 	service := media.NewService(media.Deps{
 		Repo: repo, Store: store, Search: media.StubImageSearchProvider{},
 		MaxUploadBytes: 10 * 1024 * 1024, AllowedImageTypes: []string{"image/jpeg", "image/png", "image/webp"},
+		RateLimiter: ratelimit.New(redisClient),
 	})
 	return harness{service: service, repo: repo, dbPool: dbPool, userID: user.ID}
 }
@@ -291,5 +302,24 @@ func TestCleanupOrphans_LeavesRecentAssetsAlone(t *testing.T) {
 	}
 	if !found {
 		t.Error("a fresh asset must survive a grace-period cleanup pass")
+	}
+}
+
+// TestSearch_RepeatedCallsAreRateLimited covers plan.md section 19.5:
+// image search proxies to an external provider on every call, so it needs
+// its own bound distinct from the shared upload size/decode limits.
+func TestSearch_RepeatedCallsAreRateLimited(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+
+	var lastErr error
+	for range 31 {
+		_, lastErr = h.service.Search(ctx, media.SearchInput{UserID: h.userID, Query: "coffee", Limit: 1})
+	}
+	if lastErr == nil {
+		t.Fatal("expected the 31st search within a minute to be rejected")
+	}
+	if !errors.Is(lastErr, apierror.ErrRateLimited) {
+		t.Errorf("31st search error = %v, want apierror.ErrRateLimited", lastErr)
 	}
 }

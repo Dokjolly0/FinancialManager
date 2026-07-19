@@ -3,11 +3,13 @@ package auth_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
 
 	"financial-manager-backend/internal/auth"
+	"financial-manager-backend/internal/platform/apierror"
 )
 
 const testUserPassword = "correct-horse-1"
@@ -196,5 +198,32 @@ func TestDeleteAccount_RevokesSessionsAndBlocksFutureLogin(t *testing.T) {
 
 	if _, err := h.service.Login(ctx, auth.LoginInput{UsernameOrEmail: email, Password: testUserPassword}); err == nil {
 		t.Error("expected Login() to fail for a pending_deletion account")
+	}
+}
+
+// TestChangePassword_RepeatedWrongAttemptsAreRateLimited covers plan.md
+// section 19.5/23.8: without this, a stolen access token would let an
+// attacker brute-force the current password with no throttling at all,
+// since ChangePassword sits outside the login flow's own lockout.
+func TestChangePassword_RepeatedWrongAttemptsAreRateLimited(t *testing.T) {
+	h := newTestHarness(t)
+	ctx := context.Background()
+	userID, _ := registerTestUser(t, h)
+
+	sessions, err := h.service.ListSessions(ctx, userID)
+	if err != nil || len(sessions) != 1 {
+		t.Fatalf("ListSessions() = %v, %v; want exactly 1", sessions, err)
+	}
+	sessionID := sessions[0].ID
+
+	var lastErr error
+	for range 6 {
+		lastErr = h.service.ChangePassword(ctx, userID, sessionID, "totally-wrong", "a-brand-new-password")
+	}
+	if lastErr == nil {
+		t.Fatal("expected the 6th rapid wrong-password attempt to be rejected")
+	}
+	if !errors.Is(lastErr, apierror.ErrRateLimited) {
+		t.Errorf("6th attempt error = %v, want apierror.ErrRateLimited", lastErr)
 	}
 }
