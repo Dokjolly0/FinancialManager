@@ -13,6 +13,7 @@ class MediaApi {
     required String kind,
     required bool sortRecent,
     required int limit,
+    String? query,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/media',
@@ -20,6 +21,7 @@ class MediaApi {
         'kind': kind,
         if (sortRecent) 'sort': 'recent',
         'limit': limit,
+        if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
       },
     );
     return response.data!;
@@ -67,5 +69,16 @@ class MediaApi {
 
   Future<void> delete(String id) async {
     await _dio.delete<void>('/media/$id');
+  }
+
+  Future<Map<String, dynamic>> rename({
+    required String id,
+    required String name,
+  }) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/media/$id',
+      data: {'name': name},
+    );
+    return response.data!;
   }
 }

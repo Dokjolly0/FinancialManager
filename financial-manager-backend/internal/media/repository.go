@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -27,7 +28,7 @@ func (r *Repository) WithQuerier(q database.Querier) *Repository {
 
 const assetColumns = `
 	id, owner_user_id, kind, source, source_provider, source_external_id, source_attribution,
-	object_key, original_filename, mime_type, width, height, size_bytes, sha256, status,
+	object_key, original_filename, name, name_normalized, mime_type, width, height, size_bytes, sha256, status,
 	created_at, last_used_at, deleted_at
 `
 
@@ -35,7 +36,7 @@ func scanAsset(row pgx.Row) (Asset, error) {
 	var a Asset
 	err := row.Scan(
 		&a.ID, &a.OwnerUserID, &a.Kind, &a.Source, &a.SourceProvider, &a.SourceExternalID, &a.SourceAttribution,
-		&a.ObjectKey, &a.OriginalFilename, &a.MimeType, &a.Width, &a.Height, &a.SizeBytes, &a.SHA256, &a.Status,
+		&a.ObjectKey, &a.OriginalFilename, &a.Name, &a.NameNormalized, &a.MimeType, &a.Width, &a.Height, &a.SizeBytes, &a.SHA256, &a.Status,
 		&a.CreatedAt, &a.LastUsedAt, &a.DeletedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -56,6 +57,7 @@ type CreateInput struct {
 	SourceAttribution *string
 	ObjectKey         string
 	OriginalFilename  *string
+	Name              *string
 	MimeType          string
 	Width             int
 	Height            int
@@ -70,16 +72,21 @@ type CreateInput struct {
 // e SHA-256"). Callers must delete the object they just wrote to storage
 // when the returned asset's ObjectKey differs from the one they requested.
 func (r *Repository) CreateOrReuse(ctx context.Context, in CreateInput) (Asset, error) {
+	var nameNormalized *string
+	if in.Name != nil {
+		n := normalizeMediaName(*in.Name)
+		nameNormalized = &n
+	}
 	row := r.db.QueryRow(ctx, `
 		INSERT INTO media_assets (
 			owner_user_id, kind, source, source_provider, source_external_id, source_attribution,
-			object_key, original_filename, mime_type, width, height, size_bytes, sha256, status, last_used_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, now())
+			object_key, original_filename, name, name_normalized, mime_type, width, height, size_bytes, sha256, status, last_used_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, now())
 		ON CONFLICT (owner_user_id, sha256) WHERE deleted_at IS NULL
 			DO UPDATE SET last_used_at = now()
 		RETURNING `+assetColumns,
 		in.OwnerUserID, in.Kind, in.Source, in.SourceProvider, in.SourceExternalID, in.SourceAttribution,
-		in.ObjectKey, in.OriginalFilename, in.MimeType, in.Width, in.Height, in.SizeBytes, in.SHA256, in.Status,
+		in.ObjectKey, in.OriginalFilename, in.Name, nameNormalized, in.MimeType, in.Width, in.Height, in.SizeBytes, in.SHA256, in.Status,
 	)
 	return scanAsset(row)
 }
@@ -96,6 +103,7 @@ type ListFilter struct {
 	OwnerUserID uuid.UUID
 	Kind        string // "" = any
 	SortRecent  bool   // true = ORDER BY last_used_at DESC, false = ORDER BY created_at DESC ("Libreria")
+	Query       string // "" = no filter; otherwise matches anywhere in the asset's name
 	Limit       int
 }
 
@@ -116,7 +124,11 @@ func (r *Repository) List(ctx context.Context, filter ListFilter) ([]Asset, erro
 	args := []any{filter.OwnerUserID}
 	if filter.Kind != "" {
 		args = append(args, filter.Kind)
-		query += " AND kind = $2"
+		query += " AND kind = $" + strconv.Itoa(len(args))
+	}
+	if filter.Query != "" {
+		args = append(args, "%"+normalizeMediaName(filter.Query)+"%")
+		query += " AND name_normalized LIKE $" + strconv.Itoa(len(args))
 	}
 	query += " ORDER BY " + orderBy + " LIMIT " + fmt.Sprintf("$%d", len(args)+1)
 	args = append(args, limit)
@@ -178,6 +190,19 @@ func (r *Repository) MarkUsed(ctx context.Context, id, ownerUserID uuid.UUID) er
 		return ErrNotFound
 	}
 	return nil
+}
+
+// Rename sets the asset's user-editable display name, used by both the
+// library search and the rename affordance on grid tiles.
+func (r *Repository) Rename(ctx context.Context, id, ownerUserID uuid.UUID, name string) (Asset, error) {
+	normalized := normalizeMediaName(name)
+	row := r.db.QueryRow(ctx, `
+		UPDATE media_assets SET name = $1, name_normalized = $2
+		WHERE id = $3 AND owner_user_id = $4 AND deleted_at IS NULL
+		RETURNING `+assetColumns,
+		name, normalized, id, ownerUserID,
+	)
+	return scanAsset(row)
 }
 
 func (r *Repository) SoftDelete(ctx context.Context, id, ownerUserID uuid.UUID) error {

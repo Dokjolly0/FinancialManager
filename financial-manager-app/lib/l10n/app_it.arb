@@ -273,5 +273,26 @@
   "dateAndTimeLabel": "Data e ora",
   "descriptionLabel": "Descrizione",
   "createdLabel": "Creata il",
-  "lastModifiedLabel": "Ultima modifica"
+  "lastModifiedLabel": "Ultima modifica",
+
+  "mediaPickerRecentTab": "Recenti",
+  "mediaPickerLibraryTab": "Libreria",
+  "mediaPickerSearchTab": "Cerca",
+  "mediaPickerUploadTab": "Carica",
+  "mediaLoadErrorMessage": "Impossibile caricare le immagini.",
+  "mediaEmptyStateMessage": "Nessuna immagine disponibile.",
+  "mediaUntitledLabel": "Senza titolo",
+  "mediaLibrarySearchHint": "Cerca nella libreria",
+  "mediaSearchHint": "Cerca immagini",
+  "mediaSearchMinCharsMessage": "Digita almeno 2 caratteri per cercare.",
+  "mediaSearchNoResultsMessage": "Nessun risultato.",
+  "mediaSearchUnavailableMessage": "Ricerca non disponibile al momento.",
+  "mediaSelectFailedMessage": "Impossibile selezionare questa immagine.",
+  "mediaCropScreenTitle": "Ritaglia immagine",
+  "mediaCameraAction": "Fotocamera",
+  "mediaGalleryAction": "Galleria",
+  "mediaUploadFailedMessage": "Caricamento non riuscito. Riprova.",
+  "mediaRenameDialogTitle": "Rinomina immagine",
+  "mediaNameLabel": "Nome",
+  "mediaRenameFailedMessage": "Impossibile rinominare l'immagine."
 }

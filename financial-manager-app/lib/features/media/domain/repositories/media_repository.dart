@@ -13,6 +13,7 @@ abstract class MediaRepository {
     required MediaKind kind,
     bool sortRecent = false,
     int limit = 40,
+    String? query,
   });
 
   Future<List<MediaSearchResult>> search({
@@ -34,6 +35,8 @@ abstract class MediaRepository {
   });
 
   Future<void> delete(String id);
+
+  Future<MediaAsset> rename({required String id, required String name});
 
   /// The authenticated URL to fetch an asset's raw bytes from — used to
   /// build a `NetworkImage(url, headers: ...)` (plan.md section 16.7).

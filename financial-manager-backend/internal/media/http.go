@@ -30,6 +30,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Get("/v1/media/search", h.search)
 	r.Post("/v1/media/uploads", h.upload)
 	r.Get("/v1/media/{id}", h.getContent)
+	r.Patch("/v1/media/{id}", h.rename)
 	r.Delete("/v1/media/{id}", h.delete)
 }
 
@@ -54,7 +55,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	list, err := h.service.List(r.Context(), userID, query.Get("kind"), query.Get("sort") == "recent", limit)
+	list, err := h.service.List(r.Context(), userID, query.Get("kind"), query.Get("sort") == "recent", limit, query.Get("q"))
 	if err != nil {
 		apierror.Write(w, r, err)
 		return
@@ -211,6 +212,37 @@ func (h *Handler) getContent(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", asset.MimeType)
 	w.Header().Set("Cache-Control", "private, max-age=86400")
 	_, _ = io.Copy(w, content)
+}
+
+type renameRequest struct {
+	Name string `json:"name"`
+}
+
+func (h *Handler) rename(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+
+	var req renameRequest
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&req); err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	asset, err := h.service.Rename(r.Context(), RenameInput{OwnerUserID: userID, ID: id, Name: req.Name})
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, asset)
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {

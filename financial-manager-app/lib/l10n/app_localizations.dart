@@ -1451,6 +1451,126 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Ultima modifica'**
   String get lastModifiedLabel;
+
+  /// No description provided for @mediaPickerRecentTab.
+  ///
+  /// In it, this message translates to:
+  /// **'Recenti'**
+  String get mediaPickerRecentTab;
+
+  /// No description provided for @mediaPickerLibraryTab.
+  ///
+  /// In it, this message translates to:
+  /// **'Libreria'**
+  String get mediaPickerLibraryTab;
+
+  /// No description provided for @mediaPickerSearchTab.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca'**
+  String get mediaPickerSearchTab;
+
+  /// No description provided for @mediaPickerUploadTab.
+  ///
+  /// In it, this message translates to:
+  /// **'Carica'**
+  String get mediaPickerUploadTab;
+
+  /// No description provided for @mediaLoadErrorMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile caricare le immagini.'**
+  String get mediaLoadErrorMessage;
+
+  /// No description provided for @mediaEmptyStateMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna immagine disponibile.'**
+  String get mediaEmptyStateMessage;
+
+  /// No description provided for @mediaUntitledLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Senza titolo'**
+  String get mediaUntitledLabel;
+
+  /// No description provided for @mediaLibrarySearchHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca nella libreria'**
+  String get mediaLibrarySearchHint;
+
+  /// No description provided for @mediaSearchHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca immagini'**
+  String get mediaSearchHint;
+
+  /// No description provided for @mediaSearchMinCharsMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Digita almeno 2 caratteri per cercare.'**
+  String get mediaSearchMinCharsMessage;
+
+  /// No description provided for @mediaSearchNoResultsMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun risultato.'**
+  String get mediaSearchNoResultsMessage;
+
+  /// No description provided for @mediaSearchUnavailableMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Ricerca non disponibile al momento.'**
+  String get mediaSearchUnavailableMessage;
+
+  /// No description provided for @mediaSelectFailedMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile selezionare questa immagine.'**
+  String get mediaSelectFailedMessage;
+
+  /// No description provided for @mediaCropScreenTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Ritaglia immagine'**
+  String get mediaCropScreenTitle;
+
+  /// No description provided for @mediaCameraAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Fotocamera'**
+  String get mediaCameraAction;
+
+  /// No description provided for @mediaGalleryAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Galleria'**
+  String get mediaGalleryAction;
+
+  /// No description provided for @mediaUploadFailedMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Caricamento non riuscito. Riprova.'**
+  String get mediaUploadFailedMessage;
+
+  /// No description provided for @mediaRenameDialogTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Rinomina immagine'**
+  String get mediaRenameDialogTitle;
+
+  /// No description provided for @mediaNameLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Nome'**
+  String get mediaNameLabel;
+
+  /// No description provided for @mediaRenameFailedMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile rinominare l\'immagine.'**
+  String get mediaRenameFailedMessage;
 }
 
 class _AppLocalizationsDelegate

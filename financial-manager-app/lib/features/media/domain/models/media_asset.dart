@@ -28,6 +28,7 @@ class MediaAsset {
     required this.kind,
     required this.source,
     this.attribution,
+    this.name,
     required this.mimeType,
     required this.width,
     required this.height,
@@ -38,6 +39,7 @@ class MediaAsset {
   final MediaKind kind;
   final String source;
   final String? attribution;
+  final String? name;
   final String mimeType;
   final int width;
   final int height;
@@ -49,6 +51,7 @@ class MediaAsset {
       kind: MediaKind.fromApi(json['kind'] as String),
       source: json['source'] as String,
       attribution: json['attribution'] as String?,
+      name: json['name'] as String?,
       mimeType: json['mime_type'] as String,
       width: json['width'] as int,
       height: json['height'] as int,

@@ -4,6 +4,7 @@
 package media
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,6 +33,12 @@ func IsValidKind(kind string) bool {
 	return kind == KindProfile || kind == KindTransaction || kind == KindCategory
 }
 
+// normalizeMediaName mirrors categories.NormalizeName: trim, compact
+// internal spaces, case-insensitive comparison — used for search matching.
+func normalizeMediaName(name string) string {
+	return strings.ToLower(strings.Join(strings.Fields(strings.TrimSpace(name)), " "))
+}
+
 type Asset struct {
 	ID                uuid.UUID
 	OwnerUserID       uuid.UUID
@@ -42,6 +49,8 @@ type Asset struct {
 	SourceAttribution *string
 	ObjectKey         string
 	OriginalFilename  *string
+	Name              *string
+	NameNormalized    *string
 	MimeType          string
 	Width             int
 	Height            int

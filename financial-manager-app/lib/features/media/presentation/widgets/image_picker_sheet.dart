@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/inline_error.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../data/providers.dart';
 import '../../domain/models/media_asset.dart';
 
@@ -57,6 +58,7 @@ class _ImagePickerSheetState extends State<ImagePickerSheet>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: FractionallySizedBox(
         heightFactor: 0.9,
@@ -64,11 +66,11 @@ class _ImagePickerSheetState extends State<ImagePickerSheet>
           children: [
             TabBar(
               controller: _tabController,
-              tabs: const [
-                Tab(text: 'Recenti'),
-                Tab(text: 'Libreria'),
-                Tab(text: 'Cerca'),
-                Tab(text: 'Carica'),
+              tabs: [
+                Tab(text: l10n.mediaPickerRecentTab),
+                Tab(text: l10n.mediaPickerLibraryTab),
+                Tab(text: l10n.mediaPickerSearchTab),
+                Tab(text: l10n.mediaPickerUploadTab),
               ],
             ),
             Expanded(
@@ -100,67 +102,165 @@ class _AssetGridTab extends ConsumerStatefulWidget {
 }
 
 class _AssetGridTabState extends ConsumerState<_AssetGridTab> {
+  final _searchController = TextEditingController();
+  Timer? _debounce;
+  String? _query;
   late Future<List<MediaAsset>> _future;
 
   @override
   void initState() {
     super.initState();
-    _future = ref
+    _future = _load();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<List<MediaAsset>> _load() {
+    return ref
         .read(mediaRepositoryProvider)
-        .list(kind: widget.kind, sortRecent: widget.sortRecent);
+        .list(kind: widget.kind, sortRecent: widget.sortRecent, query: _query);
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      setState(() {
+        _query = value;
+        _future = _load();
+      });
+    });
+  }
+
+  Future<void> _rename(MediaAsset asset) async {
+    final l10n = AppLocalizations.of(context);
+    final controller = TextEditingController(text: asset.name ?? '');
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.mediaRenameDialogTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(labelText: l10n.mediaNameLabel),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: Text(l10n.commonSave),
+          ),
+        ],
+      ),
+    );
+    if (newName == null || newName.isEmpty || !mounted) return;
+
+    try {
+      await ref
+          .read(mediaRepositoryProvider)
+          .rename(id: asset.id, name: newName);
+      setState(() => _future = _load());
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.mediaRenameFailedMessage)));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final repo = ref.read(mediaRepositoryProvider);
+    final l10n = AppLocalizations.of(context);
 
-    return FutureBuilder<List<MediaAsset>>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return InlineError(
-            message: 'Impossibile caricare le immagini.',
-            onRetry: () => setState(() {
-              _future = repo.list(
-                kind: widget.kind,
-                sortRecent: widget.sortRecent,
-              );
-            }),
-          );
-        }
-        final assets = snapshot.data!;
-        if (assets.isEmpty) {
-          return const EmptyState(message: 'Nessuna immagine disponibile.');
-        }
-        return GridView.builder(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
           padding: const EdgeInsets.all(AppSpacing.sm),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: AppSpacing.xs,
-            mainAxisSpacing: AppSpacing.xs,
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: l10n.mediaLibrarySearchHint,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+            onChanged: _onSearchChanged,
           ),
-          itemCount: assets.length,
-          itemBuilder: (context, index) {
-            final asset = assets[index];
-            return GestureDetector(
-              onTap: () => Navigator.of(context).pop(asset),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppSpacing.inputRadius),
-                child: Image(
-                  image: NetworkImage(
-                    repo.contentUrl(asset.id),
-                    headers: repo.authHeaders(),
-                  ),
-                  fit: BoxFit.cover,
+        ),
+        Expanded(
+          child: FutureBuilder<List<MediaAsset>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return InlineError(
+                  message: l10n.mediaLoadErrorMessage,
+                  onRetry: () => setState(() => _future = _load()),
+                );
+              }
+              final assets = snapshot.data!;
+              if (assets.isEmpty) {
+                return EmptyState(message: l10n.mediaEmptyStateMessage);
+              }
+              return GridView.builder(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: AppSpacing.xs,
+                  mainAxisSpacing: AppSpacing.xs,
+                  childAspectRatio: 0.85,
                 ),
-              ),
-            );
-          },
-        );
-      },
+                itemCount: assets.length,
+                itemBuilder: (context, index) {
+                  final asset = assets[index];
+                  return GestureDetector(
+                    onTap: () => Navigator.of(context).pop(asset),
+                    onLongPress: () => _rename(asset),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.inputRadius,
+                            ),
+                            child: Image(
+                              image: NetworkImage(
+                                repo.contentUrl(asset.id),
+                                headers: repo.authHeaders(),
+                              ),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          asset.name ?? l10n.mediaUntitledLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -199,6 +299,7 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
   }
 
   Future<void> _search(String query) async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _isSearching = true;
       _error = null;
@@ -216,12 +317,13 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
       if (!mounted) return;
       setState(() {
         _isSearching = false;
-        _error = 'Ricerca non disponibile al momento.';
+        _error = l10n.mediaSearchUnavailableMessage;
       });
     }
   }
 
   Future<void> _select(MediaSearchResult result) async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _isSelecting = true);
     try {
       final asset = await ref
@@ -236,7 +338,7 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
       if (mounted) {
         setState(() {
           _isSelecting = false;
-          _error = 'Impossibile selezionare questa immagine.';
+          _error = l10n.mediaSelectFailedMessage;
         });
       }
     }
@@ -244,6 +346,7 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -253,7 +356,7 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
             controller: _controller,
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
-              hintText: 'Cerca immagini',
+              hintText: l10n.mediaSearchHint,
               border: const OutlineInputBorder(),
               isDense: true,
               suffixIcon: _isSearching
@@ -284,8 +387,8 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
               _results.isEmpty
                   ? EmptyState(
                       message: _controller.text.trim().length < 2
-                          ? 'Digita almeno 2 caratteri per cercare.'
-                          : 'Nessun risultato.',
+                          ? l10n.mediaSearchMinCharsMessage
+                          : l10n.mediaSearchNoResultsMessage,
                     )
                   : GridView.builder(
                       padding: const EdgeInsets.all(AppSpacing.sm),
@@ -339,6 +442,7 @@ class _UploadTabState extends ConsumerState<_UploadTab> {
   String? _error;
 
   Future<void> _pickAndUpload(ImageSource source) async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _error = null);
     final picked = await ImagePicker().pickImage(
       source: source,
@@ -356,11 +460,11 @@ class _UploadTabState extends ConsumerState<_UploadTab> {
       compressQuality: 95,
       uiSettings: [
         AndroidUiSettings(
-          toolbarTitle: 'Ritaglia immagine',
+          toolbarTitle: l10n.mediaCropScreenTitle,
           lockAspectRatio: true,
           cropStyle: cropStyle,
         ),
-        IOSUiSettings(title: 'Ritaglia immagine', cropStyle: cropStyle),
+        IOSUiSettings(title: l10n.mediaCropScreenTitle, cropStyle: cropStyle),
       ],
     );
     if (cropped == null || !mounted) return;
@@ -376,7 +480,7 @@ class _UploadTabState extends ConsumerState<_UploadTab> {
       if (mounted) {
         setState(() {
           _isUploading = false;
-          _error = 'Caricamento non riuscito. Riprova.';
+          _error = l10n.mediaUploadFailedMessage;
         });
       }
     }
@@ -384,6 +488,7 @@ class _UploadTabState extends ConsumerState<_UploadTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: _isUploading
           ? const CircularProgressIndicator()
@@ -393,13 +498,13 @@ class _UploadTabState extends ConsumerState<_UploadTab> {
                 FilledButton.icon(
                   onPressed: () => _pickAndUpload(ImageSource.camera),
                   icon: const Icon(Icons.photo_camera_outlined),
-                  label: const Text('Fotocamera'),
+                  label: Text(l10n.mediaCameraAction),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 OutlinedButton.icon(
                   onPressed: () => _pickAndUpload(ImageSource.gallery),
                   icon: const Icon(Icons.photo_library_outlined),
-                  label: const Text('Galleria'),
+                  label: Text(l10n.mediaGalleryAction),
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: AppSpacing.md),

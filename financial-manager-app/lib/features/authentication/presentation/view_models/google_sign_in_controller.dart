@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/session/current_user_provider.dart';
 import '../../../../app/session/session_controller.dart';
 import '../../../../core/errors/app_error.dart';
 import '../../data/providers.dart';
@@ -37,8 +36,7 @@ class GoogleSignInController extends Notifier<GoogleSignInState> {
 
       switch (outcome) {
         case GoogleSignInAuthenticated(:final user):
-          ref.read(currentUserProvider.notifier).state = user;
-          ref.read(sessionControllerProvider.notifier).signIn();
+          ref.read(sessionControllerProvider.notifier).signIn(user);
         case GoogleSignInRegistrationRequired():
           break;
         case GoogleSignInCancelledByUser():

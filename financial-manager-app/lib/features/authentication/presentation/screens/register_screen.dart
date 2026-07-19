@@ -39,6 +39,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _balanceController = TextEditingController(text: '0');
 
   @override
+  void initState() {
+    super.initState();
+    // Reset any stale wizard state left over from a previous, abandoned
+    // registration attempt (registerControllerProvider is not autoDispose
+    // and otherwise survives for the app's lifetime).
+    ref.invalidate(registerControllerProvider);
+  }
+
+  @override
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();

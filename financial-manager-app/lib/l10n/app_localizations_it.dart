@@ -753,4 +753,67 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get lastModifiedLabel => 'Ultima modifica';
+
+  @override
+  String get mediaPickerRecentTab => 'Recenti';
+
+  @override
+  String get mediaPickerLibraryTab => 'Libreria';
+
+  @override
+  String get mediaPickerSearchTab => 'Cerca';
+
+  @override
+  String get mediaPickerUploadTab => 'Carica';
+
+  @override
+  String get mediaLoadErrorMessage => 'Impossibile caricare le immagini.';
+
+  @override
+  String get mediaEmptyStateMessage => 'Nessuna immagine disponibile.';
+
+  @override
+  String get mediaUntitledLabel => 'Senza titolo';
+
+  @override
+  String get mediaLibrarySearchHint => 'Cerca nella libreria';
+
+  @override
+  String get mediaSearchHint => 'Cerca immagini';
+
+  @override
+  String get mediaSearchMinCharsMessage =>
+      'Digita almeno 2 caratteri per cercare.';
+
+  @override
+  String get mediaSearchNoResultsMessage => 'Nessun risultato.';
+
+  @override
+  String get mediaSearchUnavailableMessage =>
+      'Ricerca non disponibile al momento.';
+
+  @override
+  String get mediaSelectFailedMessage =>
+      'Impossibile selezionare questa immagine.';
+
+  @override
+  String get mediaCropScreenTitle => 'Ritaglia immagine';
+
+  @override
+  String get mediaCameraAction => 'Fotocamera';
+
+  @override
+  String get mediaGalleryAction => 'Galleria';
+
+  @override
+  String get mediaUploadFailedMessage => 'Caricamento non riuscito. Riprova.';
+
+  @override
+  String get mediaRenameDialogTitle => 'Rinomina immagine';
+
+  @override
+  String get mediaNameLabel => 'Nome';
+
+  @override
+  String get mediaRenameFailedMessage => 'Impossibile rinominare l\'immagine.';
 }

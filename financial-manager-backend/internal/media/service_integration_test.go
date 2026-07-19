@@ -130,7 +130,7 @@ func TestUpload_ProcessesAndListsTheAsset(t *testing.T) {
 		t.Errorf("dimensions = %dx%d, want 512x512 (transaction target size)", asset.Width, asset.Height)
 	}
 
-	list, err := h.service.List(ctx, h.userID, media.KindTransaction, false, 10)
+	list, err := h.service.List(ctx, h.userID, media.KindTransaction, false, 10, "")
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
@@ -161,7 +161,7 @@ func TestUpload_DeduplicatesIdenticalContent(t *testing.T) {
 		t.Errorf("re-uploading identical content created a new asset: %q vs %q, want the same id", first.ID, second.ID)
 	}
 
-	list, err := h.service.List(ctx, h.userID, media.KindTransaction, false, 10)
+	list, err := h.service.List(ctx, h.userID, media.KindTransaction, false, 10, "")
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
@@ -211,7 +211,7 @@ func TestDelete_RejectsWhileReferencedThenSucceedsAfterDetached(t *testing.T) {
 		t.Fatalf("Delete() of an unreferenced asset error = %v", err)
 	}
 
-	list, err := h.service.List(ctx, h.userID, media.KindTransaction, false, 10)
+	list, err := h.service.List(ctx, h.userID, media.KindTransaction, false, 10, "")
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
@@ -290,7 +290,7 @@ func TestCleanupOrphans_LeavesRecentAssetsAlone(t *testing.T) {
 	}
 	_ = deleted
 
-	list, err := h.service.List(ctx, h.userID, media.KindTransaction, false, 10)
+	list, err := h.service.List(ctx, h.userID, media.KindTransaction, false, 10, "")
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}

@@ -291,5 +291,26 @@
   "dateAndTimeLabel": "Date and time",
   "descriptionLabel": "Description",
   "createdLabel": "Created",
-  "lastModifiedLabel": "Last modified"
+  "lastModifiedLabel": "Last modified",
+
+  "mediaPickerRecentTab": "Recent",
+  "mediaPickerLibraryTab": "Library",
+  "mediaPickerSearchTab": "Search",
+  "mediaPickerUploadTab": "Upload",
+  "mediaLoadErrorMessage": "Unable to load images.",
+  "mediaEmptyStateMessage": "No images available.",
+  "mediaUntitledLabel": "Untitled",
+  "mediaLibrarySearchHint": "Search library",
+  "mediaSearchHint": "Search images",
+  "mediaSearchMinCharsMessage": "Type at least 2 characters to search.",
+  "mediaSearchNoResultsMessage": "No results.",
+  "mediaSearchUnavailableMessage": "Search is currently unavailable.",
+  "mediaSelectFailedMessage": "Unable to select this image.",
+  "mediaCropScreenTitle": "Crop image",
+  "mediaCameraAction": "Camera",
+  "mediaGalleryAction": "Gallery",
+  "mediaUploadFailedMessage": "Upload failed. Try again.",
+  "mediaRenameDialogTitle": "Rename image",
+  "mediaNameLabel": "Name",
+  "mediaRenameFailedMessage": "Unable to rename the image."
 }

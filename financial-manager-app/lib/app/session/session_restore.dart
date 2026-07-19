@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/providers.dart';
 import '../../features/authentication/data/providers.dart';
-import 'current_user_provider.dart';
 import 'session_controller.dart';
 
 /// Runs once at app startup (plan.md section 7.1): wires
@@ -28,8 +27,7 @@ final sessionRestoreProvider = FutureProvider<void>((ref) async {
       return;
     }
 
-    ref.read(currentUserProvider.notifier).state = user;
-    ref.read(sessionControllerProvider.notifier).signIn();
+    ref.read(sessionControllerProvider.notifier).signIn(user);
   } catch (_) {
     ref.read(sessionControllerProvider.notifier).signOut();
   }

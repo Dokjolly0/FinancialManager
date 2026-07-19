@@ -80,6 +80,7 @@ type assetResponse struct {
 	Kind        string  `json:"kind"`
 	Source      string  `json:"source"`
 	Attribution *string `json:"attribution,omitempty"`
+	Name        *string `json:"name,omitempty"`
 	MimeType    string  `json:"mime_type"`
 	Width       int     `json:"width"`
 	Height      int     `json:"height"`
@@ -92,6 +93,7 @@ const timeLayout = "2006-01-02T15:04:05Z07:00"
 func toAssetResponse(a Asset) assetResponse {
 	return assetResponse{
 		ID: a.ID.String(), Kind: a.Kind, Source: a.Source, Attribution: a.SourceAttribution,
+		Name:     a.Name,
 		MimeType: a.MimeType, Width: a.Width, Height: a.Height,
 		URL: "/v1/media/" + a.ID.String(), CreatedAt: a.CreatedAt.Format(timeLayout),
 	}
@@ -159,7 +161,7 @@ func (s *Service) processAndStore(
 	asset, err := s.repo.CreateOrReuse(ctx, CreateInput{
 		OwnerUserID: ownerUserID, Kind: kind, Source: source,
 		SourceProvider: sourceProvider, SourceExternalID: sourceExternalID, SourceAttribution: sourceAttribution,
-		ObjectKey: key, OriginalFilename: originalFilename, MimeType: mimeType,
+		ObjectKey: key, OriginalFilename: originalFilename, Name: originalFilename, MimeType: mimeType,
 		Width: size, Height: size, SizeBytes: int64(len(encoded)), SHA256: sum[:], Status: StatusReady,
 	})
 	if err != nil {
@@ -273,8 +275,8 @@ func (s *Service) Search(ctx context.Context, in SearchInput) ([]searchResponse,
 	return out, nil
 }
 
-func (s *Service) List(ctx context.Context, ownerUserID uuid.UUID, kind string, sortRecent bool, limit int) ([]assetResponse, error) {
-	assets, err := s.repo.List(ctx, ListFilter{OwnerUserID: ownerUserID, Kind: kind, SortRecent: sortRecent, Limit: limit})
+func (s *Service) List(ctx context.Context, ownerUserID uuid.UUID, kind string, sortRecent bool, limit int, query string) ([]assetResponse, error) {
+	assets, err := s.repo.List(ctx, ListFilter{OwnerUserID: ownerUserID, Kind: kind, SortRecent: sortRecent, Query: query, Limit: limit})
 	if err != nil {
 		return nil, err
 	}
@@ -283,6 +285,31 @@ func (s *Service) List(ctx context.Context, ownerUserID uuid.UUID, kind string, 
 		out = append(out, toAssetResponse(a))
 	}
 	return out, nil
+}
+
+type RenameInput struct {
+	OwnerUserID uuid.UUID
+	ID          uuid.UUID
+	Name        string
+}
+
+func (s *Service) Rename(ctx context.Context, in RenameInput) (assetResponse, error) {
+	trimmed := strings.TrimSpace(in.Name)
+	if trimmed == "" {
+		return assetResponse{}, apierror.NewValidation(map[string]string{"name": apierror.FieldRequired})
+	}
+	if len(trimmed) > 255 {
+		return assetResponse{}, apierror.NewValidation(map[string]string{"name": apierror.FieldMediaNameLength})
+	}
+
+	asset, err := s.repo.Rename(ctx, in.ID, in.OwnerUserID, trimmed)
+	if errors.Is(err, ErrNotFound) {
+		return assetResponse{}, apierror.ErrNotFound
+	}
+	if err != nil {
+		return assetResponse{}, err
+	}
+	return toAssetResponse(asset), nil
 }
 
 // GetContent returns the asset's bytes for the authenticated-download

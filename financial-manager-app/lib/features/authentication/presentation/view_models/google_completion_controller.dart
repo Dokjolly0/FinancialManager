@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/session/current_user_provider.dart';
 import '../../../../app/session/pending_google_registration_provider.dart';
 import '../../../../app/session/session_controller.dart';
 import '../../../../core/errors/app_error.dart';
@@ -91,9 +90,8 @@ class GoogleCompletionController extends Notifier<GoogleCompletionState> {
             ),
           );
 
-      ref.read(currentUserProvider.notifier).state = user;
       ref.read(pendingGoogleRegistrationProvider.notifier).state = null;
-      ref.read(sessionControllerProvider.notifier).signIn();
+      ref.read(sessionControllerProvider.notifier).signIn(user);
       state = state.copyWith(isSubmitting: false);
       return true;
     } on AppError catch (e) {

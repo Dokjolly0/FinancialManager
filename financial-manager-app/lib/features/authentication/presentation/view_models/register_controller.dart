@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/session/current_user_provider.dart';
 import '../../../../app/session/session_controller.dart';
 import '../../../../core/errors/app_error.dart';
 import '../../../../core/formatting/color_hex.dart';
@@ -10,7 +9,12 @@ import '../../data/providers.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../state/register_state.dart';
 
-class RegisterController extends Notifier<RegisterState> {
+/// Index of the wizard's last step (Wallet). submit() is only ever called
+/// from there, so error handling should target it directly rather than
+/// trusting ambient state.step.
+const _lastStep = 2;
+
+class RegisterController extends AutoDisposeNotifier<RegisterState> {
   @override
   RegisterState build() => const RegisterState();
 
@@ -124,8 +128,7 @@ class RegisterController extends Notifier<RegisterState> {
             ),
           );
 
-      ref.read(currentUserProvider.notifier).state = user;
-      ref.read(sessionControllerProvider.notifier).signIn();
+      ref.read(sessionControllerProvider.notifier).signIn(user);
       state = state.copyWith(isSubmitting: false);
       return true;
     } on AppError catch (e) {
@@ -141,7 +144,7 @@ class RegisterController extends Notifier<RegisterState> {
       };
       final targetStep = fieldErrors.keys.any(accountFields.contains)
           ? 0
-          : state.step;
+          : _lastStep;
 
       state = state.copyWith(
         isSubmitting: false,
@@ -155,4 +158,6 @@ class RegisterController extends Notifier<RegisterState> {
 }
 
 final registerControllerProvider =
-    NotifierProvider<RegisterController, RegisterState>(RegisterController.new);
+    NotifierProvider.autoDispose<RegisterController, RegisterState>(
+      RegisterController.new,
+    );

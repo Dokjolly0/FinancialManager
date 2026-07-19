@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/session/current_user_provider.dart';
 import '../../../../app/session/session_controller.dart';
 import '../../../../core/errors/app_error.dart';
 import '../../data/providers.dart';
@@ -21,8 +20,7 @@ class LoginController extends Notifier<LoginState> {
           .read(authRepositoryProvider)
           .login(usernameOrEmail: usernameOrEmail, password: password);
 
-      ref.read(currentUserProvider.notifier).state = user;
-      ref.read(sessionControllerProvider.notifier).signIn();
+      ref.read(sessionControllerProvider.notifier).signIn(user);
       state = state.copyWith(isSubmitting: false);
       return true;
     } on AppError catch (e) {

@@ -86,6 +86,7 @@ const (
 	FieldInvalidGroupBy        = "INVALID_GROUP_BY"
 	FieldInvalidMediaKind      = "INVALID_MEDIA_KIND"
 	FieldProviderNotSupported  = "PROVIDER_NOT_SUPPORTED"
+	FieldMediaNameLength       = "MEDIA_NAME_LENGTH_INVALID"
 )
 
 // Write renders err as the section 10.6 JSON envelope. Any error that is

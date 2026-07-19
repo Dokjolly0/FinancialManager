@@ -20,12 +20,14 @@ class MediaRepositoryImpl implements MediaRepository {
     required MediaKind kind,
     bool sortRecent = false,
     int limit = 40,
+    String? query,
   }) async {
     try {
       final response = await _api.list(
         kind: kind.toApi(),
         sortRecent: sortRecent,
         limit: limit,
+        query: query,
       );
       final raw = response['media'] as List<dynamic>? ?? [];
       return raw
@@ -99,6 +101,16 @@ class MediaRepositoryImpl implements MediaRepository {
   Future<void> delete(String id) async {
     try {
       await _api.delete(id);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<MediaAsset> rename({required String id, required String name}) async {
+    try {
+      final response = await _api.rename(id: id, name: name);
+      return MediaAsset.fromJson(response);
     } on DioException catch (e) {
       throw ErrorMapper.fromException(e);
     }
