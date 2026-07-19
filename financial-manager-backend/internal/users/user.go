@@ -22,6 +22,11 @@ const (
 	StatusDeleted         = "deleted"
 )
 
+const (
+	FirstDayOfWeekMonday = "monday"
+	FirstDayOfWeekSunday = "sunday"
+)
+
 type User struct {
 	ID                    uuid.UUID
 	FirstName             string
@@ -38,6 +43,8 @@ type User struct {
 	Locale                string
 	Timezone              string
 	Theme                 string
+	BalanceHiddenDefault  bool
+	FirstDayOfWeek        string
 	Status                string
 	CreatedAt             time.Time
 	UpdatedAt             time.Time

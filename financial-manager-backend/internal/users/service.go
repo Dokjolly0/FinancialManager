@@ -28,21 +28,25 @@ func (s *Service) GetProfile(ctx context.Context, userID uuid.UUID) (User, error
 }
 
 type UpdateProfileInput struct {
-	FirstName       string
-	LastName        string
-	Timezone        string
-	Locale          string
-	Theme           string
-	ExpectedVersion int64
+	FirstName            string
+	LastName             string
+	Timezone             string
+	Locale               string
+	Theme                string
+	BalanceHiddenDefault bool
+	FirstDayOfWeek       string
+	ExpectedVersion      int64
 }
 
 func (s *Service) UpdateProfile(ctx context.Context, userID uuid.UUID, in UpdateProfileInput) (User, error) {
 	fields := UpdateProfileFields{
-		FirstName: in.FirstName,
-		LastName:  in.LastName,
-		Timezone:  in.Timezone,
-		Locale:    in.Locale,
-		Theme:     in.Theme,
+		FirstName:            in.FirstName,
+		LastName:             in.LastName,
+		Timezone:             in.Timezone,
+		Locale:               in.Locale,
+		Theme:                in.Theme,
+		BalanceHiddenDefault: in.BalanceHiddenDefault,
+		FirstDayOfWeek:       in.FirstDayOfWeek,
 	}
 
 	updated, err := s.repo.UpdateProfile(ctx, userID, in.ExpectedVersion, fields)

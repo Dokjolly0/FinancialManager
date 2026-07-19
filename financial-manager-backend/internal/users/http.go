@@ -27,21 +27,23 @@ func (h *Handler) Mount(r chi.Router) {
 }
 
 type userResponse struct {
-	ID             string  `json:"id"`
-	FirstName      string  `json:"first_name"`
-	LastName       string  `json:"last_name"`
-	Username       string  `json:"username"`
-	Email          string  `json:"email"`
-	EmailVerified  bool    `json:"email_verified"`
-	AvatarMode     string  `json:"avatar_mode"`
-	AvatarMediaID  *string `json:"avatar_media_id,omitempty"`
-	AvatarBgColor  string  `json:"avatar_background_color"`
-	AvatarTxtColor string  `json:"avatar_text_color"`
-	Locale         string  `json:"locale"`
-	Timezone       string  `json:"timezone"`
-	Theme          string  `json:"theme"`
-	Version        int64   `json:"version"`
-	CreatedAt      string  `json:"created_at"`
+	ID                   string  `json:"id"`
+	FirstName            string  `json:"first_name"`
+	LastName             string  `json:"last_name"`
+	Username             string  `json:"username"`
+	Email                string  `json:"email"`
+	EmailVerified        bool    `json:"email_verified"`
+	AvatarMode           string  `json:"avatar_mode"`
+	AvatarMediaID        *string `json:"avatar_media_id,omitempty"`
+	AvatarBgColor        string  `json:"avatar_background_color"`
+	AvatarTxtColor       string  `json:"avatar_text_color"`
+	Locale               string  `json:"locale"`
+	Timezone             string  `json:"timezone"`
+	Theme                string  `json:"theme"`
+	BalanceHiddenDefault bool    `json:"balance_hidden_default"`
+	FirstDayOfWeek       string  `json:"first_day_of_week"`
+	Version              int64   `json:"version"`
+	CreatedAt            string  `json:"created_at"`
 }
 
 func toUserResponse(u User) userResponse {
@@ -51,21 +53,23 @@ func toUserResponse(u User) userResponse {
 		mediaID = &s
 	}
 	return userResponse{
-		ID:             u.ID.String(),
-		FirstName:      u.FirstName,
-		LastName:       u.LastName,
-		Username:       u.Username,
-		Email:          u.Email,
-		EmailVerified:  u.EmailVerified(),
-		AvatarMode:     u.AvatarMode,
-		AvatarMediaID:  mediaID,
-		AvatarBgColor:  u.AvatarBackgroundColor,
-		AvatarTxtColor: u.AvatarTextColor,
-		Locale:         u.Locale,
-		Timezone:       u.Timezone,
-		Theme:          u.Theme,
-		Version:        u.Version,
-		CreatedAt:      u.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		ID:                   u.ID.String(),
+		FirstName:            u.FirstName,
+		LastName:             u.LastName,
+		Username:             u.Username,
+		Email:                u.Email,
+		EmailVerified:        u.EmailVerified(),
+		AvatarMode:           u.AvatarMode,
+		AvatarMediaID:        mediaID,
+		AvatarBgColor:        u.AvatarBackgroundColor,
+		AvatarTxtColor:       u.AvatarTextColor,
+		Locale:               u.Locale,
+		Timezone:             u.Timezone,
+		Theme:                u.Theme,
+		BalanceHiddenDefault: u.BalanceHiddenDefault,
+		FirstDayOfWeek:       u.FirstDayOfWeek,
+		Version:              u.Version,
+		CreatedAt:            u.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
 
@@ -86,12 +90,14 @@ func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateMeRequest struct {
-	FirstName       string `json:"first_name"`
-	LastName        string `json:"last_name"`
-	Timezone        string `json:"timezone"`
-	Locale          string `json:"locale"`
-	Theme           string `json:"theme"`
-	ExpectedVersion int64  `json:"version"`
+	FirstName            string `json:"first_name"`
+	LastName             string `json:"last_name"`
+	Timezone             string `json:"timezone"`
+	Locale               string `json:"locale"`
+	Theme                string `json:"theme"`
+	BalanceHiddenDefault bool   `json:"balance_hidden_default"`
+	FirstDayOfWeek       string `json:"first_day_of_week"`
+	ExpectedVersion      int64  `json:"version"`
 }
 
 func (h *Handler) updateMe(w http.ResponseWriter, r *http.Request) {
@@ -117,18 +123,23 @@ func (h *Handler) updateMe(w http.ResponseWriter, r *http.Request) {
 	if req.Theme != "system" && req.Theme != "light" && req.Theme != "dark" {
 		fieldErrors["theme"] = "Deve essere system, light o dark."
 	}
+	if req.FirstDayOfWeek != FirstDayOfWeekMonday && req.FirstDayOfWeek != FirstDayOfWeekSunday {
+		fieldErrors["first_day_of_week"] = "Deve essere monday o sunday."
+	}
 	if len(fieldErrors) > 0 {
 		apierror.Write(w, r, apierror.NewValidation(fieldErrors))
 		return
 	}
 
 	updated, err := h.service.UpdateProfile(r.Context(), userID, UpdateProfileInput{
-		FirstName:       req.FirstName,
-		LastName:        req.LastName,
-		Timezone:        req.Timezone,
-		Locale:          req.Locale,
-		Theme:           req.Theme,
-		ExpectedVersion: req.ExpectedVersion,
+		FirstName:            req.FirstName,
+		LastName:             req.LastName,
+		Timezone:             req.Timezone,
+		Locale:               req.Locale,
+		Theme:                req.Theme,
+		BalanceHiddenDefault: req.BalanceHiddenDefault,
+		FirstDayOfWeek:       req.FirstDayOfWeek,
+		ExpectedVersion:      req.ExpectedVersion,
 	})
 	if err != nil {
 		apierror.Write(w, r, err)
