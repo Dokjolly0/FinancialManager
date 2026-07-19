@@ -32,6 +32,12 @@ class ConfirmationSheet extends StatelessWidget {
   }) async {
     final result = await showModalBottomSheet<bool>(
       context: context,
+      // Without this, the sheet is inserted into the shell branch's own
+      // nested Navigator (StatefulShellRoute.indexedStack) instead of the
+      // root one — AppShell's centerDocked FAB then paints and hit-tests
+      // above it, so a button under the FAB's screen position is
+      // unreachable.
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (context) => ConfirmationSheet(
         title: title,

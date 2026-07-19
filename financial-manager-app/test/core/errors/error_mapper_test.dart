@@ -17,7 +17,7 @@ void main() {
       expect(ErrorMapper.fromException(error), isA<NetworkError>());
     });
 
-    test('maps 401 to SessionExpiredError', () {
+    test('maps a bodyless 401 to SessionExpiredError', () {
       final error = DioException(
         requestOptions: _requestOptions(),
         type: DioExceptionType.badResponse,
@@ -26,6 +26,49 @@ void main() {
 
       expect(ErrorMapper.fromException(error), isA<SessionExpiredError>());
     });
+
+    test('maps a 401 with code UNAUTHORIZED to SessionExpiredError', () {
+      final error = DioException(
+        requestOptions: _requestOptions(),
+        type: DioExceptionType.badResponse,
+        response: Response(
+          requestOptions: _requestOptions(),
+          statusCode: 401,
+          data: {
+            'error': {
+              'code': 'UNAUTHORIZED',
+              'message': 'Autenticazione richiesta o non valida.',
+            },
+          },
+        ),
+      );
+
+      expect(ErrorMapper.fromException(error), isA<SessionExpiredError>());
+    });
+
+    test(
+      'maps a 401 with a domain code (e.g. wrong current password) to DomainError, not SessionExpiredError',
+      () {
+        final error = DioException(
+          requestOptions: _requestOptions(),
+          type: DioExceptionType.badResponse,
+          response: Response(
+            requestOptions: _requestOptions(),
+            statusCode: 401,
+            data: {
+              'error': {
+                'code': 'INVALID_CURRENT_PASSWORD',
+                'message': 'La password attuale non è corretta.',
+              },
+            },
+          ),
+        );
+
+        final mapped = ErrorMapper.fromException(error) as DomainError;
+        expect(mapped.code, 'INVALID_CURRENT_PASSWORD');
+        expect(mapped.message, 'La password attuale non è corretta.');
+      },
+    );
 
     test('maps 429 to RateLimitedError with retry-after', () {
       final error = DioException(

@@ -39,6 +39,9 @@ dependencies:
   # Report charts: andamento line, confronto mensile bars (section 7.12, 18).
   fl_chart: ^0.69.2
 
+  # Saving a downloaded data export to app storage (section 7.13 "Dati", 20.2).
+  path_provider: ^2.1.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

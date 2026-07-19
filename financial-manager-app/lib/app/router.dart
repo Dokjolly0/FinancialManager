@@ -2,6 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/account/presentation/screens/account_data_screen.dart';
+import '../features/account/presentation/screens/account_linked_accounts_screen.dart';
+import '../features/account/presentation/screens/account_preferences_screen.dart';
+import '../features/account/presentation/screens/account_profile_screen.dart';
+import '../features/account/presentation/screens/account_screen.dart';
+import '../features/account/presentation/screens/account_security_screen.dart';
 import '../features/authentication/presentation/screens/forgot_password_screen.dart';
 import '../features/authentication/presentation/screens/google_registration_completion_screen.dart';
 import '../features/authentication/presentation/screens/login_screen.dart';
@@ -12,7 +18,6 @@ import '../features/reports/presentation/screens/report_screen.dart';
 import '../features/transactions/presentation/screens/new_transaction_screen.dart';
 import '../features/transactions/presentation/screens/transaction_detail_screen.dart';
 import 'app_shell.dart';
-import 'placeholder_screen.dart';
 import 'session/session_controller.dart';
 import 'session/session_status.dart';
 import 'splash_screen.dart';
@@ -35,6 +40,7 @@ abstract final class AppRoutes {
   static const accountProfile = '/app/account/profile';
   static const accountSecurity = '/app/account/security';
   static const accountLinkedAccounts = '/app/account/linked-accounts';
+  static const accountPreferences = '/app/account/preferences';
   static const accountData = '/app/account/data';
 
   static String transactionDetail(String id) => '/app/transactions/$id';
@@ -111,7 +117,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) =>
             NewTransactionScreen(editTransactionId: state.pathParameters['id']),
       ),
-      ..._placeholderRoutes,
+      GoRoute(
+        path: AppRoutes.accountProfile,
+        builder: (_, _) => const AccountProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.accountSecurity,
+        builder: (_, _) => const AccountSecurityScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.accountLinkedAccounts,
+        builder: (_, _) => const AccountLinkedAccountsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.accountPreferences,
+        builder: (_, _) => const AccountPreferencesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.accountData,
+        builder: (_, _) => const AccountDataScreen(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
@@ -144,9 +169,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.account,
-                builder: (_, _) => const FeaturePlaceholderScreen(
-                  routeName: AppRoutes.account,
-                ),
+                builder: (_, _) => const AccountScreen(),
               ),
             ],
           ),
@@ -156,16 +179,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-const _placeholderPaths = [
-  AppRoutes.accountProfile,
-  AppRoutes.accountSecurity,
-  AppRoutes.accountLinkedAccounts,
-  AppRoutes.accountData,
-];
-
-final _placeholderRoutes = _placeholderPaths.map(
-  (path) => GoRoute(
-    path: path,
-    builder: (_, _) => FeaturePlaceholderScreen(routeName: path),
-  ),
-);

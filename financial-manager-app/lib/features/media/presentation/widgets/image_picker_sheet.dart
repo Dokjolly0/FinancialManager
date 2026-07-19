@@ -26,6 +26,9 @@ class ImagePickerSheet extends StatefulWidget {
   }) {
     return showModalBottomSheet<MediaAsset?>(
       context: context,
+      // See ConfirmationSheet's useRootNavigator comment — otherwise
+      // AppShell's centerDocked FAB sits above this sheet's own buttons.
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) => ImagePickerSheet(kind: kind),

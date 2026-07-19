@@ -34,7 +34,17 @@ abstract final class ErrorMapper {
     final status = response?.statusCode ?? 0;
     final envelope = ApiErrorEnvelope.tryParse(response?.data);
 
-    if (status == 401) {
+    // 401 is not exclusively "the access token is invalid/expired" — some
+    // endpoints reuse it for a rejected domain-level credential (e.g.
+    // wrong current password on change-password/delete-account, wrong
+    // password on login), each with their own envelope code. Only the
+    // backend's generic UNAUTHORIZED code (or a 401 with no parseable
+    // envelope at all, e.g. a missing/malformed token) means the session
+    // itself is the problem; anything else with a body is a domain error
+    // and must keep its own message/field_errors instead of being
+    // overwritten with "Sessione scaduta" (found live: a wrong current
+    // password on the change-password screen was showing that message).
+    if (status == 401 && (envelope == null || envelope.code == 'UNAUTHORIZED')) {
       return SessionExpiredError(requestId: envelope?.requestId);
     }
 

@@ -22,6 +22,9 @@ class HistoryFiltersSheet extends ConsumerStatefulWidget {
   }) {
     return showModalBottomSheet<TransactionListFilter?>(
       context: context,
+      // See ConfirmationSheet's useRootNavigator comment — otherwise
+      // AppShell's centerDocked FAB sits above this sheet's own buttons.
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) => HistoryFiltersSheet(initialFilter: initialFilter),
