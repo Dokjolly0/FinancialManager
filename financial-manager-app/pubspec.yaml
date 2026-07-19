@@ -36,6 +36,9 @@ dependencies:
   image_picker: ^1.2.2
   image_cropper: ^12.2.1
 
+  # Report charts: andamento line, confronto mensile bars (section 7.12, 18).
+  fl_chart: ^0.69.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

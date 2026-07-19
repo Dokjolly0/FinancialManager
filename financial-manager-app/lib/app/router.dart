@@ -8,6 +8,7 @@ import '../features/authentication/presentation/screens/login_screen.dart';
 import '../features/authentication/presentation/screens/register_screen.dart';
 import '../features/history/presentation/screens/history_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
+import '../features/reports/presentation/screens/report_screen.dart';
 import '../features/transactions/presentation/screens/new_transaction_screen.dart';
 import '../features/transactions/presentation/screens/transaction_detail_screen.dart';
 import 'app_shell.dart';
@@ -135,9 +136,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.reports,
-                builder: (_, _) => const FeaturePlaceholderScreen(
-                  routeName: AppRoutes.reports,
-                ),
+                builder: (_, _) => const ReportScreen(),
               ),
             ],
           ),
