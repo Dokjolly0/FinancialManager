@@ -1,377 +1,377 @@
-# Piano implementativo completo — App di gestione economica
+# Complete implementation plan — Personal finance management app
 
-**Versione:** 1.0  
-**Data:** 18 luglio 2026  
-**Stack previsto:** Flutter · Go · PostgreSQL · Redis · Docker  
-**Porte host richieste:** PostgreSQL `10001` · Redis `10002` · API `10003`
+**Version:** 1.0  
+**Date:** July 18, 2026  
+**Planned stack:** Flutter · Go · PostgreSQL · Redis · Docker  
+**Required host ports:** PostgreSQL `10001` · Redis `10002` · API `10003`
 
 ---
 
-## Indice
+## Table of contents
 
-1. [Obiettivo del prodotto](#1-obiettivo-del-prodotto)
-2. [Revisione critica della bozza iniziale](#2-revisione-critica-della-bozza-iniziale)
-3. [Ambito MVP e funzionalità successive](#3-ambito-mvp-e-funzionalità-successive)
-4. [Terminologia e regole di dominio](#4-terminologia-e-regole-di-dominio)
-5. [Architettura informativa e navigazione](#5-architettura-informativa-e-navigazione)
-6. [Design system e linee guida UI](#6-design-system-e-linee-guida-ui)
-7. [Specifiche dettagliate delle schermate](#7-specifiche-dettagliate-delle-schermate)
-8. [Flussi utente principali](#8-flussi-utente-principali)
-9. [Architettura Flutter](#9-architettura-flutter)
-10. [Architettura backend Go](#10-architettura-backend-go)
-11. [Modello dati PostgreSQL](#11-modello-dati-postgresql)
-12. [Ruolo di Redis](#12-ruolo-di-redis)
-13. [Gestione affidabile del saldo](#13-gestione-affidabile-del-saldo)
-14. [Contratto API REST](#14-contratto-api-rest)
-15. [Autenticazione e collegamento Google](#15-autenticazione-e-collegamento-google)
-16. [Gestione immagini, ricerca e crop](#16-gestione-immagini-ricerca-e-crop)
-17. [Cronologia, ricerca e filtri](#17-cronologia-ricerca-e-filtri)
-18. [Report, percentuali e grafici](#18-report-percentuali-e-grafici)
-19. [Sicurezza](#19-sicurezza)
-20. [Privacy e gestione dei dati](#20-privacy-e-gestione-dei-dati)
-21. [Docker e ambienti](#21-docker-e-ambienti)
-22. [Osservabilità, log e monitoraggio](#22-osservabilità-log-e-monitoraggio)
-23. [Strategia di test](#23-strategia-di-test)
-24. [CI/CD e rilascio](#24-cicd-e-rilascio)
-25. [Roadmap implementativa](#25-roadmap-implementativa)
-26. [Criteri di accettazione](#26-criteri-di-accettazione)
-27. [Rischi e mitigazioni](#27-rischi-e-mitigazioni)
-28. [Decisioni da confermare prima dello sviluppo](#28-decisioni-da-confermare-prima-dello-sviluppo)
-29. [Struttura consigliata dei repository](#29-struttura-consigliata-dei-repository)
+1. [Product goal](#1-product-goal)
+2. [Critical review of the initial draft](#2-critical-review-of-the-initial-draft)
+3. [MVP scope and later features](#3-mvp-scope-and-later-features)
+4. [Terminology and domain rules](#4-terminology-and-domain-rules)
+5. [Information architecture and navigation](#5-information-architecture-and-navigation)
+6. [Design system and UI guidelines](#6-design-system-and-ui-guidelines)
+7. [Detailed screen specifications](#7-detailed-screen-specifications)
+8. [Main user flows](#8-main-user-flows)
+9. [Flutter architecture](#9-flutter-architecture)
+10. [Go backend architecture](#10-go-backend-architecture)
+11. [PostgreSQL data model](#11-postgresql-data-model)
+12. [Redis's role](#12-rediss-role)
+13. [Reliable balance management](#13-reliable-balance-management)
+14. [REST API contract](#14-rest-api-contract)
+15. [Authentication and Google linking](#15-authentication-and-google-linking)
+16. [Image management, search, and crop](#16-image-management-search-and-crop)
+17. [History, search, and filters](#17-history-search-and-filters)
+18. [Reports, percentages, and charts](#18-reports-percentages-and-charts)
+19. [Security](#19-security)
+20. [Privacy and data management](#20-privacy-and-data-management)
+21. [Docker and environments](#21-docker-and-environments)
+22. [Observability, logging, and monitoring](#22-observability-logging-and-monitoring)
+23. [Test strategy](#23-test-strategy)
+24. [CI/CD and release](#24-cicd-and-release)
+25. [Implementation roadmap](#25-implementation-roadmap)
+26. [Acceptance criteria](#26-acceptance-criteria)
+27. [Risks and mitigations](#27-risks-and-mitigations)
+28. [Decisions to confirm before development](#28-decisions-to-confirm-before-development)
+29. [Recommended repository structure](#29-recommended-repository-structure)
 30. [Definition of Done](#30-definition-of-done)
-31. [Riferimenti tecnici](#31-riferimenti-tecnici)
+31. [Technical references](#31-technical-references)
 
 ---
 
-## 1. Obiettivo del prodotto
+## 1. Product goal
 
-L’app deve consentire a una persona di gestire in modo semplice ma verificabile il proprio saldo, registrare entrate e uscite, ritrovare rapidamente le operazioni e comprendere l’andamento economico nel tempo.
+The app must let a person manage their balance in a way that is simple yet verifiable, record income and expenses, quickly find past operations, and understand their financial trend over time.
 
-Il prodotto deve avere quattro qualità principali:
+The product must have four core qualities:
 
-1. **Rapidità:** inserire un movimento comune deve richiedere pochi secondi.
-2. **Affidabilità:** ogni modifica che influenza il saldo deve essere tracciabile.
-3. **Leggibilità:** saldo, entrate, uscite e andamento devono essere comprensibili senza conoscenze contabili.
-4. **Estendibilità:** l’MVP deve poter evolvere verso più conti, ricorrenze automatiche, budget, esportazioni e sincronizzazioni bancarie senza riscrivere il nucleo.
+1. **Speed:** entering a common transaction must take only a few seconds.
+2. **Reliability:** every change that affects the balance must be traceable.
+3. **Readability:** balance, income, expenses, and trend must be understandable without accounting knowledge.
+4. **Extensibility:** the MVP must be able to evolve toward multiple accounts, automatic recurrences, budgets, exports, and bank synchronization without rewriting the core.
 
-### 1.1 Utenti target iniziali
+### 1.1 Initial target users
 
-- Persona che vuole sostituire note o fogli di calcolo con una soluzione mobile.
-- Persona che registra manualmente spese e accrediti.
-- Persona che vuole confrontare mesi e capire quali titoli o categorie incidono maggiormente.
-- Persona che non necessita, nella prima versione, di collegamento automatico alla banca.
+- A person who wants to replace notes or spreadsheets with a mobile solution.
+- A person who manually records expenses and income.
+- A person who wants to compare months and understand which titles or categories weigh the most.
+- A person who does not need, in the first version, automatic bank connection.
 
-### 1.2 Principi di prodotto
+### 1.2 Product principles
 
-- Il saldo mostrato deve essere sempre riconducibile a movimenti registrati.
-- Le azioni distruttive devono essere reversibili o chiaramente confermate.
-- PostgreSQL è la fonte autorevole dei dati finanziari.
-- Redis non deve contenere l’unica copia di alcun dato finanziario.
-- Gli importi non devono mai essere trattati con numeri floating point.
-- Le date devono essere conservate in UTC e visualizzate nel fuso orario dell’utente.
-- L’interfaccia deve distinguere entrate e uscite anche senza affidarsi esclusivamente al colore.
+- The displayed balance must always be traceable to recorded transactions.
+- Destructive actions must be reversible or clearly confirmed.
+- PostgreSQL is the authoritative source of financial data.
+- Redis must not hold the only copy of any financial data.
+- Amounts must never be handled with floating-point numbers.
+- Dates must be stored in UTC and displayed in the user's time zone.
+- The interface must distinguish income and expenses without relying solely on color.
 
 ---
 
-## 2. Revisione critica della bozza iniziale
+## 2. Critical review of the initial draft
 
-La bozza contiene già il nucleo corretto del prodotto. Per renderla implementabile sono però necessarie alcune correzioni e integrazioni.
+The draft already contains the correct core of the product. To make it implementable, however, some corrections and additions are needed.
 
-### 2.1 Modifiche necessarie
+### 2.1 Necessary changes
 
-#### A. La modifica manuale del saldo diventa una “rettifica di saldo”
+#### A. Manually changing the balance becomes a "balance adjustment"
 
-Non bisogna sovrascrivere direttamente un numero nel profilo, perché si perderebbe la spiegazione della differenza. Quando l’utente imposta un saldo differente, il sistema deve creare un movimento speciale:
+A number in the profile must not be directly overwritten, because the explanation for the difference would be lost. When the user sets a different balance, the system must create a special transaction:
 
-- tipo tecnico: `BALANCE_ADJUSTMENT`;
-- importo: differenza tra saldo attuale e saldo desiderato;
-- titolo predefinito: “Rettifica saldo”;
-- descrizione facoltativa ma consigliata;
-- escluso per impostazione predefinita dai grafici di entrate e spese ordinarie;
-- sempre visibile nella cronologia, con indicatore dedicato.
+- technical type: `BALANCE_ADJUSTMENT`;
+- amount: difference between the current balance and the desired balance;
+- default title: "Balance adjustment";
+- optional but recommended description;
+- excluded by default from ordinary income/expense charts;
+- always visible in history, with a dedicated indicator.
 
-Esempio: saldo registrato €500, saldo reale €470. L’app crea una rettifica di `-€30`.
+Example: recorded balance €500, actual balance €470. The app creates a `-€30` adjustment.
 
-#### B. Aggiunta del concetto di categoria
+#### B. Adding the concept of category
 
-Il titolo da solo non è sufficiente per report coerenti. “Bar Centrale”, “Caffè Roma” e “Colazione” potrebbero rappresentare la stessa categoria economica, ma titoli diversi.
+The title alone is not enough for consistent reports. "Bar Centrale," "Caffè Roma," and "Colazione" might represent the same economic category but have different titles.
 
-Si aggiunge quindi una categoria, con valore predefinito “Altro”. Nei report l’utente potrà raggruppare:
+A category is therefore added, with a default value of "Other." In reports, the user will be able to group:
 
-- per **titolo/modello** — requisito originale;
-- per **categoria** — vista più utile per l’analisi;
-- in futuro per esercente, tag o conto.
+- by **title/template** — original requirement;
+- by **category** — a more useful view for analysis;
+- in the future, by merchant, tag, or account.
 
-#### C. Aggiunta dell’email alla registrazione manuale
+#### C. Adding email to manual registration
 
-L’email è necessaria per:
+Email is needed for:
 
-- recupero password;
-- avvisi di sicurezza;
-- verifica dell’identità;
-- eventuale collegamento a Google;
-- esportazione o cancellazione dell’account.
+- password recovery;
+- security alerts;
+- identity verification;
+- possible linking to Google;
+- account export or deletion.
 
-Campi registrazione aggiornati:
+Updated registration fields:
 
-- nome;
-- cognome;
+- first name;
+- last name;
 - username;
 - email;
 - password;
-- conferma password;
-- immagine profilo o avatar generato;
-- saldo iniziale;
-- valuta;
-- accettazione dei documenti richiesti dal prodotto.
+- confirm password;
+- profile picture or generated avatar;
+- initial balance;
+- currency;
+- acceptance of the documents required by the product.
 
-#### D. Separazione tra “riuso di un titolo” e “ricorrenza automatica”
+#### D. Separating "reusing a title" from "automatic recurrence"
 
-Il requisito descritto riguarda soprattutto l’autocompletamento di operazioni già usate. Nell’MVP verranno creati **modelli riutilizzabili**: selezionando un titolo precedente vengono precompilati categoria, immagine e dati abituali.
+The described requirement is mainly about autocompleting already-used transactions. In the MVP, **reusable templates** will be created: selecting a previous title pre-fills category, image, and usual data.
 
-La creazione automatica mensile o settimanale di transazioni viene mantenuta come fase successiva, perché richiede notifiche, gestione degli errori, fusi orari e conferma delle operazioni pianificate.
+Automatic monthly or weekly transaction creation is kept as a later phase, because it requires notifications, error handling, time zones, and confirmation of scheduled operations.
 
-#### E. Aggiunta di uno storage per le immagini
+#### E. Adding storage for images
 
-PostgreSQL e Redis non sono adatti a contenere direttamente tutti i file immagine. Il piano prevede:
+PostgreSQL and Redis are not suited to directly hold all image files. The plan calls for:
 
-- PostgreSQL per metadati e riferimenti;
-- storage S3-compatible, preferibilmente MinIO in ambiente self-hosted, oppure bucket cloud in produzione;
-- backend come unico punto autorizzato per upload, validazione e distribuzione iniziale.
+- PostgreSQL for metadata and references;
+- S3-compatible storage, preferably MinIO in a self-hosted environment, or a cloud bucket in production;
+- the backend as the sole authorized point for upload, validation, and initial distribution.
 
-MinIO può rimanere nella rete Docker interna senza una porta host pubblica. In alternativa, per un MVP molto piccolo, si può usare un volume persistente gestito dal backend, mantenendo la stessa interfaccia astratta.
+MinIO can stay on the internal Docker network without a public host port. Alternatively, for a very small MVP, a persistent volume managed by the backend can be used, keeping the same abstract interface.
 
-#### F. Aggiunta delle operazioni di modifica ed eliminazione
+#### F. Adding edit and delete operations
 
-Una cronologia utile deve permettere di correggere errori. Per ogni transazione sono previste:
+A useful history must allow correcting mistakes. For every transaction the following are planned:
 
-- visualizzazione dettaglio;
-- modifica;
-- eliminazione logica;
-- aggiornamento atomico del saldo;
-- audit dell’azione.
+- detail view;
+- edit;
+- logical deletion;
+- atomic balance update;
+- audit of the action.
 
-#### G. Aggiunta di valuta e fuso orario
+#### G. Adding currency and time zone
 
-Anche con una sola valuta iniziale, ogni portafoglio deve avere un codice ISO, per esempio `EUR`. Il profilo conserva anche locale e fuso orario, per esempio `it-IT` e `Europe/Rome`.
+Even with a single initial currency, every wallet must have an ISO code, e.g. `EUR`. The profile also stores locale and time zone, e.g. `it-IT` and `Europe/Rome`.
 
-#### H. Aggiunta di esportazione e cancellazione account
+#### H. Adding export and account deletion
 
-Sono funzionalità importanti per un’app che conserva dati finanziari personali:
+These are important features for an app that stores personal financial data:
 
-- esportazione CSV/JSON;
-- richiesta cancellazione account;
-- cancellazione o anonimizzazione secondo la politica definita;
-- revoca delle sessioni e scollegamento provider esterni.
+- CSV/JSON export;
+- account deletion request;
+- deletion or anonymization according to the defined policy;
+- session revocation and external-provider unlinking.
 
-### 2.2 Funzionalità non necessarie nell’MVP
+### 2.2 Features not needed in the MVP
 
-Vengono rinviate per evitare di aumentare il rischio della prima release:
+These are deferred to avoid increasing the risk of the first release:
 
-- sincronizzazione automatica con banche;
-- gestione condivisa tra più utenti;
-- più portafogli o conti per utente;
-- conversione valutaria;
-- budget avanzati;
-- previsioni basate su intelligenza artificiale;
-- riconoscimento automatico di ricevute;
-- ricorrenze automatiche;
-- importazione massiva da estratti conto.
+- automatic bank synchronization;
+- shared management among multiple users;
+- multiple wallets or accounts per user;
+- currency conversion;
+- advanced budgets;
+- AI-based forecasts;
+- automatic receipt recognition;
+- automatic recurrences;
+- bulk import from statements.
 
-L’architettura deve comunque evitare scelte che rendano queste funzionalità impossibili in seguito.
-
----
-
-## 3. Ambito MVP e funzionalità successive
-
-### 3.1 MVP obbligatorio
-
-- Registrazione manuale completa.
-- Login manuale.
-- Accesso Google collegato a un account applicativo completo.
-- Saldo iniziale non negativo.
-- Portafoglio singolo in EUR, ma schema predisposto per altre valute.
-- Home con saldo e ultimi movimenti.
-- Inserimento accredito/addebito.
-- Modelli riutilizzabili e suggerimenti dei titoli già usati.
-- Categoria della transazione.
-- Immagine da libreria già utilizzata.
-- Ricerca immagine tramite provider configurato.
-- Upload e crop immagine.
-- Cronologia paginata.
-- Filtri per titolo, importo, intervallo date, tipo e categoria.
-- Dettaglio, modifica ed eliminazione di una transazione.
-- Rettifica saldo.
-- Report per ultimi 30 giorni, ultimi 12 mesi, intera cronologia e periodo personalizzato.
-- Ripartizione per titolo e categoria.
-- Confronto mensile quando il periodo comprende almeno due mesi.
-- Modifica profilo e avatar.
-- Collegamento e scollegamento Google.
-- Logout dal dispositivo e logout da tutti i dispositivi.
-- Esportazione dati.
-- Cancellazione account.
-- Tema chiaro e scuro.
-- Localizzazione italiana; struttura pronta per altre lingue.
-
-### 3.2 Fase successiva consigliata
-
-- Ricorrenze automatiche o promemoria di operazioni ricorrenti.
-- Budget mensili per categoria.
-- Più conti/portafogli.
-- Trasferimenti tra conti.
-- Importazione CSV.
-- Allegati multipli e ricevute.
-- Notifiche push.
-- Report esportabili in PDF.
-- Widget home screen.
-- Login con passkey.
-- Sincronizzazione offline completa.
+The architecture must nonetheless avoid choices that would make these features impossible later.
 
 ---
 
-## 4. Terminologia e regole di dominio
+## 3. MVP scope and later features
 
-### 4.1 Entità principali
+### 3.1 Mandatory MVP
 
-- **Utente:** identità applicativa, indipendente dal metodo di autenticazione.
-- **Credenziale locale:** password associata all’utente.
-- **Identità esterna:** collegamento Google identificato dal `sub` verificato del token Google.
-- **Portafoglio:** contenitore del saldo e dei movimenti. Nell’MVP ne esiste uno per utente.
-- **Transazione:** movimento che modifica il saldo.
-- **Modello transazione:** dati riutilizzabili per operazioni frequenti.
-- **Categoria:** classificazione economica, per esempio “Casa”, “Trasporti”, “Stipendio”.
-- **Asset multimediale:** immagine caricata, cercata o riutilizzata.
-- **Rettifica:** transazione speciale usata per allineare il saldo.
+- Full manual registration.
+- Manual login.
+- Google sign-in linked to a complete application account.
+- Non-negative initial balance.
+- Single wallet in EUR, but schema ready for other currencies.
+- Home with balance and latest transactions.
+- Income/expense entry.
+- Reusable templates and suggestions from already-used titles.
+- Transaction category.
+- Image from an already-used library.
+- Image search via a configured provider.
+- Image upload and crop.
+- Paginated history.
+- Filters by title, amount, date range, type, and category.
+- Detail, edit, and delete of a transaction.
+- Balance adjustment.
+- Reports for the last 30 days, last 12 months, entire history, and custom period.
+- Breakdown by title and category.
+- Monthly comparison when the period spans at least two months.
+- Profile and avatar editing.
+- Google linking and unlinking.
+- Logout from the device and logout from all devices.
+- Data export.
+- Account deletion.
+- Light and dark theme.
+- Italian localization; structure ready for other languages.
 
-### 4.2 Tipi di transazione
+### 3.2 Recommended next phase
 
-Direzione economica:
-
-- `CREDIT`: aumenta il saldo;
-- `DEBIT`: diminuisce il saldo.
-
-Natura tecnica:
-
-- `STANDARD`: normale entrata o uscita;
-- `OPENING_BALANCE`: saldo iniziale;
-- `BALANCE_ADJUSTMENT`: rettifica manuale;
-- in futuro `TRANSFER`, `IMPORT`, `RECURRING_GENERATED`.
-
-### 4.3 Regole per gli importi
-
-- L’importo inserito dall’utente è sempre maggiore di zero.
-- La direzione determina il segno applicato al saldo.
-- Nel database l’importo viene salvato in unità minime, per esempio centesimi, come intero `BIGINT`.
-- Esempio: `€12,34` viene salvato come `1234`.
-- Il saldo iniziale deve essere `>= 0`.
-- Dopo la registrazione, il saldo può diventare negativo a seguito di addebiti, salvo decisione di prodotto contraria.
-- Il backend valida limiti massimi ragionevoli per evitare overflow o input anomali.
-
-### 4.4 Regole per titolo e modello
-
-- Titolo obbligatorio, lunghezza consigliata 1–120 caratteri.
-- Viene conservato il testo originale per la visualizzazione.
-- Viene calcolato anche un titolo normalizzato: trim, spazi compattati e confronto case-insensitive.
-- Se una transazione deriva da un modello, il riferimento al modello è preferito per il raggruppamento.
-- I suggerimenti sono ordinati per frequenza e utilizzo recente.
-- Se l’utente modifica un campo dopo aver selezionato un modello, la transazione può divergere senza modificare automaticamente il modello.
-- Dopo il salvataggio può essere offerta l’azione “Aggiorna anche il modello”.
-
-### 4.5 Regole temporali
-
-- `occurred_at`: data e ora effettiva dell’operazione, modificabile.
-- `created_at`: momento di creazione del record.
-- `updated_at`: ultima modifica.
-- Tutte le date persistite sono `timestamptz` in UTC.
-- Il client visualizza nel fuso del profilo.
-- I filtri date devono avere semantica inclusiva e chiara.
-- I periodi personalizzati vengono convertiti in intervalli UTC dal backend usando il fuso dell’utente.
+- Automatic recurrences or reminders for recurring transactions.
+- Monthly budgets per category.
+- Multiple accounts/wallets.
+- Transfers between accounts.
+- CSV import.
+- Multiple attachments and receipts.
+- Push notifications.
+- Reports exportable to PDF.
+- Home screen widget.
+- Passkey login.
+- Full offline synchronization.
 
 ---
 
-## 5. Architettura informativa e navigazione
+## 4. Terminology and domain rules
 
-### 5.1 Navigazione primaria
+### 4.1 Main entities
 
-Barra inferiore con quattro destinazioni e pulsante centrale:
+- **User:** application identity, independent of the authentication method.
+- **Local credential:** password associated with the user.
+- **External identity:** Google link identified by the verified `sub` of the Google token.
+- **Wallet:** container for the balance and transactions. In the MVP there is one per user.
+- **Transaction:** a movement that changes the balance.
+- **Transaction template:** reusable data for frequent transactions.
+- **Category:** economic classification, e.g. "Home," "Transport," "Salary."
+- **Media asset:** an uploaded, searched, or reused image.
+- **Adjustment:** a special transaction used to align the balance.
+
+### 4.2 Transaction types
+
+Economic direction:
+
+- `CREDIT`: increases the balance;
+- `DEBIT`: decreases the balance.
+
+Technical nature:
+
+- `STANDARD`: a normal income or expense;
+- `OPENING_BALANCE`: initial balance;
+- `BALANCE_ADJUSTMENT`: manual adjustment;
+- in the future `TRANSFER`, `IMPORT`, `RECURRING_GENERATED`.
+
+### 4.3 Rules for amounts
+
+- The amount entered by the user is always greater than zero.
+- The direction determines the sign applied to the balance.
+- In the database the amount is stored in minor units, e.g. cents, as a `BIGINT` integer.
+- Example: `€12.34` is stored as `1234`.
+- The initial balance must be `>= 0`.
+- After registration, the balance may become negative as a result of debits, unless a product decision states otherwise.
+- The backend validates reasonable maximum limits to prevent overflow or anomalous input.
+
+### 4.4 Rules for title and template
+
+- Title is required, recommended length 1–120 characters.
+- The original text is kept for display.
+- A normalized title is also computed: trimmed, whitespace collapsed, and compared case-insensitively.
+- If a transaction comes from a template, the template reference is preferred for grouping.
+- Suggestions are ordered by frequency and recent use.
+- If the user edits a field after selecting a template, the transaction can diverge without automatically updating the template.
+- After saving, an "Also update the template" action can be offered.
+
+### 4.5 Time rules
+
+- `occurred_at`: the actual date and time of the operation, editable.
+- `created_at`: when the record was created.
+- `updated_at`: last modification.
+- All persisted dates are `timestamptz` in UTC.
+- The client displays them in the profile's time zone.
+- Date filters must have clear, inclusive semantics.
+- Custom periods are converted to UTC ranges by the backend using the user's time zone.
+
+---
+
+## 5. Information architecture and navigation
+
+### 5.1 Primary navigation
+
+Bottom bar with four destinations and a center button:
 
 1. **Home**
-2. **Cronologia**
-3. **Aggiungi** — pulsante centrale prominente
-4. **Report**
+2. **History**
+3. **Add** — prominent center button
+4. **Reports**
 5. **Account**
 
-Il pulsante “Aggiungi” apre direttamente la schermata di inserimento. Una pressione prolungata o un bottom sheet può offrire due scorciatoie:
+The "Add" button opens the entry screen directly. A long press or a bottom sheet can offer two shortcuts:
 
-- Nuova uscita;
-- Nuova entrata.
+- New expense;
+- New income.
 
-### 5.2 Gerarchia delle sezioni
+### 5.2 Section hierarchy
 
 ```text
-Autenticazione
-├── Splash / ripristino sessione
+Authentication
+├── Splash / session restore
 ├── Login
-├── Registrazione
-├── Completamento registrazione Google
-├── Recupero password
-└── Verifica email
+├── Registration
+├── Google registration completion
+├── Password recovery
+└── Email verification
 
-Area autenticata
+Authenticated area
 ├── Home
-│   ├── Saldo
-│   ├── Riepilogo periodo
-│   └── Operazioni recenti
-├── Nuova operazione
-│   ├── Selezione tipo
-│   ├── Dati operazione
-│   ├── Selezione immagine
-│   └── Crop / anteprima
-├── Cronologia
-│   ├── Ricerca
-│   ├── Filtri
-│   └── Dettaglio / modifica
-├── Report
-│   ├── Periodo
-│   ├── Riepilogo
-│   ├── Ripartizione
-│   └── Confronto mensile
+│   ├── Balance
+│   ├── Period summary
+│   └── Recent transactions
+├── New transaction
+│   ├── Type selection
+│   ├── Transaction data
+│   ├── Image selection
+│   └── Crop / preview
+├── History
+│   ├── Search
+│   ├── Filters
+│   └── Detail / edit
+├── Reports
+│   ├── Period
+│   ├── Summary
+│   ├── Breakdown
+│   └── Monthly comparison
 └── Account
-    ├── Profilo
+    ├── Profile
     ├── Avatar
-    ├── Saldo e rettifica
-    ├── Sicurezza
-    ├── Account collegati
-    ├── Preferenze
-    ├── Esportazione dati
-    └── Cancellazione / logout
+    ├── Balance and adjustment
+    ├── Security
+    ├── Linked accounts
+    ├── Preferences
+    ├── Data export
+    └── Deletion / logout
 ```
 
 ---
 
-## 6. Design system e linee guida UI
+## 6. Design system and UI guidelines
 
-### 6.1 Direzione visiva
+### 6.1 Visual direction
 
-Stile consigliato: **finanziario, calmo, affidabile, non bancario tradizionale**.
+Recommended style: **financial, calm, trustworthy, not traditional-bank-like**.
 
-Caratteristiche:
+Characteristics:
 
-- superfici pulite;
-- numeri ben leggibili;
-- gerarchia tipografica netta;
-- uso moderato di card;
-- icone semplici;
-- animazioni brevi e funzionali;
-- grafici comprensibili anche su schermi piccoli.
+- clean surfaces;
+- highly legible numbers;
+- clear typographic hierarchy;
+- moderate use of cards;
+- simple icons;
+- brief, functional animations;
+- charts understandable even on small screens.
 
 ### 6.2 Material Design
 
-Usare Material 3 come base, personalizzando token e componenti. Evitare di creare da zero comportamenti già risolti dal framework, come date picker, bottom sheet, snack bar e navigation bar.
+Use Material 3 as a base, customizing tokens and components. Avoid building from scratch behaviors already solved by the framework, such as date pickers, bottom sheets, snack bars, and navigation bars.
 
-### 6.3 Palette proposta
+### 6.3 Proposed palette
 
-#### Tema chiaro
+#### Light theme
 
 - Primary: `#176B5B`
 - Primary container: `#D7F4EC`
@@ -385,7 +385,7 @@ Usare Material 3 come base, personalizzando token e componenti. Evitare di crear
 - Warning: `#B54708`
 - Info: `#175CD3`
 
-#### Tema scuro
+#### Dark theme
 
 - Background: `#0E1513`
 - Surface: `#17211E`
@@ -394,27 +394,27 @@ Usare Material 3 come base, personalizzando token e componenti. Evitare di crear
 - Text secondary: `#AAB8B3`
 - Primary: `#65CDB5`
 
-Entrate e uscite devono differire anche tramite icona, segno `+/-`, etichetta e posizione, non solo tramite verde e rosso.
+Income and expenses must also differ via icon, `+/-` sign, label, and position — not just via green and red.
 
-### 6.4 Tipografia
+### 6.4 Typography
 
-- Display saldo: 36–44 sp, peso 700.
-- Titolo pagina: 24–28 sp, peso 650–700.
-- Titolo card: 16–18 sp, peso 600.
-- Corpo: 14–16 sp.
-- Dati secondari: 12–14 sp.
-- Importi in elenco: cifre tabellari, allineate a destra.
+- Balance display: 36–44 sp, weight 700.
+- Page title: 24–28 sp, weight 650–700.
+- Card title: 16–18 sp, weight 600.
+- Body: 14–16 sp.
+- Secondary data: 12–14 sp.
+- Amounts in lists: tabular figures, right-aligned.
 
-### 6.5 Spaziatura e forme
+### 6.5 Spacing and shapes
 
-- Griglia base: 4 px.
-- Padding pagina: 16 px mobile, 24 px tablet.
-- Spazi principali: 8, 12, 16, 24, 32 px.
-- Raggio card: 16–20 px.
-- Raggio input: 12–16 px.
-- Touch target minimo: 48×48 px.
+- Base grid: 4 px.
+- Page padding: 16 px mobile, 24 px tablet.
+- Main spacing steps: 8, 12, 16, 24, 32 px.
+- Card radius: 16–20 px.
+- Input radius: 12–16 px.
+- Minimum touch target: 48×48 px.
 
-### 6.6 Componenti riutilizzabili
+### 6.6 Reusable components
 
 - `BalanceCard`
 - `TransactionTile`
@@ -433,514 +433,514 @@ Entrate e uscite devono differire anche tramite icona, segno `+/-`, etichetta e 
 - `GeneratedAvatar`
 - `ConfirmationSheet`
 
-### 6.7 Accessibilità
+### 6.7 Accessibility
 
-- Supportare text scaling senza tagliare importi o pulsanti.
-- Etichette semantiche per grafici e icone.
-- Contrasto verificato per tema chiaro e scuro.
-- Non usare il colore come unico indicatore.
-- Permettere navigazione da tastiera su tablet/web, se il target viene incluso.
-- Ridurre o disattivare animazioni quando richiesto dal sistema.
-- Per ogni grafico fornire anche una sintesi testuale o tabellare.
+- Support text scaling without clipping amounts or buttons.
+- Semantic labels for charts and icons.
+- Contrast verified for light and dark theme.
+- Do not use color as the only indicator.
+- Allow keyboard navigation on tablet/web, if that target is included.
+- Reduce or disable animations when requested by the system.
+- Provide a textual or tabular summary for every chart.
 
 ---
 
-## 7. Specifiche dettagliate delle schermate
+## 7. Detailed screen specifications
 
-## 7.1 Splash e ripristino sessione
+## 7.1 Splash and session restore
 
-### Obiettivo
+### Goal
 
-Determinare rapidamente se mostrare login, onboarding o area autenticata.
+Quickly determine whether to show login, onboarding, or the authenticated area.
 
-### Contenuto
+### Content
 
 - Logo/app mark.
-- Indicatore di caricamento discreto.
-- Nessun dato finanziario mostrato finché la sessione non è validata.
+- Discreet loading indicator.
+- No financial data shown until the session is validated.
 
-### Comportamento
+### Behavior
 
-1. Leggere in modo sicuro refresh token e stato locale.
-2. Tentare refresh sessione.
-3. Caricare profilo e portafoglio.
-4. Se il profilo non è completo, aprire il completamento registrazione.
-5. In caso di rete assente, mostrare dati locali in modalità limitata solo se esiste una sessione precedentemente valida.
+1. Securely read the refresh token and local state.
+2. Attempt a session refresh.
+3. Load profile and wallet.
+4. If the profile is incomplete, open registration completion.
+5. If there is no network, show local data in a limited mode only if a previously valid session exists.
 
 ## 7.2 Login
 
-### Campi
+### Fields
 
-- Username o email.
+- Username or email.
 - Password.
-- Mostra/nascondi password.
-- “Password dimenticata?”.
-- Pulsante “Accedi”.
-- Separatore “oppure”.
-- Pulsante ufficiale “Continua con Google”.
-- Link “Crea un account”.
+- Show/hide password.
+- "Forgot password?".
+- "Sign in" button.
+- "or" separator.
+- Official "Continue with Google" button.
+- "Create an account" link.
 
-### Stati
+### States
 
-- Validazione inline.
-- Caricamento nel pulsante.
-- Credenziali errate con messaggio non eccessivamente specifico.
-- Account non verificato con azione per reinviare email.
-- Rate limit con messaggio e tempo di riprova.
+- Inline validation.
+- Loading state on the button.
+- Wrong credentials with a not-overly-specific message.
+- Unverified account with an action to resend the email.
+- Rate limit with a message and retry time.
 
-## 7.3 Registrazione manuale
+## 7.3 Manual registration
 
-Per evitare una pagina eccessivamente lunga, usare un flusso in tre passi.
+To avoid an overly long page, use a three-step flow.
 
-### Passo 1 — Account
+### Step 1 — Account
 
-- Nome.
-- Cognome.
+- First name.
+- Last name.
 - Username.
 - Email.
 - Password.
-- Conferma password.
+- Confirm password.
 
-Validazioni:
+Validations:
 
-- username univoco e normalizzato;
-- email valida e univoca;
-- password conforme alla policy;
-- conferma identica.
+- unique, normalized username;
+- valid, unique email;
+- password compliant with policy;
+- matching confirmation.
 
-### Passo 2 — Profilo
+### Step 2 — Profile
 
-- Anteprima avatar generato.
-- Scelta immagine personalizzata.
-- Colore sfondo avatar.
-- Colore testo avatar.
-- Tema iniziale facoltativo.
+- Generated avatar preview.
+- Custom image choice.
+- Avatar background color.
+- Avatar text color.
+- Optional initial theme.
 
-L’avatar generato non viene salvato come file. Nel database vengono salvati solo modalità e colori.
+The generated avatar is not saved as a file. Only mode and colors are saved in the database.
 
-### Passo 3 — Portafoglio
+### Step 3 — Wallet
 
-- Saldo iniziale.
-- Valuta, predefinita EUR.
-- Fuso orario rilevato, modificabile.
-- Riepilogo dati.
-- Conferma registrazione.
+- Initial balance.
+- Currency, default EUR.
+- Detected time zone, editable.
+- Data summary.
+- Registration confirmation.
 
-Il saldo iniziale crea una transazione `OPENING_BALANCE` e inizializza il saldo corrente nella stessa transazione database.
+The initial balance creates an `OPENING_BALANCE` transaction and initializes the current balance in the same database transaction.
 
-## 7.4 Registrazione con Google
+## 7.4 Registration with Google
 
-Google è un metodo di prova dell’identità, non sostituisce il profilo applicativo.
+Google is a method of proving identity, not a replacement for the application profile.
 
-Flusso:
+Flow:
 
-1. Autenticazione Google sul dispositivo.
-2. Invio ID token al backend.
-3. Verifica server-side del token.
-4. Se l’identità è già collegata, login immediato.
-5. Se non è collegata, creazione di un ticket temporaneo di registrazione.
-6. Apertura della registrazione con nome, cognome ed email precompilati quando disponibili.
-7. Richiesta di username, eventuale password locale, avatar, saldo iniziale, valuta e consensi.
-8. Creazione account e collegamento atomico dell’identità Google.
+1. Google authentication on the device.
+2. Sending the ID token to the backend.
+3. Server-side token verification.
+4. If the identity is already linked, immediate login.
+5. If not linked, creation of a temporary registration ticket.
+6. Opening registration with first name, last name, and email pre-filled when available.
+7. Requesting username, optional local password, avatar, initial balance, currency, and consents.
+8. Account creation and atomic linking of the Google identity.
 
-La password locale può essere opzionale solo se il prodotto accetta account esclusivamente federati. Per ridurre il rischio di lockout dopo lo scollegamento, il piano consigliato richiede di impostare una password prima di poter scollegare l’unico provider esterno.
+The local password can be optional only if the product accepts exclusively federated accounts. To reduce the risk of lockout after unlinking, the recommended plan requires setting a password before being able to unlink the only external provider.
 
 ## 7.5 Home
 
-### Layout proposto
+### Proposed layout
 
 ```text
 ┌──────────────────────────────────────┐
-│ Ciao, Mario                     [●]  │
+│ Hi, Mario                       [●]  │
 │                                      │
-│  Saldo disponibile                   │
-│  € 2.430,50                  [occhio]│
-│  aggiornato ora                      │
+│  Available balance                   │
+│  € 2,430.50                  [eye]   │
+│  updated just now                    │
 │                                      │
-│  [+ Entrata]       [- Uscita]        │
+│  [+ Income]       [- Expense]        │
 ├──────────────────────────────────────┤
-│ Questo mese                          │
-│ Entrate €2.100   Uscite €1.240       │
-│ Netto +€860                          │
+│ This month                           │
+│ Income €2,100   Expenses €1,240      │
+│ Net +€860                            │
 ├──────────────────────────────────────┤
-│ Ultime operazioni          Vedi tutte│
-│ ● Stipendio               +€2.000    │
-│ ● Bar Centrale               -€4,50  │
-│ ● Benzina                    -€60,00  │
+│ Latest transactions        See all   │
+│ ● Salary                  +€2,000    │
+│ ● Bar Centrale               -€4.50  │
+│ ● Fuel                       -€60.00 │
 └──────────────────────────────────────┘
 ```
 
-### Componenti
+### Components
 
-- Saluto e avatar.
-- Card saldo con possibilità di nascondere il valore.
-- Azioni rapide entrata/uscita.
-- Mini riepilogo del mese corrente.
-- Ultime 5–10 transazioni.
-- Eventuale banner non invasivo per completare verifica email o backup.
+- Greeting and avatar.
+- Balance card with the option to hide the value.
+- Quick income/expense actions.
+- Mini summary of the current month.
+- Latest 5–10 transactions.
+- Optional non-intrusive banner to complete email verification or backup.
 
-### Interazioni
+### Interactions
 
-- Tap saldo: dettaglio portafoglio e rettifica.
-- Tap operazione: dettaglio.
-- Swipe opzionale sull’operazione: modifica/elimina, solo dopo validazione UX.
+- Tap balance: wallet detail and adjustment.
+- Tap transaction: detail.
+- Optional swipe on the transaction: edit/delete, only after UX validation.
 - Pull-to-refresh.
 
-## 7.6 Nuova operazione
+## 7.6 New transaction
 
-### Struttura
+### Structure
 
-1. Segmento “Uscita / Entrata”.
-2. Campo importo prominente.
-3. Titolo con autocomplete.
-4. Categoria.
-5. Data e ora.
-6. Immagine/icona.
-7. Descrizione facoltativa.
-8. Toggle facoltativo “Salva/Aggiorna modello”.
-9. Pulsante “Salva operazione”.
+1. "Expense / Income" segment.
+2. Prominent amount field.
+3. Title with autocomplete.
+4. Category.
+5. Date and time.
+6. Image/icon.
+7. Optional description.
+8. Optional "Save/Update template" toggle.
+9. "Save transaction" button.
 
-### Comportamento titolo
+### Title behavior
 
-- Dopo 1–2 caratteri mostrare suggerimenti.
-- Ogni suggerimento mostra titolo, categoria, immagine e ultimo utilizzo.
-- Selezionando un suggerimento vengono precompilati i valori associati.
-- I suggerimenti sono filtrati per direzione: modelli di uscita per uscite, di entrata per entrate.
-- L’utente può comunque cambiare ogni campo.
+- Show suggestions after 1–2 characters.
+- Each suggestion shows title, category, image, and last use.
+- Selecting a suggestion pre-fills the associated values.
+- Suggestions are filtered by direction: expense templates for expenses, income templates for income.
+- The user can still change every field.
 
-### Importo
+### Amount
 
-- Tastiera numerica.
-- Formattazione locale durante la digitazione.
-- Nessun segno negativo manuale.
-- Cambio direzione tramite controllo dedicato.
-- Conferma visiva: `+ €` o `- €`.
+- Numeric keypad.
+- Locale formatting while typing.
+- No manual negative sign.
+- Direction change via a dedicated control.
+- Visual confirmation: `+ €` or `- €`.
 
-### Salvataggio
+### Saving
 
-- Il pulsante resta disabilitato finché importo e titolo non sono validi.
-- Il client genera un `Idempotency-Key` univoco.
-- Durante il salvataggio impedire doppi tap.
-- Dopo successo mostrare feedback e tornare alla schermata precedente.
-- Opzione “Aggiungi un’altra” nel messaggio di successo.
+- The button stays disabled until amount and title are valid.
+- The client generates a unique `Idempotency-Key`.
+- Prevent double taps while saving.
+- After success, show feedback and return to the previous screen.
+- "Add another" option in the success message.
 
-## 7.7 Selettore immagine
+## 7.7 Image picker
 
-Bottom sheet o pagina con quattro tab:
+Bottom sheet or page with four tabs:
 
-1. **Recenti** — immagini già usate di recente.
-2. **Libreria** — tutte le immagini salvate dall’utente.
-3. **Cerca** — risultati del provider configurato.
-4. **Carica** — fotocamera o galleria.
+1. **Recent** — recently used images.
+2. **Library** — all images saved by the user.
+3. **Search** — results from the configured provider.
+4. **Upload** — camera or gallery.
 
-Ogni immagine deve mostrare stato di selezione, eventuale provenienza e azione di anteprima.
+Every image must show selection state, possible source, and a preview action.
 
-## 7.8 Crop immagine
+## 7.8 Image crop
 
-### Profilo
+### Profile
 
-- Crop 1:1.
-- Maschera circolare in anteprima, ma file risultante quadrato.
-- Zoom e trascinamento.
-- Rotazione facoltativa.
-- Output consigliato: 512×512.
+- 1:1 crop.
+- Circular mask in preview, but square resulting file.
+- Zoom and pan.
+- Optional rotation.
+- Recommended output: 512×512.
 
-### Operazione
+### Transaction
 
-- Crop 1:1.
-- Anteprima nel componente reale della transazione.
-- Output consigliato: 256×256 o 512×512.
+- 1:1 crop.
+- Preview in the actual transaction component.
+- Recommended output: 256×256 or 512×512.
 
-### Regole
+### Rules
 
-- Se l’immagine è già compatibile, offrire comunque anteprima ma non obbligare a modifiche.
-- Se è più grande o con rapporto incompatibile, aprire il crop.
-- Il backend deve comunque ri-decodificare e ricodificare il file, senza fidarsi del risultato client.
+- If the image is already compatible, still offer a preview but don't force changes.
+- If it's larger or has an incompatible ratio, open the crop.
+- The backend must still re-decode and re-encode the file, without trusting the client's result.
 
-## 7.9 Cronologia
+## 7.9 History
 
 ### Header
 
-- Titolo “Cronologia”.
-- Barra ricerca testuale.
-- Pulsante filtri con badge del numero di filtri attivi.
-- Ordinamento, predefinito “Più recenti”.
+- "History" title.
+- Text search bar.
+- Filter button with a badge showing the number of active filters.
+- Sorting, default "Most recent."
 
-### Lista
+### List
 
-- Raggruppata per giorno.
-- Totale netto del giorno facoltativo.
-- Infinite scroll o paginazione cursor-based.
-- Ogni riga mostra immagine, titolo, categoria, ora e importo.
-- Rettifiche e saldo iniziale hanno stile dedicato.
+- Grouped by day.
+- Optional net total for the day.
+- Infinite scroll or cursor-based pagination.
+- Each row shows image, title, category, time, and amount.
+- Adjustments and initial balance have a dedicated style.
 
-### Filtri
+### Filters
 
-- Titolo testuale.
-- Importo minimo.
-- Importo massimo.
-- Data iniziale.
-- Data finale.
-- Tipo: tutte, uscite, entrate, rettifiche.
-- Categoria.
-- Con/senza immagine, facoltativo.
-- Ordinamento per data o importo.
+- Text title.
+- Minimum amount.
+- Maximum amount.
+- Start date.
+- End date.
+- Type: all, expenses, income, adjustments.
+- Category.
+- With/without image, optional.
+- Sort by date or amount.
 
-### UX dei filtri
+### Filter UX
 
-- Bottom sheet a piena altezza.
-- Azioni “Azzera” e “Applica”.
-- Chip riepilogativi sopra la lista.
-- Persistenza dei filtri finché la schermata resta aperta.
-- Stato vuoto specifico: “Nessuna operazione corrisponde ai filtri”.
+- Full-height bottom sheet.
+- "Clear" and "Apply" actions.
+- Summary chips above the list.
+- Filters persist while the screen stays open.
+- Specific empty state: "No transactions match the filters."
 
-## 7.10 Dettaglio operazione
+## 7.10 Transaction detail
 
-Contenuti:
+Contents:
 
-- immagine;
-- titolo;
-- importo e direzione;
-- categoria;
-- data e ora effettiva;
-- descrizione;
-- data creazione e ultima modifica, in sezione secondaria;
-- origine: manuale, rettifica, saldo iniziale;
-- azioni modifica ed elimina.
+- image;
+- title;
+- amount and direction;
+- category;
+- actual date and time;
+- description;
+- creation date and last edit, in a secondary section;
+- origin: manual, adjustment, initial balance;
+- edit and delete actions.
 
-Eliminazione:
+Deletion:
 
-- bottom sheet di conferma;
-- indicazione del saldo risultante;
+- confirmation bottom sheet;
+- indication of the resulting balance;
 - soft delete;
-- possibilità di annullamento immediato, quando tecnicamente possibile.
+- possibility of immediate undo, when technically possible.
 
-## 7.11 Modifica operazione
+## 7.11 Edit transaction
 
-Riutilizza il form di inserimento. Il backend calcola la differenza tra vecchio e nuovo impatto sul saldo nella stessa transazione database.
+Reuses the entry form. The backend computes the difference between the old and new impact on the balance within the same database transaction.
 
-Concorrenza:
+Concurrency:
 
-- il record include una `version`;
-- il client invia la versione letta;
-- in caso di conflitto riceve `409 Conflict` e propone di ricaricare i dati.
+- the record includes a `version`;
+- the client sends the version it read;
+- on conflict it receives `409 Conflict` and is prompted to reload the data.
 
-## 7.12 Report
+## 7.12 Reports
 
-### Header periodo
+### Period header
 
-Preset:
+Presets:
 
-- Ultimi 30 giorni.
-- Ultimi 12 mesi.
-- Intera cronologia.
-- Personalizzato.
+- Last 30 days.
+- Last 12 months.
+- Entire history.
+- Custom.
 
-Opzionalmente aggiungere “Mese corrente” e “Anno corrente”, con nomi non ambigui.
+Optionally add "Current month" and "Current year," with unambiguous names.
 
-### Sezione riepilogo
+### Summary section
 
-- Saldo iniziale del periodo.
-- Totale entrate ordinarie.
-- Totale uscite ordinarie.
-- Risultato netto.
-- Saldo finale.
-- Numero operazioni.
-- Tasso di risparmio, solo quando le entrate sono positive.
+- Starting balance for the period.
+- Total ordinary income.
+- Total ordinary expenses.
+- Net result.
+- Ending balance.
+- Number of transactions.
+- Savings rate, only when income is positive.
 
-### Grafico andamento
+### Trend chart
 
-- Linea del saldo cumulativo oppure barre entrate/uscite per giorno o mese.
-- Granularità automatica:
-  - fino a 45 giorni: giornaliera;
-  - 46–400 giorni: mensile;
-  - oltre: mensile o annuale.
+- Cumulative balance line, or income/expense bars per day or month.
+- Automatic granularity:
+  - up to 45 days: daily;
+  - 46–400 days: monthly;
+  - beyond: monthly or yearly.
 
-### Ripartizione
+### Breakdown
 
-Due tab:
+Two tabs:
 
-- Per titolo/modello.
-- Per categoria.
+- By title/template.
+- By category.
 
-Per le uscite mostrare donut o barre ordinate con percentuali. Per le entrate utilizzare una vista separata, evitando di mescolare i due denominatori.
+For expenses, show a donut or sorted bars with percentages. For income, use a separate view, avoiding mixing the two denominators.
 
-### Confronto mensile
+### Monthly comparison
 
-Mostrare solo se l’intervallo include almeno due mesi distinti.
+Show only if the range includes at least two distinct months.
 
-- barre affiancate entrate/uscite;
-- linea o indicatore del netto;
-- tap su un mese per vedere il dettaglio;
-- tabella accessibile sotto il grafico.
+- side-by-side income/expense bars;
+- a net line or indicator;
+- tap a month to see the detail;
+- accessible table below the chart.
 
 ## 7.13 Account
 
-Sezioni:
+Sections:
 
-### Profilo
+### Profile
 
-- Nome.
-- Cognome.
+- First name.
+- Last name.
 - Username.
-- Email e stato verifica.
+- Email and verification status.
 - Avatar.
 
-### Portafoglio
+### Wallet
 
-- Saldo corrente.
-- Valuta.
-- Rettifica saldo.
-- In futuro gestione conti.
+- Current balance.
+- Currency.
+- Balance adjustment.
+- Future account management.
 
-### Sicurezza
+### Security
 
-- Cambio password.
-- Sessioni attive.
-- Logout da tutti i dispositivi.
-- Eventuale passkey in futuro.
+- Change password.
+- Active sessions.
+- Logout from all devices.
+- Possible future passkey.
 
-### Account collegati
+### Linked accounts
 
-- Google collegato/non collegato.
-- Collega.
-- Scollega.
-- Data ultimo utilizzo.
+- Google linked/not linked.
+- Link.
+- Unlink.
+- Last used date.
 
-### Preferenze
+### Preferences
 
-- Tema sistema/chiaro/scuro.
-- Fuso orario.
-- Lingua.
-- Visibilità saldo all’apertura.
-- Primo giorno della settimana.
+- System/light/dark theme.
+- Time zone.
+- Language.
+- Balance visibility on open.
+- First day of the week.
 
-### Dati
+### Data
 
-- Esporta CSV.
-- Esporta JSON.
-- Elimina account.
+- Export CSV.
+- Export JSON.
+- Delete account.
 
-### Sessione
+### Session
 
 - Logout.
 
-## 7.14 Avatar generato
+## 7.14 Generated avatar
 
-Il client genera l’avatar usando:
+The client generates the avatar using:
 
-- iniziale del nome;
-- iniziale del cognome;
-- colore sfondo salvato;
-- colore testo salvato.
+- first name initial;
+- last name initial;
+- saved background color;
+- saved text color.
 
-Se nome o cognome cambia, le iniziali cambiano automaticamente. Non viene salvato alcun file finché l’utente mantiene la modalità generata.
+If the first or last name changes, the initials change automatically. No file is saved as long as the user keeps the generated mode.
 
-## 7.15 Stati trasversali
+## 7.15 Cross-cutting states
 
-Ogni schermata deve avere:
+Every screen must have:
 
-- loading iniziale;
-- aggiornamento non bloccante;
-- errore recuperabile;
-- errore non recuperabile;
-- stato vuoto;
-- rete assente;
-- sessione scaduta;
-- permesso fotocamera/galleria negato.
+- initial loading;
+- non-blocking refresh;
+- recoverable error;
+- unrecoverable error;
+- empty state;
+- no network;
+- expired session;
+- camera/gallery permission denied.
 
 ---
 
-## 8. Flussi utente principali
+## 8. Main user flows
 
-### 8.1 Prima registrazione manuale
+### 8.1 First manual registration
 
 ```mermaid
 flowchart TD
-    A[Apertura app] --> B[Registrazione]
-    B --> C[Dati account]
-    C --> D[Profilo e avatar]
-    D --> E[Saldo iniziale e valuta]
-    E --> F[Creazione utente e portafoglio]
-    F --> G[Creazione movimento saldo iniziale]
+    A[Open app] --> B[Registration]
+    B --> C[Account data]
+    C --> D[Profile and avatar]
+    D --> E[Initial balance and currency]
+    E --> F[Create user and wallet]
+    F --> G[Create initial balance transaction]
     G --> H[Home]
 ```
 
-### 8.2 Registrazione o login Google
+### 8.2 Google registration or login
 
 ```mermaid
 flowchart TD
-    A[Continua con Google] --> B[Google restituisce ID token]
-    B --> C[Backend verifica token]
-    C --> D{Identità già collegata?}
-    D -- Sì --> E[Crea sessione]
+    A[Continue with Google] --> B[Google returns ID token]
+    B --> C[Backend verifies token]
+    C --> D{Identity already linked?}
+    D -- Yes --> E[Create session]
     E --> F[Home]
-    D -- No --> G[Ticket registrazione temporaneo]
-    G --> H[Completa dati obbligatori]
-    H --> I[Crea account + collega Google]
+    D -- No --> G[Temporary registration ticket]
+    G --> H[Complete required data]
+    H --> I[Create account + link Google]
     I --> F
 ```
 
-### 8.3 Inserimento operazione ricorrente
+### 8.3 Entering a recurring transaction
 
 ```mermaid
 flowchart TD
-    A[Aggiungi uscita] --> B[Inserisci importo]
-    B --> C[Digita titolo]
-    C --> D[Seleziona suggerimento]
-    D --> E[Precompila categoria e immagine]
-    E --> F[Conferma data e descrizione]
-    F --> G[Salva con idempotency key]
-    G --> H[Transazione DB atomica]
-    H --> I[Saldo aggiornato]
+    A[Add expense] --> B[Enter amount]
+    B --> C[Type title]
+    C --> D[Select suggestion]
+    D --> E[Pre-fill category and image]
+    E --> F[Confirm date and description]
+    F --> G[Save with idempotency key]
+    G --> H[Atomic DB transaction]
+    H --> I[Balance updated]
 ```
 
-### 8.4 Rettifica saldo
+### 8.4 Balance adjustment
 
 ```mermaid
 flowchart TD
-    A[Account > Rettifica saldo] --> B[Mostra saldo attuale]
-    B --> C[Inserisci saldo reale]
-    C --> D[Calcola differenza]
-    D --> E[Conferma effetto]
-    E --> F[Crea BALANCE_ADJUSTMENT]
-    F --> G[Aggiorna saldo atomico]
+    A[Account > Balance adjustment] --> B[Show current balance]
+    B --> C[Enter actual balance]
+    C --> D[Compute difference]
+    D --> E[Confirm effect]
+    E --> F[Create BALANCE_ADJUSTMENT]
+    F --> G[Update balance atomically]
 ```
 
 ---
 
-## 9. Architettura Flutter
+## 9. Flutter architecture
 
-### 9.1 Approccio
+### 9.1 Approach
 
-Adottare una struttura **feature-first** con separazione tra UI, dominio e dati. Il modello può essere descritto come MVVM con repository e servizi.
+Adopt a **feature-first** structure with separation between UI, domain, and data. The model can be described as MVVM with repositories and services.
 
-Principi:
+Principles:
 
-- stato UI immutabile;
-- flusso dati unidirezionale;
-- view senza logica di business;
-- repository come fonte dei dati per la feature;
-- use case per operazioni che combinano più repository o regole;
-- dipendenze iniettate;
-- modelli API separati dai modelli di dominio.
+- immutable UI state;
+- unidirectional data flow;
+- views with no business logic;
+- repository as the data source for the feature;
+- use cases for operations that combine multiple repositories or rules;
+- injected dependencies;
+- API models separated from domain models.
 
-### 9.2 Stack Flutter consigliato
+### 9.2 Recommended Flutter stack
 
-Le versioni devono essere fissate nel lockfile e aggiornate tramite processo controllato.
+Versions must be pinned in the lockfile and updated through a controlled process.
 
-- State management e dependency injection: `flutter_riverpod` oppure alternativa approvata tramite ADR.
-- Routing dichiarativo: `go_router`.
-- HTTP: `dio` o client generato da OpenAPI.
-- Serializzazione: `json_serializable` e modelli immutabili.
-- Storage sicuro token: wrapper su Keychain/Keystore, per esempio `flutter_secure_storage`.
-- Database locale/cache: `drift` su SQLite, se viene implementata la cache persistente.
-- Immagini: `image_picker` più libreria crop valutata con spike.
-- Grafici: libreria con supporto touch e accessibilità, per esempio `fl_chart`.
-- Localizzazione: `flutter_localizations` e file ARB.
-- Logging/crash reporting: astrazione indipendente dal provider.
+- State management and dependency injection: `flutter_riverpod` or an alternative approved via ADR.
+- Declarative routing: `go_router`.
+- HTTP: `dio` or a client generated from OpenAPI.
+- Serialization: `json_serializable` and immutable models.
+- Secure token storage: a wrapper over Keychain/Keystore, e.g. `flutter_secure_storage`.
+- Local database/cache: `drift` over SQLite, if a persistent cache is implemented.
+- Images: `image_picker` plus a crop library evaluated with a spike.
+- Charts: a library with touch and accessibility support, e.g. `fl_chart`.
+- Localization: `flutter_localizations` and ARB files.
+- Logging/crash reporting: a provider-independent abstraction.
 
-### 9.3 Struttura cartelle client
+### 9.3 Client folder structure
 
 ```text
 lib/
@@ -972,7 +972,7 @@ lib/
 └── main.dart
 ```
 
-Ogni feature:
+Each feature:
 
 ```text
 feature/
@@ -991,49 +991,49 @@ feature/
     └── widgets/
 ```
 
-### 9.4 Gestione stato
+### 9.4 State management
 
-Separare:
+Separate:
 
-- stato server/cache: profilo, portafoglio, transazioni, report;
-- stato effimero: valori dei form, tab selezionata, crop;
-- stato globale minimo: sessione, tema, locale.
+- server/cache state: profile, wallet, transactions, reports;
+- ephemeral state: form values, selected tab, crop;
+- minimal global state: session, theme, locale.
 
-Non conservare il saldo come stato globale modificabile dal client. Dopo una mutazione, usare la risposta autorevole del backend e invalidare le query correlate.
+Do not keep the balance as client-modifiable global state. After a mutation, use the authoritative backend response and invalidate the related queries.
 
 ### 9.5 Networking
 
-Il client deve includere:
+The client must include:
 
-- base URL per ambiente;
-- timeout differenziati;
-- interceptor per access token;
-- refresh token serializzato, evitando richieste refresh concorrenti;
+- base URL per environment;
+- differentiated timeouts;
+- access-token interceptor;
+- serialized refresh token, avoiding concurrent refresh requests;
 - correlation/request ID;
-- mapping errori API → errori di dominio;
-- retry solo per richieste idempotenti o protette da idempotency key;
-- cancellazione richieste quando una schermata viene chiusa.
+- mapping API errors → domain errors;
+- retry only for idempotent requests or ones protected by an idempotency key;
+- request cancellation when a screen is closed.
 
-### 9.6 Cache e modalità offline
+### 9.6 Cache and offline mode
 
-MVP consigliato:
+Recommended MVP:
 
-- cache locale cifrata o protetta per home e cronologia recente;
-- lettura offline dei dati già sincronizzati;
-- creazione/modifica transazioni solo online;
-- indicatore chiaro dei dati potenzialmente non aggiornati.
+- encrypted or protected local cache for home and recent history;
+- offline reading of already-synced data;
+- transaction creation/editing only online;
+- clear indicator for potentially stale data.
 
-Fase successiva:
+Later phase:
 
-- coda locale di mutazioni;
-- UUID creati dal client;
+- local mutation queue;
+- client-generated UUIDs;
 - idempotency key;
-- strategia di conflitto;
-- sincronizzazione in background.
+- conflict strategy;
+- background synchronization.
 
-### 9.7 Formattazione importi
+### 9.7 Amount formatting
 
-Creare un tipo di dominio `Money`:
+Create a `Money` domain type:
 
 ```text
 Money {
@@ -1042,7 +1042,7 @@ Money {
 }
 ```
 
-Il client non deve inviare `12.34` come floating point. Il contratto API può usare:
+The client must not send `12.34` as a floating-point value. The API contract can use:
 
 ```json
 {
@@ -1051,9 +1051,9 @@ Il client non deve inviare `12.34` come floating point. Il contratto API può us
 }
 ```
 
-### 9.8 Routing e guardie
+### 9.8 Routing and guards
 
-Route principali:
+Main routes:
 
 ```text
 /splash
@@ -1074,22 +1074,22 @@ Route principali:
 /app/account/data
 ```
 
-Guardie:
+Guards:
 
-- non autenticato → login;
-- autenticato ma profilo incompleto → completamento;
-- autenticato e completo → area app;
-- refresh fallito → logout locale controllato.
+- not authenticated → login;
+- authenticated but incomplete profile → completion;
+- authenticated and complete → app area;
+- refresh failed → controlled local logout.
 
 ---
 
-## 10. Architettura backend Go
+## 10. Go backend architecture
 
-### 10.1 Stile architetturale
+### 10.1 Architectural style
 
-Usare un **modular monolith**. È più semplice da distribuire e testare rispetto a microservizi, ma mantiene moduli separati.
+Use a **modular monolith**. It is simpler to deploy and test than microservices, while still keeping separate modules.
 
-Moduli:
+Modules:
 
 - auth;
 - users;
@@ -1102,7 +1102,7 @@ Moduli:
 - exports;
 - audit.
 
-### 10.2 Layer
+### 10.2 Layers
 
 ```text
 HTTP Handler
@@ -1113,10 +1113,10 @@ Domain Rules
     ↓
 Repository Interfaces
     ↓
-PostgreSQL / Redis / Object Storage / Provider esterni
+PostgreSQL / Redis / Object Storage / External providers
 ```
 
-### 10.3 Struttura backend
+### 10.3 Backend structure
 
 ```text
 cmd/
@@ -1150,21 +1150,21 @@ Dockerfile
 compose.yaml
 ```
 
-### 10.4 Librerie consigliate
+### 10.4 Recommended libraries
 
-- HTTP: `net/http` con router leggero, per esempio `chi`, oppure framework approvato.
-- PostgreSQL: `pgx` e pool di connessioni.
+- HTTP: `net/http` with a lightweight router, e.g. `chi`, or an approved framework.
+- PostgreSQL: `pgx` with a connection pool.
 - Redis: `go-redis`.
-- Migrazioni: `goose`, `golang-migrate` o equivalente.
-- Validazione: libreria con regole esplicite più validazioni di dominio.
-- Password: `golang.org/x/crypto/argon2` con formato versionato.
-- Log: `log/slog` strutturato.
-- Telemetria: OpenTelemetry.
-- UUID: UUID v7 quando disponibile e validato, altrimenti UUID v4.
+- Migrations: `goose`, `golang-migrate`, or equivalent.
+- Validation: a library with explicit rules plus domain validations.
+- Password: `golang.org/x/crypto/argon2` with a versioned format.
+- Logging: structured `log/slog`.
+- Telemetry: OpenTelemetry.
+- UUID: UUID v7 when available and validated, otherwise UUID v4.
 
-### 10.5 Configurazione
+### 10.5 Configuration
 
-Configurazione da variabili ambiente, validata all’avvio:
+Configuration from environment variables, validated at startup:
 
 ```text
 APP_ENV
@@ -1186,67 +1186,67 @@ MAX_UPLOAD_BYTES
 ALLOWED_IMAGE_TYPES
 ```
 
-Nessun segreto nel repository o nelle immagini Docker.
+No secrets in the repository or in Docker images.
 
 ### 10.6 Error model
 
-Formato uniforme:
+Uniform format:
 
 ```json
 {
   "error": {
     "code": "TRANSACTION_VERSION_CONFLICT",
-    "message": "L'operazione è stata modificata da un'altra sessione.",
+    "message": "The transaction was modified by another session.",
     "field_errors": {
-      "amount_minor": "Deve essere maggiore di zero"
+      "amount_minor": "Must be greater than zero"
     },
     "request_id": "..."
   }
 }
 ```
 
-Il messaggio è localizzabile lato client attraverso `code`; il backend può fornire un fallback.
+The message can be localized client-side via `code`; the backend can provide a fallback.
 
-### 10.7 Idempotenza
+### 10.7 Idempotency
 
-Endpoint mutanti critici, soprattutto creazione transazioni e rettifiche, devono accettare:
+Critical mutating endpoints, especially transaction creation and adjustments, must accept:
 
 ```http
 Idempotency-Key: <uuid>
 ```
 
-La chiave è unica per utente ed endpoint. La risposta della prima esecuzione viene riutilizzata per richieste duplicate entro la finestra definita.
+The key is unique per user and endpoint. The response of the first execution is reused for duplicate requests within the defined window.
 
-### 10.8 Job asincroni
+### 10.8 Async jobs
 
-Il worker è utile per:
+The worker is useful for:
 
-- generazione varianti immagini;
-- esportazioni grandi;
-- cancellazione differita account;
-- pulizia asset inutilizzati;
-- invio email;
-- futura generazione ricorrenze.
+- generating image variants;
+- large exports;
+- deferred account deletion;
+- cleaning up unused assets;
+- sending email;
+- future recurrence generation.
 
-Per l’MVP il worker può essere un secondo comando dello stesso repository e della stessa immagine Docker.
+For the MVP the worker can be a second command in the same repository and the same Docker image.
 
 ---
 
-## 11. Modello dati PostgreSQL
+## 11. PostgreSQL data model
 
-### 11.1 Principi
+### 11.1 Principles
 
-- PostgreSQL è la fonte di verità.
-- Chiavi UUID.
-- Importi in `BIGINT` minor units.
-- Timestamp con fuso.
-- Vincoli database oltre alla validazione applicativa.
-- Soft delete per dati finanziari, seguito da cancellazione definitiva secondo policy.
-- Indici progettati sui filtri reali.
+- PostgreSQL is the source of truth.
+- UUID keys.
+- Amounts in `BIGINT` minor units.
+- Timestamps with time zone.
+- Database constraints in addition to application validation.
+- Soft delete for financial data, followed by permanent deletion per policy.
+- Indexes designed around real filters.
 
-### 11.2 Tabella `users`
+### 11.2 `users` table
 
-Campi principali:
+Main fields:
 
 ```text
 id UUID PK
@@ -1271,14 +1271,14 @@ deleted_at TIMESTAMPTZ NULL
 version BIGINT NOT NULL DEFAULT 1
 ```
 
-Vincoli:
+Constraints:
 
-- `avatar_mode` in insieme consentito;
-- colori in formato esadecimale;
-- se `avatar_mode=custom`, `avatar_media_id` non nullo;
-- se `generated`, il media può essere nullo.
+- `avatar_mode` within the allowed set;
+- colors in hexadecimal format;
+- if `avatar_mode=custom`, `avatar_media_id` is not null;
+- if `generated`, the media can be null.
 
-### 11.3 Tabella `password_credentials`
+### 11.3 `password_credentials` table
 
 ```text
 user_id UUID PK FK users
@@ -1289,9 +1289,9 @@ failed_attempts INT NOT NULL DEFAULT 0
 locked_until TIMESTAMPTZ NULL
 ```
 
-Il contatore può essere integrato o sostituito dal rate limit Redis, ma il blocco di sicurezza persistente non deve dipendere esclusivamente da Redis.
+The counter can be complemented or replaced by the Redis rate limit, but the persistent security lockout must not depend solely on Redis.
 
-### 11.4 Tabella `external_identities`
+### 11.4 `external_identities` table
 
 ```text
 id UUID PK
@@ -1306,9 +1306,9 @@ UNIQUE(provider, provider_subject)
 UNIQUE(user_id, provider)
 ```
 
-Il vincolo garantisce che un account Google sia collegato a un solo account applicativo e che un utente abbia al massimo un collegamento per provider.
+The constraint guarantees that a Google account is linked to only one application account, and that a user has at most one link per provider.
 
-### 11.5 Tabella `sessions`
+### 11.5 `sessions` table
 
 ```text
 id UUID PK
@@ -1325,26 +1325,26 @@ revoked_at TIMESTAMPTZ NULL
 replaced_by_session_id UUID NULL
 ```
 
-Non salvare refresh token in chiaro.
+Do not store refresh tokens in plain text.
 
-### 11.6 Tabella `wallets`
+### 11.6 `wallets` table
 
 ```text
 id UUID PK
 user_id UUID NOT NULL FK users
-name VARCHAR(80) NOT NULL DEFAULT 'Portafoglio principale'
+name VARCHAR(80) NOT NULL DEFAULT 'Main wallet'
 currency CHAR(3) NOT NULL DEFAULT 'EUR'
 current_balance_minor BIGINT NOT NULL
 created_at TIMESTAMPTZ NOT NULL
 updated_at TIMESTAMPTZ NOT NULL
 version BIGINT NOT NULL DEFAULT 1
 archived_at TIMESTAMPTZ NULL
-UNIQUE(user_id) WHERE archived_at IS NULL  -- regola MVP
+UNIQUE(user_id) WHERE archived_at IS NULL  -- MVP rule
 ```
 
-Il saldo corrente è un valore denormalizzato mantenuto in transazione. La possibilità di ricalcolarlo dal ledger deve essere disponibile come controllo amministrativo.
+The current balance is a denormalized value maintained transactionally. The ability to recompute it from the ledger must be available as an administrative control.
 
-### 11.7 Tabella `categories`
+### 11.7 `categories` table
 
 ```text
 id UUID PK
@@ -1361,12 +1361,12 @@ updated_at TIMESTAMPTZ NOT NULL
 archived_at TIMESTAMPTZ NULL
 ```
 
-Categorie iniziali suggerite:
+Suggested initial categories:
 
-Uscite: Casa, Alimentari, Ristorazione, Trasporti, Carburante, Abbonamenti, Salute, Svago, Acquisti, Imposte, Altro.  
-Entrate: Stipendio, Rimborso, Regalo, Vendita, Interessi, Altro.
+Expenses: Home, Groceries, Dining, Transport, Fuel, Subscriptions, Health, Leisure, Shopping, Taxes, Other.  
+Income: Salary, Reimbursement, Gift, Sale, Interest, Other.
 
-### 11.8 Tabella `media_assets`
+### 11.8 `media_assets` table
 
 ```text
 id UUID PK
@@ -1389,9 +1389,9 @@ last_used_at TIMESTAMPTZ NULL
 deleted_at TIMESTAMPTZ NULL
 ```
 
-Possibile indice deduplicazione per utente e hash.
+Possible deduplication index by user and hash.
 
-### 11.9 Tabella `transaction_templates`
+### 11.9 `transaction_templates` table
 
 ```text
 id UUID PK
@@ -1410,7 +1410,7 @@ archived_at TIMESTAMPTZ NULL
 UNIQUE(user_id, direction, title_normalized) WHERE archived_at IS NULL
 ```
 
-### 11.10 Tabella `transactions`
+### 11.10 `transactions` table
 
 ```text
 id UUID PK
@@ -1437,15 +1437,15 @@ metadata JSONB NOT NULL DEFAULT '{}'
 UNIQUE(user_id, idempotency_key) WHERE idempotency_key IS NOT NULL
 ```
 
-Vincoli applicativi e database:
+Application and database constraints:
 
-- currency uguale a quella del portafoglio nell’MVP;
-- `OPENING_BALANCE` solo credit e una sola volta per portafoglio;
-- `BALANCE_ADJUSTMENT` può essere credit o debit;
-- titolo e importo obbligatori;
-- una transazione eliminata non contribuisce al saldo.
+- currency equal to the wallet's in the MVP;
+- `OPENING_BALANCE` only credit, and only once per wallet;
+- `BALANCE_ADJUSTMENT` can be credit or debit;
+- title and amount required;
+- a deleted transaction does not contribute to the balance.
 
-### 11.11 Tabella `transaction_audit_events`
+### 11.11 `transaction_audit_events` table
 
 ```text
 id UUID PK
@@ -1458,9 +1458,9 @@ created_at TIMESTAMPTZ NOT NULL
 request_id UUID NULL
 ```
 
-Limitare i dati duplicati e non includere segreti. La retention deve essere definita.
+Limit duplicated data and do not include secrets. Retention must be defined.
 
-### 11.12 Tabella `idempotency_records`
+### 11.12 `idempotency_records` table
 
 ```text
 user_id UUID NOT NULL
@@ -1474,7 +1474,7 @@ expires_at TIMESTAMPTZ NOT NULL
 PRIMARY KEY(user_id, endpoint, key)
 ```
 
-### 11.13 Indici principali
+### 11.13 Main indexes
 
 ```text
 transactions(user_id, occurred_at DESC, id DESC) WHERE deleted_at IS NULL
@@ -1487,25 +1487,25 @@ media_assets(owner_user_id, last_used_at DESC) WHERE deleted_at IS NULL
 sessions(user_id, expires_at) WHERE revoked_at IS NULL
 ```
 
-Per ricerca testuale avanzata si può aggiungere trigram index PostgreSQL in una fase successiva. Per l’MVP, prefix search sul titolo normalizzato è sufficiente.
+For advanced text search, a PostgreSQL trigram index can be added in a later phase. For the MVP, prefix search on the normalized title is sufficient.
 
 ---
 
-## 12. Ruolo di Redis
+## 12. Redis's role
 
-Redis deve essere un acceleratore e un coordinatore, non il ledger finanziario.
+Redis must be an accelerator and coordinator, not the financial ledger.
 
-### 12.1 Usi previsti
+### 12.1 Intended uses
 
-- Rate limiting login, reset password, upload e API.
-- Cache report costosi.
-- Cache suggerimenti titoli, se necessario.
-- Revoca rapida o deny-list temporanea token.
-- Lock breve per elaborazione immagini duplicate.
-- Job queue, se si adotta una libreria compatibile.
-- Nonce e ticket temporanei per registrazione Google.
+- Rate limiting for login, password reset, upload, and API.
+- Caching expensive reports.
+- Caching title suggestions, if needed.
+- Fast revocation or temporary deny-list for tokens.
+- Short lock for processing duplicate images.
+- Job queue, if a compatible library is adopted.
+- Nonces and temporary tickets for Google registration.
 
-### 12.2 Chiavi indicative
+### 12.2 Sample keys
 
 ```text
 ratelimit:login:ip:<hash>
@@ -1520,33 +1520,33 @@ revoked:jti:<jti>
 
 ### 12.3 TTL
 
-- Rate limit: da minuti a ore secondo la policy.
-- Ticket Google: 5–15 minuti.
-- Report: 1–10 minuti, invalidati dopo mutazioni.
-- Suggerimenti: breve TTL.
-- Revoche: fino alla scadenza del token.
+- Rate limit: minutes to hours depending on policy.
+- Google ticket: 5–15 minutes.
+- Report: 1–10 minutes, invalidated after mutations.
+- Suggestions: short TTL.
+- Revocations: until the token expires.
 
-### 12.4 Cosa non mettere in Redis come unica copia
+### 12.4 What not to put in Redis as the only copy
 
-- saldo;
-- transazioni;
-- profilo;
-- collegamenti Google;
-- hash password;
-- metadati permanenti immagini;
+- balance;
+- transactions;
+- profile;
+- Google links;
+- password hashes;
+- permanent image metadata;
 - audit.
 
 ---
 
-## 13. Gestione affidabile del saldo
+## 13. Reliable balance management
 
-### 13.1 Fonte del saldo
+### 13.1 Source of the balance
 
-Il ledger delle transazioni è la fonte logica. `wallets.current_balance_minor` è una proiezione denormalizzata per letture rapide.
+The transaction ledger is the logical source. `wallets.current_balance_minor` is a denormalized projection for fast reads.
 
-### 13.2 Creazione transazione
+### 13.2 Creating a transaction
 
-Pseudo-flusso:
+Pseudo-flow:
 
 ```text
 BEGIN;
@@ -1566,77 +1566,77 @@ CREDIT => +amount_minor
 DEBIT  => -amount_minor
 ```
 
-La risposta deve includere:
+The response must include:
 
-- transazione creata;
-- nuovo saldo;
-- nuova versione portafoglio.
+- the created transaction;
+- the new balance;
+- the new wallet version.
 
-### 13.3 Modifica transazione
+### 13.3 Editing a transaction
 
-1. Lock portafoglio.
-2. Leggere transazione non eliminata.
-3. Verificare versione.
-4. Calcolare impatto precedente.
-5. Calcolare nuovo impatto.
-6. Applicare `newImpact - oldImpact` al saldo.
-7. Aggiornare record e audit.
+1. Lock the wallet.
+2. Read the non-deleted transaction.
+3. Check the version.
+4. Compute the previous impact.
+5. Compute the new impact.
+6. Apply `newImpact - oldImpact` to the balance.
+7. Update the record and audit.
 8. Commit.
 
-### 13.4 Eliminazione transazione
+### 13.4 Deleting a transaction
 
-1. Lock portafoglio.
-2. Verificare proprietà e versione.
-3. Applicare al saldo il contrario dell’impatto originale.
-4. Impostare `deleted_at`.
-5. Scrivere audit.
+1. Lock the wallet.
+2. Verify ownership and version.
+3. Apply the reverse of the original impact to the balance.
+4. Set `deleted_at`.
+5. Write the audit entry.
 6. Commit.
 
-Il saldo iniziale non dovrebbe essere eliminabile dalla UI ordinaria; deve essere modificato tramite rettifica o procedura amministrativa controllata.
+The initial balance should not be deletable from the ordinary UI; it must be changed via an adjustment or a controlled administrative procedure.
 
-### 13.5 Rettifica saldo
+### 13.5 Balance adjustment
 
 Input:
 
 ```json
 {
   "target_balance_minor": 47000,
-  "reason": "Allineamento con saldo reale",
+  "reason": "Alignment with actual balance",
   "occurred_at": "...",
   "idempotency_key": "..."
 }
 ```
 
-Il backend calcola la differenza all’interno della transazione dopo aver bloccato il portafoglio. Il client non invia il delta come valore autorevole.
+The backend computes the difference inside the transaction after locking the wallet. The client does not send the delta as an authoritative value.
 
-### 13.6 Riconciliazione
+### 13.6 Reconciliation
 
-Aggiungere un comando amministrativo o job:
+Add an administrative command or job:
 
 ```text
-recalculated_balance = somma di tutte le transazioni non eliminate
+recalculated_balance = sum of all non-deleted transactions
 ```
 
-Confrontare il risultato con `current_balance_minor`. In caso di differenza:
+Compare the result with `current_balance_minor`. In case of a difference:
 
-- generare alert;
-- non correggere automaticamente senza audit;
-- fornire comando controllato di riparazione.
+- generate an alert;
+- do not auto-correct without an audit trail;
+- provide a controlled repair command.
 
-### 13.7 Concorrenza
+### 13.7 Concurrency
 
-- Lock pessimista sul portafoglio per mutazioni del saldo.
-- Versione ottimistica su transazioni e profilo.
-- Idempotenza per retry di rete.
-- Livello di isolamento PostgreSQL predefinito sufficiente con lock esplicito; valutare serializable per operazioni amministrative specifiche.
+- Pessimistic lock on the wallet for balance mutations.
+- Optimistic version on transactions and profile.
+- Idempotency for network retries.
+- PostgreSQL's default isolation level is sufficient with an explicit lock; consider serializable for specific administrative operations.
 
 ---
 
-## 14. Contratto API REST
+## 14. REST API contract
 
-Prefisso: `/v1`  
-Formato: JSON, salvo upload/download.  
-Documentazione: OpenAPI.
+Prefix: `/v1`  
+Format: JSON, except for upload/download.  
+Documentation: OpenAPI.
 
 ### 14.1 Auth
 
@@ -1654,7 +1654,7 @@ POST /v1/auth/google/verify
 POST /v1/auth/google/complete-registration
 ```
 
-### 14.2 Profilo
+### 14.2 Profile
 
 ```http
 GET    /v1/me
@@ -1666,7 +1666,7 @@ POST   /v1/me/export
 GET    /v1/me/export/{export_id}
 ```
 
-### 14.3 Identità collegate
+### 14.3 Linked identities
 
 ```http
 GET    /v1/me/identities
@@ -1674,21 +1674,21 @@ POST   /v1/me/identities/google/link
 DELETE /v1/me/identities/google
 ```
 
-Per link e unlink richiedere autenticazione recente.
+For link and unlink, require recent authentication.
 
-### 14.4 Portafoglio
+### 14.4 Wallet
 
 ```http
 GET  /v1/wallet
 POST /v1/wallet/balance-adjustments
 ```
 
-Risposta `GET /wallet`:
+`GET /wallet` response:
 
 ```json
 {
   "id": "...",
-  "name": "Portafoglio principale",
+  "name": "Main wallet",
   "currency": "EUR",
   "current_balance_minor": 243050,
   "version": 42,
@@ -1696,7 +1696,7 @@ Risposta `GET /wallet`:
 }
 ```
 
-### 14.5 Transazioni
+### 14.5 Transactions
 
 ```http
 GET    /v1/transactions
@@ -1704,10 +1704,10 @@ POST   /v1/transactions
 GET    /v1/transactions/{id}
 PATCH  /v1/transactions/{id}
 DELETE /v1/transactions/{id}
-POST   /v1/transactions/{id}/restore   -- opzionale
+POST   /v1/transactions/{id}/restore   -- optional
 ```
 
-Parametri lista:
+List parameters:
 
 ```text
 cursor
@@ -1723,9 +1723,9 @@ occurred_to
 sort
 ```
 
-Usare cursor pagination basata su `occurred_at` e `id`.
+Use cursor pagination based on `occurred_at` and `id`.
 
-### 14.6 Suggerimenti e modelli
+### 14.6 Suggestions and templates
 
 ```http
 GET    /v1/transaction-templates?direction=DEBIT&q=bar&limit=10
@@ -1734,7 +1734,7 @@ PATCH  /v1/transaction-templates/{id}
 DELETE /v1/transaction-templates/{id}
 ```
 
-La creazione di una transazione può includere:
+Creating a transaction can include:
 
 ```json
 {
@@ -1742,9 +1742,9 @@ La creazione di una transazione può includere:
 }
 ```
 
-In alternativa, mantenere il contratto più semplice e gestire il modello con endpoint separato dopo il salvataggio.
+Alternatively, keep the contract simpler and manage the template with a separate endpoint after saving.
 
-### 14.7 Categorie
+### 14.7 Categories
 
 ```http
 GET  /v1/categories
@@ -1753,7 +1753,7 @@ PATCH /v1/categories/{id}
 DELETE /v1/categories/{id}
 ```
 
-Le categorie di sistema non sono eliminabili; possono essere nascoste.
+System categories are not deletable; they can be hidden.
 
 ### 14.8 Media
 
@@ -1765,10 +1765,10 @@ GET    /v1/media/{id}
 DELETE /v1/media/{id}
 ```
 
-Upload MVP: `multipart/form-data` al backend.  
-Evoluzione: upload diretto con URL firmato e callback di completamento.
+MVP upload: `multipart/form-data` to the backend.  
+Evolution: direct upload with a signed URL and a completion callback.
 
-### 14.9 Report
+### 14.9 Reports
 
 ```http
 GET /v1/reports/summary
@@ -1777,7 +1777,7 @@ GET /v1/reports/breakdown
 GET /v1/reports/monthly-comparison
 ```
 
-Parametri comuni:
+Common parameters:
 
 ```text
 from
@@ -1787,114 +1787,114 @@ group_by=title|template|category
 include_adjustments=false
 ```
 
-È possibile anche creare un singolo endpoint aggregato `/v1/reports/dashboard`; endpoint separati permettono però caricamento progressivo e caching mirato.
+A single aggregated `/v1/reports/dashboard` endpoint could also be created; separate endpoints, however, allow progressive loading and targeted caching.
 
 ### 14.10 Health
 
 ```http
 GET /health/live
 GET /health/ready
-GET /metrics  -- solo rete interna o autenticata
+GET /metrics  -- internal network or authenticated only
 ```
 
-### 14.11 Codici HTTP
+### 14.11 HTTP codes
 
-- `200` lettura/modifica riuscita.
-- `201` creazione.
-- `204` eliminazione/logout senza body.
-- `400` richiesta malformata.
-- `401` non autenticato.
-- `403` non autorizzato.
-- `404` risorsa non trovata.
-- `409` conflitto, duplicato o versione non aggiornata.
-- `413` upload troppo grande.
-- `422` validazione di dominio.
+- `200` successful read/update.
+- `201` creation.
+- `204` deletion/logout with no body.
+- `400` malformed request.
+- `401` not authenticated.
+- `403` not authorized.
+- `404` resource not found.
+- `409` conflict, duplicate, or stale version.
+- `413` upload too large.
+- `422` domain validation.
 - `429` rate limit.
-- `500` errore interno generico.
+- `500` generic internal error.
 
 ---
 
-## 15. Autenticazione e collegamento Google
+## 15. Authentication and Google linking
 
-### 15.1 Modello account
+### 15.1 Account model
 
-L’utente applicativo è l’entità centrale. Le credenziali locali e Google sono metodi di accesso collegabili.
+The application user is the central entity. Local credentials and Google are linkable access methods.
 
-Questo evita di creare due account distinti per la stessa persona e consente di:
+This avoids creating two distinct accounts for the same person and allows:
 
-- aggiungere Google dopo registrazione manuale;
-- usare Google su un account già completo;
-- scollegare Google;
-- aggiungere in futuro Apple o passkey.
+- adding Google after manual registration;
+- using Google on an already-complete account;
+- unlinking Google;
+- adding Apple or passkeys in the future.
 
-### 15.2 Verifica Google
+### 15.2 Google verification
 
-Il client invia al backend un ID token. Il backend deve verificare almeno:
+The client sends the backend an ID token. The backend must verify at least:
 
-- firma;
+- signature;
 - issuer;
-- audience contro client ID consentiti;
-- scadenza;
+- audience against allowed client IDs;
+- expiration;
 - subject;
-- eventuale stato email verificata.
+- verified-email status, if any.
 
-Non usare email o ID forniti senza verifica come prova dell’identità.
+Do not use unverified email or IDs supplied by the client as proof of identity.
 
-### 15.3 Collegamento Google a un account esistente
+### 15.3 Linking Google to an existing account
 
-1. Utente già autenticato.
-2. Richiesta di autenticazione recente: password o provider attuale.
-3. Sign in Google.
-4. Backend verifica token.
-5. Controllo che il `provider_subject` non sia già collegato.
-6. Inserimento `external_identities`.
-7. Audit e notifica di sicurezza.
+1. User already authenticated.
+2. Request for recent authentication: password or current provider.
+3. Google sign-in.
+4. Backend verifies the token.
+5. Check that the `provider_subject` is not already linked.
+6. Insert into `external_identities`.
+7. Audit and security notification.
 
-### 15.4 Scollegamento
+### 15.4 Unlinking
 
-Consentire solo se rimane almeno un metodo di accesso valido:
+Allow only if at least one valid access method remains:
 
-- password locale impostata; oppure
-- altro provider collegato.
+- local password set; or
+- another linked provider.
 
-Richiedere autenticazione recente. Revocare eventuali token Google applicabili e rimuovere il collegamento locale.
+Require recent authentication. Revoke any applicable Google tokens and remove the local link.
 
 ### 15.5 Password
 
-- Hash Argon2id con parametri versionati e aggiornabili.
-- Salt univoco.
-- Pepper opzionale conservato nel secret manager.
-- Nessuna password nei log.
-- Password reset tramite token monouso, hashato e con scadenza breve.
-- Rate limit per login e reset.
-- Messaggi che non permettano enumerazione semplice degli account.
+- Argon2id hash with versioned, upgradable parameters.
+- Unique salt.
+- Optional pepper stored in the secret manager.
+- No passwords in logs.
+- Password reset via a single-use, hashed token with a short expiration.
+- Rate limit for login and reset.
+- Messages that don't allow trivial account enumeration.
 
-### 15.6 Sessioni mobile
+### 15.6 Mobile sessions
 
-Approccio consigliato:
+Recommended approach:
 
-- access token breve, 10–20 minuti;
-- refresh token casuale opaco, ruotato a ogni uso;
-- hash refresh token in PostgreSQL;
-- rilevazione riuso token e revoca della famiglia;
-- access token in storage sicuro del sistema;
-- logout revoca la sessione corrente;
-- logout-all revoca tutte le sessioni.
+- short access token, 10–20 minutes;
+- opaque random refresh token, rotated on every use;
+- refresh token hash in PostgreSQL;
+- token-reuse detection and family revocation;
+- access token in the system's secure storage;
+- logout revokes the current session;
+- logout-all revokes all sessions.
 
 ---
 
-## 16. Gestione immagini, ricerca e crop
+## 16. Image management, search, and crop
 
-### 16.1 Sorgenti
+### 16.1 Sources
 
-- Upload da galleria.
-- Scatto da fotocamera.
-- Asset già usati.
-- Ricerca tramite provider esterno autorizzato.
+- Upload from gallery.
+- Camera shot.
+- Already-used assets.
+- Search via an authorized external provider.
 
-### 16.2 Provider di ricerca
+### 16.2 Search provider
 
-Creare un’interfaccia backend:
+Create a backend interface:
 
 ```go
 type ImageSearchProvider interface {
@@ -1903,53 +1903,53 @@ type ImageSearchProvider interface {
 }
 ```
 
-Il client non deve inviare URL arbitrari da scaricare. Deve inviare un ID risultato emesso dal backend. Il backend accetta soltanto provider e domini in allowlist, riducendo rischio SSRF.
+The client must not send arbitrary URLs to download. It must send a result ID issued by the backend. The backend only accepts allowlisted providers and domains, reducing SSRF risk.
 
-Prima di scegliere il provider verificare:
+Before choosing the provider, verify:
 
-- licenza e attribuzione;
-- possibilità di memorizzazione permanente;
-- limiti API;
-- contenuti consentiti;
-- disponibilità commerciale;
+- license and attribution;
+- possibility of permanent storage;
+- API limits;
+- allowed content;
+- commercial availability;
 - privacy.
 
-Per semplici icone, valutare un catalogo di icone con licenza chiara; per fotografie, un provider stock separato. L’interfaccia astratta consente di cambiare fornitore.
+For simple icons, consider a clearly licensed icon catalog; for photographs, a separate stock provider. The abstract interface allows changing providers.
 
-### 16.3 Pipeline upload
+### 16.3 Upload pipeline
 
-1. Validazione dimensione richiesta.
-2. Verifica estensione solo come primo filtro.
-3. Verifica MIME rilevato.
-4. Verifica firma/magic bytes.
-5. Decodifica dell’immagine.
-6. Limite dimensioni pixel per evitare decompression bomb.
-7. Rimozione metadati EXIF, soprattutto geolocalizzazione.
-8. Applicazione crop richiesto.
-9. Ricodifica in formato supportato.
-10. Generazione thumbnail.
-11. Calcolo SHA-256.
-12. Upload nello storage.
-13. Inserimento metadati PostgreSQL.
+1. Requested-size validation.
+2. Extension check as only a first filter.
+3. Detected MIME check.
+4. Signature/magic-bytes check.
+5. Image decoding.
+6. Pixel-size limit to prevent decompression bombs.
+7. Removal of EXIF metadata, especially geolocation.
+8. Applying the requested crop.
+9. Re-encoding to a supported format.
+10. Thumbnail generation.
+11. SHA-256 computation.
+12. Upload to storage.
+13. PostgreSQL metadata insertion.
 
-### 16.4 Formati
+### 16.4 Formats
 
-Input consentiti iniziali:
+Initial allowed inputs:
 
 - JPEG;
 - PNG;
 - WebP;
-- HEIC solo se la pipeline server scelta lo supporta in modo affidabile.
+- HEIC only if the chosen server pipeline reliably supports it.
 
-Output normalizzato:
+Normalized output:
 
-- WebP o JPEG per foto;
-- PNG/WebP per immagini con trasparenza;
-- dimensioni predefinite per profilo e transazioni.
+- WebP or JPEG for photos;
+- PNG/WebP for images with transparency;
+- default sizes for profile and transactions.
 
-### 16.5 Crop client e server
+### 16.5 Client and server crop
 
-Il client produce:
+The client produces:
 
 ```json
 {
@@ -1964,40 +1964,40 @@ Il client produce:
 }
 ```
 
-Coordinate normalizzate tra 0 e 1. Il backend applica nuovamente il crop all’originale decodificato. In un MVP più semplice, il client può caricare direttamente il risultato croppato, ma il backend deve comunque ricodificarlo.
+Normalized coordinates between 0 and 1. The backend applies the crop again to the decoded original. In a simpler MVP, the client can upload the already-cropped result directly, but the backend must still re-encode it.
 
-### 16.6 Riutilizzo e deduplicazione
+### 16.6 Reuse and deduplication
 
-- Salvare un asset solo quando viene selezionato o caricato, non per ogni risultato visualizzato.
-- Aggiornare `last_used_at` quando assegnato.
-- Deduplicare per utente e SHA-256.
-- Non eliminare fisicamente un asset ancora referenziato.
-- Pulire asset orfani dopo un periodo di grazia.
+- Save an asset only when it is selected or uploaded, not for every displayed result.
+- Update `last_used_at` when assigned.
+- Deduplicate by user and SHA-256.
+- Do not physically delete an asset that is still referenced.
+- Clean up orphaned assets after a grace period.
 
-### 16.7 Distribuzione
+### 16.7 Distribution
 
 MVP:
 
-- endpoint autenticato che restituisce l’immagine;
-- cache HTTP privata;
-- controllo ownership.
+- authenticated endpoint that returns the image;
+- private HTTP cache;
+- ownership check.
 
-Produzione scalabile:
+Scalable production:
 
-- URL firmati a breve durata;
+- short-lived signed URLs;
 - CDN;
-- bucket privato;
-- nessun object key prevedibile contenente dati personali.
+- private bucket;
+- no predictable object key containing personal data.
 
 ---
 
-## 17. Cronologia, ricerca e filtri
+## 17. History, search, and filters
 
-### 17.1 Query backend
+### 17.1 Backend query
 
-La query deve sempre filtrare per `user_id` derivato dalla sessione, mai ricevuto come valore autorevole dal client.
+The query must always filter by `user_id` derived from the session, never received as an authoritative value from the client.
 
-Esempio logico:
+Logical example:
 
 ```sql
 SELECT ...
@@ -2014,38 +2014,38 @@ ORDER BY occurred_at DESC, id DESC
 LIMIT $limit_plus_one;
 ```
 
-### 17.2 Paginazione
+### 17.2 Pagination
 
-Preferire cursor pagination:
+Prefer cursor pagination:
 
 ```text
 cursor = base64(occurred_at + id)
 ```
 
-Vantaggi:
+Advantages:
 
-- stabilità con nuovi inserimenti;
-- prestazioni migliori di offset su cronologie lunghe;
-- nessun salto importante durante lo scroll.
+- stability with new inserts;
+- better performance than offset on long histories;
+- no significant jumps while scrolling.
 
-### 17.3 Ricerca titolo
+### 17.3 Title search
 
 MVP:
 
-- normalizzazione;
+- normalization;
 - prefix matching;
-- debounce client 250–400 ms;
-- minimo 2 caratteri per query remota.
+- client debounce 250–400 ms;
+- minimum 2 characters for a remote query.
 
-Evoluzione:
+Evolution:
 
 - trigram similarity;
 - typo tolerance;
-- ricerca anche nella descrizione.
+- search in the description too.
 
-### 17.4 Totali filtrati
+### 17.4 Filtered totals
 
-L’API lista può restituire un blocco opzionale:
+The list API can return an optional block:
 
 ```json
 {
@@ -2058,86 +2058,86 @@ L’API lista può restituire un blocco opzionale:
 }
 ```
 
-Per dataset molto grandi, calcolare i totali con endpoint separato o cache.
+For very large datasets, compute totals with a separate endpoint or cache.
 
 ---
 
-## 18. Report, percentuali e grafici
+## 18. Reports, percentages, and charts
 
-### 18.1 Definizione del periodo
+### 18.1 Period definition
 
-- “Ultimi 30 giorni”: intervallo rolling fino al momento corrente.
-- “Ultimi 12 mesi”: rolling 12 mesi.
-- “Intera cronologia”: dalla prima transazione al momento corrente.
-- “Personalizzato”: date locali scelte dall’utente.
+- "Last 30 days": rolling range up to the current moment.
+- "Last 12 months": rolling 12 months.
+- "Entire history": from the first transaction to the current moment.
+- "Custom": local dates chosen by the user.
 
-È consigliato aggiungere anche “Mese corrente” e “Anno corrente” per confronti contabili più naturali.
+It is recommended to also add "Current month" and "Current year" for more natural accounting comparisons.
 
-### 18.2 Operazioni incluse
+### 18.2 Included transactions
 
-Per impostazione predefinita:
+By default:
 
-- includere `STANDARD`;
-- escludere `OPENING_BALANCE` e `BALANCE_ADJUSTMENT` dai totali ordinari;
-- mostrare separatamente il loro impatto sul saldo;
-- offrire toggle “Includi rettifiche”.
+- include `STANDARD`;
+- exclude `OPENING_BALANCE` and `BALANCE_ADJUSTMENT` from ordinary totals;
+- show their impact on the balance separately;
+- offer an "Include adjustments" toggle.
 
-### 18.3 Riepilogo
+### 18.3 Summary
 
-Formule:
+Formulas:
 
 ```text
-total_credits = somma CREDIT standard
-total_debits  = somma DEBIT standard
+total_credits = sum of standard CREDIT
+total_debits  = sum of standard DEBIT
 net           = total_credits - total_debits
-savings_rate  = net / total_credits * 100, se total_credits > 0
+savings_rate  = net / total_credits * 100, if total_credits > 0
 ```
 
-Saldo iniziale del periodo:
+Starting balance of the period:
 
 ```text
-saldo immediatamente prima di from
+balance immediately before "from"
 ```
 
-Saldo finale:
+Ending balance:
 
 ```text
-saldo iniziale + impatto di tutte le transazioni del periodo, incluse rettifiche
+starting balance + impact of all transactions in the period, including adjustments
 ```
 
-### 18.4 Percentuali per titolo
+### 18.4 Percentages by title
 
-Regola richiesta:
+Required rule:
 
-- più transazioni con lo stesso titolo devono essere una singola voce;
-- se esiste `template_id`, raggruppare per modello;
-- altrimenti raggruppare per `title_normalized`;
-- visualizzare il titolo canonico del modello o il titolo più recente.
+- multiple transactions with the same title must be a single entry;
+- if `template_id` exists, group by template;
+- otherwise group by `title_normalized`;
+- display the template's canonical title or the most recent title.
 
-Per uscite:
+For expenses:
 
 ```text
-percentuale_voce = totale_uscite_voce / totale_uscite_periodo * 100
+entry_percentage = total_entry_expenses / total_period_expenses * 100
 ```
 
-Per entrate usare un denominatore separato. Non sommare entrate e uscite in un’unica torta perché hanno significato opposto.
+For income, use a separate denominator. Do not add income and expenses into a single pie, since they have opposite meanings.
 
-### 18.5 Percentuali per categoria
+### 18.5 Percentages by category
 
-Stessa formula, raggruppando per categoria. Le transazioni senza categoria vanno in “Altro”.
+Same formula, grouping by category. Transactions with no category go into "Other."
 
-### 18.6 Voci piccole
+### 18.6 Small entries
 
-Per evitare grafici illeggibili:
+To avoid unreadable charts:
 
-- mostrare al massimo 6–8 voci principali;
-- aggregare il resto in “Altre”;
-- consentire apertura lista completa;
-- mostrare importo, percentuale e numero transazioni.
+- show at most 6–8 main entries;
+- aggregate the rest into "Other";
+- allow opening the full list;
+- show amount, percentage, and transaction count.
 
-### 18.7 Confronto mensile
+### 18.7 Monthly comparison
 
-Query concettuale:
+Conceptual query:
 
 ```sql
 SELECT date_trunc('month', occurred_at AT TIME ZONE $timezone) AS month,
@@ -2149,200 +2149,200 @@ GROUP BY month
 ORDER BY month;
 ```
 
-Il backend deve riempire i mesi senza operazioni con zero per mantenere il grafico continuo.
+The backend must fill months with no transactions with zero, to keep the chart continuous.
 
-### 18.8 Regola “un solo mese”
+### 18.8 "Single month" rule
 
-Se il periodo tocca un solo mese civile:
+If the period touches only a single calendar month:
 
-- non mostrare il confronto mensile;
-- mostrare al suo posto andamento giornaliero e ripartizione;
-- evitare card vuota o messaggio ridondante.
+- do not show the monthly comparison;
+- show a daily trend and breakdown instead;
+- avoid an empty card or a redundant message.
 
-### 18.9 Caching report
+### 18.9 Report caching
 
-Chiave cache basata su:
+Cache key based on:
 
-- utente;
-- portafoglio;
-- intervallo;
-- fuso;
+- user;
+- wallet;
+- range;
+- time zone;
 - grouping;
-- flag rettifiche;
-- versione saldo o timestamp ultima mutazione.
+- adjustments flag;
+- balance version or last-mutation timestamp.
 
-Dopo create/update/delete transaction:
+After create/update/delete transaction:
 
-- incrementare una versione report per portafoglio; oppure
-- invalidare le chiavi note; oppure
-- usare TTL breve con versione nel key.
+- increment a report version per wallet; or
+- invalidate known keys; or
+- use a short TTL with the version in the key.
 
-La soluzione con versione evita scansioni di chiavi Redis.
+The versioned approach avoids Redis key scans.
 
-### 18.10 Accuratezza
+### 18.10 Accuracy
 
-- Calcoli monetari in interi.
-- Percentuali calcolate con precisione decimale e arrotondate solo per la visualizzazione.
-- La somma delle percentuali visualizzate può non essere esattamente 100 per arrotondamento; “Altre” può assorbire il residuo.
-- Testare cambio ora legale e confini di mese nel fuso `Europe/Rome`.
+- Monetary calculations in integers.
+- Percentages computed with decimal precision and rounded only for display.
+- The sum of displayed percentages may not be exactly 100 due to rounding; "Other" can absorb the remainder.
+- Test daylight-saving-time changes and month boundaries in the `Europe/Rome` time zone.
 
 ---
 
-## 19. Sicurezza
+## 19. Security
 
-### 19.1 Autorizzazione per oggetto
+### 19.1 Object-level authorization
 
-Ogni endpoint che usa un ID deve verificare che la risorsa appartenga all’utente autenticato. Non basta che l’ID esista.
+Every endpoint that uses an ID must verify that the resource belongs to the authenticated user. It's not enough for the ID to exist.
 
-Pattern repository consigliato:
+Recommended repository pattern:
 
 ```text
 GetTransactionByIDAndUserID(transactionID, authenticatedUserID)
 ```
 
-Non esporre metodi che recuperano un record per ID e demandano il controllo al client.
+Do not expose methods that fetch a record by ID and delegate the check to the client.
 
-### 19.2 Validazione input
+### 19.2 Input validation
 
-- Schema e tipi rigidi.
-- Limiti di lunghezza.
-- Enum per direzione e natura.
-- Range importi.
-- Date ragionevoli.
-- MIME e dimensione upload.
-- Rifiuto proprietà inattese quando opportuno.
-- Validazioni di business lato server.
+- Strict schema and types.
+- Length limits.
+- Enums for direction and nature.
+- Amount ranges.
+- Reasonable dates.
+- Upload MIME and size.
+- Reject unexpected properties when appropriate.
+- Server-side business validations.
 
-### 19.3 Trasporto
+### 19.3 Transport
 
-- Solo HTTPS in produzione.
-- HSTS al reverse proxy.
-- Nessuna porta PostgreSQL o Redis esposta pubblicamente.
-- Certificati e rinnovo automatico.
+- HTTPS only in production.
+- HSTS at the reverse proxy.
+- No PostgreSQL or Redis port exposed publicly.
+- Certificates with automatic renewal.
 
-### 19.4 Segreti
+### 19.4 Secrets
 
-- Secret manager in produzione.
-- `.env` solo locale e mai versionato.
-- Rotazione chiavi.
-- Chiavi distinte per ambiente.
-- Nessun segreto nei log o nelle immagini Docker.
+- Secret manager in production.
+- `.env` local only, never committed.
+- Key rotation.
+- Distinct keys per environment.
+- No secrets in logs or Docker images.
 
 ### 19.5 Rate limiting
 
-Ambiti:
+Scopes:
 
 - IP;
-- username/email normalizzati;
-- user ID autenticato;
-- endpoint sensibili;
-- upload e ricerca immagini.
+- normalized username/email;
+- authenticated user ID;
+- sensitive endpoints;
+- image upload and search.
 
-Applicare limiti più severi a login, reset password, verifica email e Google exchange.
+Apply stricter limits to login, password reset, email verification, and the Google exchange.
 
 ### 19.6 Upload
 
-- Allowlist formati.
-- Limite byte e pixel.
-- Ricodifica.
-- Filename generato dal server.
-- Bucket privato.
-- Nessuna esecuzione del contenuto.
-- Scansione malware se l’infrastruttura lo consente.
-- Timeout e limiti CPU/memoria per processamento.
+- Format allowlist.
+- Byte and pixel limits.
+- Re-encoding.
+- Server-generated filename.
+- Private bucket.
+- No execution of the content.
+- Malware scanning if the infrastructure allows it.
+- Timeouts and CPU/memory limits for processing.
 
-### 19.7 Logging sicuro
+### 19.7 Secure logging
 
-Non registrare:
+Do not log:
 
-- password;
-- token;
-- ID token Google;
-- refresh token;
-- descrizioni delle transazioni per default;
-- importi completi se non necessari;
-- URL firmati.
+- passwords;
+- tokens;
+- Google ID tokens;
+- refresh tokens;
+- transaction descriptions by default;
+- full amounts if not needed;
+- signed URLs.
 
-Registrare:
+Log:
 
 - request ID;
 - endpoint;
 - status;
-- latenza;
-- user ID pseudonimizzato o interno;
-- esito autenticazione;
-- eventi di collegamento provider;
+- latency;
+- pseudonymized or internal user ID;
+- authentication outcome;
+- provider-linking events;
 - error code.
 
-### 19.8 Dipendenze
+### 19.8 Dependencies
 
 - Lockfile.
-- Scansione vulnerabilità Go e immagini Docker.
-- Aggiornamenti automatici in PR, non deploy automatico senza test.
-- SBOM per release backend.
+- Vulnerability scanning for Go and Docker images.
+- Automatic updates via PR, no automatic deploy without tests.
+- SBOM for backend releases.
 
 ---
 
-## 20. Privacy e gestione dei dati
+## 20. Privacy and data management
 
-Questa sezione è un requisito tecnico e di prodotto; le decisioni legali definitive devono essere validate per i mercati di distribuzione.
+This section is a technical and product requirement; final legal decisions must be validated for the distribution markets.
 
-### 20.1 Minimizzazione
+### 20.1 Minimization
 
-- Conservare solo dati necessari.
-- Non salvare l’avatar generato come file.
-- Rimuovere EXIF dalle immagini.
-- Non importare dati Google non necessari.
-- Richiedere scope Google minimi per autenticazione.
+- Keep only necessary data.
+- Do not save the generated avatar as a file.
+- Strip EXIF from images.
+- Do not import unnecessary Google data.
+- Request minimal Google scopes for authentication.
 
-### 20.2 Esportazione
+### 20.2 Export
 
-Formato CSV:
+CSV format:
 
 ```text
-id,data_ora,tipo,titolo,categoria,descrizione,importo,valuta,natura
+id,date_time,type,title,category,description,amount,currency,nature
 ```
 
-Formato JSON:
+JSON format:
 
-- profilo;
-- portafoglio;
-- categorie personalizzate;
-- modelli;
-- transazioni;
-- riferimenti immagini o archivio separato.
+- profile;
+- wallet;
+- custom categories;
+- templates;
+- transactions;
+- image references or a separate archive.
 
-### 20.3 Cancellazione account
+### 20.3 Account deletion
 
-Flusso:
+Flow:
 
-1. Richiesta autenticazione recente.
-2. Avviso irreversibilità.
-3. Possibile periodo di grazia.
-4. Revoca sessioni.
-5. Scollegamento provider.
-6. Marcatura account in cancellazione.
-7. Job di rimozione dati e asset.
-8. Audit minimo separato solo se richiesto dalla policy.
+1. Recent authentication request.
+2. Irreversibility warning.
+3. Possible grace period.
+4. Session revocation.
+5. Provider unlinking.
+6. Marking the account as pending deletion.
+7. Data and asset removal job.
+8. Minimal separate audit only if required by policy.
 
 ### 20.4 Backup
 
-La cancellazione dai backup richiede una politica documentata. I backup devono avere retention finita e accesso ristretto.
+Deletion from backups requires a documented policy. Backups must have a finite retention and restricted access.
 
 ---
 
-## 21. Docker e ambienti
+## 21. Docker and environments
 
-### 21.1 Ambienti
+### 21.1 Environments
 
-- `local`: sviluppo individuale.
-- `test`: integrazione automatizzata.
-- `staging`: replica funzionale della produzione.
-- `production`: dati reali.
+- `local`: individual development.
+- `test`: automated integration.
+- `staging`: functional replica of production.
+- `production`: real data.
 
-### 21.2 Strategia Compose
+### 21.2 Compose strategy
 
-File consigliati:
+Recommended files:
 
 ```text
 compose.yaml
@@ -2351,11 +2351,11 @@ compose.prod.yaml
 .env.example
 ```
 
-`compose.yaml` definisce servizi, network, volumi e healthcheck. Gli override definiscono porte e differenze ambientali.
+`compose.yaml` defines services, networks, volumes, and healthchecks. Overrides define ports and environment differences.
 
-### 21.3 Mapping porte richiesto
+### 21.3 Required port mapping
 
-Ambiente di sviluppo:
+Development environment:
 
 ```yaml
 services:
@@ -2372,16 +2372,16 @@ services:
       - "10003:8080"
 ```
 
-In produzione è preferibile non pubblicare PostgreSQL e Redis. Se il requisito operativo impone le porte host, bindarle almeno a loopback o rete privata:
+In production it's preferable not to publish PostgreSQL and Redis. If an operational requirement mandates host ports, bind them at least to loopback or a private network:
 
 ```yaml
 - "127.0.0.1:10001:5432"
 - "127.0.0.1:10002:6379"
 ```
 
-L’API può ascoltare su `10003`, idealmente dietro reverse proxy TLS su `443`.
+The API can listen on `10003`, ideally behind a TLS reverse proxy on `443`.
 
-### 21.4 Servizi
+### 21.4 Services
 
 ```text
 api
@@ -2389,16 +2389,16 @@ worker
 postgres
 redis
 object-storage
-reverse-proxy   -- produzione
+reverse-proxy   -- production
 ```
 
-### 21.5 Network
+### 21.5 Networks
 
 - `backend_internal`: API, worker, PostgreSQL, Redis, object storage.
-- `edge`: reverse proxy e API.
-- Database e Redis non connessi alla rete edge.
+- `edge`: reverse proxy and API.
+- Database and Redis not connected to the edge network.
 
-I container comunicano usando il nome servizio e la porta interna, non la porta host:
+Containers communicate using the service name and internal port, not the host port:
 
 ```text
 postgres:5432
@@ -2407,278 +2407,278 @@ api:8080
 object-storage:9000
 ```
 
-### 21.6 Volumi
+### 21.6 Volumes
 
 - `postgres_data`.
 - `object_storage_data`.
-- Redis può non avere persistenza se usato solo per cache/rate limit; valutarla se ospita job queue o session metadata non ricostruibile.
+- Redis may have no persistence if used only for cache/rate limit; consider it if it hosts a job queue or non-reconstructible session metadata.
 
 ### 21.7 Healthcheck
 
 - PostgreSQL: `pg_isready`.
-- Redis: `redis-cli ping` con autenticazione.
-- API live: processo attivo.
-- API ready: connessione PostgreSQL disponibile; Redis può essere degradabile per alcune funzioni, secondo policy.
-- Object storage: bucket accessibile.
+- Redis: `redis-cli ping` with authentication.
+- API live: process active.
+- API ready: PostgreSQL connection available; Redis can be degradable for some functions, per policy.
+- Object storage: bucket accessible.
 
-### 21.8 Dockerfile Go
+### 21.8 Go Dockerfile
 
 - Multi-stage build.
-- Immagine runtime minimale.
-- Utente non root.
-- Binario statico quando possibile.
-- `read_only` filesystem, con directory temporanee esplicite.
-- Healthcheck esterno o endpoint dedicato.
+- Minimal runtime image.
+- Non-root user.
+- Static binary when possible.
+- `read_only` filesystem, with explicit temp directories.
+- External healthcheck or dedicated endpoint.
 
-### 21.9 Migrazioni
+### 21.9 Migrations
 
-Non eseguire migrazioni concorrenti da ogni replica API. Opzioni:
+Do not run concurrent migrations from every API replica. Options:
 
-- job separato prima del deploy;
-- comando `migrate` eseguito una sola volta;
-- lock advisory PostgreSQL come protezione aggiuntiva.
+- separate job before deploy;
+- `migrate` command run only once;
+- PostgreSQL advisory lock as extra protection.
 
-Le migrazioni devono essere backward-compatible quando si fa rolling deployment.
+Migrations must be backward-compatible when doing a rolling deployment.
 
 ### 21.10 Backup
 
-- Backup PostgreSQL automatico.
-- Test periodico restore.
-- Backup object storage.
-- Cifratura backup.
-- Retention per ambiente.
-- Redis non è parte del backup finanziario principale.
+- Automatic PostgreSQL backup.
+- Periodic restore test.
+- Object storage backup.
+- Backup encryption.
+- Retention per environment.
+- Redis is not part of the main financial backup.
 
 ---
 
-## 22. Osservabilità, log e monitoraggio
+## 22. Observability, logging, and monitoring
 
-### 22.1 Metriche backend
+### 22.1 Backend metrics
 
-- richieste per endpoint/status;
-- latenza p50/p95/p99;
+- requests per endpoint/status;
+- p50/p95/p99 latency;
 - error rate;
-- connessioni pool PostgreSQL;
-- query lente;
-- hit/miss cache Redis;
-- rate limit attivati;
-- upload rifiutati;
-- tempo processamento immagini;
-- job falliti;
-- differenze rilevate dalla riconciliazione saldo.
+- PostgreSQL pool connections;
+- slow queries;
+- Redis cache hit/miss;
+- rate limits triggered;
+- rejected uploads;
+- image processing time;
+- failed jobs;
+- differences detected by balance reconciliation.
 
 ### 22.2 Tracing
 
-Propagare un `request_id` o trace ID:
+Propagate a `request_id` or trace ID:
 
 - Flutter → API;
 - handler → service → repository;
-- API → provider immagini/object storage.
+- API → image provider/object storage.
 
-### 22.3 Alert
+### 22.3 Alerts
 
-- API non ready.
-- Error rate sopra soglia.
-- Database storage vicino al limite.
-- Backup fallito.
+- API not ready.
+- Error rate above threshold.
+- Database storage near the limit.
+- Backup failed.
 - Reconciliation mismatch.
-- Picco login falliti.
-- Job queue bloccata.
+- Spike in failed logins.
+- Job queue stuck.
 
-### 22.4 Crash client
+### 22.4 Client crashes
 
-Integrare un provider tramite astrazione. Prima dell’invio rimuovere dati personali e contenuti delle transazioni.
+Integrate a provider through an abstraction. Strip personal data and transaction content before sending.
 
 ---
 
-## 23. Strategia di test
+## 23. Test strategy
 
-### 23.1 Backend unit test
+### 23.1 Backend unit tests
 
-Testare:
+Test:
 
-- calcolo impatto transazione;
-- modifica direzione/importo;
-- rettifica target balance;
-- normalizzazione titoli;
-- raggruppamento report;
-- percentuali;
-- limiti periodo;
-- regole unlink Google;
-- validazioni immagini.
+- transaction impact calculation;
+- direction/amount change;
+- target-balance adjustment;
+- title normalization;
+- report grouping;
+- percentages;
+- period limits;
+- Google unlink rules;
+- image validations.
 
-### 23.2 Backend integration test
+### 23.2 Backend integration tests
 
-Con PostgreSQL e Redis reali in container:
+With real PostgreSQL and Redis in containers:
 
-- create/update/delete e saldo;
-- rollback su errore;
-- concorrenza su due inserimenti;
+- create/update/delete and balance;
+- rollback on error;
+- concurrency on two inserts;
 - idempotency key;
 - unique Google subject;
-- filtri cronologia;
+- history filters;
 - cursor pagination;
-- report mensili;
-- invalidazione cache;
-- migrazioni up/down quando supportato.
+- monthly reports;
+- cache invalidation;
+- up/down migrations where supported.
 
-### 23.3 Contract test
+### 23.3 Contract tests
 
-- Validare richieste e risposte contro OpenAPI.
-- Generare client o mock server.
-- Bloccare breaking change non versionate.
+- Validate requests and responses against OpenAPI.
+- Generate a client or mock server.
+- Block unversioned breaking changes.
 
-### 23.4 Flutter unit test
+### 23.4 Flutter unit tests
 
 - ViewModel.
-- Formattazione `Money`.
-- mapping errori.
-- costruzione query filtri.
-- stato sessione.
-- gestione suggerimenti.
+- `Money` formatting.
+- error mapping.
+- filter query construction.
+- session state.
+- suggestion handling.
 
-### 23.5 Widget test
+### 23.5 Widget tests
 
-- form registrazione;
-- nuova operazione;
-- filtri;
-- stati loading/error/empty;
-- temi;
+- registration form;
+- new transaction;
+- filters;
+- loading/error/empty states;
+- themes;
 - text scaling;
-- avatar generato.
+- generated avatar.
 
-### 23.6 Golden test
+### 23.6 Golden tests
 
-Schermate chiave in:
+Key screens in:
 
-- tema chiaro;
-- tema scuro;
-- testo normale e ingrandito;
-- viewport piccoli e grandi.
+- light theme;
+- dark theme;
+- normal and enlarged text;
+- small and large viewports.
 
 ### 23.7 End-to-end
 
-Scenari minimi:
+Minimum scenarios:
 
-1. Registrazione manuale con saldo iniziale.
-2. Login e logout.
-3. Registrazione Google completa.
-4. Inserimento uscita con immagine.
-5. Inserimento entrata tramite modello.
-6. Modifica operazione e verifica saldo.
-7. Eliminazione e verifica saldo.
-8. Rettifica saldo.
-9. Filtri cronologia.
-10. Report su più mesi.
-11. Collegamento e scollegamento Google.
-12. Esportazione dati.
+1. Manual registration with initial balance.
+2. Login and logout.
+3. Complete Google registration.
+4. Entering an expense with an image.
+5. Entering income via a template.
+6. Editing a transaction and verifying the balance.
+7. Deletion and balance verification.
+8. Balance adjustment.
+9. History filters.
+10. Report over multiple months.
+11. Google linking and unlinking.
+12. Data export.
 
-### 23.8 Sicurezza
+### 23.8 Security
 
-- BOLA/IDOR: tentare accesso a transazioni altrui.
-- brute force e rate limit.
-- token scaduti/revocati.
-- riuso refresh token.
-- upload con MIME falso.
-- immagini enormi/decompression bomb.
-- URL arbitrari nella ricerca media.
+- BOLA/IDOR: attempting access to other users' transactions.
+- brute force and rate limit.
+- expired/revoked tokens.
+- refresh token reuse.
+- upload with fake MIME.
+- huge images/decompression bombs.
+- arbitrary URLs in media search.
 - mass assignment.
 - SQL injection.
-- log di segreti.
+- logging of secrets.
 
 ### 23.9 Performance
 
-Dataset sintetici:
+Synthetic datasets:
 
-- 10.000 transazioni per utente;
-- 1.000 utenti attivi di test;
-- report su più anni;
-- filtri combinati;
-- upload concorrenti.
+- 10,000 transactions per user;
+- 1,000 active test users;
+- reports over multiple years;
+- combined filters;
+- concurrent uploads.
 
-Obiettivi iniziali da validare:
+Initial targets to validate:
 
-- letture comuni p95 sotto 300 ms lato API in condizioni nominali;
-- mutazioni p95 sotto 500 ms escluso upload;
-- report cached p95 sotto 250 ms;
-- report non cached ragionevole e con timeout controllato.
+- common reads p95 under 300 ms at the API level under nominal conditions;
+- mutations p95 under 500 ms excluding upload;
+- cached reports p95 under 250 ms;
+- non-cached reports reasonable and with a controlled timeout.
 
 ---
 
-## 24. CI/CD e rilascio
+## 24. CI/CD and release
 
-### 24.1 Pipeline Flutter
+### 24.1 Flutter pipeline
 
 - format check;
 - analyze;
-- unit test;
-- widget test;
-- golden test selezionati;
-- build Android/iOS per branch release;
-- firma solo in ambiente protetto;
-- distribuzione a tester.
+- unit tests;
+- widget tests;
+- selected golden tests;
+- Android/iOS build for release branches;
+- signing only in a protected environment;
+- distribution to testers.
 
-### 24.2 Pipeline Go
+### 24.2 Go pipeline
 
 - `go fmt`/format check;
 - `go vet`;
-- test con race detector dove applicabile;
-- integration test;
+- tests with race detector where applicable;
+- integration tests;
 - vulnerability scan;
 - OpenAPI validation;
-- build immagine Docker;
-- scan immagine;
+- Docker image build;
+- image scan;
 - SBOM;
-- push registry.
+- registry push.
 
 ### 24.3 Deploy
 
-1. Backup o verifica backup recente.
-2. Esecuzione migrazioni compatibili.
-3. Deploy backend.
+1. Backup or verification of a recent backup.
+2. Running compatible migrations.
+3. Backend deploy.
 4. Readiness check.
 5. Smoke test.
-6. Deploy worker.
-7. Monitoraggio errori.
-8. Rollback applicativo se necessario.
+6. Worker deploy.
+7. Error monitoring.
+8. Application rollback if needed.
 
-### 24.4 Versionamento API
+### 24.4 API versioning
 
-- `/v1` nel path.
-- Cambi additive senza rompere i client.
-- Campi nuovi opzionali.
-- Deprecazioni documentate.
-- Supporto minimo di versioni app definito tramite remote config o endpoint compatibilità.
+- `/v1` in the path.
+- Additive changes that don't break clients.
+- New fields optional.
+- Documented deprecations.
+- Minimum supported app version defined via remote config or a compatibility endpoint.
 
 ---
 
-## 25. Roadmap implementativa
+## 25. Implementation roadmap
 
-La roadmap è espressa in fasi e deliverable. La durata effettiva dipende da dimensione del team, qualità richiesta e copertura piattaforme.
+The roadmap is expressed in phases and deliverables. The actual duration depends on team size, required quality, and platform coverage.
 
-### Fase 0 — Discovery e decisioni architetturali
+### Phase 0 — Discovery and architectural decisions
 
-Deliverable:
+Deliverables:
 
-- requisiti finali approvati;
-- glossario;
-- wireframe low fidelity;
-- scelta provider immagini;
-- decisione account Google-only sì/no;
-- ADR per state management, storage immagini e auth sessioni;
-- specifica OpenAPI iniziale;
-- schema dati iniziale;
+- final requirements approved;
+- glossary;
+- low-fidelity wireframes;
+- image provider choice;
+- Google-only account decision yes/no;
+- ADR for state management, image storage, and session auth;
+- initial OpenAPI spec;
+- initial data schema;
 - threat model.
 
-### Fase 1 — Fondazioni
+### Phase 1 — Foundations
 
 Backend:
 
-- repository Go;
+- Go repository;
 - config;
 - logging;
 - PostgreSQL/Redis;
-- migrazioni;
+- migrations;
 - health endpoint;
 - Docker Compose;
 - CI.
@@ -2686,233 +2686,233 @@ Backend:
 Flutter:
 
 - repository;
-- tema;
+- theme;
 - routing;
-- localizzazione;
+- localization;
 - network client;
-- gestione errori;
-- component library iniziale.
+- error handling;
+- initial component library.
 
-### Fase 2 — Account e onboarding
+### Phase 2 — Account and onboarding
 
-- registrazione manuale;
-- verifica email;
+- manual registration;
+- email verification;
 - login;
 - refresh/logout;
-- profilo;
-- avatar generato;
-- saldo iniziale;
-- recupero password;
-- test E2E autenticazione.
+- profile;
+- generated avatar;
+- initial balance;
+- password recovery;
+- authentication E2E tests.
 
-### Fase 3 — Google Identity
+### Phase 3 — Google Identity
 
-- configurazione client Android/iOS;
-- verifica server token;
-- registrazione incompleta;
-- collegamento;
-- scollegamento;
-- vincoli anti-duplicato;
-- audit e notifiche sicurezza.
+- Android/iOS client configuration;
+- server-side token verification;
+- incomplete registration;
+- linking;
+- unlinking;
+- anti-duplicate constraints;
+- audit and security notifications.
 
-### Fase 4 — Ledger e Home
+### Phase 4 — Ledger and Home
 
-- portafoglio;
-- transazioni standard;
-- aggiornamento saldo atomico;
+- wallet;
+- standard transactions;
+- atomic balance update;
 - home;
-- elenco recenti;
-- dettaglio;
-- modifica;
-- eliminazione;
-- rettifica saldo;
-- riconciliazione.
+- recent list;
+- detail;
+- edit;
+- deletion;
+- balance adjustment;
+- reconciliation.
 
-### Fase 5 — Modelli, categorie e cronologia
+### Phase 5 — Templates, categories, and history
 
-- categorie di sistema;
-- categorie personalizzate;
-- modelli transazione;
+- system categories;
+- custom categories;
+- transaction templates;
 - autocomplete;
-- filtri;
+- filters;
 - cursor pagination;
-- UX empty/error;
-- test dataset ampio.
+- empty/error UX;
+- large-dataset testing.
 
-### Fase 6 — Media
+### Phase 6 — Media
 
 - storage;
 - upload;
 - crop;
-- ricodifica;
-- libreria immagini;
-- ricerca provider;
-- deduplicazione;
-- pulizia asset.
+- re-encoding;
+- image library;
+- provider search;
+- deduplication;
+- asset cleanup.
 
-### Fase 7 — Report
+### Phase 7 — Reports
 
 - summary;
 - timeseries;
-- breakdown per titolo/modello;
-- breakdown per categoria;
+- breakdown by title/template;
+- breakdown by category;
 - monthly comparison;
-- caching Redis;
-- grafici Flutter;
-- accessibilità e tabella alternativa.
+- Redis caching;
+- Flutter charts;
+- accessibility and alternative table.
 
-### Fase 8 — Account avanzato e dati
+### Phase 8 — Advanced account and data
 
-- sessioni attive;
+- active sessions;
 - logout-all;
-- cambio password;
-- preferenze;
-- export CSV/JSON;
-- cancellazione account.
+- password change;
+- preferences;
+- CSV/JSON export;
+- account deletion.
 
-### Fase 9 — Hardening e release
+### Phase 9 — Hardening and release
 
-- security test;
-- performance test;
+- security testing;
+- performance testing;
 - backup/restore;
-- osservabilità;
+- observability;
 - privacy review;
 - beta;
-- correzione bug;
+- bug fixing;
 - store readiness;
-- runbook operativo.
+- operational runbook.
 
-### Fase 10 — Post-MVP
+### Phase 10 — Post-MVP
 
-- ricorrenze;
-- notifiche;
-- budget;
-- più portafogli;
-- import CSV;
-- passkey;
+- recurrences;
+- notifications;
+- budgets;
+- multiple wallets;
+- CSV import;
+- passkeys;
 - offline write sync.
 
 ---
 
-## 26. Criteri di accettazione
+## 26. Acceptance criteria
 
-### 26.1 Saldo iniziale
+### 26.1 Initial balance
 
-- Un utente non può completare la registrazione con saldo iniziale negativo.
-- Il saldo iniziale genera un record `OPENING_BALANCE`.
-- Il saldo mostrato in home coincide con il portafoglio creato.
-- Retry della registrazione non duplica il saldo iniziale.
+- A user cannot complete registration with a negative initial balance.
+- The initial balance generates an `OPENING_BALANCE` record.
+- The balance shown on the home screen matches the created wallet.
+- Retrying registration does not duplicate the initial balance.
 
-### 26.2 Nuova transazione
+### 26.2 New transaction
 
-- Importo e titolo sono obbligatori.
-- L’importo deve essere positivo.
-- Data default corrisponde al momento corrente nel fuso utente.
-- Data modificabile con date/time picker.
-- Il saldo viene aggiornato in modo atomico.
-- Doppi tap o retry non creano duplicati.
-- L’immagine è facoltativa.
-- Il titolo suggerisce modelli compatibili con la direzione.
+- Amount and title are required.
+- The amount must be positive.
+- The default date matches the current moment in the user's time zone.
+- Date editable via a date/time picker.
+- The balance is updated atomically.
+- Double taps or retries don't create duplicates.
+- The image is optional.
+- The title suggests templates compatible with the direction.
 
-### 26.3 Modifica
+### 26.3 Editing
 
-- Cambiare importo aggiorna il saldo della differenza.
-- Cambiare direzione applica la differenza completa.
-- Conflitto versione produce errore 409.
-- L’audit contiene prima e dopo.
+- Changing the amount updates the balance by the difference.
+- Changing the direction applies the full difference.
+- Version conflict produces a 409 error.
+- The audit contains before and after.
 
-### 26.4 Eliminazione
+### 26.4 Deletion
 
-- La transazione scompare dalla cronologia ordinaria.
-- Il saldo viene ripristinato correttamente.
-- La cancellazione è tracciata.
-- Non si può eliminare il saldo iniziale dalla UI ordinaria.
+- The transaction disappears from ordinary history.
+- The balance is correctly restored.
+- The deletion is tracked.
+- The initial balance cannot be deleted from the ordinary UI.
 
-### 26.5 Rettifica
+### 26.5 Adjustment
 
-- L’utente inserisce il saldo desiderato.
-- Il backend calcola il delta.
-- La rettifica appare in cronologia.
-- I report ordinari la escludono per default.
+- The user enters the desired balance.
+- The backend computes the delta.
+- The adjustment appears in history.
+- Ordinary reports exclude it by default.
 
-### 26.6 Cronologia
+### 26.6 History
 
-- Tutti i filtri possono essere combinati.
-- Importo min maggiore del max produce validazione.
-- Date invertite producono validazione.
-- La paginazione non duplica o salta record in condizioni normali.
-- La ricerca non restituisce dati di altri utenti.
+- All filters can be combined.
+- A minimum amount greater than the maximum produces a validation error.
+- Reversed dates produce a validation error.
+- Pagination doesn't duplicate or skip records under normal conditions.
+- Search never returns other users' data.
 
-### 26.7 Report
+### 26.7 Reports
 
-- Più transazioni dello stesso modello sono aggregate.
-- Il fallback usa titolo normalizzato.
-- Entrate e uscite hanno percentuali separate.
-- Il confronto mensile è assente con un solo mese.
-- I mesi vuoti sono rappresentati con zero.
-- Rettifiche e saldo iniziale sono gestiti secondo il flag.
+- Multiple transactions from the same template are aggregated.
+- The fallback uses the normalized title.
+- Income and expenses have separate percentages.
+- The monthly comparison is absent with a single month.
+- Empty months are represented with zero.
+- Adjustments and initial balance are handled according to the flag.
 
 ### 26.8 Google
 
-- Un `provider_subject` può appartenere a un solo utente.
-- Un nuovo utente Google deve completare i campi obbligatori.
-- Lo scollegamento è impedito se lascerebbe l’utente senza metodo di accesso.
-- ID token non valido o con audience errata viene rifiutato.
+- A `provider_subject` can belong to only one user.
+- A new Google user must complete the required fields.
+- Unlinking is prevented if it would leave the user with no access method.
+- An invalid ID token or one with the wrong audience is rejected.
 
-### 26.9 Immagini
+### 26.9 Images
 
-- File non consentiti vengono rifiutati.
-- Immagini accettate vengono ricodificate.
-- EXIF viene rimosso.
-- Crop profilo è 1:1.
-- Asset già usato può essere selezionato senza nuovo upload.
-- Il backend non scarica URL arbitrari.
+- Disallowed files are rejected.
+- Accepted images are re-encoded.
+- EXIF is stripped.
+- Profile crop is 1:1.
+- An already-used asset can be selected without a new upload.
+- The backend does not download arbitrary URLs.
 
 ---
 
-## 27. Rischi e mitigazioni
+## 27. Risks and mitigations
 
-| Rischio | Impatto | Mitigazione |
+| Risk | Impact | Mitigation |
 |---|---:|---|
-| Saldo incoerente dopo retry o concorrenza | Alto | DB transaction, row lock, idempotency key, reconciliation |
-| Account duplicati Google/manuale | Alto | Entità utente centrale, unique provider subject, link esplicito |
-| Utente bloccato dopo unlink | Alto | Impedire unlink senza metodo alternativo |
-| Report lenti su history ampia | Medio/Alto | Indici, query dedicate, cache versionata, test performance |
-| Ricerca immagini con problemi licenza | Alto | Provider adapter, revisione termini, attribuzione, allowlist |
-| Upload malevoli o enormi | Alto | Limiti byte/pixel, magic bytes, decode/re-encode, timeout |
-| Redis usato come fonte di verità | Alto | PostgreSQL autorevole, Redis solo accessorio |
-| UI di registrazione troppo lunga | Medio | Flusso a step e precompilazione Google |
-| Titoli simili frammentano report | Medio | Modelli, titolo normalizzato, categorie |
-| Date errate ai confini mese/DST | Medio | UTC storage, timezone esplicita, test Europe/Rome |
-| Modifica/eliminazione altera report storici | Atteso | Audit, soft delete, invalidazione cache |
-| Dipendenza eccessiva da libreria Flutter | Medio | Wrapper, ADR, spike e test prima dell’adozione |
-| Porte DB/Redis esposte | Alto | Bind loopback/rete privata, firewall, auth, produzione internal-only |
+| Inconsistent balance after retry or concurrency | High | DB transaction, row lock, idempotency key, reconciliation |
+| Duplicate Google/manual accounts | High | Central user entity, unique provider subject, explicit linking |
+| User locked out after unlink | High | Prevent unlink without an alternative method |
+| Slow reports on large history | Medium/High | Indexes, dedicated queries, versioned cache, performance tests |
+| Image search with license issues | High | Provider adapter, terms review, attribution, allowlist |
+| Malicious or huge uploads | High | Byte/pixel limits, magic bytes, decode/re-encode, timeout |
+| Redis used as source of truth | High | PostgreSQL authoritative, Redis accessory only |
+| Registration UI too long | Medium | Step-based flow and Google pre-fill |
+| Similar titles fragment reports | Medium | Templates, normalized title, categories |
+| Wrong dates at month/DST boundaries | Medium | UTC storage, explicit time zone, Europe/Rome tests |
+| Editing/deleting alters historical reports | Expected | Audit, soft delete, cache invalidation |
+| Excessive dependency on a Flutter library | Medium | Wrapper, ADR, spike and testing before adoption |
+| Exposed DB/Redis ports | High | Loopback/private-network bind, firewall, auth, internal-only in production |
 
 ---
 
-## 28. Decisioni da confermare prima dello sviluppo
+## 28. Decisions to confirm before development
 
-Queste decisioni non bloccano il piano, ma devono essere chiuse in Fase 0.
+These decisions do not block the plan, but must be closed in Phase 0.
 
-1. **Piattaforme iniziali:** Android e iOS oppure anche web/desktop.
-2. **Account Google-only:** consentito oppure password locale sempre obbligatoria.
-3. **Saldo negativo dopo registrazione:** consentito, consigliato sì.
-4. **Provider ricerca immagini:** icone, fotografie o entrambi.
-5. **Categorie:** obbligatorie con default “Altro” oppure del tutto opzionali.
-6. **Visibilità descrizione nei log e crash report:** consigliato mai.
-7. **Periodo “ultimo mese”:** ultimi 30 giorni o mese calendario precedente. Il piano usa “Ultimi 30 giorni”.
-8. **Eliminazione:** undo immediato e/o cestino visibile.
-9. **Export immagini:** incluse nell’archivio o solo riferimenti.
-10. **Notifiche email:** verifica, reset, sicurezza, export pronto.
-11. **Storage produzione:** MinIO self-hosted o bucket cloud.
-12. **Supporto offline:** sola lettura nell’MVP o scritture in coda.
-13. **Raggruppamento predefinito report:** categoria oppure titolo/modello. Per rispettare la bozza, il default può essere titolo/modello con tab categoria.
+1. **Initial platforms:** Android and iOS, or also web/desktop.
+2. **Google-only account:** allowed, or local password always required.
+3. **Negative balance after registration:** allowed, recommended yes.
+4. **Image search provider:** icons, photographs, or both.
+5. **Categories:** required with default "Other," or fully optional.
+6. **Description visibility in logs and crash reports:** recommended never.
+7. **"Last month" period:** last 30 days or the previous calendar month. The plan uses "Last 30 days."
+8. **Deletion:** immediate undo and/or a visible trash.
+9. **Image export:** included in the archive or references only.
+10. **Email notifications:** verification, reset, security, export ready.
+11. **Production storage:** self-hosted MinIO or cloud bucket.
+12. **Offline support:** read-only in the MVP, or queued writes.
+13. **Default report grouping:** category or title/template. To honor the draft, the default can be title/template with a category tab.
 
 ---
 
-## 29. Struttura consigliata dei repository
+## 29. Recommended repository structure
 
-Scelta consigliata: due repository principali, più uno opzionale per infrastruttura.
+Recommended choice: two main repositories, plus an optional one for infrastructure.
 
 ```text
 economy-app-mobile/
@@ -2938,14 +2938,14 @@ economy-app-backend/
 ├── .env.example
 └── README.md
 
-economy-app-infra/            -- opzionale
+economy-app-infra/            -- optional
 ├── reverse-proxy/
 ├── monitoring/
 ├── backup/
 └── deployment/
 ```
 
-In alternativa, un monorepo è adatto a un team piccolo:
+Alternatively, a monorepo suits a small team:
 
 ```text
 /apps/mobile
@@ -2954,35 +2954,35 @@ In alternativa, un monorepo è adatto a un team piccolo:
 /docs
 ```
 
-Il monorepo facilita modifiche coordinate OpenAPI/client; repository separati riducono accoppiamento organizzativo. La scelta va registrata come ADR.
+A monorepo makes coordinated OpenAPI/client changes easier; separate repositories reduce organizational coupling. The choice should be recorded as an ADR.
 
 ---
 
 ## 30. Definition of Done
 
-Una funzionalità è completata solo quando:
+A feature is complete only when:
 
-- requisiti e criteri di accettazione sono soddisfatti;
-- design approvato e implementato nei due temi;
-- validazioni client e server presenti;
-- autorizzazione verificata;
-- test unitari e integrazione passano;
-- OpenAPI aggiornata;
-- migrazioni presenti e revisionate;
-- log e metriche adeguati;
-- errori e stati vuoti gestiti;
-- accessibilità verificata;
-- nessun segreto o dato personale nei log;
-- documentazione aggiornata;
-- feature testata su dispositivo reale;
-- rollback o gestione compatibilità definita;
-- code review completata.
+- requirements and acceptance criteria are met;
+- design approved and implemented in both themes;
+- client and server validations are present;
+- authorization is verified;
+- unit and integration tests pass;
+- OpenAPI is updated;
+- migrations are present and reviewed;
+- logs and metrics are adequate;
+- errors and empty states are handled;
+- accessibility is verified;
+- no secrets or personal data in logs;
+- documentation is updated;
+- the feature is tested on a real device;
+- rollback or compatibility handling is defined;
+- code review is complete.
 
 ---
 
-## 31. Riferimenti tecnici
+## 31. Technical references
 
-Le scelte del piano sono coerenti con le seguenti fonti ufficiali e linee guida:
+The plan's choices are consistent with the following official sources and guidelines:
 
 - Flutter — Guide to app architecture: https://docs.flutter.dev/app-architecture/guide
 - Flutter — Architecture concepts: https://docs.flutter.dev/app-architecture/concepts
@@ -3004,26 +3004,26 @@ Le scelte del piano sono coerenti con le seguenti fonti ufficiali e linee guida:
 
 ---
 
-# Sintesi delle decisioni raccomandate
+# Summary of recommended decisions
 
-Per iniziare lo sviluppo senza ambiguità, la baseline raccomandata è:
+To start development without ambiguity, the recommended baseline is:
 
-- Flutter feature-first con MVVM, repository e use case.
-- Backend Go come modular monolith.
-- PostgreSQL come fonte unica dei dati finanziari.
-- Redis per cache, rate limit e ticket temporanei.
-- Importi in centesimi `BIGINT`.
-- Saldo aggiornato solo tramite transazioni database atomiche.
-- Rettifica invece di sovrascrittura manuale del saldo.
-- Portafoglio singolo nell’MVP, schema pronto per più portafogli.
-- Titoli riutilizzabili tramite modelli.
-- Categorie aggiunte per report leggibili.
-- Report per titolo/modello e categoria, con entrate e uscite separate.
-- Immagini in object storage privato, metadati in PostgreSQL.
-- Crop 1:1 client-side con validazione e ricodifica server-side.
-- Google come identità collegata all’account applicativo, non come profilo incompleto alternativo.
-- API documentata in OpenAPI.
-- Docker Compose con host port `10001`, `10002`, `10003` in sviluppo; database e Redis non pubblici in produzione.
-- MVP online per le scritture e cache locale per letture recenti.
+- Feature-first Flutter with MVVM, repositories, and use cases.
+- Go backend as a modular monolith.
+- PostgreSQL as the single source of financial data.
+- Redis for cache, rate limiting, and temporary tickets.
+- Amounts in `BIGINT` cents.
+- Balance updated only through atomic database transactions.
+- Adjustment instead of manual balance overwrite.
+- Single wallet in the MVP, schema ready for multiple wallets.
+- Reusable titles via templates.
+- Categories added for readable reports.
+- Reports by title/template and category, with income and expenses separated.
+- Images in private object storage, metadata in PostgreSQL.
+- Client-side 1:1 crop with server-side validation and re-encoding.
+- Google as an identity linked to the application account, not as an alternative incomplete profile.
+- API documented in OpenAPI.
+- Docker Compose with host ports `10001`, `10002`, `10003` in development; database and Redis not public in production.
+- Online-only MVP for writes, with local cache for recent reads.
 
-Questo piano costituisce una base sufficiente per passare alla fase successiva: wireframe dettagliati, prototipo navigabile e definizione visuale definitiva di ogni schermata.
+This plan is a sufficient basis for moving to the next phase: detailed wireframes, a navigable prototype, and the final visual definition of every screen.
