@@ -541,6 +541,68 @@ func (s *Service) LogoutAll(ctx context.Context, userID uuid.UUID) error {
 	return s.sessions.RevokeAllForUser(ctx, userID)
 }
 
+// --- Sessions ---------------------------------------------------------------
+
+// ListSessions returns the user's active sessions (plan.md section 7.13
+// "Sessioni attive").
+func (s *Service) ListSessions(ctx context.Context, userID uuid.UUID) ([]Session, error) {
+	return s.sessions.ListActiveForUser(ctx, userID)
+}
+
+// RevokeSession revokes a single session, but only if it belongs to
+// userID (plan.md section 19.1: authorize by ownership, never trust a
+// client-supplied id alone).
+func (s *Service) RevokeSession(ctx context.Context, userID, sessionID uuid.UUID) error {
+	session, err := s.sessions.GetByID(ctx, sessionID)
+	if errors.Is(err, ErrSessionNotFound) {
+		return apierror.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if session.UserID != userID {
+		return apierror.ErrNotFound
+	}
+	return s.sessions.Revoke(ctx, sessionID)
+}
+
+// --- Change password (authenticated) ----------------------------------------
+
+// ChangePassword verifies the current password before setting a new one
+// (this verification is itself the "recent authentication" proof — plan.md
+// section 7.13). Every other session is revoked afterwards so a leaked
+// password can't keep an attacker's session alive, while the session used
+// to make the change stays valid (unlike ResetPassword, which is reached
+// from a state where the user is presumed already logged out everywhere).
+func (s *Service) ChangePassword(ctx context.Context, userID, currentSessionID uuid.UUID, currentPassword, newPassword string) error {
+	if len(newPassword) < 8 {
+		return apierror.NewValidation(map[string]string{"new_password": "Deve avere almeno 8 caratteri."})
+	}
+
+	creds, err := s.credentials.GetByUserID(ctx, userID)
+	if errors.Is(err, ErrCredentialsNotFound) {
+		return apierror.New(http.StatusConflict, "NO_PASSWORD_SET", "Nessuna password impostata per questo account.")
+	}
+	if err != nil {
+		return err
+	}
+
+	ok, verifyErr := passwordhash.Verify(creds.PasswordHash, currentPassword)
+	if verifyErr != nil || !ok {
+		return apierror.New(http.StatusUnauthorized, "INVALID_CURRENT_PASSWORD", "La password attuale non è corretta.")
+	}
+
+	hashed, err := passwordhash.Hash(newPassword)
+	if err != nil {
+		return err
+	}
+	if err := s.credentials.UpdatePassword(ctx, userID, hashed); err != nil {
+		return err
+	}
+
+	return s.sessions.RevokeAllForUserExcept(ctx, userID, currentSessionID)
+}
+
 // --- Password reset -------------------------------------------------------
 
 func (s *Service) ForgotPassword(ctx context.Context, emailOrUsername string) error {

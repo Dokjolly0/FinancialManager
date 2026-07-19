@@ -36,6 +36,9 @@ func (h *Handler) MountProtected(r chi.Router) {
 	r.Post("/v1/auth/logout", h.logout)
 	r.Post("/v1/auth/logout-all", h.logoutAll)
 	r.Post("/v1/auth/email/resend-verification", h.resendVerification)
+	r.Post("/v1/auth/password/change", h.changePassword)
+	r.Get("/v1/me/sessions", h.listSessions)
+	r.Delete("/v1/me/sessions/{session_id}", h.revokeSession)
 }
 
 func clientIPHash(r *http.Request) []byte {
@@ -244,6 +247,105 @@ func (h *Handler) verifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.VerifyEmail(r.Context(), req.Token); err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type changePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+	ConfirmPassword string `json:"confirm_new_password"`
+}
+
+func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+	sessionID, ok := reqctx.SessionID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+
+	var req changePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+	if req.NewPassword != req.ConfirmPassword {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"confirm_new_password": "Le password non coincidono.",
+		}))
+		return
+	}
+
+	if err := h.service.ChangePassword(r.Context(), userID, sessionID, req.CurrentPassword, req.NewPassword); err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type sessionResponse struct {
+	ID         string  `json:"id"`
+	DeviceName *string `json:"device_name"`
+	Platform   *string `json:"platform"`
+	CreatedAt  string  `json:"created_at"`
+	LastUsedAt string  `json:"last_used_at"`
+	ExpiresAt  string  `json:"expires_at"`
+	IsCurrent  bool    `json:"is_current"`
+}
+
+func toSessionResponse(s Session, currentSessionID uuid.UUID) sessionResponse {
+	return sessionResponse{
+		ID:         s.ID.String(),
+		DeviceName: s.DeviceName,
+		Platform:   s.Platform,
+		CreatedAt:  s.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		LastUsedAt: s.LastUsedAt.Format("2006-01-02T15:04:05Z07:00"),
+		ExpiresAt:  s.ExpiresAt.Format("2006-01-02T15:04:05Z07:00"),
+		IsCurrent:  s.ID == currentSessionID,
+	}
+}
+
+func (h *Handler) listSessions(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+	currentSessionID, _ := reqctx.SessionID(r.Context())
+
+	sessions, err := h.service.ListSessions(r.Context(), userID)
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+
+	out := make([]sessionResponse, 0, len(sessions))
+	for _, s := range sessions {
+		out = append(out, toSessionResponse(s, currentSessionID))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"sessions": out})
+}
+
+func (h *Handler) revokeSession(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+	sessionID, err := uuid.Parse(chi.URLParam(r, "session_id"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+
+	if err := h.service.RevokeSession(r.Context(), userID, sessionID); err != nil {
 		apierror.Write(w, r, err)
 		return
 	}

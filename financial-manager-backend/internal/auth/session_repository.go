@@ -105,6 +105,46 @@ func (r *SessionRepository) RevokeAllForUser(ctx context.Context, userID uuid.UU
 	return nil
 }
 
+// RevokeAllForUserExcept revokes every session for userID other than
+// exceptSessionID (plan.md 7.13 "cambio password": other devices are
+// signed out, but the session used to make the change stays valid).
+func (r *SessionRepository) RevokeAllForUserExcept(ctx context.Context, userID, exceptSessionID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE sessions SET revoked_at = now()
+		WHERE user_id = $1 AND id != $2 AND revoked_at IS NULL
+	`, userID, exceptSessionID)
+	if err != nil {
+		return fmt.Errorf("revoke other sessions: %w", err)
+	}
+	return nil
+}
+
+// ListActiveForUser returns every session that is neither revoked nor
+// expired, most recently used first (plan.md section 7.13 "Sessioni
+// attive").
+func (r *SessionRepository) ListActiveForUser(ctx context.Context, userID uuid.UUID) ([]Session, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT `+sessionColumns+`
+		FROM sessions
+		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()
+		ORDER BY last_used_at DESC
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list active sessions: %w", err)
+	}
+	defer rows.Close()
+
+	var sessions []Session
+	for rows.Next() {
+		s, err := scanSession(rows)
+		if err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, s)
+	}
+	return sessions, rows.Err()
+}
+
 func (r *SessionRepository) TouchLastUsed(ctx context.Context, sessionID uuid.UUID) error {
 	_, err := r.db.Exec(ctx, `UPDATE sessions SET last_used_at = now() WHERE id = $1`, sessionID)
 	if err != nil {
