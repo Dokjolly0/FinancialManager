@@ -138,7 +138,7 @@ func Load() (Config, error) {
 		RedisAddr:     optionalString("REDIS_ADDR", "localhost:6379"),
 		RedisPassword: os.Getenv("REDIS_PASSWORD"),
 
-		ObjectStorageEndpoint:  optionalString("OBJECT_STORAGE_ENDPOINT", "localhost:9000"),
+		ObjectStorageEndpoint:  optionalString("OBJECT_STORAGE_ENDPOINT", "localhost:10004"),
 		ObjectStorageBucket:    optionalString("OBJECT_STORAGE_BUCKET", "financial-manager-media"),
 		ObjectStorageAccessKey: os.Getenv("OBJECT_STORAGE_ACCESS_KEY"),
 		ObjectStorageSecretKey: os.Getenv("OBJECT_STORAGE_SECRET_KEY"),

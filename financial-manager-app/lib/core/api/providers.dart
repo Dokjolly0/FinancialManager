@@ -4,11 +4,10 @@ import '../auth/session_token_store.dart';
 import 'api_client.dart';
 import 'api_environment.dart';
 
-/// The environment is fixed at [ApiEnvironment.local] for now — there is no
-/// build flavor plumbing yet to pick staging/production, and both remain
-/// placeholder URLs until those environments exist (plan.md section 9.5).
+/// Defaults to production, while still allowing local/staging builds via
+/// `--dart-define=API_ENVIRONMENT=local` or an explicit API_BASE_URL override.
 final apiEnvironmentProvider = Provider<ApiEnvironment>(
-  (ref) => ApiEnvironment.local,
+  (ref) => ApiEnvironment.fromBuildConfig,
 );
 
 final sessionTokenStoreProvider = Provider<SessionTokenStore>((ref) {

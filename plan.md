@@ -3,7 +3,7 @@
 **Version:** 1.0  
 **Date:** July 18, 2026  
 **Planned stack:** Flutter · Go · PostgreSQL · Redis · Docker  
-**Required host ports:** PostgreSQL `10001` · Redis `10002` · API `10003`
+**Required host ports:** PostgreSQL `10001` · Redis `10002` · API `10003` · MinIO `10004`
 
 ---
 
@@ -2361,15 +2361,19 @@ Development environment:
 services:
   postgres:
     ports:
-      - "127.0.0.1:10001:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-10001}:5432"
 
   redis:
     ports:
-      - "127.0.0.1:10002:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-10002}:6379"
 
   api:
     ports:
-      - "10003:8080"
+      - "127.0.0.1:${API_HOST_PORT:-10003}:8080"
+
+  object-storage:
+    ports:
+      - "127.0.0.1:${OBJECT_STORAGE_HOST_PORT:-10004}:9000"
 ```
 
 In production it's preferable not to publish PostgreSQL and Redis. If an operational requirement mandates host ports, bind them at least to loopback or a private network:
@@ -2379,7 +2383,7 @@ In production it's preferable not to publish PostgreSQL and Redis. If an operati
 - "127.0.0.1:10002:6379"
 ```
 
-The API can listen on `10003`, ideally behind a TLS reverse proxy on `443`.
+The API can listen on `10003`, ideally behind a TLS reverse proxy on `443`. MinIO is exposed on `10004` for local host-run tooling and integration tests only; services inside Docker still use `object-storage:9000`.
 
 ### 21.4 Services
 
@@ -3023,7 +3027,7 @@ To start development without ambiguity, the recommended baseline is:
 - Client-side 1:1 crop with server-side validation and re-encoding.
 - Google as an identity linked to the application account, not as an alternative incomplete profile.
 - API documented in OpenAPI.
-- Docker Compose with host ports `10001`, `10002`, `10003` in development; database and Redis not public in production.
+- Docker Compose with host ports `10001`, `10002`, `10003`, `10004` in development; database, Redis, and object storage not public in production.
 - Online-only MVP for writes, with local cache for recent reads.
 
 This plan is a sufficient basis for moving to the next phase: detailed wireframes, a navigable prototype, and the final visual definition of every screen.

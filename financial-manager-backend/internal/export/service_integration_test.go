@@ -43,7 +43,7 @@ func newHarness(t *testing.T) harness {
 	t.Helper()
 
 	databaseURL := envOrDefault("TEST_DATABASE_URL", "postgres://financial_manager:financial_manager@localhost:10001/financial_manager?sslmode=disable")
-	objectStorageEndpoint := envOrDefault("TEST_OBJECT_STORAGE_ENDPOINT", "localhost:9002")
+	objectStorageEndpoint := envOrDefault("TEST_OBJECT_STORAGE_ENDPOINT", "localhost:10004")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

@@ -26,7 +26,7 @@ cp .env.example .env
 docker compose -f compose.yaml -f compose.dev.yaml up --build
 ```
 
-Fixed host ports: PostgreSQL `10001`, Redis `10002`, API `10003`. See [`financial-manager-backend/README.md`](financial-manager-backend/README.md) for running without Docker, migrations, and health checks.
+Default host ports: PostgreSQL `10001`, Redis `10002`, API `10003`, MinIO `10004`. Production API clients use `http://83.228.246.84:10003/v1`; ports are configurable through the backend `.env` file. See [`financial-manager-backend/README.md`](financial-manager-backend/README.md) for running without Docker, migrations, and health checks.
 
 ### App
 

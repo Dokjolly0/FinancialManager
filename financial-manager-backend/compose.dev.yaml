@@ -1,26 +1,25 @@
-# Local development overrides. Host ports are fixed by the plan (section
-# 21.3): PostgreSQL 10001, Redis 10002, API 10003. Bound to loopback only —
-# no reason to expose dev databases on the LAN either.
+# Local development overrides. Host ports default to the plan's local range
+# (section 21.3) and can be shifted with *_HOST_PORT variables when multiple
+# stacks share the same host. Bound to loopback only — no reason to expose dev
+# databases or object storage on the LAN either.
 
 services:
   postgres:
     ports:
-      - "127.0.0.1:10001:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-10001}:5432"
 
   redis:
     ports:
-      - "127.0.0.1:10002:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-10002}:6379"
 
-  # Not part of the plan's required port mapping (section 21.3 only lists
-  # postgres/redis/api) — exposed so integration tests running on the host
-  # (not inside Docker) can reach MinIO directly. Port matches the endpoint
-  # .env.example already documented ahead of Fase 6.
+  # Exposed so integration tests running on the host (not inside Docker) can
+  # reach MinIO directly. Inside Docker, services still use object-storage:9000.
   object-storage:
     ports:
-      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:${OBJECT_STORAGE_HOST_PORT:-10004}:9000"
 
   api:
     ports:
-      - "127.0.0.1:10003:8080"
+      - "127.0.0.1:${API_HOST_PORT:-10003}:8080"
     environment:
       APP_ENV: local

@@ -1,10 +1,10 @@
-# Production overrides. PostgreSQL and Redis are not published at all —
-# only services on backend_internal can reach them. If an operational
-# requirement ever forces host ports for debugging, bind to 127.0.0.1 only
-# (plan.md section 21.3), never 0.0.0.0.
+# Production overrides. Only the API is published on the host; PostgreSQL,
+# Redis, and MinIO remain reachable only on backend_internal.
 
 services:
   api:
+    ports:
+      - "${API_HOST_BIND:-0.0.0.0}:${API_HOST_PORT:-10003}:8080"
     environment:
       APP_ENV: production
     restart: unless-stopped

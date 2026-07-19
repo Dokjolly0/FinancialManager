@@ -14,7 +14,7 @@ cp .env.example .env
 docker compose -f compose.yaml -f compose.dev.yaml up --build
 ```
 
-Host ports (fixed by the plan, loopback-only): PostgreSQL `10001`, Redis `10002`, API `10003`.
+Default dev host ports (loopback-only, configurable in `.env`): PostgreSQL `10001`, Redis `10002`, API `10003`, MinIO `10004`. In production, only the API is published, by default on `0.0.0.0:10003`, and clients reach it at `http://83.228.246.84:10003/v1`. Worker metrics stay internal on `9101`.
 
 Run migrations manually against the dev stack:
 

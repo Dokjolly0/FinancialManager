@@ -10,7 +10,7 @@
 // Not part of the shipped API/worker images. Run locally against a
 // disposable/dev database and a running API process:
 //
-//	go run ./cmd/perftest -base-url=http://localhost:10003 -users=1000 -requests=500
+//	go run ./cmd/perftest -base-url=http://83.228.246.84:10003 -users=1000 -requests=500
 package main
 
 import (
@@ -42,7 +42,7 @@ type scenario struct {
 }
 
 func main() {
-	baseURL := flag.String("base-url", "http://localhost:10003", "API base URL")
+	baseURL := flag.String("base-url", "http://83.228.246.84:10003", "API base URL")
 	userCount := flag.Int("users", 1000, "number of seeded perf users to draw tokens for")
 	prefix := flag.String("prefix", "perfuser", "username prefix used by cmd/seedperf")
 	requests := flag.Int("requests", 500, "requests to issue per scenario")

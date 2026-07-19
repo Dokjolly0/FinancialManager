@@ -48,7 +48,7 @@ func newHarness(t *testing.T) harness {
 	t.Helper()
 
 	databaseURL := envOrDefault("TEST_DATABASE_URL", "postgres://financial_manager:financial_manager@localhost:10001/financial_manager?sslmode=disable")
-	objectStorageEndpoint := envOrDefault("TEST_OBJECT_STORAGE_ENDPOINT", "localhost:9002")
+	objectStorageEndpoint := envOrDefault("TEST_OBJECT_STORAGE_ENDPOINT", "localhost:10004")
 	redisAddr := envOrDefault("TEST_REDIS_ADDR", "localhost:10002")
 	redisPassword := envOrDefault("TEST_REDIS_PASSWORD", "financial_manager")
 
