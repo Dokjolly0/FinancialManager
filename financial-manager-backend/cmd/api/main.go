@@ -28,6 +28,7 @@ import (
 	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/redisclient"
 	"financial-manager-backend/internal/platform/storage"
+	"financial-manager-backend/internal/reports"
 	"financial-manager-backend/internal/templates"
 	"financial-manager-backend/internal/transactions"
 	"financial-manager-backend/internal/users"
@@ -189,6 +190,11 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	})
 	transactionsHandler := transactions.NewHandler(transactionsService)
 
+	reportsService := reports.NewService(reports.Deps{
+		Repo: reports.NewRepository(dbPool), Wallets: walletsRepo, Users: usersRepo, Clock: clock.System{},
+	})
+	reportsHandler := reports.NewHandler(reportsService)
+
 	router.Group(func(r chi.Router) {
 		r.Use(auth.Middleware(cfg.JWTSigningKey))
 		authHandler.MountProtected(r)
@@ -199,5 +205,6 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		categoriesHandler.Mount(r)
 		templatesHandler.Mount(r)
 		mediaHandler.Mount(r)
+		reportsHandler.Mount(r)
 	})
 }
