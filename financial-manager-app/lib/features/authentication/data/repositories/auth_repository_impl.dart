@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../../core/auth/device_info_service.dart';
 import '../../../../core/auth/google_sign_in_service.dart';
 import '../../../../core/auth/session_token_store.dart';
 import '../../../../core/errors/error_mapper.dart';
@@ -13,13 +14,16 @@ class AuthRepositoryImpl implements AuthRepository {
     required AuthApi authApi,
     required SessionTokenStore tokenStore,
     required GoogleSignInService googleSignIn,
+    required DeviceInfoService deviceInfo,
   }) : _api = authApi,
        _tokenStore = tokenStore,
-       _googleSignIn = googleSignIn;
+       _googleSignIn = googleSignIn,
+       _deviceInfo = deviceInfo;
 
   final AuthApi _api;
   final SessionTokenStore _tokenStore;
   final GoogleSignInService _googleSignIn;
+  final DeviceInfoService _deviceInfo;
 
   AuthUser _userFromJson(Map<String, dynamic> json) {
     return AuthUser(
@@ -43,6 +47,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<AuthUser> register(RegisterParams params) async {
     try {
+      final device = await _deviceInfo.current();
       final response = await _api.register({
         'first_name': params.firstName,
         'last_name': params.lastName,
@@ -57,6 +62,8 @@ class AuthRepositoryImpl implements AuthRepository {
         'timezone': params.timezone,
         'locale': params.locale,
         'accepted_terms': params.acceptedTerms,
+        if (device.deviceName != null) 'device_name': device.deviceName,
+        if (device.platform != null) 'platform': device.platform,
       });
       return await _handleAuthResponse(response);
     } on DioException catch (e) {
@@ -70,9 +77,12 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
+      final device = await _deviceInfo.current();
       final response = await _api.login(
         usernameOrEmail: usernameOrEmail,
         password: password,
+        deviceName: device.deviceName,
+        platform: device.platform,
       );
       return await _handleAuthResponse(response);
     } on DioException catch (e) {
@@ -90,7 +100,12 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     try {
-      final response = await _api.googleVerify(idToken);
+      final device = await _deviceInfo.current();
+      final response = await _api.googleVerify(
+        idToken,
+        deviceName: device.deviceName,
+        platform: device.platform,
+      );
       if (response['status'] == 'authenticated') {
         return GoogleSignInAuthenticated(await _handleAuthResponse(response));
       }
@@ -112,6 +127,7 @@ class AuthRepositoryImpl implements AuthRepository {
     GoogleCompletionParams params,
   ) async {
     try {
+      final device = await _deviceInfo.current();
       final response = await _api.completeGoogleRegistration({
         'ticket': params.ticket,
         'username': params.username,
@@ -124,6 +140,8 @@ class AuthRepositoryImpl implements AuthRepository {
         'timezone': params.timezone,
         'locale': params.locale,
         'accepted_terms': params.acceptedTerms,
+        if (device.deviceName != null) 'device_name': device.deviceName,
+        if (device.platform != null) 'platform': device.platform,
       });
       return await _handleAuthResponse(response);
     } on DioException catch (e) {

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/account/presentation/view_models/account_providers.dart';
 import '../../features/account/presentation/view_models/linked_accounts_controller.dart';
+import '../../features/account/presentation/view_models/security_controller.dart';
 import '../../features/categories/data/providers.dart';
 import '../../features/history/presentation/view_models/history_controller.dart';
 import '../../features/home/presentation/view_models/home_controller.dart';
@@ -43,5 +44,8 @@ void invalidateUserScopedProviders(Ref ref) {
   }
   if (ref.exists(linkedAccountsControllerProvider)) {
     ref.invalidate(linkedAccountsControllerProvider);
+  }
+  if (ref.exists(securityControllerProvider)) {
+    ref.invalidate(securityControllerProvider);
   }
 }

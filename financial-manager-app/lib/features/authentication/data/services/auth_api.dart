@@ -22,18 +22,33 @@ class AuthApi {
   Future<Map<String, dynamic>> login({
     required String usernameOrEmail,
     required String password,
+    String? deviceName,
+    String? platform,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/auth/login',
-      data: {'username_or_email': usernameOrEmail, 'password': password},
+      data: {
+        'username_or_email': usernameOrEmail,
+        'password': password,
+        'device_name': ?deviceName,
+        'platform': ?platform,
+      },
     );
     return response.data!;
   }
 
-  Future<Map<String, dynamic>> googleVerify(String idToken) async {
+  Future<Map<String, dynamic>> googleVerify(
+    String idToken, {
+    String? deviceName,
+    String? platform,
+  }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/auth/google/verify',
-      data: {'id_token': idToken},
+      data: {
+        'id_token': idToken,
+        'device_name': ?deviceName,
+        'platform': ?platform,
+      },
     );
     return response.data!;
   }

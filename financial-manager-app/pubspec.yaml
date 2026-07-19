@@ -41,6 +41,7 @@ dependencies:
 
   # Saving a downloaded data export to app storage (section 7.13 "Dati", 20.2).
   path_provider: ^2.1.5
+  device_info_plus: ^13.2.0
 
 dev_dependencies:
   flutter_test:

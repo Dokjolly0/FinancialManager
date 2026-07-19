@@ -7,7 +7,9 @@ import '../../../../core/errors/error_code_localizations.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/amount_field.dart';
 import '../../../../core/widgets/direction_segmented_control.dart';
+import '../../../../core/widgets/first_day_of_week_scope.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../account/presentation/view_models/account_providers.dart';
 import '../../../categories/data/providers.dart';
 import '../../../categories/domain/models/category.dart';
 import '../../../categories/presentation/widgets/category_picker_sheet.dart';
@@ -44,11 +46,15 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
   }
 
   Future<void> _pickDateTime(BuildContext context, DateTime current) async {
+    final firstDayOfWeek =
+        ref.read(accountProfileProvider).value?.firstDayOfWeek ?? 'monday';
     final date = await showDatePicker(
       context: context,
       initialDate: current,
       firstDate: DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 1)),
+      builder: (context, child) =>
+          firstDayOfWeekScope(context, child, firstDayOfWeek),
     );
     if (date == null || !context.mounted) return;
 

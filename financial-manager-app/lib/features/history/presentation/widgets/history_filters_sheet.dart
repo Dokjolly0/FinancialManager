@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/first_day_of_week_scope.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../account/presentation/view_models/account_providers.dart';
 import '../../../categories/data/providers.dart';
 import '../../../categories/presentation/widgets/category_picker_sheet.dart';
 import '../../../transactions/domain/repositories/transaction_repository.dart';
@@ -85,11 +87,15 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
 
   Future<void> _pickDate({required bool isFrom}) async {
     final now = DateTime.now();
+    final firstDayOfWeek =
+        ref.read(accountProfileProvider).value?.firstDayOfWeek ?? 'monday';
     final picked = await showDatePicker(
       context: context,
       initialDate: (isFrom ? _from : _to) ?? now,
       firstDate: DateTime(2000),
       lastDate: now,
+      builder: (context, child) =>
+          firstDayOfWeekScope(context, child, firstDayOfWeek),
     );
     if (picked == null) return;
     setState(() {

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/first_day_of_week_scope.dart';
+import '../../../account/presentation/view_models/account_providers.dart';
 import '../../domain/models/report_period.dart';
 
 /// Header periodo (plan.md section 7.12): preset chips plus a custom date
 /// range picker. Selecting "Personalizzato" immediately opens the range
 /// picker rather than leaving an ambiguous half-selected state.
-class PeriodSelector extends StatelessWidget {
+class PeriodSelector extends ConsumerWidget {
   const PeriodSelector({
     super.key,
     required this.selection,
@@ -19,7 +22,10 @@ class PeriodSelector extends StatelessWidget {
   final ValueChanged<ReportPreset> onPresetSelected;
   final void Function(DateTime from, DateTime to) onCustomRangeSelected;
 
-  Future<void> _pickCustomRange(BuildContext context) async {
+  Future<void> _pickCustomRange(
+    BuildContext context,
+    String firstDayOfWeek,
+  ) async {
     final now = DateTime.now();
     final initial = selection.customFrom != null && selection.customTo != null
         ? DateTimeRange(start: selection.customFrom!, end: selection.customTo!)
@@ -33,6 +39,8 @@ class PeriodSelector extends StatelessWidget {
       firstDate: DateTime(2000),
       lastDate: now,
       initialDateRange: initial,
+      builder: (context, child) =>
+          firstDayOfWeekScope(context, child, firstDayOfWeek),
     );
     if (picked != null) {
       onCustomRangeSelected(picked.start, picked.end);
@@ -51,7 +59,10 @@ class PeriodSelector extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final firstDayOfWeek =
+        ref.watch(accountProfileProvider).value?.firstDayOfWeek ?? 'monday';
+
     return SizedBox(
       height: 40,
       child: ListView.separated(
@@ -67,7 +78,7 @@ class PeriodSelector extends StatelessWidget {
             selected: selected,
             onSelected: (_) {
               if (preset == ReportPreset.custom) {
-                _pickCustomRange(context);
+                _pickCustomRange(context, firstDayOfWeek);
               } else {
                 onPresetSelected(preset);
               }
