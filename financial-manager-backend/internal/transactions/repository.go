@@ -166,6 +166,33 @@ func (r *Repository) SumNetForWallet(ctx context.Context, walletID uuid.UUID) (i
 	return net, nil
 }
 
+// ListAllForExport returns every non-deleted transaction for userID,
+// oldest first, with no pagination (plan.md section 20.2). Fine at MVP
+// scale — a single user's lifetime ledger is not large enough to warrant
+// streaming or batching.
+func (r *Repository) ListAllForExport(ctx context.Context, userID uuid.UUID) ([]Transaction, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT `+transactionColumns+`
+		FROM transactions
+		WHERE user_id = $1 AND deleted_at IS NULL
+		ORDER BY occurred_at ASC, id ASC
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list transactions for export: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Transaction
+	for rows.Next() {
+		t, err := scanTransaction(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
 // ListFilter selects and paginates a user's ledger (plan.md section 17).
 // Cursor pagination only (no offset): stable under concurrent inserts and
 // fast on long histories. Always ordered by (occurred_at, id) DESC — the

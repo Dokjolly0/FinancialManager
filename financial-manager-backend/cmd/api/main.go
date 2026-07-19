@@ -18,6 +18,7 @@ import (
 	"financial-manager-backend/internal/auth"
 	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/email"
+	"financial-manager-backend/internal/export"
 	"financial-manager-backend/internal/identities"
 	"financial-manager-backend/internal/media"
 	"financial-manager-backend/internal/platform/clock"
@@ -200,12 +201,19 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	})
 	reportsHandler := reports.NewHandler(reportsService)
 
+	exportService := export.NewService(export.Deps{
+		Repo: export.NewRepository(dbPool), Store: objectStore, Users: usersRepo, Wallets: walletsRepo,
+		Categories: categoriesRepo, Templates: templatesRepo, Transactions: transactionsRepo,
+	})
+	exportHandler := export.NewHandler(exportService)
+
 	router.Group(func(r chi.Router) {
 		r.Use(auth.Middleware(cfg.JWTSigningKey))
 		authHandler.MountProtected(r)
 		authHandler.MountGoogleProtected(r)
 		usersHandler.Mount(r)
 		walletsHandler.Mount(r)
+		exportHandler.Mount(r)
 		transactionsHandler.Mount(r)
 		categoriesHandler.Mount(r)
 		templatesHandler.Mount(r)

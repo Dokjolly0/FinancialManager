@@ -125,6 +125,31 @@ func (r *Repository) Search(ctx context.Context, filter SearchFilter) ([]Templat
 	return out, rows.Err()
 }
 
+// ListAllForUser returns every non-archived template for userID,
+// regardless of direction (plan.md section 20.2 JSON export — "modelli").
+func (r *Repository) ListAllForUser(ctx context.Context, userID uuid.UUID) ([]Template, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT `+templateColumns+`
+		FROM transaction_templates
+		WHERE user_id = $1 AND archived_at IS NULL
+		ORDER BY title ASC
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list all templates for user: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Template
+	for rows.Next() {
+		t, err := scanTemplate(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
 type UpdateInput struct {
 	Title              string
 	DefaultCategoryID  *uuid.UUID
