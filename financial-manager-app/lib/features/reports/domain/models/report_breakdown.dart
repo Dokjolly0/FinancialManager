@@ -21,7 +21,10 @@ class BreakdownItem {
     return BreakdownItem(
       key: json['key'] as String,
       label: json['label'] as String,
-      amount: Money(minorUnits: json['amount_minor'] as int, currency: currency),
+      amount: Money(
+        minorUnits: json['amount_minor'] as int,
+        currency: currency,
+      ),
       percentage: (json['percentage'] as num).toDouble(),
       transactionCount: json['transaction_count'] as int,
     );
@@ -46,12 +49,9 @@ class ReportBreakdown {
     Map<String, dynamic> json, {
     required String currency,
   }) {
-    List<BreakdownItem> items(String key) =>
-        (json[key] as List<dynamic>? ?? [])
-            .map(
-              (i) => BreakdownItem.fromJson(i as Map<String, dynamic>, currency),
-            )
-            .toList();
+    List<BreakdownItem> items(String key) => (json[key] as List<dynamic>? ?? [])
+        .map((i) => BreakdownItem.fromJson(i as Map<String, dynamic>, currency))
+        .toList();
     return ReportBreakdown(
       groupBy: json['group_by'] as String,
       credits: items('credits'),

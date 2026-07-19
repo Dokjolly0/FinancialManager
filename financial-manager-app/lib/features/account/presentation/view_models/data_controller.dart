@@ -10,7 +10,12 @@ import '../../data/providers.dart';
 import '../../domain/models/export_record.dart';
 
 class DataState {
-  const DataState({this.isExporting = false, this.export, this.error, this.savedFilePath});
+  const DataState({
+    this.isExporting = false,
+    this.export,
+    this.error,
+    this.savedFilePath,
+  });
 
   final bool isExporting;
   final ExportRecord? export;
@@ -101,5 +106,6 @@ class DataController extends Notifier<DataState> {
   }
 }
 
-final dataControllerProvider =
-    NotifierProvider<DataController, DataState>(DataController.new);
+final dataControllerProvider = NotifierProvider<DataController, DataState>(
+  DataController.new,
+);

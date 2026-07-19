@@ -114,10 +114,7 @@ class _Metric extends StatelessWidget {
             color: colorScheme.onSurfaceVariant,
           ),
         ),
-        Text(
-          value,
-          style: textTheme.titleMedium?.copyWith(color: valueColor),
-        ),
+        Text(value, style: textTheme.titleMedium?.copyWith(color: valueColor)),
       ],
     );
   }

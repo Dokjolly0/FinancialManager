@@ -31,10 +31,7 @@ class _AccountPreferencesScreenState
     'UTC',
   ];
 
-  static const _locales = [
-    ('it-IT', 'Italiano'),
-    ('en-US', 'English'),
-  ];
+  static const _locales = [('it-IT', 'Italiano'), ('en-US', 'English')];
 
   // PATCH /v1/me uses optimistic locking (version) and replaces the whole
   // record. Two edits fired back-to-back (e.g. tapping theme then first-day
@@ -101,17 +98,28 @@ class _AccountPreferencesScreenState
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.md),
               children: [
-                Text(l10n.themeLabel, style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  l10n.themeLabel,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 SegmentedButton<String>(
                   segments: [
-                    ButtonSegment(value: 'system', label: Text(l10n.themeOptionSystem)),
-                    ButtonSegment(value: 'light', label: Text(l10n.themeOptionLight)),
-                    ButtonSegment(value: 'dark', label: Text(l10n.themeOptionDark)),
+                    ButtonSegment(
+                      value: 'system',
+                      label: Text(l10n.themeOptionSystem),
+                    ),
+                    ButtonSegment(
+                      value: 'light',
+                      label: Text(l10n.themeOptionLight),
+                    ),
+                    ButtonSegment(
+                      value: 'dark',
+                      label: Text(l10n.themeOptionDark),
+                    ),
                   ],
                   selected: {profile.theme},
-                  onSelectionChanged: (s) =>
-                      _update(profile, theme: s.first),
+                  onSelectionChanged: (s) => _update(profile, theme: s.first),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Text(
@@ -121,8 +129,14 @@ class _AccountPreferencesScreenState
                 const SizedBox(height: AppSpacing.sm),
                 SegmentedButton<String>(
                   segments: [
-                    ButtonSegment(value: 'monday', label: Text(l10n.weekdayMonday)),
-                    ButtonSegment(value: 'sunday', label: Text(l10n.weekdaySunday)),
+                    ButtonSegment(
+                      value: 'monday',
+                      label: Text(l10n.weekdayMonday),
+                    ),
+                    ButtonSegment(
+                      value: 'sunday',
+                      label: Text(l10n.weekdaySunday),
+                    ),
                   ],
                   selected: {profile.firstDayOfWeek},
                   onSelectionChanged: (s) =>
@@ -163,7 +177,10 @@ class _AccountPreferencesScreenState
                   },
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Text(l10n.languageLabel, style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  l10n.languageLabel,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 DropdownButtonFormField<String>(
                   key: ValueKey('locale-${profile.version}'),
@@ -175,7 +192,10 @@ class _AccountPreferencesScreenState
                   ),
                   items: [
                     for (final locale in _locales)
-                      DropdownMenuItem(value: locale.$1, child: Text(locale.$2)),
+                      DropdownMenuItem(
+                        value: locale.$1,
+                        child: Text(locale.$2),
+                      ),
                   ],
                   onChanged: (v) {
                     if (v != null) _update(profile, locale: v);

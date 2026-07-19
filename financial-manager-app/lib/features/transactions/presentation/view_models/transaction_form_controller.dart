@@ -51,11 +51,8 @@ class TransactionFormController
   void setDirection(bool isCredit) =>
       state = state.copyWith(isCredit: isCredit);
 
-  void setAmountInput(String value) => state = state.copyWith(
-    amountInput: value,
-    fieldErrors: {},
-    error: null,
-  );
+  void setAmountInput(String value) =>
+      state = state.copyWith(amountInput: value, fieldErrors: {}, error: null);
 
   /// Setting the title manually breaks the link to a previously selected
   /// template the moment it stops matching that template's title (plan.md

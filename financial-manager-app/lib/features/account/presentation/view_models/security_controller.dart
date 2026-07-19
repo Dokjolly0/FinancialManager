@@ -36,6 +36,4 @@ class SecurityController extends Notifier<SecurityState> {
 }
 
 final securityControllerProvider =
-    NotifierProvider<SecurityController, SecurityState>(
-      SecurityController.new,
-    );
+    NotifierProvider<SecurityController, SecurityState>(SecurityController.new);

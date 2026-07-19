@@ -25,8 +25,7 @@ class AccountSecurityScreen extends ConsumerStatefulWidget {
       _AccountSecurityScreenState();
 }
 
-class _AccountSecurityScreenState
-    extends ConsumerState<AccountSecurityScreen> {
+class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -68,9 +67,9 @@ class _AccountSecurityScreenState
       _confirmPasswordController.clear();
       ref.invalidate(securityControllerProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password aggiornata.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Password aggiornata.')));
       }
     } on AppError catch (e) {
       final presented = presentError(e, l10n);
@@ -125,7 +124,10 @@ class _AccountSecurityScreenState
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          Text('Cambia password', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Cambia password',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: AppSpacing.sm),
           PasswordField(
             controller: _currentPasswordController,
@@ -183,9 +185,7 @@ class _AccountSecurityScreenState
               Card(
                 child: ListTile(
                   leading: Icon(
-                    session.isCurrent
-                        ? Icons.smartphone
-                        : Icons.devices_other,
+                    session.isCurrent ? Icons.smartphone : Icons.devices_other,
                   ),
                   title: Text(_sessionLabel(session)),
                   subtitle: Text(

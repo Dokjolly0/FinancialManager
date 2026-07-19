@@ -44,7 +44,8 @@ abstract final class ErrorMapper {
     // and must keep its own message/field_errors instead of being
     // overwritten with "Sessione scaduta" (found live: a wrong current
     // password on the change-password screen was showing that message).
-    if (status == 401 && (envelope == null || envelope.code == 'UNAUTHORIZED')) {
+    if (status == 401 &&
+        (envelope == null || envelope.code == 'UNAUTHORIZED')) {
       return SessionExpiredError(requestId: envelope?.requestId);
     }
 

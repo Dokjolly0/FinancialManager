@@ -17,6 +17,9 @@ class ReportQuery {
 abstract class ReportRepository {
   Future<ReportSummary> summary(ReportQuery query);
   Future<ReportTimeseries> timeseries(ReportQuery query);
-  Future<ReportBreakdown> breakdown(ReportQuery query, {required String groupBy});
+  Future<ReportBreakdown> breakdown(
+    ReportQuery query, {
+    required String groupBy,
+  });
   Future<ReportMonthlyComparison> monthlyComparison(ReportQuery query);
 }

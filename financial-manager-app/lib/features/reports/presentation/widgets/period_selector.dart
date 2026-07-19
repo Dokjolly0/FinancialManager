@@ -21,10 +21,12 @@ class PeriodSelector extends StatelessWidget {
 
   Future<void> _pickCustomRange(BuildContext context) async {
     final now = DateTime.now();
-    final initial =
-        selection.customFrom != null && selection.customTo != null
+    final initial = selection.customFrom != null && selection.customTo != null
         ? DateTimeRange(start: selection.customFrom!, end: selection.customTo!)
-        : DateTimeRange(start: now.subtract(const Duration(days: 30)), end: now);
+        : DateTimeRange(
+            start: now.subtract(const Duration(days: 30)),
+            end: now,
+          );
 
     final picked = await showDateRangePicker(
       context: context,

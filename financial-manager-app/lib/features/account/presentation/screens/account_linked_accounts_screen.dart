@@ -120,7 +120,9 @@ class AccountLinkedAccountsScreen extends ConsumerWidget {
                           ? _unlink(context, ref)
                           : _link(context, ref),
                       child: Text(
-                        state.isGoogleLinked ? l10n.unlinkGoogleAction : l10n.linkAction,
+                        state.isGoogleLinked
+                            ? l10n.unlinkGoogleAction
+                            : l10n.linkAction,
                       ),
                     ),
                   ),

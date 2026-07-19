@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/providers.dart';
-import '../../authentication/data/providers.dart' show googleSignInServiceProvider;
+import '../../authentication/data/providers.dart'
+    show googleSignInServiceProvider;
 import '../domain/repositories/account_repository.dart';
 import 'repositories/account_repository_impl.dart';
 import 'services/account_api.dart';

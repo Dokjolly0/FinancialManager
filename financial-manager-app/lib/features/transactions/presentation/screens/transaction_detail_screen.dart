@@ -73,7 +73,10 @@ class TransactionDetailScreen extends ConsumerWidget {
           ? const Center(child: CircularProgressIndicator())
           : state.error != null && state.transaction == null
           ? InlineError(
-              message: presentError(state.error!, AppLocalizations.of(context)).message,
+              message: presentError(
+                state.error!,
+                AppLocalizations.of(context),
+              ).message,
               onRetry: controller.load,
             )
           : _Detail(transactionId: transactionId),
@@ -147,7 +150,10 @@ class _Detail extends ConsumerWidget {
           _Row(label: l10n.titleFieldLabel, value: transaction.title),
           if (categoryName != null)
             _Row(label: l10n.categoryLabel, value: categoryName),
-          _Row(label: l10n.sourceLabel, value: _kindLabel(l10n, transaction.kind)),
+          _Row(
+            label: l10n.sourceLabel,
+            value: _kindLabel(l10n, transaction.kind),
+          ),
           _Row(
             label: l10n.dateAndTimeLabel,
             value: dateFormat.format(transaction.occurredAt.toLocal()),

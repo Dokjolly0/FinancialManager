@@ -82,7 +82,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: AppSpacing.xl),
-              Text(l10n.loginAction, style: Theme.of(context).textTheme.headlineMedium),
+              Text(
+                l10n.loginAction,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
               const SizedBox(height: AppSpacing.lg),
               if (state.error != null) ...[
                 Text(

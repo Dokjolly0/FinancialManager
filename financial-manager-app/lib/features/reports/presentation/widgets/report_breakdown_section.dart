@@ -42,11 +42,17 @@ class _ReportBreakdownSectionState extends State<ReportBreakdownSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.reportBreakdownTitle, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              l10n.reportBreakdownTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: AppSpacing.sm),
             SegmentedButton<String>(
               segments: [
-                ButtonSegment(value: ReportGroupBy.title, label: Text(l10n.groupByTitleOption)),
+                ButtonSegment(
+                  value: ReportGroupBy.title,
+                  label: Text(l10n.groupByTitleOption),
+                ),
                 ButtonSegment(
                   value: ReportGroupBy.category,
                   label: Text(l10n.groupByCategoryOption),
@@ -59,7 +65,10 @@ class _ReportBreakdownSectionState extends State<ReportBreakdownSection> {
             SegmentedButton<bool>(
               segments: [
                 ButtonSegment(value: true, label: Text(l10n.debitsColumnLabel)),
-                ButtonSegment(value: false, label: Text(l10n.creditsColumnLabel)),
+                ButtonSegment(
+                  value: false,
+                  label: Text(l10n.creditsColumnLabel),
+                ),
               ],
               selected: {_showDebits},
               onSelectionChanged: (s) => setState(() => _showDebits = s.first),
@@ -128,7 +137,9 @@ class _BreakdownRow extends StatelessWidget {
             ),
           ),
           Text(
-            AppLocalizations.of(context).transactionCountLabel(item.transactionCount),
+            AppLocalizations.of(
+              context,
+            ).transactionCountLabel(item.transactionCount),
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),

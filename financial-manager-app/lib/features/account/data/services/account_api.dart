@@ -13,10 +13,7 @@ class AccountApi {
   }
 
   Future<Map<String, dynamic>> updateMe(Map<String, dynamic> body) async {
-    final response = await _dio.patch<Map<String, dynamic>>(
-      '/me',
-      data: body,
-    );
+    final response = await _dio.patch<Map<String, dynamic>>('/me', data: body);
     return response.data!;
   }
 

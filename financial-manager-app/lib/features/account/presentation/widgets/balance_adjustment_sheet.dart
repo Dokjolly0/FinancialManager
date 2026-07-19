@@ -56,7 +56,8 @@ class _BalanceAdjustmentSheetState
     final targetMinor = Money.parseMinorUnits(_amountController.text);
     if (targetMinor == null) {
       setState(
-        () => _amountError = AppLocalizations.of(context).errorCodeInvalidAmount,
+        () =>
+            _amountError = AppLocalizations.of(context).errorCodeInvalidAmount,
       );
       return;
     }

@@ -67,7 +67,10 @@ class _ReportTrendChartState extends State<ReportTrendChart> {
                 height: 220,
                 child: LineChart(
                   LineChartData(
-                    gridData: const FlGridData(show: true, drawVerticalLine: false),
+                    gridData: const FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                    ),
                     titlesData: FlTitlesData(
                       topTitles: const AxisTitles(),
                       rightTitles: const AxisTitles(),
@@ -78,7 +81,9 @@ class _ReportTrendChartState extends State<ReportTrendChart> {
                         sideTitles: SideTitles(
                           showTitles: true,
                           reservedSize: 32,
-                          interval: (points.length / 4).clamp(1, points.length).toDouble(),
+                          interval: (points.length / 4)
+                              .clamp(1, points.length)
+                              .toDouble(),
                           getTitlesWidget: (value, meta) {
                             final index = value.round();
                             if (index < 0 || index >= points.length) {
@@ -100,7 +105,10 @@ class _ReportTrendChartState extends State<ReportTrendChart> {
                       LineChartBarData(
                         spots: [
                           for (var i = 0; i < points.length; i++)
-                            FlSpot(i.toDouble(), points[i].balance.minorUnits / 100),
+                            FlSpot(
+                              i.toDouble(),
+                              points[i].balance.minorUnits / 100,
+                            ),
                         ],
                         isCurved: true,
                         color: colorScheme.primary,

@@ -72,9 +72,7 @@ class AccountRepositoryImpl implements AccountRepository {
       final response = await _api.listSessions();
       final raw = response['sessions'] as List<dynamic>? ?? [];
       return raw
-          .map(
-            (json) => AccountSession.fromJson(json as Map<String, dynamic>),
-          )
+          .map((json) => AccountSession.fromJson(json as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
       throw ErrorMapper.fromException(e);
@@ -96,9 +94,7 @@ class AccountRepositoryImpl implements AccountRepository {
       final response = await _api.listIdentities();
       final raw = response['identities'] as List<dynamic>? ?? [];
       return raw
-          .map(
-            (json) => LinkedIdentity.fromJson(json as Map<String, dynamic>),
-          )
+          .map((json) => LinkedIdentity.fromJson(json as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
       throw ErrorMapper.fromException(e);

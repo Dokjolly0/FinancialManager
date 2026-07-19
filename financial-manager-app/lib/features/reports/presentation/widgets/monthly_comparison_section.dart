@@ -65,7 +65,10 @@ class MonthlyComparisonSection extends StatelessWidget {
                 child: BarChart(
                   BarChartData(
                     maxY: maxValue == 0 ? 1 : maxValue / 100 * 1.1,
-                    gridData: const FlGridData(show: true, drawVerticalLine: false),
+                    gridData: const FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                    ),
                     borderData: FlBorderData(show: false),
                     titlesData: FlTitlesData(
                       topTitles: const AxisTitles(),
@@ -99,7 +102,9 @@ class MonthlyComparisonSection extends StatelessWidget {
                       touchCallback: (event, response) {
                         if (!event.isInterestedForInteractions) return;
                         final index = response?.spot?.touchedBarGroupIndex;
-                        if (index == null || index < 0 || index >= months.length) {
+                        if (index == null ||
+                            index < 0 ||
+                            index >= months.length) {
                           return;
                         }
                         _showMonthDetail(context, months[index]);
@@ -132,8 +137,14 @@ class MonthlyComparisonSection extends StatelessWidget {
               child: DataTable(
                 columns: [
                   DataColumn(label: Text(l10n.monthColumnLabel)),
-                  DataColumn(label: Text(l10n.creditsColumnLabel), numeric: true),
-                  DataColumn(label: Text(l10n.debitsColumnLabel), numeric: true),
+                  DataColumn(
+                    label: Text(l10n.creditsColumnLabel),
+                    numeric: true,
+                  ),
+                  DataColumn(
+                    label: Text(l10n.debitsColumnLabel),
+                    numeric: true,
+                  ),
                   DataColumn(label: Text(l10n.netColumnLabel), numeric: true),
                 ],
                 rows: [

@@ -19,8 +19,10 @@ class ReportController extends Notifier<ReportState> {
     return const ReportState();
   }
 
-  ReportQuery get _query =>
-      ReportQuery(period: state.period, includeAdjustments: state.includeAdjustments);
+  ReportQuery get _query => ReportQuery(
+    period: state.period,
+    includeAdjustments: state.includeAdjustments,
+  );
 
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, clearError: true);

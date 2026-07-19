@@ -141,8 +141,7 @@ class AccountScreen extends ConsumerWidget {
                     title: Text(l10n.accountLinkedAccountsMenuTitle),
                     subtitle: const Text('Google'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () =>
-                        context.push(AppRoutes.accountLinkedAccounts),
+                    onTap: () => context.push(AppRoutes.accountLinkedAccounts),
                   ),
                   const Divider(height: 1),
                   ListTile(

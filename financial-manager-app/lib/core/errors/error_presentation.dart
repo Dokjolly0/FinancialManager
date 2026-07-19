@@ -29,7 +29,8 @@ ErrorPresentation presentError(AppError error, AppLocalizations l10n) {
     DomainError(:final code, :final fieldErrors) => ErrorPresentation(
       message: localizeErrorCode(l10n, code),
       fieldErrors: fieldErrors.map(
-        (field, fieldCode) => MapEntry(field, localizeErrorCode(l10n, fieldCode)),
+        (field, fieldCode) =>
+            MapEntry(field, localizeErrorCode(l10n, fieldCode)),
       ),
     ),
     UnknownError() => ErrorPresentation(message: l10n.errorCodeUnknownError),

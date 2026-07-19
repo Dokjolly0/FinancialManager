@@ -15,7 +15,11 @@ import '../view_models/data_controller.dart';
 class AccountDataScreen extends ConsumerWidget {
   const AccountDataScreen({super.key});
 
-  Future<void> _export(BuildContext context, WidgetRef ref, String format) async {
+  Future<void> _export(
+    BuildContext context,
+    WidgetRef ref,
+    String format,
+  ) async {
     await ref.read(dataControllerProvider.notifier).requestExport(format);
     if (!context.mounted) return;
 
@@ -101,7 +105,10 @@ class AccountDataScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          Text(l10n.exportDataSectionTitle, style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            l10n.exportDataSectionTitle,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             l10n.exportDataDescription,
@@ -139,9 +146,9 @@ class AccountDataScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             l10n.dangerZoneTitle,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.error),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).colorScheme.error,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           OutlinedButton(

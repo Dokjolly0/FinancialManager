@@ -25,19 +25,22 @@ void main() {
     expect(summary.transactionCount, 3);
   });
 
-  test('ReportSummary.fromJson leaves savingsRatePercent null when omitted', () {
-    final summary = ReportSummary.fromJson({
-      'opening_balance_minor': 0,
-      'closing_balance_minor': 0,
-      'total_credits_minor': 0,
-      'total_debits_minor': 0,
-      'net_minor': 0,
-      'transaction_count': 0,
-      'currency': 'EUR',
-      'to': '2026-07-19T00:00:00Z',
-    });
-    expect(summary.savingsRatePercent, isNull);
-  });
+  test(
+    'ReportSummary.fromJson leaves savingsRatePercent null when omitted',
+    () {
+      final summary = ReportSummary.fromJson({
+        'opening_balance_minor': 0,
+        'closing_balance_minor': 0,
+        'total_credits_minor': 0,
+        'total_debits_minor': 0,
+        'net_minor': 0,
+        'transaction_count': 0,
+        'currency': 'EUR',
+        'to': '2026-07-19T00:00:00Z',
+      });
+      expect(summary.savingsRatePercent, isNull);
+    },
+  );
 
   test('ReportTimeseries.fromJson parses points and granularity', () {
     final timeseries = ReportTimeseries.fromJson({

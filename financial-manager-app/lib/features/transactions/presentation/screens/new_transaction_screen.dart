@@ -192,7 +192,8 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.label_outline),
                     title: Text(
-                      selectedCategory?.name ?? AppLocalizations.of(context).noCategoryLabel,
+                      selectedCategory?.name ??
+                          AppLocalizations.of(context).noCategoryLabel,
                     ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _pickCategory(context, direction),
@@ -243,7 +244,9 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
                     controller: _descriptionController,
                     maxLines: 3,
                     decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context).descriptionOptionalLabel,
+                      labelText: AppLocalizations.of(
+                        context,
+                      ).descriptionOptionalLabel,
                     ),
                     onChanged: controller.setDescription,
                   ),

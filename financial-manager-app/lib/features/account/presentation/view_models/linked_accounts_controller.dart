@@ -42,7 +42,9 @@ class LinkedAccountsController extends Notifier<LinkedAccountsState> {
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final identities = await ref.read(accountRepositoryProvider).listIdentities();
+      final identities = await ref
+          .read(accountRepositoryProvider)
+          .listIdentities();
       state = state.copyWith(isLoading: false, identities: identities);
     } on AppError catch (e) {
       state = state.copyWith(isLoading: false, error: e);

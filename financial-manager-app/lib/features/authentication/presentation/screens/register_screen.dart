@@ -273,8 +273,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     _usernameController.text,
                     Money(
                       minorUnits:
-                          Money.parseMinorUnits(state.initialBalanceInput) ??
-                          0,
+                          Money.parseMinorUnits(state.initialBalanceInput) ?? 0,
                       currency: 'EUR',
                     ).format(),
                   ),

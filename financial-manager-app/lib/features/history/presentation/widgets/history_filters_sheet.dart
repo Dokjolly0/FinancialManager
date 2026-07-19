@@ -164,7 +164,10 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
               Expanded(
                 child: ListView(
                   children: [
-                    Text(l10n.typeLabel, style: Theme.of(context).textTheme.labelLarge),
+                    Text(
+                      l10n.typeLabel,
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
                     const SizedBox(height: AppSpacing.xs),
                     Wrap(
                       spacing: AppSpacing.xs,
@@ -180,7 +183,9 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
                     const SizedBox(height: AppSpacing.lg),
                     TextField(
                       controller: _titleController,
-                      decoration: InputDecoration(labelText: l10n.titleFieldLabel),
+                      decoration: InputDecoration(
+                        labelText: l10n.titleFieldLabel,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     Row(
@@ -227,7 +232,9 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(l10n.startDateLabel),
                       subtitle: Text(
-                        _from == null ? l10n.anyLabel : dateFormat.format(_from!),
+                        _from == null
+                            ? l10n.anyLabel
+                            : dateFormat.format(_from!),
                       ),
                       trailing: const Icon(Icons.calendar_today_outlined),
                       onTap: () => _pickDate(isFrom: true),
@@ -286,10 +293,11 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
     );
   }
 
-  String _typeLabel(AppLocalizations l10n, TransactionTypeFilter type) => switch (type) {
-    TransactionTypeFilter.all => l10n.typeFilterAll,
-    TransactionTypeFilter.debit => l10n.debitsColumnLabel,
-    TransactionTypeFilter.credit => l10n.creditsColumnLabel,
-    TransactionTypeFilter.adjustments => l10n.typeFilterAdjustments,
-  };
+  String _typeLabel(AppLocalizations l10n, TransactionTypeFilter type) =>
+      switch (type) {
+        TransactionTypeFilter.all => l10n.typeFilterAll,
+        TransactionTypeFilter.debit => l10n.debitsColumnLabel,
+        TransactionTypeFilter.credit => l10n.creditsColumnLabel,
+        TransactionTypeFilter.adjustments => l10n.typeFilterAdjustments,
+      };
 }

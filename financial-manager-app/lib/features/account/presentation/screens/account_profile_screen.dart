@@ -50,7 +50,9 @@ class _AccountProfileScreenState extends ConsumerState<AccountProfileScreen> {
           );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).profileUpdatedMessage)),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).profileUpdatedMessage),
+          ),
         );
       }
     } on AppError catch (e) {
@@ -74,7 +76,9 @@ class _AccountProfileScreenState extends ConsumerState<AccountProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).verificationEmailSentMessage),
+            content: Text(
+              AppLocalizations.of(context).verificationEmailSentMessage,
+            ),
           ),
         );
       }
