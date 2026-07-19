@@ -33,33 +33,54 @@ const (
 	maxAmountMinor = 10_000_000_00
 )
 
+// ReportVersionBumper invalidates cached report data for a wallet after a
+// mutation touches its ledger (plan.md section 18.9). Optional: left unset
+// (nil) in tests that don't exercise report caching.
+type ReportVersionBumper interface {
+	Bump(ctx context.Context, walletID uuid.UUID) error
+}
+
 type Service struct {
-	db           *database.Pool
-	transactions *Repository
-	wallets      *wallets.Repository
-	audit        *AuditRepository
-	categories   *categories.Repository
-	templates    *templates.Repository
-	media        *media.Repository
-	clock        clock.Clock
+	db             *database.Pool
+	transactions   *Repository
+	wallets        *wallets.Repository
+	audit          *AuditRepository
+	categories     *categories.Repository
+	templates      *templates.Repository
+	media          *media.Repository
+	clock          clock.Clock
+	reportVersions ReportVersionBumper
 }
 
 type Deps struct {
-	DB           *database.Pool
-	Transactions *Repository
-	Wallets      *wallets.Repository
-	Audit        *AuditRepository
-	Categories   *categories.Repository
-	Templates    *templates.Repository
-	Media        *media.Repository
-	Clock        clock.Clock
+	DB             *database.Pool
+	Transactions   *Repository
+	Wallets        *wallets.Repository
+	Audit          *AuditRepository
+	Categories     *categories.Repository
+	Templates      *templates.Repository
+	Media          *media.Repository
+	Clock          clock.Clock
+	ReportVersions ReportVersionBumper
 }
 
 func NewService(d Deps) *Service {
 	return &Service{
 		db: d.DB, transactions: d.Transactions, wallets: d.Wallets, audit: d.Audit,
 		categories: d.Categories, templates: d.Templates, media: d.Media, clock: d.Clock,
+		reportVersions: d.ReportVersions,
 	}
+}
+
+// bumpReportVersion is a best-effort cache invalidation: a failure here
+// only means a report cache serves briefly stale data until its TTL
+// expires (plan.md section 18.9), never a reason to fail the mutation
+// itself, so it's called after the DB transaction has already committed.
+func (s *Service) bumpReportVersion(ctx context.Context, walletID uuid.UUID) {
+	if s.reportVersions == nil {
+		return
+	}
+	_ = s.reportVersions.Bump(ctx, walletID)
 }
 
 // resolveAttachments validates that an optional category_id is visible to
@@ -246,6 +267,7 @@ func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([
 	requestHash := sha256Sum(in.RequestBody)
 
 	var responseBody []byte
+	var walletID uuid.UUID
 	err := s.db.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		idemStore := idempotency.NewStore(tx)
 		claimed, existing, claimErr := idemStore.Claim(ctx, in.UserID.String(), createTransactionEndpoint, in.IdempotencyKey, requestHash, idempotencyTTL)
@@ -265,6 +287,7 @@ func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([
 		if err != nil {
 			return fmt.Errorf("lock wallet: %w", err)
 		}
+		walletID = wallet.ID
 		if in.Currency != wallet.Currency {
 			return apierror.NewValidation(map[string]string{"currency": "Deve corrispondere alla valuta del portafoglio."})
 		}
@@ -306,6 +329,9 @@ func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([
 	})
 	if err != nil {
 		return nil, 0, err
+	}
+	if walletID != uuid.Nil {
+		s.bumpReportVersion(ctx, walletID)
 	}
 	return responseBody, http.StatusCreated, nil
 }
@@ -377,11 +403,13 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 	}
 
 	var result TransactionWithWallet
+	var walletID uuid.UUID
 	err := s.db.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		wallet, err := s.wallets.WithQuerier(tx).LockForUpdate(ctx, in.UserID)
 		if err != nil {
 			return fmt.Errorf("lock wallet: %w", err)
 		}
+		walletID = wallet.ID
 
 		existing, err := s.transactions.WithQuerier(tx).LockByIDAndUserID(ctx, in.TransactionID, in.UserID)
 		if errors.Is(err, ErrNotFound) {
@@ -429,6 +457,9 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 		result = TransactionWithWallet{Transaction: toTransactionResponse(updated), Wallet: toWalletSnapshot(updatedWallet)}
 		return nil
 	})
+	if err == nil {
+		s.bumpReportVersion(ctx, walletID)
+	}
 	return result, err
 }
 
@@ -439,11 +470,13 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 // (section 13.4: "non dovrebbe essere eliminabile dalla UI ordinaria").
 func (s *Service) Delete(ctx context.Context, userID, transactionID uuid.UUID) (walletSnapshot, error) {
 	var result walletSnapshot
+	var walletID uuid.UUID
 	err := s.db.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		wallet, err := s.wallets.WithQuerier(tx).LockForUpdate(ctx, userID)
 		if err != nil {
 			return fmt.Errorf("lock wallet: %w", err)
 		}
+		walletID = wallet.ID
 
 		existing, err := s.transactions.WithQuerier(tx).LockByIDAndUserID(ctx, transactionID, userID)
 		if errors.Is(err, ErrNotFound) {
@@ -475,6 +508,9 @@ func (s *Service) Delete(ctx context.Context, userID, transactionID uuid.UUID) (
 		result = toWalletSnapshot(updatedWallet)
 		return nil
 	})
+	if err == nil {
+		s.bumpReportVersion(ctx, walletID)
+	}
 	return result, err
 }
 
@@ -510,6 +546,7 @@ func (s *Service) CreateBalanceAdjustment(ctx context.Context, in CreateBalanceA
 	requestHash := sha256Sum(in.RequestBody)
 
 	var responseBody []byte
+	var walletID uuid.UUID
 	err := s.db.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		idemStore := idempotency.NewStore(tx)
 		claimed, existing, claimErr := idemStore.Claim(ctx, in.UserID.String(), balanceAdjustmentEndpoint, in.IdempotencyKey, requestHash, idempotencyTTL)
@@ -568,6 +605,7 @@ func (s *Service) CreateBalanceAdjustment(ctx context.Context, in CreateBalanceA
 			if updErr != nil {
 				return fmt.Errorf("update wallet balance: %w", updErr)
 			}
+			walletID = wallet.ID
 
 			if auditErr := s.audit.WithQuerier(tx).Record(ctx, created.ID, in.UserID, AuditActionCreated, nil, created); auditErr != nil {
 				return auditErr
@@ -588,6 +626,9 @@ func (s *Service) CreateBalanceAdjustment(ctx context.Context, in CreateBalanceA
 	})
 	if err != nil {
 		return nil, 0, err
+	}
+	if walletID != uuid.Nil {
+		s.bumpReportVersion(ctx, walletID)
 	}
 	return responseBody, http.StatusCreated, nil
 }

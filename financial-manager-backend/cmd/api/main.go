@@ -27,6 +27,7 @@ import (
 	"financial-manager-backend/internal/platform/observability"
 	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/redisclient"
+	"financial-manager-backend/internal/platform/reportcache"
 	"financial-manager-backend/internal/platform/storage"
 	"financial-manager-backend/internal/reports"
 	"financial-manager-backend/internal/templates"
@@ -178,20 +179,24 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	})
 	mediaHandler := media.NewHandler(mediaService, cfg.MaxUploadBytes)
 
+	reportCache := reportcache.New(redisClient)
+
 	transactionsService := transactions.NewService(transactions.Deps{
-		DB:           dbPool,
-		Transactions: transactionsRepo,
-		Wallets:      walletsRepo,
-		Audit:        transactions.NewAuditRepository(dbPool),
-		Categories:   categoriesRepo,
-		Templates:    templatesRepo,
-		Media:        mediaRepo,
-		Clock:        clock.System{},
+		DB:             dbPool,
+		Transactions:   transactionsRepo,
+		Wallets:        walletsRepo,
+		Audit:          transactions.NewAuditRepository(dbPool),
+		Categories:     categoriesRepo,
+		Templates:      templatesRepo,
+		Media:          mediaRepo,
+		Clock:          clock.System{},
+		ReportVersions: reportCache,
 	})
 	transactionsHandler := transactions.NewHandler(transactionsService)
 
 	reportsService := reports.NewService(reports.Deps{
 		Repo: reports.NewRepository(dbPool), Wallets: walletsRepo, Users: usersRepo, Clock: clock.System{},
+		Cache: reportCache,
 	})
 	reportsHandler := reports.NewHandler(reportsService)
 
