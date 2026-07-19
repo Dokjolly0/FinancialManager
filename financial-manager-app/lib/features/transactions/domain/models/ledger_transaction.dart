@@ -11,6 +11,7 @@ class LedgerTransaction {
     this.description,
     this.categoryId,
     this.templateId,
+    this.mediaId,
     required this.occurredAt,
     required this.createdAt,
     required this.updatedAt,
@@ -25,6 +26,7 @@ class LedgerTransaction {
   final String? description;
   final String? categoryId;
   final String? templateId;
+  final String? mediaId;
   final DateTime occurredAt;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -45,6 +47,7 @@ class LedgerTransaction {
       description: json['description'] as String?,
       categoryId: json['category_id'] as String?,
       templateId: json['template_id'] as String?,
+      mediaId: json['media_id'] as String?,
       occurredAt: DateTime.parse(json['occurred_at'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),

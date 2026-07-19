@@ -11,6 +11,7 @@ import '../../../../core/widgets/inline_error.dart';
 import '../../../../core/widgets/skeleton_list.dart';
 import '../../../categories/data/providers.dart';
 import '../../../categories/domain/models/category.dart';
+import '../../../media/data/providers.dart';
 import '../../../transactions/presentation/widgets/transaction_tile.dart';
 import '../../domain/day_group.dart';
 import '../view_models/history_controller.dart';
@@ -67,6 +68,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final state = ref.watch(historyControllerProvider);
     final controller = ref.read(historyControllerProvider.notifier);
     final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+    final mediaRepo = ref.read(mediaRepositoryProvider);
     final dayGroups = DayGroup.group(state.transactions);
 
     return Scaffold(
@@ -176,6 +178,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                   categories,
                                   transaction.categoryId,
                                 ),
+                                imageUrl: transaction.mediaId == null
+                                    ? null
+                                    : mediaRepo.contentUrl(
+                                        transaction.mediaId!,
+                                      ),
+                                imageHeaders: mediaRepo.authHeaders(),
                                 onTap: () => context.push(
                                   AppRoutes.transactionDetail(transaction.id),
                                 ),

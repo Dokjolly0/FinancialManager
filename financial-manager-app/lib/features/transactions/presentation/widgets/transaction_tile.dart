@@ -14,6 +14,8 @@ class TransactionTile extends StatelessWidget {
     required this.transaction,
     this.onTap,
     this.categoryName,
+    this.imageUrl,
+    this.imageHeaders = const {},
   });
 
   final LedgerTransaction transaction;
@@ -24,6 +26,12 @@ class TransactionTile extends StatelessWidget {
   /// importo") — this widget doesn't know how to look categories up
   /// itself, so it stays usable without a Riverpod context in tests.
   final String? categoryName;
+
+  /// Resolved from the transaction's media_id by the caller, same reason
+  /// as [categoryName] — an authenticated `/v1/media/{id}` URL plus the
+  /// headers needed to fetch it (plan.md section 16.7).
+  final String? imageUrl;
+  final Map<String, String> imageHeaders;
 
   @override
   Widget build(BuildContext context) {
@@ -42,15 +50,25 @@ class TransactionTile extends StatelessWidget {
 
     return ListTile(
       onTap: onTap,
-      leading: CircleAvatar(
-        backgroundColor: amountColor.withValues(alpha: 0.15),
-        child: Icon(
-          isSpecial
-              ? Icons.sync_alt
-              : (isCredit ? Icons.arrow_downward : Icons.arrow_upward),
-          color: amountColor,
-        ),
-      ),
+      leading: imageUrl != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image(
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+                image: NetworkImage(imageUrl!, headers: imageHeaders),
+              ),
+            )
+          : CircleAvatar(
+              backgroundColor: amountColor.withValues(alpha: 0.15),
+              child: Icon(
+                isSpecial
+                    ? Icons.sync_alt
+                    : (isCredit ? Icons.arrow_downward : Icons.arrow_upward),
+                color: amountColor,
+              ),
+            ),
       title: Text(
         transaction.title,
         maxLines: 1,

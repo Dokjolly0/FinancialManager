@@ -39,6 +39,8 @@ class TransactionFormController
         description: existing.description ?? '',
         categoryId: existing.categoryId,
         clearCategory: existing.categoryId == null,
+        mediaId: existing.mediaId,
+        clearMedia: existing.mediaId == null,
         occurredAt: existing.occurredAt.toLocal(),
         expectedVersion: existing.version,
       );
@@ -91,6 +93,10 @@ class TransactionFormController
   void setSaveAsTemplate(bool value) =>
       state = state.copyWith(saveAsTemplate: value);
 
+  void setMedia(String? mediaId) {
+    state = state.copyWith(mediaId: mediaId, clearMedia: mediaId == null);
+  }
+
   /// Applies an autocomplete suggestion (plan.md section 7.6: "Selezionando
   /// un suggerimento vengono precompilati i valori associati").
   void applyTemplate(TransactionTemplate template, Category? category) {
@@ -133,6 +139,7 @@ class TransactionFormController
     final title = state.title.trim();
     final categoryId = state.categoryId;
     final templateId = state.selectedTemplateId;
+    final mediaId = state.mediaId;
 
     try {
       if (state.isEditMode) {
@@ -147,6 +154,7 @@ class TransactionFormController
                 description: description,
                 categoryId: categoryId,
                 templateId: templateId,
+                mediaId: mediaId,
                 occurredAt: occurredAt,
                 expectedVersion: state.expectedVersion!,
               ),
@@ -163,6 +171,7 @@ class TransactionFormController
                 description: description,
                 categoryId: categoryId,
                 templateId: templateId,
+                mediaId: mediaId,
                 occurredAt: occurredAt,
               ),
             );

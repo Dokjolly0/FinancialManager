@@ -9,6 +9,7 @@ import '../../../../app/theme/semantic_colors.dart';
 import '../../../../core/widgets/confirmation_sheet.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../categories/data/providers.dart';
+import '../../../media/data/providers.dart';
 import '../../domain/models/transaction_direction.dart';
 import '../view_models/transaction_detail_controller.dart';
 
@@ -109,6 +110,25 @@ class _Detail extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (transaction.mediaId != null) ...[
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                child: Image(
+                  width: 160,
+                  height: 160,
+                  fit: BoxFit.cover,
+                  image: NetworkImage(
+                    ref
+                        .read(mediaRepositoryProvider)
+                        .contentUrl(transaction.mediaId!),
+                    headers: ref.read(mediaRepositoryProvider).authHeaders(),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
           Center(
             child: Text(
               '${isCredit ? '+' : '−'} ${transaction.amount.format()}',

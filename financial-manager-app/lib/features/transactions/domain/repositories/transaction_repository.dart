@@ -12,6 +12,7 @@ class CreateTransactionParams {
     this.description,
     this.categoryId,
     this.templateId,
+    this.mediaId,
     required this.occurredAt,
   });
 
@@ -22,6 +23,7 @@ class CreateTransactionParams {
   final String? description;
   final String? categoryId;
   final String? templateId;
+  final String? mediaId;
   final DateTime occurredAt;
 }
 
@@ -33,6 +35,7 @@ class UpdateTransactionParams {
     this.description,
     this.categoryId,
     this.templateId,
+    this.mediaId,
     required this.occurredAt,
     required this.expectedVersion,
   });
@@ -43,6 +46,7 @@ class UpdateTransactionParams {
   final String? description;
   final String? categoryId;
   final String? templateId;
+  final String? mediaId;
   final DateTime occurredAt;
   final int expectedVersion;
 }

@@ -9,6 +9,7 @@ import '../../../../core/widgets/balance_card.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../core/widgets/skeleton_list.dart';
+import '../../../media/data/providers.dart';
 import '../../../transactions/presentation/widgets/transaction_tile.dart';
 import '../view_models/home_controller.dart';
 
@@ -24,6 +25,7 @@ class HomeScreen extends ConsumerWidget {
     final state = ref.watch(homeControllerProvider);
     final user = ref.watch(currentUserProvider);
     final controller = ref.read(homeControllerProvider.notifier);
+    final mediaRepo = ref.read(mediaRepositoryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -79,6 +81,10 @@ class HomeScreen extends ConsumerWidget {
                     ...state.recentTransactions.map(
                       (t) => TransactionTile(
                         transaction: t,
+                        imageUrl: t.mediaId == null
+                            ? null
+                            : mediaRepo.contentUrl(t.mediaId!),
+                        imageHeaders: mediaRepo.authHeaders(),
                         onTap: () =>
                             context.push(AppRoutes.transactionDetail(t.id)),
                       ),

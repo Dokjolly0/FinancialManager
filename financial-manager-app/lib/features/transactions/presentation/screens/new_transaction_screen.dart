@@ -8,12 +8,14 @@ import '../../../../core/widgets/direction_segmented_control.dart';
 import '../../../categories/data/providers.dart';
 import '../../../categories/domain/models/category.dart';
 import '../../../categories/presentation/widgets/category_picker_sheet.dart';
+import '../../../media/data/providers.dart';
+import '../../../media/domain/models/media_asset.dart';
+import '../../../media/presentation/widgets/image_picker_sheet.dart';
 import '../../domain/models/transaction_direction.dart';
 import '../view_models/transaction_form_controller.dart';
 import '../widgets/title_autocomplete_field.dart';
 
 /// New / edit operation (plan.md section 7.6, 7.11 — the same form).
-/// Image attachment is deferred to Fase 6 (media).
 class NewTransactionScreen extends ConsumerStatefulWidget {
   const NewTransactionScreen({super.key, this.editTransactionId});
 
@@ -75,6 +77,18 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
     );
     if (!mounted) return;
     controller.setCategory(selected);
+  }
+
+  Future<void> _pickImage(BuildContext context) async {
+    final controller = ref.read(
+      transactionFormControllerProvider(widget.editTransactionId).notifier,
+    );
+    final selected = await ImagePickerSheet.show(
+      context,
+      kind: MediaKind.transaction,
+    );
+    if (!mounted || selected == null) return;
+    controller.setMedia(selected.id);
   }
 
   Future<void> _submit() async {
@@ -172,6 +186,37 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
                     title: Text(selectedCategory?.name ?? 'Nessuna categoria'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _pickCategory(context, direction),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: state.mediaId == null
+                        ? const Icon(Icons.image_outlined)
+                        : ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.inputRadius,
+                            ),
+                            child: Image(
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.cover,
+                              image: NetworkImage(
+                                ref
+                                    .read(mediaRepositoryProvider)
+                                    .contentUrl(state.mediaId!),
+                                headers: ref
+                                    .read(mediaRepositoryProvider)
+                                    .authHeaders(),
+                              ),
+                            ),
+                          ),
+                    title: Text(
+                      state.mediaId == null
+                          ? 'Nessuna immagine'
+                          : 'Immagine selezionata',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _pickImage(context),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   ListTile(

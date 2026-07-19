@@ -8,6 +8,7 @@ class TransactionFormState {
     this.categoryId,
     this.selectedTemplateId,
     this.saveAsTemplate = false,
+    this.mediaId,
     this.occurredAt,
     this.expectedVersion,
     this.isSubmitting = false,
@@ -23,6 +24,7 @@ class TransactionFormState {
   final String? categoryId;
   final String? selectedTemplateId;
   final bool saveAsTemplate;
+  final String? mediaId;
   final DateTime? occurredAt;
   final int? expectedVersion;
   final bool isSubmitting;
@@ -42,6 +44,8 @@ class TransactionFormState {
     String? selectedTemplateId,
     bool clearSelectedTemplate = false,
     bool? saveAsTemplate,
+    String? mediaId,
+    bool clearMedia = false,
     DateTime? occurredAt,
     int? expectedVersion,
     bool? isSubmitting,
@@ -59,6 +63,7 @@ class TransactionFormState {
           ? null
           : (selectedTemplateId ?? this.selectedTemplateId),
       saveAsTemplate: saveAsTemplate ?? this.saveAsTemplate,
+      mediaId: clearMedia ? null : (mediaId ?? this.mediaId),
       occurredAt: occurredAt ?? this.occurredAt,
       expectedVersion: expectedVersion ?? this.expectedVersion,
       isSubmitting: isSubmitting ?? this.isSubmitting,

@@ -35,6 +35,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
         'description': params.description,
         'category_id': params.categoryId,
         'template_id': params.templateId,
+        'media_id': params.mediaId,
         'occurred_at': params.occurredAt.toUtc().toIso8601String(),
       });
       return _parseWithWallet(response);
@@ -114,6 +115,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
         'description': params.description,
         'category_id': params.categoryId,
         'template_id': params.templateId,
+        'media_id': params.mediaId,
         'occurred_at': params.occurredAt.toUtc().toIso8601String(),
         'version': params.expectedVersion,
       });

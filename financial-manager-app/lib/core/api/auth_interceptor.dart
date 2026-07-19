@@ -46,6 +46,15 @@ class AuthInterceptor extends Interceptor {
       final retryOptions = err.requestOptions;
       retryOptions.extra[_retriedKey] = true;
       retryOptions.headers['Authorization'] = 'Bearer $newToken';
+      // A multipart body's file streams are single-use — the first
+      // (401'd) attempt already consumed them, so resending the same
+      // FormData would send an empty/truncated body. Clone it fresh
+      // before retrying (plan.md section 7.7 uploads; discovered live
+      // against a real expired-token multipart upload).
+      final body = retryOptions.data;
+      if (body is FormData) {
+        retryOptions.data = body.clone();
+      }
       final retryResponse = await _dio.fetch(retryOptions);
       handler.resolve(retryResponse);
     } on DioException catch (retryError) {
