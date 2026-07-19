@@ -42,10 +42,10 @@ func toCategoryResponse(c Category) categoryResponse {
 func validateFields(name, directionScope string) map[string]string {
 	fieldErrors := map[string]string{}
 	if strings.TrimSpace(name) == "" || len(name) > 80 {
-		fieldErrors["name"] = "Deve avere tra 1 e 80 caratteri."
+		fieldErrors["name"] = apierror.FieldCategoryNameLength
 	}
 	if !IsValidScope(directionScope) {
-		fieldErrors["direction_scope"] = "Deve essere DEBIT, CREDIT o BOTH."
+		fieldErrors["direction_scope"] = apierror.FieldInvalidCategoryScope
 	}
 	return fieldErrors
 }
@@ -83,7 +83,7 @@ func (s *Service) Create(ctx context.Context, in CreateServiceInput) (categoryRe
 		OwnerUserID: in.UserID, Name: in.Name, DirectionScope: in.DirectionScope, Color: in.Color,
 	})
 	if isUniqueViolation(err) {
-		return categoryResponse{}, apierror.New(409, "CATEGORY_ALREADY_EXISTS", "Esiste già una categoria con questo nome per questa direzione.")
+		return categoryResponse{}, apierror.New(409, "CATEGORY_ALREADY_EXISTS", "A category with this name already exists for this direction.")
 	}
 	if err != nil {
 		return categoryResponse{}, err
@@ -112,7 +112,7 @@ func (s *Service) Update(ctx context.Context, in UpdateServiceInput) (categoryRe
 		return categoryResponse{}, err
 	}
 	if existing.IsSystem {
-		return categoryResponse{}, apierror.New(403, "SYSTEM_CATEGORY_NOT_EDITABLE", "Le categorie di sistema non possono essere modificate.")
+		return categoryResponse{}, apierror.New(403, "SYSTEM_CATEGORY_NOT_EDITABLE", "System categories cannot be edited.")
 	}
 
 	updated, err := s.repo.Update(ctx, in.CategoryID, in.UserID, UpdateInput{
@@ -122,7 +122,7 @@ func (s *Service) Update(ctx context.Context, in UpdateServiceInput) (categoryRe
 		return categoryResponse{}, apierror.ErrNotFound
 	}
 	if isUniqueViolation(err) {
-		return categoryResponse{}, apierror.New(409, "CATEGORY_ALREADY_EXISTS", "Esiste già una categoria con questo nome per questa direzione.")
+		return categoryResponse{}, apierror.New(409, "CATEGORY_ALREADY_EXISTS", "A category with this name already exists for this direction.")
 	}
 	if err != nil {
 		return categoryResponse{}, err
@@ -130,8 +130,8 @@ func (s *Service) Update(ctx context.Context, in UpdateServiceInput) (categoryRe
 	return toCategoryResponse(updated), nil
 }
 
-// Delete soft-deletes a user-owned category (plan.md section 14.7: "Le
-// categorie di sistema non sono eliminabili"). Per-user hiding of system
+// Delete soft-deletes a user-owned category (plan.md section 14.7:
+// "System categories are not deletable"). Per-user hiding of system
 // categories isn't modeled — plan.md section 11 doesn't define a per-user
 // visibility table, so a system category can only be hidden by a future,
 // explicitly designed extension, not silently archived here (which would
@@ -145,7 +145,7 @@ func (s *Service) Delete(ctx context.Context, userID, categoryID uuid.UUID) erro
 		return err
 	}
 	if existing.IsSystem {
-		return apierror.New(403, "SYSTEM_CATEGORY_NOT_DELETABLE", "Le categorie di sistema non possono essere eliminate.")
+		return apierror.New(403, "SYSTEM_CATEGORY_NOT_DELETABLE", "System categories cannot be deleted.")
 	}
 
 	if err := s.repo.Archive(ctx, categoryID, userID); err != nil {

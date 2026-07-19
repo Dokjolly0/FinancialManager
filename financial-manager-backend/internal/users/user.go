@@ -1,7 +1,6 @@
 // Package users implements the applicational user profile (plan.md
-// section 4.1: "identità applicativa, indipendente dal metodo di
-// autenticazione") — not credentials or sessions, which live in
-// internal/auth.
+// section 4.1: "application identity, independent of the authentication
+// method") — not credentials or sessions, which live in internal/auth.
 package users
 
 import (

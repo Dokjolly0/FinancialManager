@@ -105,7 +105,7 @@ func (s *Service) resolveContext(ctx context.Context, in contextInput) (reportCo
 	}
 	loc, err := time.LoadLocation(tzName)
 	if err != nil {
-		return reportContext{}, apierror.NewValidation(map[string]string{"timezone": "Fuso orario non valido."})
+		return reportContext{}, apierror.NewValidation(map[string]string{"timezone": apierror.FieldInvalidTimezone})
 	}
 
 	preset := in.Preset
@@ -113,12 +113,12 @@ func (s *Service) resolveContext(ctx context.Context, in contextInput) (reportCo
 		preset = PresetLast30Days
 	}
 	if !IsValidPreset(preset) {
-		return reportContext{}, apierror.NewValidation(map[string]string{"preset": "Valore non valido."})
+		return reportContext{}, apierror.NewValidation(map[string]string{"preset": apierror.FieldInvalidPreset})
 	}
 
 	period, err := ResolvePeriod(preset, in.CustomFrom, in.CustomTo, loc, s.clock.Now())
 	if err != nil {
-		return reportContext{}, apierror.NewValidation(map[string]string{"from": "Intervallo non valido; 'from' e 'to' sono obbligatori con preset=custom."})
+		return reportContext{}, apierror.NewValidation(map[string]string{"from": apierror.FieldCustomRangeRequired})
 	}
 
 	return reportContext{wallet: wallet, loc: loc, period: period}, nil
@@ -314,11 +314,11 @@ type breakdownResponse struct {
 // Breakdown implements plan.md section 18.4 (group_by=title, coalescing by
 // template when present) and 18.5 (group_by=category). Credits and debits
 // are returned as separate lists with independent denominators — never
-// merged into one pie (section 18.4: "Non sommare entrate e uscite in
-// un'unica torta perché hanno significato opposto").
+// merged into one pie (section 18.4: "Do not add income and expenses
+// into a single pie, since they have opposite meanings").
 func (s *Service) Breakdown(ctx context.Context, in BreakdownInput) (breakdownResponse, error) {
 	if in.GroupBy != GroupByTitle && in.GroupBy != GroupByCategory {
-		return breakdownResponse{}, apierror.NewValidation(map[string]string{"group_by": "Deve essere title o category."})
+		return breakdownResponse{}, apierror.NewValidation(map[string]string{"group_by": apierror.FieldInvalidGroupBy})
 	}
 
 	rc, err := s.resolveContext(ctx, in.contextInput)

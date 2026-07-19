@@ -92,7 +92,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 	categoryID, ok := parseOptionalUUID(req.DefaultCategoryID)
 	if !ok {
-		apierror.Write(w, r, apierror.NewValidation(map[string]string{"default_category_id": "UUID non valido."}))
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"default_category_id": apierror.FieldInvalidUUID}))
 		return
 	}
 
@@ -127,7 +127,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	}
 	categoryID, ok := parseOptionalUUID(req.DefaultCategoryID)
 	if !ok {
-		apierror.Write(w, r, apierror.NewValidation(map[string]string{"default_category_id": "UUID non valido."}))
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"default_category_id": apierror.FieldInvalidUUID}))
 		return
 	}
 

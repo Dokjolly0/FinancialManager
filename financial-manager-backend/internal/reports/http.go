@@ -53,14 +53,14 @@ func parseCommonParams(r *http.Request) (contextInput, bool, error) {
 	if raw := query.Get("from"); raw != "" {
 		t, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			return contextInput{}, false, apierror.NewValidation(map[string]string{"from": "Deve essere una data RFC3339 valida."})
+			return contextInput{}, false, apierror.NewValidation(map[string]string{"from": apierror.FieldInvalidRFC3339Date})
 		}
 		in.CustomFrom = &t
 	}
 	if raw := query.Get("to"); raw != "" {
 		t, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			return contextInput{}, false, apierror.NewValidation(map[string]string{"to": "Deve essere una data RFC3339 valida."})
+			return contextInput{}, false, apierror.NewValidation(map[string]string{"to": apierror.FieldInvalidRFC3339Date})
 		}
 		in.CustomTo = &t
 	}

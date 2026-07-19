@@ -59,10 +59,10 @@ func isUniqueViolation(err error) bool {
 func validateFields(direction, title string) map[string]string {
 	fieldErrors := map[string]string{}
 	if !isValidDirection(direction) {
-		fieldErrors["direction"] = "Deve essere CREDIT o DEBIT."
+		fieldErrors["direction"] = apierror.FieldInvalidDirection
 	}
 	if strings.TrimSpace(title) == "" || len(title) > 120 {
-		fieldErrors["title"] = "Deve avere tra 1 e 120 caratteri."
+		fieldErrors["title"] = apierror.FieldTitleLength
 	}
 	return fieldErrors
 }
@@ -76,7 +76,7 @@ type SearchInput struct {
 
 func (s *Service) Search(ctx context.Context, in SearchInput) ([]templateResponse, error) {
 	if !isValidDirection(in.Direction) {
-		return nil, apierror.NewValidation(map[string]string{"direction": "Deve essere CREDIT o DEBIT."})
+		return nil, apierror.NewValidation(map[string]string{"direction": apierror.FieldInvalidDirection})
 	}
 
 	list, err := s.repo.Search(ctx, SearchFilter{UserID: in.UserID, Direction: in.Direction, Query: in.Query, Limit: in.Limit})
@@ -108,7 +108,7 @@ func (s *Service) Create(ctx context.Context, in CreateServiceInput) (templateRe
 		DefaultCategoryID: in.DefaultCategoryID, DefaultDescription: in.DefaultDescription,
 	})
 	if isUniqueViolation(err) {
-		return templateResponse{}, apierror.New(409, "TEMPLATE_ALREADY_EXISTS", "Esiste già un modello con questo titolo per questa direzione.")
+		return templateResponse{}, apierror.New(409, "TEMPLATE_ALREADY_EXISTS", "A template with this title already exists for this direction.")
 	}
 	if err != nil {
 		return templateResponse{}, err
@@ -126,7 +126,7 @@ type UpdateServiceInput struct {
 
 func (s *Service) Update(ctx context.Context, in UpdateServiceInput) (templateResponse, error) {
 	if strings.TrimSpace(in.Title) == "" || len(in.Title) > 120 {
-		return templateResponse{}, apierror.NewValidation(map[string]string{"title": "Deve avere tra 1 e 120 caratteri."})
+		return templateResponse{}, apierror.NewValidation(map[string]string{"title": apierror.FieldTitleLength})
 	}
 
 	updated, err := s.repo.Update(ctx, in.TemplateID, in.UserID, UpdateInput{
@@ -136,7 +136,7 @@ func (s *Service) Update(ctx context.Context, in UpdateServiceInput) (templateRe
 		return templateResponse{}, apierror.ErrNotFound
 	}
 	if isUniqueViolation(err) {
-		return templateResponse{}, apierror.New(409, "TEMPLATE_ALREADY_EXISTS", "Esiste già un modello con questo titolo per questa direzione.")
+		return templateResponse{}, apierror.New(409, "TEMPLATE_ALREADY_EXISTS", "A template with this title already exists for this direction.")
 	}
 	if err != nil {
 		return templateResponse{}, err

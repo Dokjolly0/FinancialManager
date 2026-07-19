@@ -166,40 +166,40 @@ func validateRegisterInput(in RegisterInput) map[string]string {
 	fieldErrors := map[string]string{}
 
 	if strings.TrimSpace(in.FirstName) == "" {
-		fieldErrors["first_name"] = "Campo obbligatorio."
+		fieldErrors["first_name"] = apierror.FieldRequired
 	}
 	if strings.TrimSpace(in.LastName) == "" {
-		fieldErrors["last_name"] = "Campo obbligatorio."
+		fieldErrors["last_name"] = apierror.FieldRequired
 	}
 	if len(users.NormalizeUsername(in.Username)) < 3 || len(in.Username) > 40 {
-		fieldErrors["username"] = "Deve avere tra 3 e 40 caratteri."
+		fieldErrors["username"] = apierror.FieldUsernameLength
 	}
 	if !strings.Contains(in.Email, "@") || len(in.Email) > 320 {
-		fieldErrors["email"] = "Email non valida."
+		fieldErrors["email"] = apierror.FieldInvalidEmail
 	}
 	if len(in.Password) < 8 {
-		fieldErrors["password"] = "Deve avere almeno 8 caratteri."
+		fieldErrors["password"] = apierror.FieldPasswordTooShort
 	}
 	if in.Password != in.ConfirmPassword {
-		fieldErrors["confirm_password"] = "Le password non coincidono."
+		fieldErrors["confirm_password"] = apierror.FieldPasswordMismatch
 	}
 	if !hexColorPattern.MatchString(in.AvatarBackgroundColor) {
-		fieldErrors["avatar_background_color"] = "Formato colore non valido."
+		fieldErrors["avatar_background_color"] = apierror.FieldInvalidColorFormat
 	}
 	if !hexColorPattern.MatchString(in.AvatarTextColor) {
-		fieldErrors["avatar_text_color"] = "Formato colore non valido."
+		fieldErrors["avatar_text_color"] = apierror.FieldInvalidColorFormat
 	}
 	if in.InitialBalanceMinor < 0 {
-		fieldErrors["initial_balance_minor"] = "Non può essere negativo."
+		fieldErrors["initial_balance_minor"] = apierror.FieldNegativeNotAllowed
 	}
 	if in.Currency != "EUR" {
-		fieldErrors["currency"] = "Solo EUR è supportato in questa versione."
+		fieldErrors["currency"] = apierror.FieldCurrencyNotSupported
 	}
 	if !in.AcceptedTerms {
-		fieldErrors["accepted_terms"] = "Devi accettare i termini per procedere."
+		fieldErrors["accepted_terms"] = apierror.FieldTermsNotAccepted
 	}
 	if in.IdempotencyKey == uuid.Nil {
-		fieldErrors["idempotency_key"] = "Campo obbligatorio."
+		fieldErrors["idempotency_key"] = apierror.FieldRequired
 	}
 
 	return fieldErrors
@@ -236,7 +236,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) ([]byte, int, 
 		if claimErr != nil {
 			if errors.Is(claimErr, idempotency.ErrKeyReusedWithDifferentPayload) {
 				return apierror.New(http.StatusUnprocessableEntity, "IDEMPOTENCY_KEY_REUSED",
-					"La chiave di idempotenza è già stata usata con dati diversi.")
+					"The idempotency key was already used with different data.")
 			}
 			return claimErr
 		}
@@ -426,7 +426,7 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (AuthResponse, error
 	}
 	if user.Status != users.StatusActive {
 		return AuthResponse{}, apierror.New(http.StatusForbidden, "ACCOUNT_DELETION_PENDING",
-			"Questo account è in fase di cancellazione.")
+			"This account is being deleted.")
 	}
 
 	creds, err := s.credentials.GetByUserID(ctx, user.ID)
@@ -437,7 +437,7 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (AuthResponse, error
 	now := s.clock.Now()
 	if creds.LockedUntil != nil && now.Before(*creds.LockedUntil) {
 		return AuthResponse{}, apierror.New(http.StatusTooManyRequests, "ACCOUNT_LOCKED",
-			"Account temporaneamente bloccato per troppi tentativi falliti.")
+			"Account temporarily locked due to too many failed attempts.")
 	}
 
 	ok, verifyErr := passwordhash.Verify(creds.PasswordHash, in.Password)
@@ -606,7 +606,7 @@ func (s *Service) checkPasswordReauthLimit(ctx context.Context, userID uuid.UUID
 // from a state where the user is presumed already logged out everywhere).
 func (s *Service) ChangePassword(ctx context.Context, userID, currentSessionID uuid.UUID, currentPassword, newPassword string) error {
 	if len(newPassword) < 8 {
-		return apierror.NewValidation(map[string]string{"new_password": "Deve avere almeno 8 caratteri."})
+		return apierror.NewValidation(map[string]string{"new_password": apierror.FieldPasswordTooShort})
 	}
 	if err := s.checkPasswordReauthLimit(ctx, userID); err != nil {
 		return err
@@ -614,7 +614,7 @@ func (s *Service) ChangePassword(ctx context.Context, userID, currentSessionID u
 
 	creds, err := s.credentials.GetByUserID(ctx, userID)
 	if errors.Is(err, ErrCredentialsNotFound) {
-		return apierror.New(http.StatusConflict, "NO_PASSWORD_SET", "Nessuna password impostata per questo account.")
+		return apierror.New(http.StatusConflict, "NO_PASSWORD_SET", "No password set for this account.")
 	}
 	if err != nil {
 		return err
@@ -622,7 +622,7 @@ func (s *Service) ChangePassword(ctx context.Context, userID, currentSessionID u
 
 	ok, verifyErr := passwordhash.Verify(creds.PasswordHash, currentPassword)
 	if verifyErr != nil || !ok {
-		return apierror.New(http.StatusUnauthorized, "INVALID_CURRENT_PASSWORD", "La password attuale non è corretta.")
+		return apierror.New(http.StatusUnauthorized, "INVALID_CURRENT_PASSWORD", "The current password is incorrect.")
 	}
 
 	hashed, err := passwordhash.Hash(newPassword)
@@ -655,7 +655,7 @@ func (s *Service) DeleteAccount(ctx context.Context, userID uuid.UUID, currentPa
 	if err == nil {
 		ok, verifyErr := passwordhash.Verify(creds.PasswordHash, currentPassword)
 		if verifyErr != nil || !ok {
-			return apierror.New(http.StatusUnauthorized, "INVALID_CURRENT_PASSWORD", "La password attuale non è corretta.")
+			return apierror.New(http.StatusUnauthorized, "INVALID_CURRENT_PASSWORD", "The current password is incorrect.")
 		}
 	} else if !errors.Is(err, ErrCredentialsNotFound) {
 		return err
@@ -706,12 +706,12 @@ func (s *Service) ForgotPassword(ctx context.Context, emailOrUsername string) er
 
 func (s *Service) ResetPassword(ctx context.Context, rawToken, newPassword string) error {
 	if len(newPassword) < 8 {
-		return apierror.NewValidation(map[string]string{"password": "Deve avere almeno 8 caratteri."})
+		return apierror.NewValidation(map[string]string{"password": apierror.FieldPasswordTooShort})
 	}
 
 	userID, err := s.passwordReset.ConsumeValid(ctx, security.HashToken(rawToken))
 	if errors.Is(err, ErrTokenNotFound) {
-		return apierror.New(http.StatusUnprocessableEntity, "INVALID_OR_EXPIRED_TOKEN", "Il link non è valido o è scaduto.")
+		return apierror.New(http.StatusUnprocessableEntity, "INVALID_OR_EXPIRED_TOKEN", "The link is invalid or has expired.")
 	}
 	if err != nil {
 		return err
@@ -736,7 +736,7 @@ func (s *Service) ResetPassword(ctx context.Context, rawToken, newPassword strin
 func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 	userID, err := s.emailVerification.ConsumeValid(ctx, security.HashToken(rawToken))
 	if errors.Is(err, ErrTokenNotFound) {
-		return apierror.New(http.StatusUnprocessableEntity, "INVALID_OR_EXPIRED_TOKEN", "Il link non è valido o è scaduto.")
+		return apierror.New(http.StatusUnprocessableEntity, "INVALID_OR_EXPIRED_TOKEN", "The link is invalid or has expired.")
 	}
 	if err != nil {
 		return err

@@ -115,16 +115,16 @@ func (h *Handler) updateMe(w http.ResponseWriter, r *http.Request) {
 
 	fieldErrors := map[string]string{}
 	if req.FirstName == "" {
-		fieldErrors["first_name"] = "Campo obbligatorio."
+		fieldErrors["first_name"] = apierror.FieldRequired
 	}
 	if req.LastName == "" {
-		fieldErrors["last_name"] = "Campo obbligatorio."
+		fieldErrors["last_name"] = apierror.FieldRequired
 	}
 	if req.Theme != "system" && req.Theme != "light" && req.Theme != "dark" {
-		fieldErrors["theme"] = "Deve essere system, light o dark."
+		fieldErrors["theme"] = apierror.FieldInvalidTheme
 	}
 	if req.FirstDayOfWeek != FirstDayOfWeekMonday && req.FirstDayOfWeek != FirstDayOfWeekSunday {
-		fieldErrors["first_day_of_week"] = "Deve essere monday o sunday."
+		fieldErrors["first_day_of_week"] = apierror.FieldInvalidFirstDayOfWeek
 	}
 	if len(fieldErrors) > 0 {
 		apierror.Write(w, r, apierror.NewValidation(fieldErrors))

@@ -57,7 +57,7 @@ func NewService(d Deps) *Service {
 // 0018's comment.
 func (s *Service) RequestExport(ctx context.Context, userID uuid.UUID, format string) (Record, error) {
 	if !IsValidFormat(format) {
-		return Record{}, apierror.NewValidation(map[string]string{"format": "Deve essere csv o json."})
+		return Record{}, apierror.NewValidation(map[string]string{"format": apierror.FieldInvalidExportFormat})
 	}
 
 	record, err := s.repo.Create(ctx, userID, format)
@@ -111,7 +111,7 @@ func (s *Service) DownloadContent(ctx context.Context, userID, exportID uuid.UUI
 		return Record{}, nil, err
 	}
 	if record.Status != StatusReady || record.ObjectKey == nil {
-		return Record{}, nil, apierror.New(http.StatusConflict, "EXPORT_NOT_READY", "L'esportazione non è ancora pronta.")
+		return Record{}, nil, apierror.New(http.StatusConflict, "EXPORT_NOT_READY", "The export is not ready yet.")
 	}
 
 	content, err := s.store.Get(ctx, *record.ObjectKey)

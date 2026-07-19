@@ -76,7 +76,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	idempotencyKey, err := uuid.Parse(r.Header.Get("Idempotency-Key"))
 	if err != nil {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{
-			"Idempotency-Key": "Header obbligatorio, deve essere un UUID.",
+			"Idempotency-Key": apierror.FieldInvalidUUID,
 		}))
 		return
 	}
@@ -279,7 +279,7 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.NewPassword != req.ConfirmPassword {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{
-			"confirm_new_password": "Le password non coincidono.",
+			"confirm_new_password": apierror.FieldPasswordMismatch,
 		}))
 		return
 	}

@@ -86,7 +86,7 @@ func (s *Service) bumpReportVersion(ctx context.Context, walletID uuid.UUID) {
 // resolveAttachments validates that an optional category_id is visible to
 // the user (system or owned, plan.md section 14.7), that an optional
 // template_id belongs to the user (bumping its usage stats, plan.md section
-// 4.4: "ordinati per frequenza e utilizzo recente"), and that an optional
+// 4.4: "ordered by frequency and recent use"), and that an optional
 // media_id belongs to the user (bumping last_used_at, plan.md section
 // 16.6). All checks run against tx so a cross-user reference rolls back the
 // whole mutation, not just the side effect.
@@ -94,7 +94,7 @@ func (s *Service) resolveAttachments(ctx context.Context, tx pgx.Tx, userID uuid
 	if categoryID != nil {
 		if _, err := s.categories.WithQuerier(tx).GetByIDAndVisibility(ctx, *categoryID, userID); err != nil {
 			if errors.Is(err, categories.ErrNotFound) {
-				return apierror.NewValidation(map[string]string{"category_id": "Categoria non trovata."})
+				return apierror.NewValidation(map[string]string{"category_id": "CATEGORY_NOT_FOUND"})
 			}
 			return err
 		}
@@ -102,7 +102,7 @@ func (s *Service) resolveAttachments(ctx context.Context, tx pgx.Tx, userID uuid
 	if templateID != nil {
 		if err := s.templates.WithQuerier(tx).BumpUsage(ctx, *templateID, userID); err != nil {
 			if errors.Is(err, templates.ErrNotFound) {
-				return apierror.NewValidation(map[string]string{"template_id": "Modello non trovato."})
+				return apierror.NewValidation(map[string]string{"template_id": "TEMPLATE_NOT_FOUND"})
 			}
 			return err
 		}
@@ -110,7 +110,7 @@ func (s *Service) resolveAttachments(ctx context.Context, tx pgx.Tx, userID uuid
 	if mediaID != nil {
 		if err := s.media.WithQuerier(tx).MarkUsed(ctx, *mediaID, userID); err != nil {
 			if errors.Is(err, media.ErrNotFound) {
-				return apierror.NewValidation(map[string]string{"media_id": "Immagine non trovata."})
+				return apierror.NewValidation(map[string]string{"media_id": "MEDIA_NOT_FOUND"})
 			}
 			return err
 		}
@@ -231,15 +231,15 @@ type CreateStandardInput struct {
 func validateTransactionFields(direction string, amountMinor int64, title string) map[string]string {
 	fieldErrors := map[string]string{}
 	if !isValidDirection(direction) {
-		fieldErrors["direction"] = "Deve essere CREDIT o DEBIT."
+		fieldErrors["direction"] = apierror.FieldInvalidDirection
 	}
 	if amountMinor <= 0 {
-		fieldErrors["amount_minor"] = "Deve essere maggiore di zero."
+		fieldErrors["amount_minor"] = apierror.FieldAmountNotPositive
 	} else if amountMinor > maxAmountMinor {
-		fieldErrors["amount_minor"] = "Importo non plausibile."
+		fieldErrors["amount_minor"] = apierror.FieldAmountImplausible
 	}
 	if strings.TrimSpace(title) == "" || len(title) > 120 {
-		fieldErrors["title"] = "Deve avere tra 1 e 120 caratteri."
+		fieldErrors["title"] = apierror.FieldTitleLength
 	}
 	return fieldErrors
 }
@@ -247,14 +247,15 @@ func validateTransactionFields(direction string, amountMinor int64, title string
 // CreateStandard creates a STANDARD transaction and atomically applies its
 // effect to the wallet balance (plan.md section 13.2), replaying the
 // original response for a retried Idempotency-Key instead of duplicating
-// the mutation (section 26.2: "Doppi tap o retry non creano duplicati").
+// the mutation (section 26.2: "Double taps or retries don't create
+// duplicates").
 func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([]byte, int, error) {
 	fieldErrors := validateTransactionFields(in.Direction, in.AmountMinor, in.Title)
 	if in.Currency != "EUR" {
-		fieldErrors["currency"] = "Solo EUR è supportato in questa versione."
+		fieldErrors["currency"] = apierror.FieldCurrencyNotSupported
 	}
 	if in.IdempotencyKey == uuid.Nil {
-		fieldErrors["idempotency_key"] = "Campo obbligatorio."
+		fieldErrors["idempotency_key"] = apierror.FieldRequired
 	}
 	if len(fieldErrors) > 0 {
 		return nil, 0, apierror.NewValidation(fieldErrors)
@@ -274,7 +275,7 @@ func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([
 		if claimErr != nil {
 			if errors.Is(claimErr, idempotency.ErrKeyReusedWithDifferentPayload) {
 				return apierror.New(http.StatusUnprocessableEntity, "IDEMPOTENCY_KEY_REUSED",
-					"La chiave di idempotenza è già stata usata con dati diversi.")
+					"The idempotency key was already used with different data.")
 			}
 			return claimErr
 		}
@@ -289,7 +290,7 @@ func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([
 		}
 		walletID = wallet.ID
 		if in.Currency != wallet.Currency {
-			return apierror.NewValidation(map[string]string{"currency": "Deve corrispondere alla valuta del portafoglio."})
+			return apierror.NewValidation(map[string]string{"currency": apierror.FieldCurrencyMismatch})
 		}
 		if err := s.resolveAttachments(ctx, tx, in.UserID, in.CategoryID, in.TemplateID, in.MediaID); err != nil {
 			return err
@@ -420,7 +421,7 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 		}
 		if existing.Kind != KindStandard {
 			return apierror.New(http.StatusForbidden, "NOT_EDITABLE",
-				"Solo le operazioni standard possono essere modificate.")
+				"Only standard transactions can be edited.")
 		}
 		if err := s.resolveAttachments(ctx, tx, in.UserID, in.CategoryID, in.TemplateID, in.MediaID); err != nil {
 			return err
@@ -467,7 +468,7 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 
 // Delete reverses the transaction's balance impact and soft-deletes it
 // (plan.md section 13.4). OPENING_BALANCE cannot be deleted this way
-// (section 13.4: "non dovrebbe essere eliminabile dalla UI ordinaria").
+// (section 13.4: "should not be deletable from the ordinary UI").
 func (s *Service) Delete(ctx context.Context, userID, transactionID uuid.UUID) (walletSnapshot, error) {
 	var result walletSnapshot
 	var walletID uuid.UUID
@@ -487,7 +488,7 @@ func (s *Service) Delete(ctx context.Context, userID, transactionID uuid.UUID) (
 		}
 		if existing.Kind == KindOpeningBalance {
 			return apierror.New(http.StatusForbidden, "OPENING_BALANCE_NOT_DELETABLE",
-				"Il saldo iniziale non può essere eliminato direttamente.")
+				"The initial balance cannot be deleted directly.")
 		}
 
 		newBalance := wallet.CurrentBalanceMinor - SignedDelta(existing.Direction, existing.AmountMinor)
@@ -533,10 +534,10 @@ type CreateBalanceAdjustmentInput struct {
 // row is created, since amount_minor must be > 0.
 func (s *Service) CreateBalanceAdjustment(ctx context.Context, in CreateBalanceAdjustmentInput) ([]byte, int, error) {
 	if in.IdempotencyKey == uuid.Nil {
-		return nil, 0, apierror.NewValidation(map[string]string{"idempotency_key": "Campo obbligatorio."})
+		return nil, 0, apierror.NewValidation(map[string]string{"idempotency_key": apierror.FieldRequired})
 	}
 	if in.TargetBalanceMinor < 0 {
-		return nil, 0, apierror.NewValidation(map[string]string{"target_balance_minor": "Non può essere negativo."})
+		return nil, 0, apierror.NewValidation(map[string]string{"target_balance_minor": apierror.FieldNegativeNotAllowed})
 	}
 
 	occurredAt := in.OccurredAt
@@ -553,7 +554,7 @@ func (s *Service) CreateBalanceAdjustment(ctx context.Context, in CreateBalanceA
 		if claimErr != nil {
 			if errors.Is(claimErr, idempotency.ErrKeyReusedWithDifferentPayload) {
 				return apierror.New(http.StatusUnprocessableEntity, "IDEMPOTENCY_KEY_REUSED",
-					"La chiave di idempotenza è già stata usata con dati diversi.")
+					"The idempotency key was already used with different data.")
 			}
 			return claimErr
 		}

@@ -32,22 +32,60 @@ func NewValidation(fieldErrors map[string]string) *Error {
 	return &Error{
 		Status:      http.StatusUnprocessableEntity,
 		Code:        "VALIDATION_ERROR",
-		Message:     "La richiesta contiene dati non validi.",
+		Message:     "The request contains invalid data.",
 		FieldErrors: fieldErrors,
 	}
 }
 
 var (
-	ErrBadRequest    = New(http.StatusBadRequest, "BAD_REQUEST", "Richiesta malformata.")
-	ErrUnauthorized  = New(http.StatusUnauthorized, "UNAUTHORIZED", "Autenticazione richiesta o non valida.")
-	ErrForbidden     = New(http.StatusForbidden, "FORBIDDEN", "Operazione non consentita.")
-	ErrNotFound      = New(http.StatusNotFound, "NOT_FOUND", "Risorsa non trovata.")
-	ErrConflict      = New(http.StatusConflict, "CONFLICT", "La risorsa è cambiata rispetto a quanto atteso.")
-	ErrRateLimited   = New(http.StatusTooManyRequests, "RATE_LIMITED", "Troppi tentativi. Riprova più tardi.")
-	ErrInternal      = New(http.StatusInternalServerError, "INTERNAL_ERROR", "Si è verificato un errore interno.")
-	ErrEmailInUse    = New(http.StatusConflict, "EMAIL_IN_USE", "Email già registrata.")
-	ErrUsernameInUse = New(http.StatusConflict, "USERNAME_IN_USE", "Nome utente già in uso.")
-	ErrInvalidLogin  = New(http.StatusUnauthorized, "INVALID_CREDENTIALS", "Credenziali non valide.")
+	ErrBadRequest    = New(http.StatusBadRequest, "BAD_REQUEST", "Malformed request.")
+	ErrUnauthorized  = New(http.StatusUnauthorized, "UNAUTHORIZED", "Authentication required or invalid.")
+	ErrForbidden     = New(http.StatusForbidden, "FORBIDDEN", "Operation not allowed.")
+	ErrNotFound      = New(http.StatusNotFound, "NOT_FOUND", "Resource not found.")
+	ErrConflict      = New(http.StatusConflict, "CONFLICT", "The resource has changed from what was expected.")
+	ErrRateLimited   = New(http.StatusTooManyRequests, "RATE_LIMITED", "Too many attempts. Try again later.")
+	ErrInternal      = New(http.StatusInternalServerError, "INTERNAL_ERROR", "An internal error occurred.")
+	ErrEmailInUse    = New(http.StatusConflict, "EMAIL_IN_USE", "Email already registered.")
+	ErrUsernameInUse = New(http.StatusConflict, "USERNAME_IN_USE", "Username already in use.")
+	ErrInvalidLogin  = New(http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid credentials.")
+)
+
+// Field-error codes: reusable, machine-readable identifiers for
+// FieldErrors values. Clients (e.g. the Flutter app) localize these
+// instead of displaying server-generated text, so the code — not any
+// message — is the stable contract. Reuse one constant across every call
+// site that reports the same validation failure; add a one-off inline
+// string only for a message so specific to a single field that sharing a
+// code would lose meaning (e.g. "CATEGORY_NOT_FOUND").
+const (
+	FieldRequired              = "REQUIRED_FIELD"
+	FieldUsernameLength        = "USERNAME_LENGTH_INVALID"
+	FieldInvalidEmail          = "INVALID_EMAIL"
+	FieldPasswordTooShort      = "PASSWORD_TOO_SHORT"
+	FieldPasswordMismatch      = "PASSWORDS_DO_NOT_MATCH"
+	FieldInvalidColorFormat    = "INVALID_COLOR_FORMAT"
+	FieldNegativeNotAllowed    = "NEGATIVE_NOT_ALLOWED"
+	FieldCurrencyNotSupported  = "CURRENCY_NOT_SUPPORTED"
+	FieldTermsNotAccepted      = "TERMS_NOT_ACCEPTED"
+	FieldInvalidUUID           = "INVALID_UUID"
+	FieldInvalidDirection      = "INVALID_DIRECTION"
+	FieldAmountNotPositive     = "AMOUNT_NOT_POSITIVE"
+	FieldAmountImplausible     = "AMOUNT_IMPLAUSIBLE"
+	FieldTitleLength           = "TITLE_LENGTH_INVALID"
+	FieldCurrencyMismatch      = "CURRENCY_MISMATCH"
+	FieldMustBeInteger         = "MUST_BE_INTEGER"
+	FieldInvalidRFC3339Date    = "INVALID_RFC3339_DATE"
+	FieldInvalidCategoryScope  = "INVALID_CATEGORY_SCOPE"
+	FieldCategoryNameLength    = "CATEGORY_NAME_LENGTH_INVALID"
+	FieldInvalidTheme          = "INVALID_THEME"
+	FieldInvalidFirstDayOfWeek = "INVALID_FIRST_DAY_OF_WEEK"
+	FieldInvalidExportFormat   = "INVALID_EXPORT_FORMAT"
+	FieldInvalidTimezone       = "INVALID_TIMEZONE"
+	FieldInvalidPreset         = "INVALID_PRESET"
+	FieldCustomRangeRequired   = "CUSTOM_RANGE_REQUIRED"
+	FieldInvalidGroupBy        = "INVALID_GROUP_BY"
+	FieldInvalidMediaKind      = "INVALID_MEDIA_KIND"
+	FieldProviderNotSupported  = "PROVIDER_NOT_SUPPORTED"
 )
 
 // Write renders err as the section 10.6 JSON envelope. Any error that is

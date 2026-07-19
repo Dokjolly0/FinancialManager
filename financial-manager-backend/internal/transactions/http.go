@@ -85,7 +85,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	idempotencyKey, err := uuid.Parse(r.Header.Get("Idempotency-Key"))
 	if err != nil {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{
-			"Idempotency-Key": "Header obbligatorio, deve essere un UUID.",
+			"Idempotency-Key": apierror.FieldInvalidUUID,
 		}))
 		return
 	}
@@ -105,23 +105,23 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	occurredAt, ok := parseOccurredAt(req.OccurredAt)
 	if !ok {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{
-			"occurred_at": "Deve essere una data RFC3339 valida.",
+			"occurred_at": apierror.FieldInvalidRFC3339Date,
 		}))
 		return
 	}
 	categoryID, ok := parseOptionalUUID(req.CategoryID)
 	if !ok {
-		apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": "UUID non valido."}))
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": apierror.FieldInvalidUUID}))
 		return
 	}
 	templateID, ok := parseOptionalUUID(req.TemplateID)
 	if !ok {
-		apierror.Write(w, r, apierror.NewValidation(map[string]string{"template_id": "UUID non valido."}))
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"template_id": apierror.FieldInvalidUUID}))
 		return
 	}
 	mediaID, ok := parseOptionalUUID(req.MediaID)
 	if !ok {
-		apierror.Write(w, r, apierror.NewValidation(map[string]string{"media_id": "UUID non valido."}))
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"media_id": apierror.FieldInvalidUUID}))
 		return
 	}
 
@@ -188,7 +188,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 
 	direction := query.Get("direction")
 	if direction != "" && !isValidDirection(direction) {
-		apierror.Write(w, r, apierror.NewValidation(map[string]string{"direction": "Deve essere CREDIT o DEBIT."}))
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"direction": apierror.FieldInvalidDirection}))
 		return
 	}
 
@@ -196,7 +196,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	if raw := query.Get("category_id"); raw != "" {
 		parsed, err := uuid.Parse(raw)
 		if err != nil {
-			apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": "UUID non valido."}))
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": apierror.FieldInvalidUUID}))
 			return
 		}
 		categoryID = parsed
@@ -206,7 +206,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	if raw := query.Get("amount_min_minor"); raw != "" {
 		parsed, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
-			apierror.Write(w, r, apierror.NewValidation(map[string]string{"amount_min_minor": "Deve essere un intero."}))
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"amount_min_minor": apierror.FieldMustBeInteger}))
 			return
 		}
 		amountMin = parsed
@@ -214,7 +214,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	if raw := query.Get("amount_max_minor"); raw != "" {
 		parsed, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
-			apierror.Write(w, r, apierror.NewValidation(map[string]string{"amount_max_minor": "Deve essere un intero."}))
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"amount_max_minor": apierror.FieldMustBeInteger}))
 			return
 		}
 		amountMax = parsed
@@ -224,7 +224,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	if raw := query.Get("occurred_from"); raw != "" {
 		parsed, ok := parseOccurredAt(raw)
 		if !ok {
-			apierror.Write(w, r, apierror.NewValidation(map[string]string{"occurred_from": "Deve essere una data RFC3339 valida."}))
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"occurred_from": apierror.FieldInvalidRFC3339Date}))
 			return
 		}
 		occurredFrom = parsed
@@ -232,7 +232,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	if raw := query.Get("occurred_to"); raw != "" {
 		parsed, ok := parseOccurredAt(raw)
 		if !ok {
-			apierror.Write(w, r, apierror.NewValidation(map[string]string{"occurred_to": "Deve essere una data RFC3339 valida."}))
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"occurred_to": apierror.FieldInvalidRFC3339Date}))
 			return
 		}
 		occurredTo = parsed
@@ -292,23 +292,23 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	occurredAt, ok := parseOccurredAt(req.OccurredAt)
 	if !ok {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{
-			"occurred_at": "Deve essere una data RFC3339 valida.",
+			"occurred_at": apierror.FieldInvalidRFC3339Date,
 		}))
 		return
 	}
 	categoryID, ok := parseOptionalUUID(req.CategoryID)
 	if !ok {
-		apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": "UUID non valido."}))
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": apierror.FieldInvalidUUID}))
 		return
 	}
 	templateID, ok := parseOptionalUUID(req.TemplateID)
 	if !ok {
-		apierror.Write(w, r, apierror.NewValidation(map[string]string{"template_id": "UUID non valido."}))
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"template_id": apierror.FieldInvalidUUID}))
 		return
 	}
 	mediaID, ok := parseOptionalUUID(req.MediaID)
 	if !ok {
-		apierror.Write(w, r, apierror.NewValidation(map[string]string{"media_id": "UUID non valido."}))
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"media_id": apierror.FieldInvalidUUID}))
 		return
 	}
 
@@ -370,7 +370,7 @@ func (h *Handler) createBalanceAdjustment(w http.ResponseWriter, r *http.Request
 	idempotencyKey, err := uuid.Parse(r.Header.Get("Idempotency-Key"))
 	if err != nil {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{
-			"Idempotency-Key": "Header obbligatorio, deve essere un UUID.",
+			"Idempotency-Key": apierror.FieldInvalidUUID,
 		}))
 		return
 	}
@@ -390,7 +390,7 @@ func (h *Handler) createBalanceAdjustment(w http.ResponseWriter, r *http.Request
 	occurredAt, ok := parseOccurredAt(req.OccurredAt)
 	if !ok {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{
-			"occurred_at": "Deve essere una data RFC3339 valida.",
+			"occurred_at": apierror.FieldInvalidRFC3339Date,
 		}))
 		return
 	}

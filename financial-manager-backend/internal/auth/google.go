@@ -50,7 +50,7 @@ type GoogleTicketResponse struct {
 func (s *Service) GoogleVerify(ctx context.Context, in GoogleVerifyInput) (GoogleVerifyResult, error) {
 	claims, err := s.googleVerifier.Verify(ctx, in.IDToken)
 	if err != nil {
-		return GoogleVerifyResult{}, apierror.New(http.StatusUnauthorized, "INVALID_GOOGLE_TOKEN", "Token Google non valido.")
+		return GoogleVerifyResult{}, apierror.New(http.StatusUnauthorized, "INVALID_GOOGLE_TOKEN", "Invalid Google token.")
 	}
 
 	identity, err := s.identities.GetByProviderSubject(ctx, identities.ProviderGoogle, claims.Subject)
@@ -169,33 +169,33 @@ func validateGoogleCompletionInput(in CompleteGoogleRegistrationInput) map[strin
 	fieldErrors := map[string]string{}
 
 	if len(users.NormalizeUsername(in.Username)) < 3 || len(in.Username) > 40 {
-		fieldErrors["username"] = "Deve avere tra 3 e 40 caratteri."
+		fieldErrors["username"] = apierror.FieldUsernameLength
 	}
 	if in.Password != "" {
 		if len(in.Password) < 8 {
-			fieldErrors["password"] = "Deve avere almeno 8 caratteri."
+			fieldErrors["password"] = apierror.FieldPasswordTooShort
 		}
 		if in.Password != in.ConfirmPassword {
-			fieldErrors["confirm_password"] = "Le password non coincidono."
+			fieldErrors["confirm_password"] = apierror.FieldPasswordMismatch
 		}
 	}
 	if !hexColorPattern.MatchString(in.AvatarBackgroundColor) {
-		fieldErrors["avatar_background_color"] = "Formato colore non valido."
+		fieldErrors["avatar_background_color"] = apierror.FieldInvalidColorFormat
 	}
 	if !hexColorPattern.MatchString(in.AvatarTextColor) {
-		fieldErrors["avatar_text_color"] = "Formato colore non valido."
+		fieldErrors["avatar_text_color"] = apierror.FieldInvalidColorFormat
 	}
 	if in.InitialBalanceMinor < 0 {
-		fieldErrors["initial_balance_minor"] = "Non può essere negativo."
+		fieldErrors["initial_balance_minor"] = apierror.FieldNegativeNotAllowed
 	}
 	if in.Currency != "EUR" {
-		fieldErrors["currency"] = "Solo EUR è supportato in questa versione."
+		fieldErrors["currency"] = apierror.FieldCurrencyNotSupported
 	}
 	if !in.AcceptedTerms {
-		fieldErrors["accepted_terms"] = "Devi accettare i termini per procedere."
+		fieldErrors["accepted_terms"] = apierror.FieldTermsNotAccepted
 	}
 	if strings.TrimSpace(in.Ticket) == "" {
-		fieldErrors["ticket"] = "Campo obbligatorio."
+		fieldErrors["ticket"] = apierror.FieldRequired
 	}
 
 	return fieldErrors
@@ -209,7 +209,7 @@ func (s *Service) CompleteGoogleRegistration(ctx context.Context, in CompleteGoo
 	ticket, err := s.ticketStore.Consume(ctx, in.Ticket)
 	if errors.Is(err, identities.ErrTicketNotFound) {
 		return AuthResponse{}, apierror.New(http.StatusUnprocessableEntity, "INVALID_OR_EXPIRED_TOKEN",
-			"Il ticket di registrazione non è valido o è scaduto. Accedi di nuovo con Google.")
+			"The registration ticket is invalid or has expired. Sign in with Google again.")
 	}
 	if err != nil {
 		return AuthResponse{}, err
@@ -337,19 +337,19 @@ func (s *Service) LinkGoogle(ctx context.Context, userID uuid.UUID, idToken, cur
 	}
 	ok, verifyErr := passwordhash.Verify(creds.PasswordHash, currentPassword)
 	if verifyErr != nil || !ok {
-		return apierror.New(http.StatusUnauthorized, "REAUTH_REQUIRED", "Conferma la password per collegare un account Google.")
+		return apierror.New(http.StatusUnauthorized, "REAUTH_REQUIRED", "Confirm your password to link a Google account.")
 	}
 
 	claims, err := s.googleVerifier.Verify(ctx, idToken)
 	if err != nil {
-		return apierror.New(http.StatusUnauthorized, "INVALID_GOOGLE_TOKEN", "Token Google non valido.")
+		return apierror.New(http.StatusUnauthorized, "INVALID_GOOGLE_TOKEN", "Invalid Google token.")
 	}
 
 	existing, err := s.identities.GetByProviderSubject(ctx, identities.ProviderGoogle, claims.Subject)
 	if err == nil {
 		if existing.UserID != userID {
 			return apierror.New(http.StatusConflict, "GOOGLE_ACCOUNT_ALREADY_LINKED",
-				"Questo account Google è già collegato a un altro utente.")
+				"This Google account is already linked to another user.")
 		}
 		return nil
 	}
@@ -375,7 +375,7 @@ func (s *Service) UnlinkGoogle(ctx context.Context, userID uuid.UUID) error {
 	if _, err := s.credentials.GetByUserID(ctx, userID); err != nil {
 		if errors.Is(err, ErrCredentialsNotFound) {
 			return apierror.New(http.StatusConflict, "NO_ALTERNATIVE_LOGIN_METHOD",
-				"Imposta prima una password per poter scollegare Google.")
+				"Set a password first before unlinking Google.")
 		}
 		return err
 	}

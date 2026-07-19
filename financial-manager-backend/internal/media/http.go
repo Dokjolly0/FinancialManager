@@ -133,13 +133,13 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) uploadFromFile(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
 	r.Body = http.MaxBytesReader(w, r.Body, h.maxUploadBytes+1<<20) // +1MiB slack for multipart overhead/other fields
 	if err := r.ParseMultipartForm(h.maxUploadBytes + 1<<20); err != nil {
-		apierror.Write(w, r, apierror.New(http.StatusRequestEntityTooLarge, "UPLOAD_TOO_LARGE", "Il file supera la dimensione massima consentita."))
+		apierror.Write(w, r, apierror.New(http.StatusRequestEntityTooLarge, "UPLOAD_TOO_LARGE", "The file exceeds the maximum allowed size."))
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		apierror.Write(w, r, apierror.NewValidation(map[string]string{"file": "Campo obbligatorio."}))
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"file": apierror.FieldRequired}))
 		return
 	}
 	defer file.Close()

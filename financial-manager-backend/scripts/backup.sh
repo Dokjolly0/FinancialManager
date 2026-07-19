@@ -4,8 +4,8 @@
 # required) for whichever `docker compose` stack is currently up (plan.md
 # section 21.10). Redis is deliberately not backed up here — it holds
 # caches/rate limits/idempotency records, never the source of truth
-# (plan.md section 20.4: "Redis non è parte del backup finanziario
-# principale").
+# (plan.md section 20.4: "Redis is not part of the main financial
+# backup").
 #
 # Usage: ./scripts/backup.sh [compose-files...]
 #   BACKUP_DIR              where backups are written (default ./backups)

@@ -119,13 +119,13 @@ func (s *Service) processAndStore(
 	raw []byte, crop *CropRect,
 ) (assetResponse, error) {
 	if !IsValidKind(kind) {
-		return assetResponse{}, apierror.NewValidation(map[string]string{"kind": "Deve essere profile, transaction o category."})
+		return assetResponse{}, apierror.NewValidation(map[string]string{"kind": apierror.FieldInvalidMediaKind})
 	}
 
 	if _, err := DetectMIME(raw); err != nil {
 		metrics.UploadsRejected.WithLabelValues("format").Inc()
 		return assetResponse{}, apierror.New(http.StatusUnprocessableEntity, "UNSUPPORTED_IMAGE_FORMAT",
-			"Formato immagine non supportato. Usa JPEG, PNG o WebP.")
+			"Unsupported image format. Use JPEG, PNG, or WebP.")
 	}
 
 	defer metrics.ObserveImageProcessingSince(time.Now())
@@ -134,10 +134,10 @@ func (s *Service) processAndStore(
 	if err != nil {
 		if errors.Is(err, ErrImageTooLarge) {
 			metrics.UploadsRejected.WithLabelValues("pixels").Inc()
-			return assetResponse{}, apierror.New(http.StatusUnprocessableEntity, "IMAGE_TOO_LARGE", "L'immagine supera le dimensioni massime consentite.")
+			return assetResponse{}, apierror.New(http.StatusUnprocessableEntity, "IMAGE_TOO_LARGE", "The image exceeds the maximum allowed dimensions.")
 		}
 		metrics.UploadsRejected.WithLabelValues("format").Inc()
-		return assetResponse{}, apierror.New(http.StatusUnprocessableEntity, "UNSUPPORTED_IMAGE_FORMAT", "Impossibile decodificare l'immagine.")
+		return assetResponse{}, apierror.New(http.StatusUnprocessableEntity, "UNSUPPORTED_IMAGE_FORMAT", "Unable to decode the image.")
 	}
 
 	cropped := ApplyCrop(decoded, crop)
@@ -188,7 +188,7 @@ func (s *Service) Upload(ctx context.Context, in UploadInput) (assetResponse, er
 	}
 	if int64(len(in.Content)) > s.maxBytes {
 		metrics.UploadsRejected.WithLabelValues("size").Inc()
-		return assetResponse{}, apierror.New(http.StatusRequestEntityTooLarge, "UPLOAD_TOO_LARGE", "Il file supera la dimensione massima consentita.")
+		return assetResponse{}, apierror.New(http.StatusRequestEntityTooLarge, "UPLOAD_TOO_LARGE", "The file exceeds the maximum allowed size.")
 	}
 	var filename *string
 	if in.OriginalFilename != "" {
@@ -213,12 +213,12 @@ func (s *Service) SelectFromSearch(ctx context.Context, in SelectFromSearchInput
 		return assetResponse{}, err
 	}
 	if in.Provider != "unsplash" {
-		return assetResponse{}, apierror.NewValidation(map[string]string{"provider": "Provider non supportato."})
+		return assetResponse{}, apierror.NewValidation(map[string]string{"provider": apierror.FieldProviderNotSupported})
 	}
 
 	reader, meta, err := s.search.Fetch(ctx, in.ExternalID)
 	if err != nil {
-		return assetResponse{}, apierror.New(http.StatusBadGateway, "IMAGE_FETCH_FAILED", "Impossibile scaricare l'immagine selezionata.")
+		return assetResponse{}, apierror.New(http.StatusBadGateway, "IMAGE_FETCH_FAILED", "Unable to download the selected image.")
 	}
 	defer reader.Close()
 
@@ -228,7 +228,7 @@ func (s *Service) SelectFromSearch(ctx context.Context, in SelectFromSearchInput
 	}
 	if int64(len(content)) > s.maxBytes {
 		metrics.UploadsRejected.WithLabelValues("size").Inc()
-		return assetResponse{}, apierror.New(http.StatusRequestEntityTooLarge, "UPLOAD_TOO_LARGE", "L'immagine selezionata supera la dimensione massima consentita.")
+		return assetResponse{}, apierror.New(http.StatusRequestEntityTooLarge, "UPLOAD_TOO_LARGE", "The selected image exceeds the maximum allowed size.")
 	}
 
 	provider := in.Provider
@@ -257,11 +257,11 @@ func (s *Service) Search(ctx context.Context, in SearchInput) ([]searchResponse,
 		return nil, err
 	}
 	if strings.TrimSpace(in.Query) == "" {
-		return nil, apierror.NewValidation(map[string]string{"q": "Campo obbligatorio."})
+		return nil, apierror.NewValidation(map[string]string{"q": apierror.FieldRequired})
 	}
 	results, err := s.search.Search(ctx, in.Query, in.Page, in.Limit)
 	if err != nil {
-		return nil, apierror.New(http.StatusBadGateway, "IMAGE_SEARCH_FAILED", "Ricerca immagini non disponibile al momento.")
+		return nil, apierror.New(http.StatusBadGateway, "IMAGE_SEARCH_FAILED", "Image search is currently unavailable.")
 	}
 	out := make([]searchResponse, 0, len(results))
 	for _, r := range results {
@@ -318,7 +318,7 @@ func (s *Service) Delete(ctx context.Context, ownerUserID, id uuid.UUID) error {
 		return err
 	}
 	if referenced {
-		return apierror.New(http.StatusConflict, "MEDIA_IN_USE", "L'immagine è ancora in uso e non può essere eliminata.")
+		return apierror.New(http.StatusConflict, "MEDIA_IN_USE", "The image is still in use and cannot be deleted.")
 	}
 
 	if err := s.repo.SoftDelete(ctx, id, ownerUserID); err != nil {
