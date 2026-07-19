@@ -312,3 +312,46 @@ func TestReconcile_FindsNoMismatchAfterNormalOperations(t *testing.T) {
 		}
 	}
 }
+
+// TestCrossUserAccess_IsAlwaysRejected covers plan.md section 19.1/23.8
+// (BOLA/IDOR): user B must not be able to read, edit, or delete user A's
+// transaction just by knowing its ID.
+func TestCrossUserAccess_IsAlwaysRejected(t *testing.T) {
+	owner := newHarness(t, 100000)
+	intruder := newHarness(t, 0)
+	ctx := context.Background()
+
+	body, _, err := owner.service.CreateStandard(ctx, transactions.CreateStandardInput{
+		UserID: owner.userID, Direction: transactions.DirectionDebit, AmountMinor: 1500,
+		Currency: "EUR", Title: "Privato di A", IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
+	})
+	if err != nil {
+		t.Fatalf("CreateStandard() error = %v", err)
+	}
+	txIDStr, _ := decodeCreateResponse(t, body)
+	txID, err := uuid.Parse(txIDStr)
+	if err != nil {
+		t.Fatalf("parse transaction id: %v", err)
+	}
+
+	if _, err := owner.service.Get(ctx, intruder.userID, txID); !errors.Is(err, apierror.ErrNotFound) {
+		t.Errorf("Get() by intruder = %v, want apierror.ErrNotFound", err)
+	}
+
+	_, err = owner.service.UpdateStandard(ctx, transactions.UpdateStandardInput{
+		UserID: intruder.userID, TransactionID: txID, Direction: transactions.DirectionDebit,
+		AmountMinor: 999999, Title: "Hijacked", ExpectedVersion: 1,
+	})
+	if !errors.Is(err, apierror.ErrNotFound) {
+		t.Errorf("UpdateStandard() by intruder = %v, want apierror.ErrNotFound", err)
+	}
+
+	if _, err := owner.service.Delete(ctx, intruder.userID, txID); !errors.Is(err, apierror.ErrNotFound) {
+		t.Errorf("Delete() by intruder = %v, want apierror.ErrNotFound", err)
+	}
+
+	// The transaction must still exist, untouched, for its real owner.
+	if _, err := owner.service.Get(ctx, owner.userID, txID); err != nil {
+		t.Errorf("owner's own Get() after intruder attempts = %v, want no error", err)
+	}
+}

@@ -323,3 +323,34 @@ func TestSearch_RepeatedCallsAreRateLimited(t *testing.T) {
 		t.Errorf("31st search error = %v, want apierror.ErrRateLimited", lastErr)
 	}
 }
+
+// TestCrossUserAccess_IsAlwaysRejected covers plan.md section 19.1/23.8
+// (BOLA/IDOR): user B must not be able to read or delete user A's media
+// asset just by knowing its ID.
+func TestCrossUserAccess_IsAlwaysRejected(t *testing.T) {
+	owner := newHarness(t)
+	intruder := newHarness(t)
+	ctx := context.Background()
+
+	content := testPNG(t, 64, 64, color.RGBA{R: 10, G: 20, B: 30, A: 255})
+	asset, err := owner.service.Upload(ctx, media.UploadInput{
+		OwnerUserID: owner.userID, Kind: media.KindTransaction, Content: content,
+	})
+	if err != nil {
+		t.Fatalf("Upload() error = %v", err)
+	}
+	assetID := uuid.MustParse(asset.ID)
+
+	if _, _, err := owner.service.GetContent(ctx, intruder.userID, assetID); !errors.Is(err, apierror.ErrNotFound) {
+		t.Errorf("GetContent() by intruder = %v, want apierror.ErrNotFound", err)
+	}
+
+	if err := owner.service.Delete(ctx, intruder.userID, assetID); !errors.Is(err, apierror.ErrNotFound) {
+		t.Errorf("Delete() by intruder = %v, want apierror.ErrNotFound", err)
+	}
+
+	// The asset must still exist, untouched, for its real owner.
+	if _, _, err := owner.service.GetContent(ctx, owner.userID, assetID); err != nil {
+		t.Errorf("owner's own GetContent() after intruder attempts = %v, want no error", err)
+	}
+}

@@ -61,3 +61,22 @@ jobs:
       - name: Build worker image
         run: docker build --build-arg TARGET=worker -t financial-manager-worker:ci .
         working-directory: financial-manager-backend
+
+      # plan.md section 19.8: "Scansione vulnerabilità... immagini Docker".
+      # Fails the build on HIGH/CRITICAL findings; a base-image CVE isn't
+      # something app code can wait out until the next unrelated release.
+      - name: Scan API image (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: financial-manager-api:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Scan worker image (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: financial-manager-worker:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true

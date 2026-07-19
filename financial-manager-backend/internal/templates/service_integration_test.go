@@ -169,3 +169,31 @@ func TestSearch_OrdersByUsageThenRecency(t *testing.T) {
 		t.Fatalf("Search() = %+v, want %q ranked first by usage_count", results, "Caffè")
 	}
 }
+
+// TestCrossUserAccess_IsAlwaysRejected covers plan.md section 19.1/23.8
+// (BOLA/IDOR): user B must not be able to edit or delete user A's
+// template just by knowing its ID.
+func TestCrossUserAccess_IsAlwaysRejected(t *testing.T) {
+	owner := newHarness(t)
+	intruder := newHarness(t)
+	ctx := context.Background()
+
+	created, err := owner.service.Create(ctx, templates.CreateServiceInput{
+		UserID: owner.userID, Direction: "DEBIT", Title: "Privato di A",
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	templateID := uuid.MustParse(created.ID)
+
+	_, err = owner.service.Update(ctx, templates.UpdateServiceInput{
+		UserID: intruder.userID, TemplateID: templateID, Title: "Hijacked",
+	})
+	if !errors.Is(err, apierror.ErrNotFound) {
+		t.Errorf("Update() by intruder = %v, want apierror.ErrNotFound", err)
+	}
+
+	if err := owner.service.Delete(ctx, intruder.userID, templateID); !errors.Is(err, apierror.ErrNotFound) {
+		t.Errorf("Delete() by intruder = %v, want apierror.ErrNotFound", err)
+	}
+}

@@ -191,3 +191,31 @@ func TestSystemCategory_CannotBeEditedOrDeleted(t *testing.T) {
 		t.Fatalf("expected a 403 forbidding deleting a system category, got %v", err)
 	}
 }
+
+// TestCrossUserAccess_IsAlwaysRejected covers plan.md section 19.1/23.8
+// (BOLA/IDOR): user B must not be able to edit or delete user A's own
+// (non-system) category just by knowing its ID.
+func TestCrossUserAccess_IsAlwaysRejected(t *testing.T) {
+	owner := newHarness(t)
+	intruder := newHarness(t)
+	ctx := context.Background()
+
+	created, err := owner.service.Create(ctx, categories.CreateServiceInput{
+		UserID: owner.userID, Name: "Privata di A", DirectionScope: categories.ScopeDebit,
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	categoryID := uuid.MustParse(created.ID)
+
+	_, err = owner.service.Update(ctx, categories.UpdateServiceInput{
+		UserID: intruder.userID, CategoryID: categoryID, Name: "Hijacked", DirectionScope: categories.ScopeDebit,
+	})
+	if !errors.Is(err, apierror.ErrNotFound) {
+		t.Errorf("Update() by intruder = %v, want apierror.ErrNotFound", err)
+	}
+
+	if err := owner.service.Delete(ctx, intruder.userID, categoryID); !errors.Is(err, apierror.ErrNotFound) {
+		t.Errorf("Delete() by intruder = %v, want apierror.ErrNotFound", err)
+	}
+}
