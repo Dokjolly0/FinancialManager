@@ -7,8 +7,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,6 +23,7 @@ import (
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/config"
 	"financial-manager-backend/internal/platform/database"
+	"financial-manager-backend/internal/platform/metrics"
 	"financial-manager-backend/internal/platform/observability"
 	"financial-manager-backend/internal/platform/redisclient"
 	"financial-manager-backend/internal/platform/storage"
@@ -70,6 +73,20 @@ func run() error {
 		return fmt.Errorf("connect database: %w", err)
 	}
 	defer dbPool.Close()
+	metrics.RegisterDBPool(dbPool.Pool)
+
+	metricsSrv := &http.Server{Addr: cfg.MetricsAddr, Handler: metrics.Handler()}
+	go func() {
+		logger.Info("metrics_server_starting", slog.String("addr", cfg.MetricsAddr))
+		if err := metricsSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("metrics_server_failed", slog.String("error", err.Error()))
+		}
+	}()
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = metricsSrv.Shutdown(shutdownCtx)
+	}()
 
 	redisClient, err := redisclient.Connect(ctx, cfg.RedisAddr, cfg.RedisPassword)
 	if err != nil {
@@ -141,9 +158,11 @@ func run() error {
 func runMediaCleanup(ctx context.Context, logger *slog.Logger, svc *media.Service) {
 	deleted, err := svc.CleanupOrphans(ctx, mediaOrphanGraceHours)
 	if err != nil {
+		metrics.JobRunsTotal.WithLabelValues("media_cleanup", "failed").Inc()
 		logger.Error("media_cleanup_failed", slog.String("error", err.Error()))
 		return
 	}
+	metrics.JobRunsTotal.WithLabelValues("media_cleanup", "ok").Inc()
 	logger.Info("media_cleanup_ok", slog.Int("deleted", deleted))
 }
 
@@ -153,15 +172,18 @@ func runMediaCleanup(ctx context.Context, logger *slog.Logger, svc *media.Servic
 func runReconciliation(ctx context.Context, logger *slog.Logger, svc *transactions.Service) {
 	mismatches, err := svc.Reconcile(ctx)
 	if err != nil {
+		metrics.JobRunsTotal.WithLabelValues("reconciliation", "failed").Inc()
 		logger.Error("reconciliation_failed", slog.String("error", err.Error()))
 		return
 	}
+	metrics.JobRunsTotal.WithLabelValues("reconciliation", "ok").Inc()
 
 	if len(mismatches) == 0 {
 		logger.Info("reconciliation_ok")
 		return
 	}
 
+	metrics.ReconciliationMismatches.Add(float64(len(mismatches)))
 	for _, m := range mismatches {
 		logger.Warn("reconciliation_mismatch",
 			slog.String("wallet_id", m.WalletID.String()),
@@ -213,17 +235,25 @@ func runAccountPurge(ctx context.Context, logger *slog.Logger, p accountPurger) 
 	cutoff := p.clock.Now().AddDate(0, 0, -accountDeletionGraceDays)
 	pending, err := p.users.ListPendingDeletionOlderThan(ctx, cutoff)
 	if err != nil {
+		metrics.JobRunsTotal.WithLabelValues("account_purge", "failed").Inc()
 		logger.Error("account_purge_list_failed", slog.String("error", err.Error()))
 		return
 	}
 
 	purged := 0
+	anyFailed := false
 	for _, u := range pending {
 		if err := p.purgeOne(ctx, u.ID); err != nil {
+			anyFailed = true
 			logger.Error("account_purge_failed", slog.String("user_id", u.ID.String()), slog.String("error", err.Error()))
 			continue
 		}
 		purged++
 	}
+	outcome := "ok"
+	if anyFailed {
+		outcome = "failed"
+	}
+	metrics.JobRunsTotal.WithLabelValues("account_purge", outcome).Inc()
 	logger.Info("account_purge_ok", slog.Int("purged", purged), slog.Int("pending", len(pending)))
 }

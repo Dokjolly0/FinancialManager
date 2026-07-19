@@ -21,6 +21,7 @@ import (
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/database"
 	"financial-manager-backend/internal/platform/idempotency"
+	"financial-manager-backend/internal/platform/metrics"
 	"financial-manager-backend/internal/platform/passwordhash"
 	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/security"
@@ -406,6 +407,7 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (AuthResponse, error
 	if s.rateLimiter != nil {
 		result, rlErr := s.rateLimiter.Allow(ctx, "ratelimit:login:user:"+normalized, loginRateLimitPerWindow, loginRateLimitWindow)
 		if rlErr == nil && !result.Allowed {
+			metrics.RateLimitTriggered.WithLabelValues("login").Inc()
 			return AuthResponse{}, apierror.ErrRateLimited
 		}
 	}
@@ -590,6 +592,7 @@ func (s *Service) checkPasswordReauthLimit(ctx context.Context, userID uuid.UUID
 	}
 	result, err := s.rateLimiter.Allow(ctx, "ratelimit:password-reauth:user:"+userID.String(), passwordReauthPerWindow, passwordReauthWindow)
 	if err == nil && !result.Allowed {
+		metrics.RateLimitTriggered.WithLabelValues("password-reauth").Inc()
 		return apierror.ErrRateLimited
 	}
 	return nil
@@ -673,6 +676,7 @@ func (s *Service) ForgotPassword(ctx context.Context, emailOrUsername string) er
 	if s.rateLimiter != nil {
 		key := "ratelimit:password-forgot:" + users.NormalizeEmail(emailOrUsername)
 		if result, err := s.rateLimiter.Allow(ctx, key, 3, time.Hour); err == nil && !result.Allowed {
+			metrics.RateLimitTriggered.WithLabelValues("password-forgot").Inc()
 			return apierror.ErrRateLimited
 		}
 	}
@@ -744,6 +748,7 @@ func (s *Service) ResendVerification(ctx context.Context, userID uuid.UUID) erro
 	if s.rateLimiter != nil {
 		key := "ratelimit:email-resend:" + userID.String()
 		if result, err := s.rateLimiter.Allow(ctx, key, 3, time.Hour); err == nil && !result.Allowed {
+			metrics.RateLimitTriggered.WithLabelValues("email-resend").Inc()
 			return apierror.ErrRateLimited
 		}
 	}

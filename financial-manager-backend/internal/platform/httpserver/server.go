@@ -7,10 +7,13 @@ package httpserver
 import (
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+
+	"financial-manager-backend/internal/platform/metrics"
 )
 
 // New builds the base router with platform middleware and health endpoints
@@ -26,12 +29,41 @@ func New(logger *slog.Logger, checks HealthChecks) chi.Router {
 	// resolution is added once the reverse proxy is in place, scoped to only
 	// trust headers set by that specific proxy.
 	r.Use(RequestLogger(logger))
+	r.Use(MetricsMiddleware)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(chimiddleware.Timeout(30 * time.Second))
 
 	RegisterHealthRoutes(r, checks)
+	// Unauthenticated by design — a Prometheus scraper has no access
+	// token, and this endpoint exposes only aggregate counts/latencies,
+	// never per-user or financial data (plan.md section 22.1). In
+	// production it must still only be reachable from the scraper's
+	// network, not the public internet.
+	r.Handle("/metrics", metrics.Handler())
 
 	return r
+}
+
+// MetricsMiddleware records plan.md section 22.1's "richieste per
+// endpoint/status" and "latenza p50/p95/p99". It reads the matched route
+// pattern (e.g. "/v1/transactions/{id}", not the literal path with real
+// IDs in it) after the handler runs, once chi has populated it, so the
+// requests-per-endpoint metric stays low-cardinality regardless of how
+// many distinct IDs are ever requested.
+func MetricsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		ww := chimiddleware.NewWrapResponseWriter(w, r.ProtoMajor)
+
+		next.ServeHTTP(ww, r)
+
+		route := chi.RouteContext(r.Context()).RoutePattern()
+		if route == "" {
+			route = "unmatched"
+		}
+		metrics.HTTPRequestsTotal.WithLabelValues(r.Method, route, strconv.Itoa(ww.Status())).Inc()
+		metrics.HTTPRequestDuration.WithLabelValues(r.Method, route).Observe(time.Since(start).Seconds())
+	})
 }
 
 // RequestLogger logs one structured line per request: method, path, status,

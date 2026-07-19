@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 
 	"financial-manager-backend/internal/platform/apierror"
+	"financial-manager-backend/internal/platform/metrics"
 	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/storage"
 )
@@ -65,6 +66,10 @@ func (s *Service) checkRateLimit(ctx context.Context, scope string, ownerUserID 
 	}
 	result, err := s.rateLimiter.Allow(ctx, "ratelimit:media-"+scope+":user:"+ownerUserID.String(), limit, window)
 	if err == nil && !result.Allowed {
+		metrics.RateLimitTriggered.WithLabelValues("media-" + scope).Inc()
+		if scope == "upload" {
+			metrics.UploadsRejected.WithLabelValues("rate-limit").Inc()
+		}
 		return apierror.ErrRateLimited
 	}
 	return nil
@@ -118,15 +123,20 @@ func (s *Service) processAndStore(
 	}
 
 	if _, err := DetectMIME(raw); err != nil {
+		metrics.UploadsRejected.WithLabelValues("format").Inc()
 		return assetResponse{}, apierror.New(http.StatusUnprocessableEntity, "UNSUPPORTED_IMAGE_FORMAT",
 			"Formato immagine non supportato. Usa JPEG, PNG o WebP.")
 	}
 
+	defer metrics.ObserveImageProcessingSince(time.Now())
+
 	decoded, err := DecodeWithLimits(raw)
 	if err != nil {
 		if errors.Is(err, ErrImageTooLarge) {
+			metrics.UploadsRejected.WithLabelValues("pixels").Inc()
 			return assetResponse{}, apierror.New(http.StatusUnprocessableEntity, "IMAGE_TOO_LARGE", "L'immagine supera le dimensioni massime consentite.")
 		}
+		metrics.UploadsRejected.WithLabelValues("format").Inc()
 		return assetResponse{}, apierror.New(http.StatusUnprocessableEntity, "UNSUPPORTED_IMAGE_FORMAT", "Impossibile decodificare l'immagine.")
 	}
 
@@ -177,6 +187,7 @@ func (s *Service) Upload(ctx context.Context, in UploadInput) (assetResponse, er
 		return assetResponse{}, err
 	}
 	if int64(len(in.Content)) > s.maxBytes {
+		metrics.UploadsRejected.WithLabelValues("size").Inc()
 		return assetResponse{}, apierror.New(http.StatusRequestEntityTooLarge, "UPLOAD_TOO_LARGE", "Il file supera la dimensione massima consentita.")
 	}
 	var filename *string
@@ -216,6 +227,7 @@ func (s *Service) SelectFromSearch(ctx context.Context, in SelectFromSearchInput
 		return assetResponse{}, fmt.Errorf("read fetched image: %w", err)
 	}
 	if int64(len(content)) > s.maxBytes {
+		metrics.UploadsRejected.WithLabelValues("size").Inc()
 		return assetResponse{}, apierror.New(http.StatusRequestEntityTooLarge, "UPLOAD_TOO_LARGE", "L'immagine selezionata supera la dimensione massima consentita.")
 	}
 

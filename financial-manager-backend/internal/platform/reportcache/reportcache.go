@@ -15,6 +15,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+
+	"financial-manager-backend/internal/platform/metrics"
 )
 
 // ttl is a belt-and-suspenders expiry on top of version-based invalidation
@@ -57,11 +59,13 @@ func (s *Store) version(ctx context.Context, walletID uuid.UUID) (int64, error) 
 // bypasses caching — correctness never depends on the cache being up.
 func Cached[T any](ctx context.Context, s *Store, walletID uuid.UUID, endpoint, paramsKey string, compute func() (T, error)) (T, error) {
 	if s == nil {
+		metrics.ReportCacheResult.WithLabelValues("bypass").Inc()
 		return compute()
 	}
 
 	version, err := s.version(ctx, walletID)
 	if err != nil {
+		metrics.ReportCacheResult.WithLabelValues("bypass").Inc()
 		return compute()
 	}
 	key := fmt.Sprintf("reports:%d:%s:%s:%s", version, walletID, endpoint, paramsKey)
@@ -69,9 +73,11 @@ func Cached[T any](ctx context.Context, s *Store, walletID uuid.UUID, endpoint, 
 	if raw, err := s.redis.Get(ctx, key).Bytes(); err == nil {
 		var cached T
 		if json.Unmarshal(raw, &cached) == nil {
+			metrics.ReportCacheResult.WithLabelValues("hit").Inc()
 			return cached, nil
 		}
 	}
+	metrics.ReportCacheResult.WithLabelValues("miss").Inc()
 
 	value, err := compute()
 	if err != nil {

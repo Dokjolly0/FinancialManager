@@ -16,6 +16,10 @@ type Config struct {
 	AppEnv   string
 	HTTPAddr string
 
+	// MetricsAddr is only used by the worker process (the API exposes
+	// /metrics on HTTPAddr itself, alongside its regular routes).
+	MetricsAddr string
+
 	DatabaseURL string
 
 	RedisAddr     string
@@ -125,8 +129,9 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
-		AppEnv:   optionalString("APP_ENV", EnvLocal),
-		HTTPAddr: optionalString("HTTP_ADDR", ":8080"),
+		AppEnv:      optionalString("APP_ENV", EnvLocal),
+		HTTPAddr:    optionalString("HTTP_ADDR", ":8080"),
+		MetricsAddr: optionalString("METRICS_ADDR", ":9101"),
 
 		DatabaseURL: requireString("DATABASE_URL"),
 

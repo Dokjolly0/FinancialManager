@@ -25,6 +25,7 @@ import (
 	"financial-manager-backend/internal/platform/config"
 	"financial-manager-backend/internal/platform/database"
 	"financial-manager-backend/internal/platform/httpserver"
+	"financial-manager-backend/internal/platform/metrics"
 	"financial-manager-backend/internal/platform/observability"
 	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/redisclient"
@@ -61,6 +62,7 @@ func run() error {
 		return fmt.Errorf("connect database: %w", err)
 	}
 	defer dbPool.Close()
+	metrics.RegisterDBPool(dbPool.Pool)
 
 	redisClient, err := redisclient.Connect(ctx, cfg.RedisAddr, cfg.RedisPassword)
 	if err != nil {
