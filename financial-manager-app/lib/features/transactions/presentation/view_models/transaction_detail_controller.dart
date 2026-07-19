@@ -34,10 +34,13 @@ class TransactionDetailState {
   }
 }
 
-class TransactionDetailController
-    extends AutoDisposeFamilyNotifier<TransactionDetailState, String> {
+class TransactionDetailController extends Notifier<TransactionDetailState> {
+  TransactionDetailController(this.arg);
+
+  final String arg;
+
   @override
-  TransactionDetailState build(String arg) {
+  TransactionDetailState build() {
     Future.microtask(load);
     return const TransactionDetailState();
   }

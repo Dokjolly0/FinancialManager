@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 /// Bumped by any successful ledger mutation (create/update/delete a
 /// transaction, balance adjustment) so screens showing wallet balance or

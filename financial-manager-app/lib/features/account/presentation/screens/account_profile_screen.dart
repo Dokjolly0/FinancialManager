@@ -36,7 +36,7 @@ class _AccountProfileScreenState extends ConsumerState<AccountProfileScreen> {
   }
 
   Future<void> _save() async {
-    final profile = ref.read(accountProfileProvider).valueOrNull;
+    final profile = ref.read(accountProfileProvider).value;
     if (profile == null) return;
 
     setState(() => _isSaving = true);

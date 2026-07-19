@@ -111,7 +111,7 @@ class _Detail extends ConsumerWidget {
 
     String? categoryName;
     if (transaction.categoryId != null) {
-      final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+      final categories = ref.watch(categoriesProvider).value ?? const [];
       final matches = categories.where((c) => c.id == transaction.categoryId);
       categoryName = matches.isEmpty ? null : matches.first.name;
     }

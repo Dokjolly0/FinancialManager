@@ -115,7 +115,7 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
     final controller = ref.read(
       transactionFormControllerProvider(widget.editTransactionId).notifier,
     );
-    final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+    final categories = ref.watch(categoriesProvider).value ?? const [];
     final l10n = AppLocalizations.of(context);
     String? fieldError(String key) {
       final code = state.fieldErrors[key];

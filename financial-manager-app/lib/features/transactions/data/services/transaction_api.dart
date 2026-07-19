@@ -39,13 +39,13 @@ class TransactionApi {
       '/transactions',
       queryParameters: {
         'limit': limit,
-        if (cursor != null) 'cursor': cursor,
-        if (direction != null) 'direction': direction,
-        if (kind != null) 'kind': kind,
-        if (categoryId != null) 'category_id': categoryId,
+        'cursor': ?cursor,
+        'direction': ?direction,
+        'kind': ?kind,
+        'category_id': ?categoryId,
         if (title != null && title.isNotEmpty) 'title': title,
-        if (amountMinMinor != null) 'amount_min_minor': amountMinMinor,
-        if (amountMaxMinor != null) 'amount_max_minor': amountMaxMinor,
+        'amount_min_minor': ?amountMinMinor,
+        'amount_max_minor': ?amountMaxMinor,
         if (occurredFrom != null)
           'occurred_from': occurredFrom.toUtc().toIso8601String(),
         if (occurredTo != null)

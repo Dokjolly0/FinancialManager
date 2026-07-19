@@ -14,10 +14,14 @@ import '../state/transaction_form_state.dart';
 /// Backs both "new operation" and "edit operation" (plan.md section 7.6,
 /// 7.11 — same form). Keyed by the transaction id being edited, or null
 /// for a new one, via Riverpod's family so create/edit never share state.
-class TransactionFormController
-    extends AutoDisposeFamilyNotifier<TransactionFormState, String?> {
+class TransactionFormController extends Notifier<TransactionFormState> {
+  TransactionFormController(this.arg);
+
+  final String? arg;
+
   @override
-  TransactionFormState build(String? arg) {
+  TransactionFormState build() {
+    final arg = this.arg;
     if (arg != null) {
       Future.microtask(() => _loadExisting(arg));
       return const TransactionFormState(isLoadingExisting: true);

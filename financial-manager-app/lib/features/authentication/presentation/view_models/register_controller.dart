@@ -14,7 +14,7 @@ import '../state/register_state.dart';
 /// trusting ambient state.step.
 const _lastStep = 2;
 
-class RegisterController extends AutoDisposeNotifier<RegisterState> {
+class RegisterController extends Notifier<RegisterState> {
   @override
   RegisterState build() => const RegisterState();
 

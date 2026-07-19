@@ -137,7 +137,7 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+    final categories = ref.watch(categoriesProvider).value ?? const [];
     final matchingCategory = categories
         .where((c) => c.id == _categoryId)
         .toList();

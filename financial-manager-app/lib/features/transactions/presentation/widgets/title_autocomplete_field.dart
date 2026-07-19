@@ -96,7 +96,7 @@ class _TitleAutocompleteFieldState
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+    final categories = ref.watch(categoriesProvider).value ?? const [];
     final showSuggestions =
         _focusNode.hasFocus && (_suggestions.isNotEmpty || _isSearching);
 

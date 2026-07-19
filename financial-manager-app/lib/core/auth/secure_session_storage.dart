@@ -7,11 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// implements [AccessTokenProvider].
 class SecureSessionStorage {
   SecureSessionStorage({FlutterSecureStorage? storage})
-    : _storage =
-          storage ??
-          const FlutterSecureStorage(
-            aOptions: AndroidOptions(encryptedSharedPreferences: true),
-          );
+    : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 

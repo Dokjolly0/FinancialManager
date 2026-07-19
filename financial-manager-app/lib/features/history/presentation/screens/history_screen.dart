@@ -69,7 +69,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(historyControllerProvider);
     final controller = ref.read(historyControllerProvider.notifier);
-    final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+    final categories = ref.watch(categoriesProvider).value ?? const [];
     final mediaRepo = ref.read(mediaRepositoryProvider);
     final l10n = AppLocalizations.of(context);
     final dayGroups = DayGroup.group(state.transactions);
