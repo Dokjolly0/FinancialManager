@@ -11,3 +11,6 @@
 *.test
 *.out
 vendor/
+
+# Local backups (scripts/backup.sh) — real data, even when encrypted
+/backups/
