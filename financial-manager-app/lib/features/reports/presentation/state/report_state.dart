@@ -1,3 +1,4 @@
+import '../../../../core/errors/app_error.dart';
 import '../../domain/models/report_breakdown.dart';
 import '../../domain/models/report_monthly_comparison.dart';
 import '../../domain/models/report_period.dart';
@@ -23,7 +24,7 @@ class ReportState {
   final String groupBy;
   final bool isLoading;
   final bool isBreakdownLoading;
-  final String? error;
+  final AppError? error;
   final ReportSummary? summary;
   final ReportTimeseries? timeseries;
   final ReportBreakdown? breakdown;
@@ -37,7 +38,7 @@ class ReportState {
     String? groupBy,
     bool? isLoading,
     bool? isBreakdownLoading,
-    String? error,
+    AppError? error,
     bool clearError = false,
     ReportSummary? summary,
     ReportTimeseries? timeseries,

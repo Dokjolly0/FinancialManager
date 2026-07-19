@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_spacing.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Full-width bottom sheet used to confirm an important or destructive
 /// action (plan.md section 6.6, 7.10: transaction deletion, balance
@@ -10,15 +11,15 @@ class ConfirmationSheet extends StatelessWidget {
     super.key,
     required this.title,
     this.message,
-    this.confirmLabel = 'Conferma',
-    this.cancelLabel = 'Annulla',
+    this.confirmLabel,
+    this.cancelLabel,
     this.isDestructive = false,
   });
 
   final String title;
   final String? message;
-  final String confirmLabel;
-  final String cancelLabel;
+  final String? confirmLabel;
+  final String? cancelLabel;
   final bool isDestructive;
 
   /// Shows the sheet and returns the user's choice.
@@ -26,8 +27,8 @@ class ConfirmationSheet extends StatelessWidget {
     BuildContext context, {
     required String title,
     String? message,
-    String confirmLabel = 'Conferma',
-    String cancelLabel = 'Annulla',
+    String? confirmLabel,
+    String? cancelLabel,
     bool isDestructive = false,
   }) async {
     final result = await showModalBottomSheet<bool>(
@@ -54,6 +55,9 @@ class ConfirmationSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context);
+    final resolvedConfirmLabel = confirmLabel ?? l10n.commonConfirm;
+    final resolvedCancelLabel = cancelLabel ?? l10n.commonCancel;
 
     return SafeArea(
       child: Padding(
@@ -86,12 +90,12 @@ class ConfirmationSheet extends StatelessWidget {
                   ? FilledButton.styleFrom(backgroundColor: colorScheme.error)
                   : null,
               onPressed: () => Navigator.of(context).pop(true),
-              child: Text(confirmLabel),
+              child: Text(resolvedConfirmLabel),
             ),
             const SizedBox(height: AppSpacing.xs),
             OutlinedButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: Text(cancelLabel),
+              child: Text(resolvedCancelLabel),
             ),
           ],
         ),

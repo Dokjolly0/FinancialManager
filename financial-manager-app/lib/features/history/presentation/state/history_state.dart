@@ -1,3 +1,4 @@
+import '../../../../core/errors/app_error.dart';
 import '../../../transactions/domain/models/ledger_transaction.dart';
 import '../../../transactions/domain/repositories/transaction_repository.dart';
 
@@ -17,7 +18,7 @@ class HistoryState {
   final List<LedgerTransaction> transactions;
   final String? nextCursor;
   final bool hasMore;
-  final String? error;
+  final AppError? error;
   final TransactionListFilter filter;
 
   bool get hasActiveFilters => filter.activeCount > 0;
@@ -29,7 +30,7 @@ class HistoryState {
     String? nextCursor,
     bool clearNextCursor = false,
     bool? hasMore,
-    String? error,
+    AppError? error,
     bool clearError = false,
     TransactionListFilter? filter,
   }) {

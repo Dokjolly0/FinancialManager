@@ -37,7 +37,7 @@ void main() {
           data: {
             'error': {
               'code': 'UNAUTHORIZED',
-              'message': 'Autenticazione richiesta o non valida.',
+              'message': 'Authentication required or invalid.',
             },
           },
         ),
@@ -58,7 +58,7 @@ void main() {
             data: {
               'error': {
                 'code': 'INVALID_CURRENT_PASSWORD',
-                'message': 'La password attuale non è corretta.',
+                'message': 'The current password is incorrect.',
               },
             },
           ),
@@ -66,7 +66,7 @@ void main() {
 
         final mapped = ErrorMapper.fromException(error) as DomainError;
         expect(mapped.code, 'INVALID_CURRENT_PASSWORD');
-        expect(mapped.message, 'La password attuale non è corretta.');
+        expect(mapped.message, 'The current password is incorrect.');
       },
     );
 
@@ -97,8 +97,8 @@ void main() {
           data: {
             'error': {
               'code': 'VALIDATION_ERROR',
-              'message': 'Richiesta non valida',
-              'field_errors': {'amount_minor': 'Deve essere maggiore di zero'},
+              'message': 'The request contains invalid data.',
+              'field_errors': {'amount_minor': 'AMOUNT_NOT_POSITIVE'},
               'request_id': 'req-123',
             },
           },
@@ -107,10 +107,7 @@ void main() {
 
       final mapped = ErrorMapper.fromException(error) as DomainError;
       expect(mapped.code, 'VALIDATION_ERROR');
-      expect(
-        mapped.fieldErrors['amount_minor'],
-        'Deve essere maggiore di zero',
-      );
+      expect(mapped.fieldErrors['amount_minor'], 'AMOUNT_NOT_POSITIVE');
       expect(mapped.requestId, 'req-123');
     });
 

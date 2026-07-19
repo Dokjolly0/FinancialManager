@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/report_breakdown.dart';
 import '../state/report_state.dart';
 
@@ -33,6 +34,7 @@ class _ReportBreakdownSectionState extends State<ReportBreakdownSection> {
     final items = widget.breakdown == null
         ? const <BreakdownItem>[]
         : (_showDebits ? widget.breakdown!.debits : widget.breakdown!.credits);
+    final l10n = AppLocalizations.of(context);
 
     return Card(
       child: Padding(
@@ -40,14 +42,14 @@ class _ReportBreakdownSectionState extends State<ReportBreakdownSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Ripartizione', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.reportBreakdownTitle, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AppSpacing.sm),
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: ReportGroupBy.title, label: Text('Per titolo')),
+              segments: [
+                ButtonSegment(value: ReportGroupBy.title, label: Text(l10n.groupByTitleOption)),
                 ButtonSegment(
                   value: ReportGroupBy.category,
-                  label: Text('Per categoria'),
+                  label: Text(l10n.groupByCategoryOption),
                 ),
               ],
               selected: {widget.groupBy},
@@ -55,9 +57,9 @@ class _ReportBreakdownSectionState extends State<ReportBreakdownSection> {
             ),
             const SizedBox(height: AppSpacing.sm),
             SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: true, label: Text('Uscite')),
-                ButtonSegment(value: false, label: Text('Entrate')),
+              segments: [
+                ButtonSegment(value: true, label: Text(l10n.debitsColumnLabel)),
+                ButtonSegment(value: false, label: Text(l10n.creditsColumnLabel)),
               ],
               selected: {_showDebits},
               onSelectionChanged: (s) => setState(() => _showDebits = s.first),
@@ -69,9 +71,9 @@ class _ReportBreakdownSectionState extends State<ReportBreakdownSection> {
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (items.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                child: Text('Nessuna operazione per questa vista.'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                child: Text(l10n.noTransactionsForView),
               )
             else
               Column(
@@ -126,7 +128,7 @@ class _BreakdownRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${item.transactionCount} operazioni',
+            AppLocalizations.of(context).transactionCountLabel(item.transactionCount),
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),

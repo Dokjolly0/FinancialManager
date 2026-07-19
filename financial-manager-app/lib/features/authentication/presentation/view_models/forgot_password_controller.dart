@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../data/providers.dart';
 
 class ForgotPasswordState {
@@ -12,12 +11,12 @@ class ForgotPasswordState {
   });
 
   final bool isSubmitting;
-  final String? error;
+  final AppError? error;
   final bool succeeded;
 
   ForgotPasswordState copyWith({
     bool? isSubmitting,
-    String? error,
+    AppError? error,
     bool? succeeded,
   }) {
     return ForgotPasswordState(
@@ -38,10 +37,7 @@ class ForgotPasswordController extends Notifier<ForgotPasswordState> {
       await ref.read(authRepositoryProvider).forgotPassword(email);
       state = state.copyWith(isSubmitting: false, succeeded: true);
     } on AppError catch (e) {
-      state = state.copyWith(
-        isSubmitting: false,
-        error: presentError(e).message,
-      );
+      state = state.copyWith(isSubmitting: false, error: e);
     }
   }
 }

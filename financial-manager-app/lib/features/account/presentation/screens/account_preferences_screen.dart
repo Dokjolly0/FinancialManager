@@ -5,12 +5,13 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/app_error.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/inline_error.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/user_profile.dart';
 import '../view_models/account_providers.dart';
 import '../view_models/profile_controller.dart';
 
-/// Preferenze (plan.md section 7.13): tema, fuso orario, lingua,
-/// visibilità saldo all'apertura, primo giorno della settimana.
+/// Preferences (plan.md section 7.13): theme, timezone, language, balance
+/// visibility on open, first day of the week.
 class AccountPreferencesScreen extends ConsumerStatefulWidget {
   const AccountPreferencesScreen({super.key});
 
@@ -67,9 +68,13 @@ class _AccountPreferencesScreenState
           );
     } on AppError catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(presentError(e).message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              presentError(e, AppLocalizations.of(context)).message,
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -79,13 +84,14 @@ class _AccountPreferencesScreenState
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(accountProfileProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Preferenze')),
+      appBar: AppBar(title: Text(l10n.accountPreferencesMenuTitle)),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => InlineError(
-          message: 'Impossibile caricare le preferenze.',
+          message: l10n.accountPreferencesLoadError,
           onRetry: () => ref.invalidate(accountProfileProvider),
         ),
         data: (profile) => AbsorbPointer(
@@ -95,13 +101,13 @@ class _AccountPreferencesScreenState
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.md),
               children: [
-                Text('Tema', style: Theme.of(context).textTheme.titleMedium),
+                Text(l10n.themeLabel, style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: AppSpacing.sm),
                 SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'system', label: Text('Sistema')),
-                    ButtonSegment(value: 'light', label: Text('Chiaro')),
-                    ButtonSegment(value: 'dark', label: Text('Scuro')),
+                  segments: [
+                    ButtonSegment(value: 'system', label: Text(l10n.themeOptionSystem)),
+                    ButtonSegment(value: 'light', label: Text(l10n.themeOptionLight)),
+                    ButtonSegment(value: 'dark', label: Text(l10n.themeOptionDark)),
                   ],
                   selected: {profile.theme},
                   onSelectionChanged: (s) =>
@@ -109,14 +115,14 @@ class _AccountPreferencesScreenState
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Text(
-                  'Primo giorno della settimana',
+                  l10n.firstDayOfWeekLabel,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'monday', label: Text('Lunedì')),
-                    ButtonSegment(value: 'sunday', label: Text('Domenica')),
+                  segments: [
+                    ButtonSegment(value: 'monday', label: Text(l10n.weekdayMonday)),
+                    ButtonSegment(value: 'sunday', label: Text(l10n.weekdaySunday)),
                   ],
                   selected: {profile.firstDayOfWeek},
                   onSelectionChanged: (s) =>
@@ -125,16 +131,14 @@ class _AccountPreferencesScreenState
                 const SizedBox(height: AppSpacing.lg),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Nascondi saldo all\'apertura'),
-                  subtitle: const Text(
-                    'Il saldo sarà oscurato di default in Home',
-                  ),
+                  title: Text(l10n.hideBalanceOnOpenTitle),
+                  subtitle: Text(l10n.hideBalanceOnOpenSubtitle),
                   value: profile.balanceHiddenDefault,
                   onChanged: (v) => _update(profile, balanceHiddenDefault: v),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Text(
-                  'Fuso orario',
+                  l10n.timezoneLabel,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -159,7 +163,7 @@ class _AccountPreferencesScreenState
                   },
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Text('Lingua', style: Theme.of(context).textTheme.titleMedium),
+                Text(l10n.languageLabel, style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: AppSpacing.sm),
                 DropdownButtonFormField<String>(
                   key: ValueKey('locale-${profile.version}'),

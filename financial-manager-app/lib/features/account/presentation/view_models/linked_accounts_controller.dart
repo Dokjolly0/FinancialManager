@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../data/providers.dart';
 import '../../domain/models/linked_identity.dart';
 
@@ -14,14 +13,14 @@ class LinkedAccountsState {
 
   final bool isLoading;
   final List<LinkedIdentity> identities;
-  final String? error;
+  final AppError? error;
 
   bool get isGoogleLinked => identities.any((i) => i.provider == 'google');
 
   LinkedAccountsState copyWith({
     bool? isLoading,
     List<LinkedIdentity>? identities,
-    String? error,
+    AppError? error,
     bool clearError = false,
   }) {
     return LinkedAccountsState(
@@ -46,28 +45,28 @@ class LinkedAccountsController extends Notifier<LinkedAccountsState> {
       final identities = await ref.read(accountRepositoryProvider).listIdentities();
       state = state.copyWith(isLoading: false, identities: identities);
     } on AppError catch (e) {
-      state = state.copyWith(isLoading: false, error: presentError(e).message);
+      state = state.copyWith(isLoading: false, error: e);
     }
   }
 
-  /// Returns null on success, or a message to show if it failed.
-  Future<String?> linkGoogle(String currentPassword) async {
+  /// Returns null on success, or the [AppError] to show if it failed.
+  Future<AppError?> linkGoogle(String currentPassword) async {
     try {
       await ref.read(accountRepositoryProvider).linkGoogle(currentPassword);
       await refresh();
       return null;
     } on AppError catch (e) {
-      return presentError(e).message;
+      return e;
     }
   }
 
-  Future<String?> unlinkGoogle() async {
+  Future<AppError?> unlinkGoogle() async {
     try {
       await ref.read(accountRepositoryProvider).unlinkGoogle();
       await refresh();
       return null;
     } on AppError catch (e) {
-      return presentError(e).message;
+      return e;
     }
   }
 }

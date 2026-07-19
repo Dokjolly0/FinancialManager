@@ -1,5 +1,5 @@
-/// The authenticated principal (plan.md section 4.1: "identità applicativa,
-/// indipendente dal metodo di autenticazione"). Wallet/balance data is
+/// The authenticated principal (plan.md section 4.1: "application identity,
+/// independent of the authentication method"). Wallet/balance data is
 /// fetched separately by the wallet feature — this model only carries what
 /// the auth flows themselves need.
 class AuthUser {

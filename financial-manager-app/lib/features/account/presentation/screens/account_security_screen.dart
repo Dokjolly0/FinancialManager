@@ -8,6 +8,7 @@ import '../../../../core/errors/app_error.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/confirmation_sheet.dart';
 import '../../../../core/widgets/inline_error.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/data/providers.dart';
 import '../../../authentication/presentation/widgets/password_field.dart';
 import '../../data/providers.dart';
@@ -41,12 +42,13 @@ class _AccountSecurityScreenState
   }
 
   Future<void> _changePassword() async {
+    final l10n = AppLocalizations.of(context);
     if (_newPasswordController.text.length < 8) {
-      setState(() => _passwordError = 'Deve avere almeno 8 caratteri.');
+      setState(() => _passwordError = l10n.errorCodePasswordTooShort);
       return;
     }
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      setState(() => _passwordError = 'Le password non coincidono.');
+      setState(() => _passwordError = l10n.errorCodePasswordsDoNotMatch);
       return;
     }
 
@@ -71,7 +73,7 @@ class _AccountSecurityScreenState
         );
       }
     } on AppError catch (e) {
-      final presented = presentError(e);
+      final presented = presentError(e, l10n);
       if (mounted) {
         setState(
           () => _passwordError =
@@ -116,6 +118,7 @@ class _AccountSecurityScreenState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(securityControllerProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Sicurezza')),
@@ -171,7 +174,7 @@ class _AccountSecurityScreenState
             )
           else if (state.error != null)
             InlineError(
-              message: state.error!,
+              message: presentError(state.error!, l10n).message,
               onRetry: () =>
                   ref.read(securityControllerProvider.notifier).refresh(),
             )

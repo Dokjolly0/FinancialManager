@@ -5,10 +5,12 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/formatting/money.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../core/widgets/skeleton_list.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../categories/data/providers.dart';
 import '../../../categories/domain/models/category.dart';
 import '../../../media/data/providers.dart';
@@ -69,6 +71,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final controller = ref.read(historyControllerProvider.notifier);
     final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
     final mediaRepo = ref.read(mediaRepositoryProvider);
+    final l10n = AppLocalizations.of(context);
     final dayGroups = DayGroup.group(state.transactions);
 
     return Scaffold(
@@ -111,7 +114,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 ? const SkeletonList()
                 : state.error != null && state.transactions.isEmpty
                 ? InlineError(
-                    message: state.error!,
+                    message: presentError(state.error!, l10n).message,
                     onRetry: controller.refresh,
                   )
                 : state.transactions.isEmpty

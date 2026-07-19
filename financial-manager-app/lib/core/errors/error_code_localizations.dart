@@ -1,0 +1,82 @@
+import '../../l10n/app_localizations.dart';
+
+/// Maps a backend/client error `code` (the stable contract from
+/// `apierror.go`'s sentinels and `Field*` constants, plan.md section 10.6)
+/// to localized text. Unrecognized codes fall back to a generic message
+/// instead of ever showing raw server text.
+String localizeErrorCode(AppLocalizations l10n, String code) {
+  return switch (code) {
+    'VALIDATION_ERROR' => l10n.errorCodeValidationError,
+    'BAD_REQUEST' => l10n.errorCodeBadRequest,
+    'UNAUTHORIZED' => l10n.errorCodeUnauthorized,
+    'FORBIDDEN' => l10n.errorCodeForbidden,
+    'NOT_FOUND' => l10n.errorCodeNotFound,
+    'CONFLICT' => l10n.errorCodeConflict,
+    'INTERNAL_ERROR' => l10n.errorCodeInternalError,
+    'EMAIL_IN_USE' => l10n.errorCodeEmailInUse,
+    'USERNAME_IN_USE' => l10n.errorCodeUsernameInUse,
+    'INVALID_CREDENTIALS' => l10n.errorCodeInvalidCredentials,
+    'INVALID_CURRENT_PASSWORD' => l10n.errorCodeInvalidCurrentPassword,
+    'INVALID_OR_EXPIRED_TOKEN' => l10n.errorCodeInvalidOrExpiredToken,
+    'INVALID_GOOGLE_TOKEN' => l10n.errorCodeInvalidGoogleToken,
+    'GOOGLE_ACCOUNT_ALREADY_LINKED' => l10n.errorCodeGoogleAccountAlreadyLinked,
+    'NO_ALTERNATIVE_LOGIN_METHOD' => l10n.errorCodeNoAlternativeLoginMethod,
+    'IDEMPOTENCY_KEY_REUSED' => l10n.errorCodeIdempotencyKeyReused,
+    'ACCOUNT_DELETION_PENDING' => l10n.errorCodeAccountDeletionPending,
+    'ACCOUNT_LOCKED' => l10n.errorCodeAccountLocked,
+    'NO_PASSWORD_SET' => l10n.errorCodeNoPasswordSet,
+    'REAUTH_REQUIRED' => l10n.errorCodeReauthRequired,
+    'CATEGORY_ALREADY_EXISTS' => l10n.errorCodeCategoryAlreadyExists,
+    'SYSTEM_CATEGORY_NOT_EDITABLE' => l10n.errorCodeSystemCategoryNotEditable,
+    'SYSTEM_CATEGORY_NOT_DELETABLE' => l10n.errorCodeSystemCategoryNotDeletable,
+    'TEMPLATE_ALREADY_EXISTS' => l10n.errorCodeTemplateAlreadyExists,
+    'EXPORT_NOT_READY' => l10n.errorCodeExportNotReady,
+    'UPLOAD_TOO_LARGE' => l10n.errorCodeUploadTooLarge,
+    'IMAGE_TOO_LARGE' => l10n.errorCodeImageTooLarge,
+    'UNSUPPORTED_IMAGE_FORMAT' => l10n.errorCodeUnsupportedImageFormat,
+    'IMAGE_FETCH_FAILED' => l10n.errorCodeImageFetchFailed,
+    'IMAGE_SEARCH_FAILED' => l10n.errorCodeImageSearchFailed,
+    'MEDIA_IN_USE' => l10n.errorCodeMediaInUse,
+    'NOT_EDITABLE' => l10n.errorCodeNotEditable,
+    'OPENING_BALANCE_NOT_DELETABLE' => l10n.errorCodeOpeningBalanceNotDeletable,
+    'CATEGORY_NOT_FOUND' => l10n.errorCodeCategoryNotFound,
+    'TEMPLATE_NOT_FOUND' => l10n.errorCodeTemplateNotFound,
+    'MEDIA_NOT_FOUND' => l10n.errorCodeMediaNotFound,
+
+    // Field-error codes (apierror.go Field* constants).
+    'REQUIRED_FIELD' => l10n.errorCodeRequiredField,
+    'USERNAME_LENGTH_INVALID' => l10n.errorCodeUsernameLengthInvalid,
+    'INVALID_EMAIL' => l10n.errorCodeInvalidEmail,
+    'PASSWORD_TOO_SHORT' => l10n.errorCodePasswordTooShort,
+    'PASSWORDS_DO_NOT_MATCH' => l10n.errorCodePasswordsDoNotMatch,
+    'INVALID_COLOR_FORMAT' => l10n.errorCodeInvalidColorFormat,
+    'NEGATIVE_NOT_ALLOWED' => l10n.errorCodeNegativeNotAllowed,
+    'CURRENCY_NOT_SUPPORTED' => l10n.errorCodeCurrencyNotSupported,
+    'TERMS_NOT_ACCEPTED' => l10n.errorCodeTermsNotAccepted,
+    'INVALID_UUID' => l10n.errorCodeInvalidUuid,
+    'INVALID_DIRECTION' => l10n.errorCodeInvalidDirection,
+    'AMOUNT_NOT_POSITIVE' => l10n.errorCodeAmountNotPositive,
+    'AMOUNT_IMPLAUSIBLE' => l10n.errorCodeAmountImplausible,
+    'TITLE_LENGTH_INVALID' => l10n.errorCodeTitleLengthInvalid,
+    'CURRENCY_MISMATCH' => l10n.errorCodeCurrencyMismatch,
+    'MUST_BE_INTEGER' => l10n.errorCodeMustBeInteger,
+    'INVALID_RFC3339_DATE' => l10n.errorCodeInvalidRfc3339Date,
+    'INVALID_CATEGORY_SCOPE' => l10n.errorCodeInvalidCategoryScope,
+    'CATEGORY_NAME_LENGTH_INVALID' => l10n.errorCodeCategoryNameLengthInvalid,
+    'INVALID_THEME' => l10n.errorCodeInvalidTheme,
+    'INVALID_FIRST_DAY_OF_WEEK' => l10n.errorCodeInvalidFirstDayOfWeek,
+    'INVALID_EXPORT_FORMAT' => l10n.errorCodeInvalidExportFormat,
+    'INVALID_TIMEZONE' => l10n.errorCodeInvalidTimezone,
+    'INVALID_PRESET' => l10n.errorCodeInvalidPreset,
+    'CUSTOM_RANGE_REQUIRED' => l10n.errorCodeCustomRangeRequired,
+    'INVALID_GROUP_BY' => l10n.errorCodeInvalidGroupBy,
+    'INVALID_MEDIA_KIND' => l10n.errorCodeInvalidMediaKind,
+    'PROVIDER_NOT_SUPPORTED' => l10n.errorCodeProviderNotSupported,
+
+    // Client-only codes (no backend equivalent).
+    'INVALID_AMOUNT' => l10n.errorCodeInvalidAmount,
+    'EXPORT_FAILED' => l10n.errorCodeExportFailed,
+
+    _ => l10n.errorCodeUnknownError,
+  };
+}

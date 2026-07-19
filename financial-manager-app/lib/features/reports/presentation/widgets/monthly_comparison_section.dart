@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/report_monthly_comparison.dart';
 
 /// Confronto mensile (plan.md section 7.12, 18.7, 18.8): only rendered
@@ -18,12 +19,16 @@ class MonthlyComparisonSection extends StatelessWidget {
 
   void _showMonthDetail(BuildContext context, MonthlyComparisonRow row) {
     final label = DateFormat('MMMM yyyy', 'it_IT').format(row.month.toLocal());
+    final monthLabel = '${label[0].toUpperCase()}${label.substring(1)}';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '${label[0].toUpperCase()}${label.substring(1)}: '
-          'entrate ${row.credits.format()}, uscite ${row.debits.format()}, '
-          'netto ${row.net.format()}',
+          AppLocalizations.of(context).monthDetailSnackbar(
+            monthLabel,
+            row.credits.format(),
+            row.debits.format(),
+            row.net.format(),
+          ),
         ),
       ),
     );
@@ -32,6 +37,7 @@ class MonthlyComparisonSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final months = comparison.months;
     final maxValue = months.fold<int>(0, (max, m) {
       final v = m.credits.minorUnits > m.debits.minorUnits
@@ -47,12 +53,12 @@ class MonthlyComparisonSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Confronto mensile',
+              l10n.monthlyComparisonTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: AppSpacing.md),
             if (months.isEmpty)
-              const Text('Nessun dato per il periodo selezionato.')
+              Text(l10n.noDataForPeriod)
             else
               SizedBox(
                 height: 220,
@@ -124,11 +130,11 @@ class MonthlyComparisonSection extends StatelessWidget {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Mese')),
-                  DataColumn(label: Text('Entrate'), numeric: true),
-                  DataColumn(label: Text('Uscite'), numeric: true),
-                  DataColumn(label: Text('Netto'), numeric: true),
+                columns: [
+                  DataColumn(label: Text(l10n.monthColumnLabel)),
+                  DataColumn(label: Text(l10n.creditsColumnLabel), numeric: true),
+                  DataColumn(label: Text(l10n.debitsColumnLabel), numeric: true),
+                  DataColumn(label: Text(l10n.netColumnLabel), numeric: true),
                 ],
                 rows: [
                   for (final row in months)

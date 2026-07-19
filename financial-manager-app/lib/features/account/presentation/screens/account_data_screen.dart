@@ -6,6 +6,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/app_error.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/confirmation_sheet.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/presentation/widgets/password_field.dart';
 import '../view_models/data_controller.dart';
 
@@ -19,25 +20,25 @@ class AccountDataScreen extends ConsumerWidget {
     if (!context.mounted) return;
 
     final state = ref.read(dataControllerProvider);
+    final l10n = AppLocalizations.of(context);
     if (state.savedFilePath != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Esportazione salvata in ${state.savedFilePath}')),
+        SnackBar(content: Text(l10n.exportSavedMessage(state.savedFilePath!))),
       );
     } else if (state.error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(state.error!)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(presentError(state.error!, l10n).message)),
+      );
     }
   }
 
   Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final warned = await ConfirmationSheet.show(
       context,
-      title: 'Eliminare l\'account?',
-      message:
-          'Questa azione è irreversibile. Il tuo profilo verrà rimosso; '
-          'le operazioni registrate restano solo a fini contabili.',
-      confirmLabel: 'Continua',
+      title: l10n.deleteAccountConfirmTitle,
+      message: l10n.deleteAccountConfirmMessage,
+      confirmLabel: l10n.commonContinue,
       isDestructive: true,
     );
     if (!warned || !context.mounted) return;
@@ -46,22 +47,22 @@ class AccountDataScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Conferma la password'),
+        title: Text(l10n.confirmPasswordDialogTitle),
         content: PasswordField(
           controller: passwordController,
-          label: 'Password attuale (vuota se solo Google)',
+          label: l10n.currentPasswordOptionalGoogleLabel,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annulla'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Elimina account'),
+            child: Text(l10n.deleteAccountAction),
           ),
         ],
       ),
@@ -79,9 +80,13 @@ class AccountDataScreen extends ConsumerWidget {
       ref.read(sessionControllerProvider.notifier).signOut();
     } on AppError catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(presentError(e).message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              presentError(e, AppLocalizations.of(context)).message,
+            ),
+          ),
+        );
       }
     }
   }
@@ -89,17 +94,17 @@ class AccountDataScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(dataControllerProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Dati')),
+      appBar: AppBar(title: Text(l10n.accountDataMenuTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          Text('Esporta i tuoi dati', style: Theme.of(context).textTheme.titleMedium),
+          Text(l10n.exportDataSectionTitle, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'CSV per le operazioni, JSON per profilo, portafoglio, '
-            'categorie, modelli e operazioni.',
+            l10n.exportDataDescription,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: AppSpacing.md),
@@ -110,7 +115,7 @@ class AccountDataScreen extends ConsumerWidget {
                   onPressed: state.isExporting
                       ? null
                       : () => _export(context, ref, 'csv'),
-                  child: const Text('Esporta CSV'),
+                  child: Text(l10n.exportCsvAction),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -119,7 +124,7 @@ class AccountDataScreen extends ConsumerWidget {
                   onPressed: state.isExporting
                       ? null
                       : () => _export(context, ref, 'json'),
-                  child: const Text('Esporta JSON'),
+                  child: Text(l10n.exportJsonAction),
                 ),
               ),
             ],
@@ -133,7 +138,7 @@ class AccountDataScreen extends ConsumerWidget {
           const Divider(),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Zona pericolosa',
+            l10n.dangerZoneTitle,
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.error),
@@ -145,7 +150,7 @@ class AccountDataScreen extends ConsumerWidget {
               side: BorderSide(color: Theme.of(context).colorScheme.error),
             ),
             onPressed: () => _deleteAccount(context, ref),
-            child: const Text('Elimina account'),
+            child: Text(l10n.deleteAccountAction),
           ),
         ],
       ),

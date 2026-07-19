@@ -5,7 +5,7 @@ import '../../app/theme/app_spacing.dart';
 /// Generic empty-state placeholder (plan.md section 6.6 / 7.15), used
 /// whenever a list or screen has nothing to show yet — no data, a filtered
 /// result with no matches, etc. Feature screens pass a message tailored to
-/// their own context (e.g. "Nessuna operazione corrisponde ai filtri").
+/// their own context (e.g. "No transactions match the filters").
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,

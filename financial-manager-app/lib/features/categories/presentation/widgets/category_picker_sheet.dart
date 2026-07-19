@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../transactions/domain/models/transaction_direction.dart';
 import '../../data/providers.dart';
 import '../../domain/models/category.dart';
@@ -76,7 +77,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
       if (mounted) {
         setState(() {
           _isCreating = false;
-          _error = 'Impossibile creare la categoria. Riprova.';
+          _error = AppLocalizations.of(context).createCategoryError;
         });
       }
     }
@@ -85,6 +86,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
+    final l10n = AppLocalizations.of(context);
 
     return SafeArea(
       child: Padding(
@@ -96,7 +98,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
               child: Text(
-                'Categoria',
+                l10n.categoryPickerTitle,
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -107,9 +109,9 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                   padding: EdgeInsets.all(AppSpacing.lg),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (_, _) => const Padding(
-                  padding: EdgeInsets.all(AppSpacing.lg),
-                  child: Text('Impossibile caricare le categorie.'),
+                error: (_, _) => Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Text(l10n.categoriesLoadError),
                 ),
                 data: (categories) {
                   final direction = widget.direction;
@@ -125,7 +127,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                     children: [
                       ListTile(
                         leading: const Icon(Icons.block_outlined),
-                        title: const Text('Nessuna categoria'),
+                        title: Text(l10n.noCategoryLabel),
                         onTap: () => Navigator.of(context).pop(null),
                       ),
                       for (final category in visible)
@@ -159,7 +161,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                       controller: _nameController,
                       autofocus: true,
                       decoration: InputDecoration(
-                        labelText: 'Nome nuova categoria',
+                        labelText: l10n.newCategoryNameLabel,
                         errorText: _error,
                       ),
                       onSubmitted: (_) => _createCategory(),
@@ -173,7 +175,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Crea e seleziona'),
+                          : Text(l10n.createAndSelectAction),
                     ),
                   ],
                 ),
@@ -184,7 +186,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                 child: OutlinedButton.icon(
                   onPressed: () => setState(() => _showCreateForm = true),
                   icon: const Icon(Icons.add),
-                  label: const Text('Nuova categoria'),
+                  label: Text(l10n.newCategoryAction),
                 ),
               ),
           ],

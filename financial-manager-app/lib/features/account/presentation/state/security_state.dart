@@ -1,3 +1,4 @@
+import '../../../../core/errors/app_error.dart';
 import '../../domain/models/account_session.dart';
 
 class SecurityState {
@@ -9,12 +10,12 @@ class SecurityState {
 
   final bool isLoading;
   final List<AccountSession> sessions;
-  final String? error;
+  final AppError? error;
 
   SecurityState copyWith({
     bool? isLoading,
     List<AccountSession>? sessions,
-    String? error,
+    AppError? error,
     bool clearError = false,
   }) {
     return SecurityState(

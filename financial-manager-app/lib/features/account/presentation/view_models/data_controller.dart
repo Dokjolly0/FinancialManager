@@ -6,7 +6,6 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/api/providers.dart';
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../data/providers.dart';
 import '../../domain/models/export_record.dart';
 
@@ -15,13 +14,13 @@ class DataState {
 
   final bool isExporting;
   final ExportRecord? export;
-  final String? error;
+  final AppError? error;
   final String? savedFilePath;
 
   DataState copyWith({
     bool? isExporting,
     ExportRecord? export,
-    String? error,
+    AppError? error,
     bool clearError = false,
     String? savedFilePath,
     bool clearSavedFilePath = false,
@@ -59,11 +58,11 @@ class DataController extends Notifier<DataState> {
         await _download(record);
       } else if (record.isFailed) {
         state = state.copyWith(
-          error: record.errorMessage ?? 'Esportazione non riuscita.',
+          error: const DomainError(code: 'EXPORT_FAILED', message: ''),
         );
       }
     } on AppError catch (e) {
-      state = state.copyWith(isExporting: false, error: presentError(e).message);
+      state = state.copyWith(isExporting: false, error: e);
     }
   }
 
@@ -89,7 +88,9 @@ class DataController extends Notifier<DataState> {
 
       state = state.copyWith(savedFilePath: file.path);
     } on DioException {
-      state = state.copyWith(error: 'Impossibile scaricare l\'esportazione.');
+      state = state.copyWith(
+        error: const DomainError(code: 'EXPORT_FAILED', message: ''),
+      );
     }
   }
 

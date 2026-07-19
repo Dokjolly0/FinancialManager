@@ -14,8 +14,8 @@ import '../../domain/models/transaction_direction.dart';
 /// direction — title, category, and usage count — debounced so it doesn't
 /// fire a request per keystroke. Selecting a suggestion is reported via
 /// [onSuggestionSelected]; typing further without selecting just leaves a
-/// plain title, matching section 4.4 ("l'utente può comunque cambiare ogni
-/// campo").
+/// plain title, matching section 4.4 ("the user can still change any
+/// field").
 class TitleAutocompleteField extends ConsumerStatefulWidget {
   const TitleAutocompleteField({
     super.key,

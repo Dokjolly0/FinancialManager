@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/state/ledger_revision_provider.dart';
 import '../../data/providers.dart';
 import '../../domain/models/report_period.dart';
@@ -49,7 +48,7 @@ class ReportController extends Notifier<ReportState> {
         monthlyComparison: monthlyComparison,
       );
     } on AppError catch (e) {
-      state = state.copyWith(isLoading: false, error: presentError(e).message);
+      state = state.copyWith(isLoading: false, error: e);
     }
   }
 

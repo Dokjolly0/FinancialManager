@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../core/widgets/skeleton_list.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../view_models/report_controller.dart';
 import '../widgets/monthly_comparison_section.dart';
 import '../widgets/period_selector.dart';
@@ -21,6 +23,7 @@ class ReportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(reportControllerProvider);
     final controller = ref.read(reportControllerProvider.notifier);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Report')),
@@ -54,7 +57,10 @@ class ReportScreen extends ConsumerWidget {
             child: state.isLoading && !state.hasData
                 ? const SkeletonList()
                 : state.error != null && !state.hasData
-                ? InlineError(message: state.error!, onRetry: controller.refresh)
+                ? InlineError(
+                    message: presentError(state.error!, l10n).message,
+                    onRetry: controller.refresh,
+                  )
                 : RefreshIndicator(
                     onRefresh: controller.refresh,
                     child: ListView(

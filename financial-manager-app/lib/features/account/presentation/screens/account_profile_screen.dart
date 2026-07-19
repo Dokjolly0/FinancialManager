@@ -7,6 +7,7 @@ import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/formatting/color_hex.dart';
 import '../../../../core/widgets/generated_avatar.dart';
 import '../../../../core/widgets/inline_error.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/data/providers.dart';
 import '../view_models/account_providers.dart';
 import '../view_models/profile_controller.dart';
@@ -48,15 +49,19 @@ class _AccountProfileScreenState extends ConsumerState<AccountProfileScreen> {
             lastName: _lastNameController.text.trim(),
           );
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Profilo aggiornato.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).profileUpdatedMessage)),
+        );
       }
     } on AppError catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(presentError(e).message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              presentError(e, AppLocalizations.of(context)).message,
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -68,14 +73,20 @@ class _AccountProfileScreenState extends ConsumerState<AccountProfileScreen> {
       await ref.read(authRepositoryProvider).resendVerification();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email di verifica inviata.')),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).verificationEmailSentMessage),
+          ),
         );
       }
     } on AppError catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(presentError(e).message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              presentError(e, AppLocalizations.of(context)).message,
+            ),
+          ),
+        );
       }
     }
   }
@@ -83,13 +94,14 @@ class _AccountProfileScreenState extends ConsumerState<AccountProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(accountProfileProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profilo')),
+      appBar: AppBar(title: Text(l10n.accountProfileScreenTitle)),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => InlineError(
-          message: 'Impossibile caricare il profilo.',
+          message: l10n.accountProfileLoadError,
           onRetry: () => ref.invalidate(accountProfileProvider),
         ),
         data: (profile) {
@@ -114,18 +126,18 @@ class _AccountProfileScreenState extends ConsumerState<AccountProfileScreen> {
               const SizedBox(height: AppSpacing.lg),
               TextField(
                 controller: _firstNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nome',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.firstNameLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: _lastNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Cognome',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.lastNameLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
@@ -133,9 +145,9 @@ class _AccountProfileScreenState extends ConsumerState<AccountProfileScreen> {
               TextField(
                 enabled: false,
                 controller: TextEditingController(text: profile.username),
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.usernameLabel,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -143,13 +155,13 @@ class _AccountProfileScreenState extends ConsumerState<AccountProfileScreen> {
                 enabled: false,
                 controller: TextEditingController(text: profile.email),
                 decoration: InputDecoration(
-                  labelText: 'Email',
+                  labelText: l10n.emailLabel,
                   border: const OutlineInputBorder(),
                   suffixIcon: profile.emailVerified
                       ? const Icon(Icons.check_circle, color: Colors.green)
                       : IconButton(
                           icon: const Icon(Icons.error_outline),
-                          tooltip: 'Invia di nuovo la verifica',
+                          tooltip: l10n.resendVerificationTooltip,
                           onPressed: _resendVerification,
                         ),
                 ),
@@ -158,7 +170,7 @@ class _AccountProfileScreenState extends ConsumerState<AccountProfileScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.xs),
                   child: Text(
-                    'Email non verificata. Tocca l\'icona per reinviare il link.',
+                    l10n.emailNotVerifiedHint,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -171,7 +183,7 @@ class _AccountProfileScreenState extends ConsumerState<AccountProfileScreen> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Salva'),
+                    : Text(l10n.commonSave),
               ),
             ],
           );

@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/state/ledger_revision_provider.dart';
 import '../../data/providers.dart';
 import '../../domain/models/ledger_transaction.dart';
@@ -17,13 +16,13 @@ class TransactionDetailState {
 
   final bool isLoading;
   final LedgerTransaction? transaction;
-  final String? error;
+  final AppError? error;
   final bool isDeleting;
 
   TransactionDetailState copyWith({
     bool? isLoading,
     LedgerTransaction? transaction,
-    String? error,
+    AppError? error,
     bool? isDeleting,
   }) {
     return TransactionDetailState(
@@ -51,7 +50,7 @@ class TransactionDetailController
           .getTransaction(arg);
       state = state.copyWith(isLoading: false, transaction: transaction);
     } on AppError catch (e) {
-      state = state.copyWith(isLoading: false, error: presentError(e).message);
+      state = state.copyWith(isLoading: false, error: e);
     }
   }
 
@@ -67,7 +66,7 @@ class TransactionDetailController
       ref.bumpLedgerRevision();
       return wallet;
     } on AppError catch (e) {
-      state = state.copyWith(isDeleting: false, error: presentError(e).message);
+      state = state.copyWith(isDeleting: false, error: e);
       return null;
     }
   }

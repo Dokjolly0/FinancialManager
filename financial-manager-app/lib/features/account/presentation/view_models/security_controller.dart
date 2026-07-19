@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../data/providers.dart';
 import '../state/security_state.dart';
 
@@ -19,7 +18,7 @@ class SecurityController extends Notifier<SecurityState> {
       final sessions = await ref.read(accountRepositoryProvider).listSessions();
       state = state.copyWith(isLoading: false, sessions: sessions);
     } on AppError catch (e) {
-      state = state.copyWith(isLoading: false, error: presentError(e).message);
+      state = state.copyWith(isLoading: false, error: e);
     }
   }
 

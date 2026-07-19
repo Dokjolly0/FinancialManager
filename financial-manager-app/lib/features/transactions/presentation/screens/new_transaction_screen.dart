@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/error_code_localizations.dart';
+import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/amount_field.dart';
 import '../../../../core/widgets/direction_segmented_control.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../categories/data/providers.dart';
 import '../../../categories/domain/models/category.dart';
 import '../../../categories/presentation/widgets/category_picker_sheet.dart';
@@ -113,6 +116,11 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
       transactionFormControllerProvider(widget.editTransactionId).notifier,
     );
     final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+    final l10n = AppLocalizations.of(context);
+    String? fieldError(String key) {
+      final code = state.fieldErrors[key];
+      return code == null ? null : localizeErrorCode(l10n, code);
+    }
 
     if (!_controllersSynced && !state.isLoadingExisting) {
       _amountController.text = state.amountInput;
@@ -154,13 +162,13 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
                   const SizedBox(height: AppSpacing.lg),
                   AmountField(
                     controller: _amountController,
-                    errorText: state.fieldErrors['amount_minor'],
+                    errorText: fieldError('amount_minor'),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   TitleAutocompleteField(
                     controller: _titleController,
                     direction: direction,
-                    errorText: state.fieldErrors['title'],
+                    errorText: fieldError('title'),
                     onChanged: controller.setTitle,
                     onSuggestionSelected: (template) {
                       final matches = categories.where(
@@ -183,7 +191,9 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.label_outline),
-                    title: Text(selectedCategory?.name ?? 'Nessuna categoria'),
+                    title: Text(
+                      selectedCategory?.name ?? AppLocalizations.of(context).noCategoryLabel,
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _pickCategory(context, direction),
                   ),
@@ -232,8 +242,8 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
                   TextField(
                     controller: _descriptionController,
                     maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Descrizione (facoltativa)',
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context).descriptionOptionalLabel,
                     ),
                     onChanged: controller.setDescription,
                   ),
@@ -248,10 +258,10 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
                     value: state.saveAsTemplate,
                     onChanged: controller.setSaveAsTemplate,
                   ),
-                  if (state.generalError != null) ...[
+                  if (state.error != null) ...[
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      state.generalError!,
+                      presentError(state.error!, l10n).message,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),

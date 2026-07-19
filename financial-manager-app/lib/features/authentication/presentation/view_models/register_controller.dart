@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/session/current_user_provider.dart';
 import '../../../../app/session/session_controller.dart';
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/formatting/color_hex.dart';
 import '../../../../core/formatting/money.dart';
 import '../../data/providers.dart';
@@ -33,7 +32,7 @@ class RegisterController extends Notifier<RegisterState> {
       password: password,
       confirmPassword: confirmPassword,
       fieldErrors: {},
-      generalError: null,
+      error: null,
     );
   }
 
@@ -52,7 +51,7 @@ class RegisterController extends Notifier<RegisterState> {
       initialBalanceInput: initialBalanceInput,
       timezone: timezone,
       fieldErrors: {},
-      generalError: null,
+      error: null,
     );
   }
 
@@ -65,22 +64,24 @@ class RegisterController extends Notifier<RegisterState> {
 
   /// Client-side validation for step 0 (mirrors the backend's rules from
   /// plan.md section 4.4/15.5 so the user gets feedback before submitting).
+  /// Field values are error codes (see [localizeErrorCode]), not display
+  /// text, so they localize the same way as backend-sourced field errors.
   Map<String, String> validateAccountStep() {
     final s = state;
     final errors = <String, String>{};
     if (s.firstName.trim().isEmpty) {
-      errors['first_name'] = 'Campo obbligatorio.';
+      errors['first_name'] = 'REQUIRED_FIELD';
     }
-    if (s.lastName.trim().isEmpty) errors['last_name'] = 'Campo obbligatorio.';
+    if (s.lastName.trim().isEmpty) errors['last_name'] = 'REQUIRED_FIELD';
     if (s.username.trim().length < 3) {
-      errors['username'] = 'Deve avere almeno 3 caratteri.';
+      errors['username'] = 'USERNAME_LENGTH_INVALID';
     }
-    if (!s.email.contains('@')) errors['email'] = 'Email non valida.';
+    if (!s.email.contains('@')) errors['email'] = 'INVALID_EMAIL';
     if (s.password.length < 8) {
-      errors['password'] = 'Deve avere almeno 8 caratteri.';
+      errors['password'] = 'PASSWORD_TOO_SHORT';
     }
     if (s.password != s.confirmPassword) {
-      errors['confirm_password'] = 'Le password non coincidono.';
+      errors['confirm_password'] = 'PASSWORDS_DO_NOT_MATCH';
     }
     return errors;
   }
@@ -89,22 +90,18 @@ class RegisterController extends Notifier<RegisterState> {
     final balanceMinor = Money.parseMinorUnits(state.initialBalanceInput);
     if (balanceMinor == null) {
       state = state.copyWith(
-        fieldErrors: {'initial_balance_minor': 'Importo non valido.'},
+        fieldErrors: {'initial_balance_minor': 'INVALID_AMOUNT'},
       );
       return false;
     }
     if (!state.acceptedTerms) {
       state = state.copyWith(
-        fieldErrors: {'accepted_terms': 'Devi accettare i termini.'},
+        fieldErrors: {'accepted_terms': 'TERMS_NOT_ACCEPTED'},
       );
       return false;
     }
 
-    state = state.copyWith(
-      isSubmitting: true,
-      generalError: null,
-      fieldErrors: {},
-    );
+    state = state.copyWith(isSubmitting: true, error: null, fieldErrors: {});
 
     try {
       final user = await ref
@@ -132,7 +129,7 @@ class RegisterController extends Notifier<RegisterState> {
       state = state.copyWith(isSubmitting: false);
       return true;
     } on AppError catch (e) {
-      final presentation = presentError(e);
+      final fieldErrors = e is DomainError ? e.fieldErrors : <String, String>{};
       // A field error on an account-step field means the user should go
       // back there to fix it (e.g. USERNAME_IN_USE surfaces on submit,
       // which only happens after step 2).
@@ -142,15 +139,14 @@ class RegisterController extends Notifier<RegisterState> {
         'password',
         'confirm_password',
       };
-      final targetStep =
-          presentation.fieldErrors.keys.any(accountFields.contains)
+      final targetStep = fieldErrors.keys.any(accountFields.contains)
           ? 0
           : state.step;
 
       state = state.copyWith(
         isSubmitting: false,
-        generalError: presentation.message,
-        fieldErrors: presentation.fieldErrors,
+        error: e,
+        fieldErrors: fieldErrors,
         step: targetStep,
       );
       return false;

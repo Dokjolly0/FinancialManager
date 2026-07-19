@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/session/current_user_provider.dart';
 import '../../../../app/session/session_controller.dart';
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../data/providers.dart';
 import '../state/login_state.dart';
 
@@ -15,11 +14,7 @@ class LoginController extends Notifier<LoginState> {
     required String usernameOrEmail,
     required String password,
   }) async {
-    state = state.copyWith(
-      isSubmitting: true,
-      generalError: null,
-      fieldErrors: {},
-    );
+    state = state.copyWith(isSubmitting: true, error: null, fieldErrors: {});
 
     try {
       final user = await ref
@@ -31,11 +26,10 @@ class LoginController extends Notifier<LoginState> {
       state = state.copyWith(isSubmitting: false);
       return true;
     } on AppError catch (e) {
-      final presentation = presentError(e);
       state = state.copyWith(
         isSubmitting: false,
-        generalError: presentation.message,
-        fieldErrors: presentation.fieldErrors,
+        error: e,
+        fieldErrors: e is DomainError ? e.fieldErrors : const {},
       );
       return false;
     }

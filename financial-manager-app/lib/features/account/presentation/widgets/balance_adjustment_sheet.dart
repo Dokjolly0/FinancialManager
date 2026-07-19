@@ -7,6 +7,7 @@ import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/formatting/money.dart';
 import '../../../../core/state/ledger_revision_provider.dart';
 import '../../../../core/widgets/amount_field.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../transactions/data/providers.dart';
 import '../view_models/account_providers.dart';
 
@@ -54,7 +55,9 @@ class _BalanceAdjustmentSheetState
   Future<void> _submit() async {
     final targetMinor = Money.parseMinorUnits(_amountController.text);
     if (targetMinor == null) {
-      setState(() => _amountError = 'Importo non valido.');
+      setState(
+        () => _amountError = AppLocalizations.of(context).errorCodeInvalidAmount,
+      );
       return;
     }
     setState(() {
@@ -76,9 +79,13 @@ class _BalanceAdjustmentSheetState
       if (mounted) Navigator.of(context).pop();
     } on AppError catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(presentError(e).message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              presentError(e, AppLocalizations.of(context)).message,
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -87,6 +94,7 @@ class _BalanceAdjustmentSheetState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -99,13 +107,13 @@ class _BalanceAdjustmentSheetState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Rettifica saldo',
+            l10n.accountBalanceAdjustmentAction,
             style: Theme.of(context).textTheme.titleMedium,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Saldo attuale: ${widget.currentBalance.format()}',
+            l10n.currentBalanceLabel(widget.currentBalance.format()),
             style: Theme.of(context).textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
@@ -120,9 +128,9 @@ class _BalanceAdjustmentSheetState
           const SizedBox(height: AppSpacing.sm),
           TextField(
             controller: _reasonController,
-            decoration: const InputDecoration(
-              labelText: 'Motivo (opzionale)',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.reasonOptionalLabel,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -134,7 +142,7 @@ class _BalanceAdjustmentSheetState
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Salva rettifica'),
+                : Text(l10n.saveAdjustmentAction),
           ),
         ],
       ),

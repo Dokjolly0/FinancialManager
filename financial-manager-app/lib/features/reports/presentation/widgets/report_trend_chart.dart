@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/report_timeseries.dart';
 
-/// Grafico andamento (plan.md section 7.12): cumulative balance line at
+/// Trend chart (plan.md section 7.12): cumulative balance line at
 /// the backend's chosen granularity. A table view is offered alongside the
-/// chart (plan.md Fase 7 "accessibilità e tabella alternativa") since a
+/// chart (plan.md phase 7, "accessibility and alternative table") since a
 /// canvas-drawn line chart carries no information to a screen reader.
 class ReportTrendChart extends StatefulWidget {
   const ReportTrendChart({super.key, required this.timeseries});
@@ -30,6 +31,7 @@ class _ReportTrendChartState extends State<ReportTrendChart> {
   Widget build(BuildContext context) {
     final points = widget.timeseries.points;
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
 
     return Card(
       child: Padding(
@@ -41,22 +43,22 @@ class _ReportTrendChartState extends State<ReportTrendChart> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Andamento',
+                  l10n.reportTrendTitle,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 IconButton(
                   icon: Icon(_showTable ? Icons.show_chart : Icons.table_rows),
                   tooltip: _showTable
-                      ? 'Mostra grafico'
-                      : 'Mostra tabella (accessibile)',
+                      ? l10n.showChartTooltip
+                      : l10n.showTableTooltip,
                   onPressed: () => setState(() => _showTable = !_showTable),
                 ),
               ],
             ),
             if (points.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                child: Text('Nessun dato per il periodo selezionato.'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                child: Text(l10n.noDataForPeriod),
               )
             else if (_showTable)
               _TrendTable(points: points, formatDate: _formatDate)
@@ -128,14 +130,15 @@ class _TrendTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Periodo')),
-          DataColumn(label: Text('Entrate'), numeric: true),
-          DataColumn(label: Text('Uscite'), numeric: true),
-          DataColumn(label: Text('Saldo'), numeric: true),
+        columns: [
+          DataColumn(label: Text(l10n.periodColumnLabel)),
+          DataColumn(label: Text(l10n.creditsColumnLabel), numeric: true),
+          DataColumn(label: Text(l10n.debitsColumnLabel), numeric: true),
+          DataColumn(label: Text(l10n.balanceColumnLabel), numeric: true),
         ],
         rows: [
           for (final p in points)

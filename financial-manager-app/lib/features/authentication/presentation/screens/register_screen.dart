@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/error_code_localizations.dart';
+import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/formatting/money.dart';
 import '../../../../core/widgets/generated_avatar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../view_models/register_controller.dart';
 import '../widgets/password_field.dart';
 
@@ -71,9 +74,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(registerControllerProvider);
     final controller = ref.read(registerControllerProvider.notifier);
+    final l10n = AppLocalizations.of(context);
+    String? fieldError(String key) {
+      final code = state.fieldErrors[key];
+      return code == null ? null : localizeErrorCode(l10n, code);
+    }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Crea un account')),
+      appBar: AppBar(title: Text(l10n.createAccountAction)),
       body: Stepper(
         currentStep: state.step,
         onStepContinue: () async {
@@ -108,14 +116,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : Text(
-                          state.step == 2 ? 'Conferma registrazione' : 'Avanti',
+                          state.step == 2
+                              ? l10n.confirmRegistrationAction
+                              : l10n.nextAction,
                         ),
                 ),
                 if (details.onStepCancel != null) ...[
                   const SizedBox(width: AppSpacing.sm),
                   TextButton(
                     onPressed: details.onStepCancel,
-                    child: const Text('Indietro'),
+                    child: Text(l10n.backAction),
                   ),
                 ],
               ],
@@ -124,7 +134,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         },
         steps: [
           Step(
-            title: const Text('Account'),
+            title: Text(l10n.accountStepTitle),
             isActive: state.step >= 0,
             state: state.step > 0 ? StepState.complete : StepState.indexed,
             content: Column(
@@ -133,24 +143,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 TextField(
                   controller: _firstNameController,
                   decoration: InputDecoration(
-                    labelText: 'Nome',
-                    errorText: state.fieldErrors['first_name'],
+                    labelText: l10n.firstNameLabel,
+                    errorText: fieldError('first_name'),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 TextField(
                   controller: _lastNameController,
                   decoration: InputDecoration(
-                    labelText: 'Cognome',
-                    errorText: state.fieldErrors['last_name'],
+                    labelText: l10n.lastNameLabel,
+                    errorText: fieldError('last_name'),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 TextField(
                   controller: _usernameController,
                   decoration: InputDecoration(
-                    labelText: 'Username',
-                    errorText: state.fieldErrors['username'],
+                    labelText: l10n.usernameLabel,
+                    errorText: fieldError('username'),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -158,27 +168,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: 'Email',
-                    errorText: state.fieldErrors['email'],
+                    labelText: l10n.emailLabel,
+                    errorText: fieldError('email'),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 PasswordField(
                   controller: _passwordController,
-                  label: 'Password',
-                  errorText: state.fieldErrors['password'],
+                  label: l10n.passwordLabel,
+                  errorText: fieldError('password'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 PasswordField(
                   controller: _confirmPasswordController,
-                  label: 'Conferma password',
-                  errorText: state.fieldErrors['confirm_password'],
+                  label: l10n.confirmPasswordLabel,
+                  errorText: fieldError('confirm_password'),
                 ),
               ],
             ),
           ),
           Step(
-            title: const Text('Profilo'),
+            title: Text(l10n.profileStepTitle),
             isActive: state.step >= 1,
             state: state.step > 1 ? StepState.complete : StepState.indexed,
             content: Column(
@@ -192,7 +202,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  'Colore sfondo',
+                  l10n.backgroundColorLabel,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.xs),
@@ -214,7 +224,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
           Step(
-            title: const Text('Portafoglio'),
+            title: Text(l10n.walletStepTitle),
             isActive: state.step >= 2,
             state: StepState.indexed,
             content: Column(
@@ -228,14 +238,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   onChanged: (v) =>
                       controller.updateWalletFields(initialBalanceInput: v),
                   decoration: InputDecoration(
-                    labelText: 'Saldo iniziale (EUR)',
-                    errorText: state.fieldErrors['initial_balance_minor'],
+                    labelText: l10n.initialBalanceLabel,
+                    errorText: fieldError('initial_balance_minor'),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                if (state.generalError != null)
+                if (state.error != null)
                   Text(
-                    state.generalError!,
+                    presentError(state.error!, l10n).message,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -243,15 +253,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 CheckboxListTile(
                   value: state.acceptedTerms,
                   onChanged: (v) => controller.setAcceptedTerms(v ?? false),
-                  title: const Text(
-                    'Accetto i termini di servizio e la privacy policy',
-                  ),
+                  title: Text(l10n.acceptTermsLabel),
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
                 ),
-                if (state.fieldErrors['accepted_terms'] != null)
+                if (fieldError('accepted_terms') != null)
                   Text(
-                    state.fieldErrors['accepted_terms']!,
+                    fieldError('accepted_terms')!,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                       fontSize: 12,
@@ -259,9 +267,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Riepilogo: ${_firstNameController.text} ${_lastNameController.text}, '
-                  '@${_usernameController.text}, saldo iniziale '
-                  '${Money(minorUnits: Money.parseMinorUnits(state.initialBalanceInput) ?? 0, currency: 'EUR').format()}',
+                  l10n.registrationSummaryLabel(
+                    _firstNameController.text,
+                    _lastNameController.text,
+                    _usernameController.text,
+                    Money(
+                      minorUnits:
+                          Money.parseMinorUnits(state.initialBalanceInput) ??
+                          0,
+                      currency: 'EUR',
+                    ).format(),
+                  ),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],

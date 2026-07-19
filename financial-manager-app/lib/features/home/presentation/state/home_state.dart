@@ -1,3 +1,4 @@
+import '../../../../core/errors/app_error.dart';
 import '../../../transactions/domain/models/ledger_transaction.dart';
 import '../../../transactions/domain/models/wallet.dart';
 
@@ -13,14 +14,14 @@ class HomeState {
   final bool isLoading;
   final Wallet? wallet;
   final List<LedgerTransaction> recentTransactions;
-  final String? error;
+  final AppError? error;
   final bool balanceObscured;
 
   HomeState copyWith({
     bool? isLoading,
     Wallet? wallet,
     List<LedgerTransaction>? recentTransactions,
-    String? error,
+    AppError? error,
     bool? balanceObscured,
   }) {
     return HomeState(

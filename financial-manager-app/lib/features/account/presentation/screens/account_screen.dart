@@ -9,6 +9,7 @@ import '../../../../core/formatting/color_hex.dart';
 import '../../../../core/widgets/confirmation_sheet.dart';
 import '../../../../core/widgets/generated_avatar.dart';
 import '../../../../core/widgets/inline_error.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/data/providers.dart';
 import '../view_models/account_providers.dart';
 import '../widgets/balance_adjustment_sheet.dart';
@@ -20,10 +21,11 @@ class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
 
   Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await ConfirmationSheet.show(
       context,
-      title: 'Vuoi uscire?',
-      confirmLabel: 'Esci',
+      title: l10n.accountLogoutConfirmTitle,
+      confirmLabel: l10n.accountLogoutAction,
     );
     if (!confirmed) return;
     await ref.read(authRepositoryProvider).logout();
@@ -31,11 +33,12 @@ class AccountScreen extends ConsumerWidget {
   }
 
   Future<void> _logoutAll(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await ConfirmationSheet.show(
       context,
-      title: 'Uscire da tutti i dispositivi?',
-      message: 'Tutte le sessioni attive verranno terminate.',
-      confirmLabel: 'Esci ovunque',
+      title: l10n.accountLogoutAllConfirmTitle,
+      message: l10n.accountLogoutAllConfirmMessage,
+      confirmLabel: l10n.accountLogoutAllAction,
       isDestructive: true,
     );
     if (!confirmed) return;
@@ -47,9 +50,10 @@ class AccountScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(accountProfileProvider);
     final walletAsync = ref.watch(accountWalletProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Account')),
+      appBar: AppBar(title: Text(l10n.accountScreenTitle)),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(accountProfileProvider);
@@ -64,7 +68,7 @@ class AccountScreen extends ConsumerWidget {
                 child: Center(child: CircularProgressIndicator()),
               ),
               error: (error, _) => InlineError(
-                message: 'Impossibile caricare il profilo.',
+                message: l10n.accountProfileLoadError,
                 onRetry: () => ref.invalidate(accountProfileProvider),
               ),
               data: (profile) => Card(
@@ -95,7 +99,7 @@ class AccountScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Portafoglio',
+                        l10n.accountWalletLabel,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: AppSpacing.xs),
@@ -111,7 +115,7 @@ class AccountScreen extends ConsumerWidget {
                               context,
                               wallet.balance,
                             ),
-                            child: const Text('Rettifica saldo'),
+                            child: Text(l10n.accountBalanceAdjustmentAction),
                           ),
                         ],
                       ),
@@ -126,17 +130,15 @@ class AccountScreen extends ConsumerWidget {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.shield_outlined),
-                    title: const Text('Sicurezza'),
-                    subtitle: const Text(
-                      'Password, sessioni attive, logout',
-                    ),
+                    title: Text(l10n.accountSecurityMenuTitle),
+                    subtitle: Text(l10n.accountSecurityMenuSubtitle),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.accountSecurity),
                   ),
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.link),
-                    title: const Text('Account collegati'),
+                    title: Text(l10n.accountLinkedAccountsMenuTitle),
                     subtitle: const Text('Google'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
@@ -145,18 +147,16 @@ class AccountScreen extends ConsumerWidget {
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.tune),
-                    title: const Text('Preferenze'),
-                    subtitle: const Text(
-                      'Tema, fuso orario, lingua, saldo',
-                    ),
+                    title: Text(l10n.accountPreferencesMenuTitle),
+                    subtitle: Text(l10n.accountPreferencesMenuSubtitle),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.accountPreferences),
                   ),
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.folder_outlined),
-                    title: const Text('Dati'),
-                    subtitle: const Text('Esporta o elimina il tuo account'),
+                    title: Text(l10n.accountDataMenuTitle),
+                    subtitle: Text(l10n.accountDataMenuSubtitle),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.accountData),
                   ),
@@ -169,13 +169,13 @@ class AccountScreen extends ConsumerWidget {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.logout),
-                    title: const Text('Esci'),
+                    title: Text(l10n.accountLogoutAction),
                     onTap: () => _logout(context, ref),
                   ),
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.logout_outlined),
-                    title: const Text('Esci da tutti i dispositivi'),
+                    title: Text(l10n.accountLogoutAllMenuTitle),
                     onTap: () => _logoutAll(context, ref),
                   ),
                 ],

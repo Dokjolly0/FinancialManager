@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/formatting/money.dart';
 import '../../../../core/state/ledger_revision_provider.dart';
 import '../../../categories/domain/models/category.dart';
@@ -45,10 +44,7 @@ class TransactionFormController
         expectedVersion: existing.version,
       );
     } on AppError catch (e) {
-      state = state.copyWith(
-        isLoadingExisting: false,
-        generalError: presentError(e).message,
-      );
+      state = state.copyWith(isLoadingExisting: false, error: e);
     }
   }
 
@@ -58,14 +54,14 @@ class TransactionFormController
   void setAmountInput(String value) => state = state.copyWith(
     amountInput: value,
     fieldErrors: {},
-    generalError: null,
+    error: null,
   );
 
   /// Setting the title manually breaks the link to a previously selected
   /// template the moment it stops matching that template's title (plan.md
-  /// section 4.4: "Se l'utente modifica un campo dopo aver selezionato un
-  /// modello, la transazione può divergere senza modificare automaticamente
-  /// il modello").
+  /// section 4.4: "If the user edits a field after selecting a template,
+  /// the transaction can diverge without automatically updating the
+  /// template").
   void setTitle(String value) {
     final diverged =
         state.selectedTemplateId != null &&
@@ -113,21 +109,17 @@ class TransactionFormController
     final amountMinor = Money.parseMinorUnits(state.amountInput);
     final fieldErrors = <String, String>{};
     if (amountMinor == null || amountMinor <= 0) {
-      fieldErrors['amount_minor'] = 'Inserisci un importo maggiore di zero.';
+      fieldErrors['amount_minor'] = 'AMOUNT_NOT_POSITIVE';
     }
     if (state.title.trim().isEmpty) {
-      fieldErrors['title'] = 'Campo obbligatorio.';
+      fieldErrors['title'] = 'REQUIRED_FIELD';
     }
     if (fieldErrors.isNotEmpty) {
       state = state.copyWith(fieldErrors: fieldErrors);
       return false;
     }
 
-    state = state.copyWith(
-      isSubmitting: true,
-      generalError: null,
-      fieldErrors: {},
-    );
+    state = state.copyWith(isSubmitting: true, error: null, fieldErrors: {});
 
     final direction = state.isCredit
         ? TransactionDirection.credit
@@ -183,11 +175,10 @@ class TransactionFormController
       }
       return true;
     } on AppError catch (e) {
-      final presentation = presentError(e);
       state = state.copyWith(
         isSubmitting: false,
-        generalError: presentation.message,
-        fieldErrors: presentation.fieldErrors,
+        error: e,
+        fieldErrors: e is DomainError ? e.fieldErrors : const {},
       );
       return false;
     }
@@ -196,8 +187,8 @@ class TransactionFormController
   /// Best-effort: the ledger mutation already succeeded, so a failure here
   /// (e.g. a race with another device creating the same-titled template)
   /// must never surface as an error to the user (plan.md section 4.4:
-  /// "Dopo il salvataggio può essere offerta l'azione 'Aggiorna anche il
-  /// modello'" — a convenience, not part of the financial operation).
+  /// "After saving, the action 'Also update the template' may be offered"
+  /// — a convenience, not part of the financial operation).
   Future<void> _persistTemplate(
     TransactionDirection direction,
     String title,

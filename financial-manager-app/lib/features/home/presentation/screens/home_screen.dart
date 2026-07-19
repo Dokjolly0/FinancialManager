@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router.dart';
 import '../../../../app/session/current_user_provider.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/balance_card.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../core/widgets/skeleton_list.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../media/data/providers.dart';
 import '../../../transactions/presentation/widgets/transaction_tile.dart';
 import '../view_models/home_controller.dart';
@@ -26,6 +28,7 @@ class HomeScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final controller = ref.read(homeControllerProvider.notifier);
     final mediaRepo = ref.read(mediaRepositoryProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -36,7 +39,10 @@ class HomeScreen extends ConsumerWidget {
         child: state.isLoading
             ? const SkeletonList()
             : state.error != null && state.wallet == null
-            ? InlineError(message: state.error!, onRetry: controller.refresh)
+            ? InlineError(
+                message: presentError(state.error!, l10n).message,
+                onRetry: controller.refresh,
+              )
             : ListView(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [

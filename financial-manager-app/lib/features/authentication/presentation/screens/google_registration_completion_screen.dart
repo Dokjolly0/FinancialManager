@@ -5,7 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router.dart';
 import '../../../../app/session/pending_google_registration_provider.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/error_code_localizations.dart';
+import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/generated_avatar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../view_models/google_completion_controller.dart';
 import '../widgets/password_field.dart';
 
@@ -64,21 +67,26 @@ class _GoogleRegistrationCompletionScreenState
     final ticket = ref.watch(pendingGoogleRegistrationProvider);
     final state = ref.watch(googleCompletionControllerProvider);
     final controller = ref.read(googleCompletionControllerProvider.notifier);
+    final l10n = AppLocalizations.of(context);
+    String? fieldError(String key) {
+      final code = state.fieldErrors[key];
+      return code == null ? null : localizeErrorCode(l10n, code);
+    }
 
     if (ticket == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Completa la registrazione')),
+        appBar: AppBar(title: Text(l10n.completeRegistrationScreenTitle)),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Sessione di registrazione scaduta.'),
+                Text(l10n.errorCodeRegistrationSessionExpired),
                 const SizedBox(height: AppSpacing.md),
                 FilledButton(
                   onPressed: () => context.go(AppRoutes.login),
-                  child: const Text('Torna al login'),
+                  child: Text(l10n.backToLoginAction),
                 ),
               ],
             ),
@@ -95,7 +103,7 @@ class _GoogleRegistrationCompletionScreenState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Accesso confermato con Google come ${ticket.email}.',
+              l10n.googleSignInConfirmedMessage(ticket.email),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -138,26 +146,26 @@ class _GoogleRegistrationCompletionScreenState
             TextField(
               controller: _usernameController,
               decoration: InputDecoration(
-                labelText: 'Username',
-                errorText: state.fieldErrors['username'],
+                labelText: l10n.usernameLabel,
+                errorText: fieldError('username'),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Password locale (facoltativa: senza, potrai accedere solo con Google)',
+              l10n.localPasswordOptionalHint,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: AppSpacing.xs),
             PasswordField(
               controller: _passwordController,
-              label: 'Password',
-              errorText: state.fieldErrors['password'],
+              label: l10n.passwordLabel,
+              errorText: fieldError('password'),
             ),
             const SizedBox(height: AppSpacing.sm),
             PasswordField(
               controller: _confirmPasswordController,
-              label: 'Conferma password',
-              errorText: state.fieldErrors['confirm_password'],
+              label: l10n.confirmPasswordLabel,
+              errorText: fieldError('confirm_password'),
             ),
             const SizedBox(height: AppSpacing.sm),
             TextField(
@@ -166,32 +174,30 @@ class _GoogleRegistrationCompletionScreenState
                 decimal: true,
               ),
               decoration: InputDecoration(
-                labelText: 'Saldo iniziale (EUR)',
-                errorText: state.fieldErrors['initial_balance_minor'],
+                labelText: l10n.initialBalanceLabel,
+                errorText: fieldError('initial_balance_minor'),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
             CheckboxListTile(
               value: state.acceptedTerms,
               onChanged: (v) => controller.setAcceptedTerms(v ?? false),
-              title: const Text(
-                'Accetto i termini di servizio e la privacy policy',
-              ),
+              title: Text(l10n.acceptTermsLabel),
               controlAffinity: ListTileControlAffinity.leading,
               contentPadding: EdgeInsets.zero,
             ),
-            if (state.fieldErrors['accepted_terms'] != null)
+            if (fieldError('accepted_terms') != null)
               Text(
-                state.fieldErrors['accepted_terms']!,
+                fieldError('accepted_terms')!,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.error,
                   fontSize: 12,
                 ),
               ),
-            if (state.generalError != null) ...[
+            if (state.error != null) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(
-                state.generalError!,
+                presentError(state.error!, l10n).message,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
@@ -204,7 +210,7 @@ class _GoogleRegistrationCompletionScreenState
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Completa registrazione'),
+                  : Text(l10n.completeRegistrationAction),
             ),
           ],
         ),

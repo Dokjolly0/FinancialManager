@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router.dart';
 import '../../../../app/session/pending_google_registration_provider.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/error_code_localizations.dart';
+import '../../../../core/errors/error_presentation.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/google_sign_in_outcome.dart';
 import '../view_models/google_sign_in_controller.dart';
 import '../view_models/login_controller.dart';
@@ -65,6 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(loginControllerProvider);
     final googleState = ref.watch(googleSignInControllerProvider);
+    final l10n = AppLocalizations.of(context);
     final canSubmit =
         !state.isSubmitting &&
         _usernameOrEmailController.text.isNotEmpty &&
@@ -78,11 +82,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: AppSpacing.xl),
-              Text('Accedi', style: Theme.of(context).textTheme.headlineMedium),
+              Text(l10n.loginAction, style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: AppSpacing.lg),
-              if (state.generalError != null) ...[
+              if (state.error != null) ...[
                 Text(
-                  state.generalError!,
+                  presentError(state.error!, l10n).message,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -92,15 +96,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onChanged: (_) => setState(() {}),
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
-                  labelText: 'Username o email',
-                  errorText: state.fieldErrors['username_or_email'],
+                  labelText: l10n.usernameOrEmailLabel,
+                  errorText: state.fieldErrors['username_or_email'] == null
+                      ? null
+                      : localizeErrorCode(
+                          l10n,
+                          state.fieldErrors['username_or_email']!,
+                        ),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
               PasswordField(
                 controller: _passwordController,
-                label: 'Password',
-                errorText: state.fieldErrors['password'],
+                label: l10n.passwordLabel,
+                errorText: state.fieldErrors['password'] == null
+                    ? null
+                    : localizeErrorCode(l10n, state.fieldErrors['password']!),
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => canSubmit ? _submit() : null,
               ),
@@ -108,7 +119,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => context.push(AppRoutes.forgotPassword),
-                  child: const Text('Password dimenticata?'),
+                  child: Text(l10n.forgotPasswordAction),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -120,7 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Accedi'),
+                    : Text(l10n.loginAction),
               ),
               const SizedBox(height: AppSpacing.md),
               Row(
@@ -131,7 +142,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       horizontal: AppSpacing.sm,
                     ),
                     child: Text(
-                      'oppure',
+                      l10n.orDividerLabel,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
@@ -141,7 +152,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const SizedBox(height: AppSpacing.md),
               if (googleState.error != null) ...[
                 Text(
-                  googleState.error!,
+                  presentError(googleState.error!, l10n).message,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -157,13 +168,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.g_mobiledata),
-                label: const Text('Continua con Google'),
+                label: Text(l10n.continueWithGoogleAction),
               ),
               const SizedBox(height: AppSpacing.lg),
               Center(
                 child: TextButton(
                   onPressed: () => context.push(AppRoutes.register),
-                  child: const Text('Crea un account'),
+                  child: Text(l10n.createAccountAction),
                 ),
               ),
             ],

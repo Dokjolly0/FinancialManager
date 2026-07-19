@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/state/ledger_revision_provider.dart';
 import '../../../transactions/data/providers.dart';
 import '../../../transactions/domain/repositories/transaction_repository.dart';
@@ -41,7 +40,7 @@ class HistoryController extends Notifier<HistoryState> {
         hasMore: page.hasMore,
       );
     } on AppError catch (e) {
-      state = state.copyWith(isLoading: false, error: presentError(e).message);
+      state = state.copyWith(isLoading: false, error: e);
     }
   }
 

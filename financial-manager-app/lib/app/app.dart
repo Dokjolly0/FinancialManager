@@ -7,7 +7,7 @@ import 'router.dart';
 import 'theme/app_theme.dart';
 
 /// Root widget. Composes routing, theming (light/dark, section 6.3), and
-/// localization (Italian now, structure ready for more locales, section
+/// localization (English source with an Italian translation, section
 /// 3.1/9.2).
 class FinancialManagerApp extends ConsumerWidget {
   const FinancialManagerApp({super.key});

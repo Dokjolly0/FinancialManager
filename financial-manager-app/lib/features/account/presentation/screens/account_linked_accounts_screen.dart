@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/confirmation_sheet.dart';
 import '../../../../core/widgets/inline_error.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/presentation/widgets/password_field.dart';
 import '../../domain/models/linked_identity.dart';
 import '../view_models/linked_accounts_controller.dart';
@@ -16,23 +18,24 @@ class AccountLinkedAccountsScreen extends ConsumerWidget {
   const AccountLinkedAccountsScreen({super.key});
 
   Future<void> _link(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final passwordController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Conferma la password'),
+        title: Text(l10n.confirmPasswordDialogTitle),
         content: PasswordField(
           controller: passwordController,
-          label: 'Password attuale',
+          label: l10n.currentPasswordLabel,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annulla'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Continua'),
+            child: Text(l10n.commonContinue),
           ),
         ],
       ),
@@ -44,16 +47,23 @@ class AccountLinkedAccountsScreen extends ConsumerWidget {
         .linkGoogle(passwordController.text);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error ?? 'Google collegato con successo.')),
+      SnackBar(
+        content: Text(
+          error == null
+              ? l10n.googleLinkedSuccessMessage
+              : presentError(error, l10n).message,
+        ),
+      ),
     );
   }
 
   Future<void> _unlink(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await ConfirmationSheet.show(
       context,
-      title: 'Scollegare Google?',
-      message: 'Potrai comunque accedere con la tua password.',
-      confirmLabel: 'Scollega',
+      title: l10n.unlinkGoogleConfirmTitle,
+      message: l10n.unlinkGoogleConfirmMessage,
+      confirmLabel: l10n.unlinkGoogleAction,
       isDestructive: true,
     );
     if (!confirmed) return;
@@ -63,21 +73,28 @@ class AccountLinkedAccountsScreen extends ConsumerWidget {
         .unlinkGoogle();
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error ?? 'Google scollegato.')),
+      SnackBar(
+        content: Text(
+          error == null
+              ? l10n.googleUnlinkedSuccessMessage
+              : presentError(error, l10n).message,
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(linkedAccountsControllerProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Account collegati')),
+      appBar: AppBar(title: Text(l10n.accountLinkedAccountsMenuTitle)),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.error != null
           ? InlineError(
-              message: state.error!,
+              message: presentError(state.error!, l10n).message,
               onRetry: () =>
                   ref.read(linkedAccountsControllerProvider.notifier).refresh(),
             )
@@ -91,18 +108,19 @@ class AccountLinkedAccountsScreen extends ConsumerWidget {
                     subtitle: state.isGoogleLinked
                         ? Text(
                             _lastUsedLabel(
+                              l10n,
                               state.identities.firstWhere(
                                 (i) => i.provider == 'google',
                               ),
                             ),
                           )
-                        : const Text('Non collegato'),
+                        : Text(l10n.notLinkedLabel),
                     trailing: FilledButton.tonal(
                       onPressed: () => state.isGoogleLinked
                           ? _unlink(context, ref)
                           : _link(context, ref),
                       child: Text(
-                        state.isGoogleLinked ? 'Scollega' : 'Collega',
+                        state.isGoogleLinked ? l10n.unlinkGoogleAction : l10n.linkAction,
                       ),
                     ),
                   ),
@@ -112,13 +130,13 @@ class AccountLinkedAccountsScreen extends ConsumerWidget {
     );
   }
 
-  String _lastUsedLabel(LinkedIdentity identity) {
+  String _lastUsedLabel(AppLocalizations l10n, LinkedIdentity identity) {
     final lastUsedAt = identity.lastUsedAt;
-    if (lastUsedAt == null) return 'Collegato, mai utilizzato';
+    if (lastUsedAt == null) return l10n.linkedNeverUsedLabel;
     final formatted = DateFormat(
       'd MMM y, HH:mm',
       'it_IT',
     ).format(lastUsedAt.toLocal());
-    return 'Ultimo utilizzo: $formatted';
+    return l10n.lastUsedLabel(formatted);
   }
 }

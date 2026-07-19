@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../categories/data/providers.dart';
 import '../../../categories/presentation/widgets/category_picker_sheet.dart';
 import '../../../transactions/domain/repositories/transaction_repository.dart';
@@ -144,6 +145,7 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
         ? null
         : matchingCategory.first;
     final dateFormat = DateFormat('d MMM y', 'it_IT');
+    final l10n = AppLocalizations.of(context);
 
     return SafeArea(
       child: FractionallySizedBox(
@@ -154,7 +156,7 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Filtri',
+                l10n.filtersTitle,
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
@@ -162,14 +164,14 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
               Expanded(
                 child: ListView(
                   children: [
-                    Text('Tipo', style: Theme.of(context).textTheme.labelLarge),
+                    Text(l10n.typeLabel, style: Theme.of(context).textTheme.labelLarge),
                     const SizedBox(height: AppSpacing.xs),
                     Wrap(
                       spacing: AppSpacing.xs,
                       children: [
                         for (final option in TransactionTypeFilter.values)
                           ChoiceChip(
-                            label: Text(_typeLabel(option)),
+                            label: Text(_typeLabel(l10n, option)),
                             selected: _type == option,
                             onSelected: (_) => setState(() => _type = option),
                           ),
@@ -178,7 +180,7 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
                     const SizedBox(height: AppSpacing.lg),
                     TextField(
                       controller: _titleController,
-                      decoration: const InputDecoration(labelText: 'Titolo'),
+                      decoration: InputDecoration(labelText: l10n.titleFieldLabel),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     Row(
@@ -194,8 +196,8 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
                                 RegExp(r'[0-9,.]'),
                               ),
                             ],
-                            decoration: const InputDecoration(
-                              labelText: 'Importo minimo',
+                            decoration: InputDecoration(
+                              labelText: l10n.minAmountLabel,
                               prefixText: '€ ',
                             ),
                           ),
@@ -212,8 +214,8 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
                                 RegExp(r'[0-9,.]'),
                               ),
                             ],
-                            decoration: const InputDecoration(
-                              labelText: 'Importo massimo',
+                            decoration: InputDecoration(
+                              labelText: l10n.maxAmountLabel,
                               prefixText: '€ ',
                             ),
                           ),
@@ -223,18 +225,18 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
                     const SizedBox(height: AppSpacing.lg),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Data iniziale'),
+                      title: Text(l10n.startDateLabel),
                       subtitle: Text(
-                        _from == null ? 'Qualsiasi' : dateFormat.format(_from!),
+                        _from == null ? l10n.anyLabel : dateFormat.format(_from!),
                       ),
                       trailing: const Icon(Icons.calendar_today_outlined),
                       onTap: () => _pickDate(isFrom: true),
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Data finale'),
+                      title: Text(l10n.endDateLabel),
                       subtitle: Text(
-                        _to == null ? 'Qualsiasi' : dateFormat.format(_to!),
+                        _to == null ? l10n.anyLabel : dateFormat.format(_to!),
                       ),
                       trailing: const Icon(Icons.calendar_today_outlined),
                       onTap: () => _pickDate(isFrom: false),
@@ -244,7 +246,7 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.label_outline),
                       title: Text(
-                        selectedCategory?.name ?? 'Tutte le categorie',
+                        selectedCategory?.name ?? l10n.allCategoriesLabel,
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () async {
@@ -264,14 +266,14 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: _reset,
-                      child: const Text('Azzera'),
+                      child: Text(l10n.resetAction),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: FilledButton(
                       onPressed: _apply,
-                      child: const Text('Applica'),
+                      child: Text(l10n.applyAction),
                     ),
                   ),
                 ],
@@ -284,10 +286,10 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
     );
   }
 
-  String _typeLabel(TransactionTypeFilter type) => switch (type) {
-    TransactionTypeFilter.all => 'Tutte',
-    TransactionTypeFilter.debit => 'Uscite',
-    TransactionTypeFilter.credit => 'Entrate',
-    TransactionTypeFilter.adjustments => 'Rettifiche',
+  String _typeLabel(AppLocalizations l10n, TransactionTypeFilter type) => switch (type) {
+    TransactionTypeFilter.all => l10n.typeFilterAll,
+    TransactionTypeFilter.debit => l10n.debitsColumnLabel,
+    TransactionTypeFilter.credit => l10n.creditsColumnLabel,
+    TransactionTypeFilter.adjustments => l10n.typeFilterAdjustments,
   };
 }

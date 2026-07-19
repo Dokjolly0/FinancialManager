@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/errors/app_error.dart';
+
 /// Accumulates the 3-step registration wizard's fields (plan.md section
 /// 7.3) in one place, since the flow is a single logical submission split
 /// across steps for UX reasons only.
@@ -20,7 +22,7 @@ class RegisterState {
     this.locale = 'it-IT',
     this.acceptedTerms = false,
     this.isSubmitting = false,
-    this.generalError,
+    this.error,
     this.fieldErrors = const {},
   });
 
@@ -39,7 +41,7 @@ class RegisterState {
   final String locale;
   final bool acceptedTerms;
   final bool isSubmitting;
-  final String? generalError;
+  final AppError? error;
   final Map<String, String> fieldErrors;
 
   RegisterState copyWith({
@@ -58,7 +60,7 @@ class RegisterState {
     String? locale,
     bool? acceptedTerms,
     bool? isSubmitting,
-    String? generalError,
+    AppError? error,
     Map<String, String>? fieldErrors,
   }) {
     return RegisterState(
@@ -78,7 +80,7 @@ class RegisterState {
       locale: locale ?? this.locale,
       acceptedTerms: acceptedTerms ?? this.acceptedTerms,
       isSubmitting: isSubmitting ?? this.isSubmitting,
-      generalError: generalError,
+      error: error,
       fieldErrors: fieldErrors ?? this.fieldErrors,
     );
   }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/error_presentation.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../view_models/forgot_password_controller.dart';
 
 /// Password recovery request (plan.md section 7.13/14.1). Always shows the
@@ -27,35 +29,32 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(forgotPasswordControllerProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Password dimenticata')),
+      appBar: AppBar(title: Text(l10n.forgotPasswordScreenTitle)),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (state.succeeded)
-              const Text(
-                'Se l\'indirizzo è registrato, riceverai a breve un\'email con le '
-                'istruzioni per reimpostare la password.',
-              )
+              Text(l10n.forgotPasswordSuccessMessage)
             else ...[
               Text(
-                'Inserisci la tua email: ti invieremo le istruzioni per '
-                'reimpostare la password.',
+                l10n.forgotPasswordInstructionsMessage,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: InputDecoration(labelText: l10n.emailLabel),
               ),
               if (state.error != null) ...[
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  state.error!,
+                  presentError(state.error!, l10n).message,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
@@ -72,7 +71,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Invia'),
+                    : Text(l10n.sendAction),
               ),
             ],
           ],

@@ -5,7 +5,6 @@ import '../../../../app/session/current_user_provider.dart';
 import '../../../../app/session/pending_google_registration_provider.dart';
 import '../../../../app/session/session_controller.dart';
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/formatting/color_hex.dart';
 import '../../../../core/formatting/money.dart';
 import '../../data/providers.dart';
@@ -28,7 +27,7 @@ class GoogleCompletionController extends Notifier<GoogleCompletionState> {
       confirmPassword: confirmPassword,
       initialBalanceInput: initialBalanceInput,
       fieldErrors: {},
-      generalError: null,
+      error: null,
     );
   }
 
@@ -41,41 +40,37 @@ class GoogleCompletionController extends Notifier<GoogleCompletionState> {
   Future<bool> submit() async {
     final ticket = ref.read(pendingGoogleRegistrationProvider);
     if (ticket == null) {
-      state = state.copyWith(
-        generalError: 'Sessione di registrazione scaduta. Riprova con Google.',
-      );
+      // The screen watches the same provider and shows its own dedicated
+      // "session expired" view whenever the ticket is null, so this state
+      // is defensive only — it's never actually rendered from here.
       return false;
     }
 
     final fieldErrors = <String, String>{};
     if (state.username.trim().length < 3) {
-      fieldErrors['username'] = 'Deve avere almeno 3 caratteri.';
+      fieldErrors['username'] = 'USERNAME_LENGTH_INVALID';
     }
     if (state.password.isNotEmpty) {
       if (state.password.length < 8) {
-        fieldErrors['password'] = 'Deve avere almeno 8 caratteri.';
+        fieldErrors['password'] = 'PASSWORD_TOO_SHORT';
       }
       if (state.password != state.confirmPassword) {
-        fieldErrors['confirm_password'] = 'Le password non coincidono.';
+        fieldErrors['confirm_password'] = 'PASSWORDS_DO_NOT_MATCH';
       }
     }
     final balanceMinor = Money.parseMinorUnits(state.initialBalanceInput);
     if (balanceMinor == null) {
-      fieldErrors['initial_balance_minor'] = 'Importo non valido.';
+      fieldErrors['initial_balance_minor'] = 'INVALID_AMOUNT';
     }
     if (!state.acceptedTerms) {
-      fieldErrors['accepted_terms'] = 'Devi accettare i termini per procedere.';
+      fieldErrors['accepted_terms'] = 'TERMS_NOT_ACCEPTED';
     }
     if (fieldErrors.isNotEmpty) {
       state = state.copyWith(fieldErrors: fieldErrors);
       return false;
     }
 
-    state = state.copyWith(
-      isSubmitting: true,
-      generalError: null,
-      fieldErrors: {},
-    );
+    state = state.copyWith(isSubmitting: true, error: null, fieldErrors: {});
 
     try {
       final user = await ref
@@ -102,11 +97,10 @@ class GoogleCompletionController extends Notifier<GoogleCompletionState> {
       state = state.copyWith(isSubmitting: false);
       return true;
     } on AppError catch (e) {
-      final presentation = presentError(e);
       state = state.copyWith(
         isSubmitting: false,
-        generalError: presentation.message,
-        fieldErrors: presentation.fieldErrors,
+        error: e,
+        fieldErrors: e is DomainError ? e.fieldErrors : const {},
       );
       return false;
     }

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/session/current_user_provider.dart';
 import '../../../../app/session/session_controller.dart';
 import '../../../../core/errors/app_error.dart';
-import '../../../../core/errors/error_presentation.dart';
 import '../../data/providers.dart';
 import '../../domain/models/google_sign_in_outcome.dart';
 
@@ -11,9 +10,9 @@ class GoogleSignInState {
   const GoogleSignInState({this.isSubmitting = false, this.error});
 
   final bool isSubmitting;
-  final String? error;
+  final AppError? error;
 
-  GoogleSignInState copyWith({bool? isSubmitting, String? error}) {
+  GoogleSignInState copyWith({bool? isSubmitting, AppError? error}) {
     return GoogleSignInState(
       isSubmitting: isSubmitting ?? this.isSubmitting,
       error: error,
@@ -49,10 +48,7 @@ class GoogleSignInController extends Notifier<GoogleSignInState> {
       state = state.copyWith(isSubmitting: false);
       return outcome;
     } on AppError catch (e) {
-      state = state.copyWith(
-        isSubmitting: false,
-        error: presentError(e).message,
-      );
+      state = state.copyWith(isSubmitting: false, error: e);
       return null;
     }
   }

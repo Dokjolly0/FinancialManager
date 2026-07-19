@@ -6,8 +6,10 @@ import 'package:intl/intl.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/semantic_colors.dart';
+import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/confirmation_sheet.dart';
 import '../../../../core/widgets/inline_error.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../categories/data/providers.dart';
 import '../../../media/data/providers.dart';
 import '../../domain/models/transaction_direction.dart';
@@ -27,15 +29,16 @@ class TransactionDetailScreen extends ConsumerWidget {
     final controller = ref.read(
       transactionDetailControllerProvider(transactionId).notifier,
     );
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dettaglio operazione'),
+        title: Text(l10n.transactionDetailScreenTitle),
         actions: [
           if (state.transaction?.isEditable ?? false) ...[
             IconButton(
               icon: const Icon(Icons.edit_outlined),
-              tooltip: 'Modifica',
+              tooltip: l10n.editTooltip,
               onPressed: () async {
                 final saved = await context.push<bool>(
                   AppRoutes.transactionEdit(transactionId),
@@ -45,15 +48,15 @@ class TransactionDetailScreen extends ConsumerWidget {
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline),
-              tooltip: 'Elimina',
+              tooltip: l10n.deleteTooltip,
               onPressed: state.isDeleting
                   ? null
                   : () async {
                       final confirmed = await ConfirmationSheet.show(
                         context,
-                        title: 'Eliminare questa operazione?',
-                        message: 'Il saldo verrà aggiornato di conseguenza.',
-                        confirmLabel: 'Elimina',
+                        title: l10n.deleteTransactionConfirmTitle,
+                        message: l10n.deleteTransactionConfirmMessage,
+                        confirmLabel: l10n.commonDelete,
                         isDestructive: true,
                       );
                       if (!confirmed) return;
@@ -69,7 +72,10 @@ class TransactionDetailScreen extends ConsumerWidget {
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.error != null && state.transaction == null
-          ? InlineError(message: state.error!, onRetry: controller.load)
+          ? InlineError(
+              message: presentError(state.error!, AppLocalizations.of(context)).message,
+              onRetry: controller.load,
+            )
           : _Detail(transactionId: transactionId),
     );
   }
@@ -80,12 +86,13 @@ class _Detail extends ConsumerWidget {
 
   final String transactionId;
 
-  String _kindLabel(TransactionKind kind) => switch (kind) {
-    TransactionKind.openingBalance => 'Saldo iniziale',
-    TransactionKind.balanceAdjustment => 'Rettifica saldo',
-    TransactionKind.standard => 'Manuale',
-    TransactionKind.unknown => '—',
-  };
+  String _kindLabel(AppLocalizations l10n, TransactionKind kind) =>
+      switch (kind) {
+        TransactionKind.openingBalance => l10n.openingBalanceKindLabel,
+        TransactionKind.balanceAdjustment => l10n.balanceAdjustmentKindLabel,
+        TransactionKind.standard => l10n.manualKindLabel,
+        TransactionKind.unknown => '—',
+      };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -96,6 +103,7 @@ class _Detail extends ConsumerWidget {
     final isCredit = transaction.direction.isCredit;
     final amountColor = isCredit ? semantic.credit : semantic.debit;
     final textTheme = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context);
     final dateFormat = DateFormat('d MMMM y, HH:mm', 'it_IT');
 
     String? categoryName;
@@ -136,24 +144,24 @@ class _Detail extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          _Row(label: 'Titolo', value: transaction.title),
+          _Row(label: l10n.titleFieldLabel, value: transaction.title),
           if (categoryName != null)
-            _Row(label: 'Categoria', value: categoryName),
-          _Row(label: 'Origine', value: _kindLabel(transaction.kind)),
+            _Row(label: l10n.categoryLabel, value: categoryName),
+          _Row(label: l10n.sourceLabel, value: _kindLabel(l10n, transaction.kind)),
           _Row(
-            label: 'Data e ora',
+            label: l10n.dateAndTimeLabel,
             value: dateFormat.format(transaction.occurredAt.toLocal()),
           ),
           if (transaction.description != null &&
               transaction.description!.isNotEmpty)
-            _Row(label: 'Descrizione', value: transaction.description!),
+            _Row(label: l10n.descriptionLabel, value: transaction.description!),
           const Divider(height: AppSpacing.xl),
           _Row(
-            label: 'Creata il',
+            label: l10n.createdLabel,
             value: dateFormat.format(transaction.createdAt.toLocal()),
           ),
           _Row(
-            label: 'Ultima modifica',
+            label: l10n.lastModifiedLabel,
             value: dateFormat.format(transaction.updatedAt.toLocal()),
           ),
         ],
