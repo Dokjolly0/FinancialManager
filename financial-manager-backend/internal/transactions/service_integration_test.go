@@ -220,6 +220,58 @@ func TestUpdateStandard_AppliesOnlyTheDifference(t *testing.T) {
 	}
 }
 
+func TestUpdateOpeningBalance_AdjustsBalanceAndRejectsOtherKinds(t *testing.T) {
+	h := newHarness(t, 100000) // 1000.00 EUR opening balance
+	ctx := context.Background()
+
+	newDate := time.Date(2025, 1, 15, 9, 0, 0, 0, time.UTC)
+	updated, err := h.service.UpdateOpeningBalance(ctx, transactions.UpdateOpeningBalanceInput{
+		UserID: h.userID, TransactionID: h.openingTransaction, AmountMinor: 120000,
+		OccurredAt: newDate, ExpectedVersion: 1,
+	})
+	if err != nil {
+		t.Fatalf("UpdateOpeningBalance() error = %v", err)
+	}
+	if updated.Wallet.CurrentBalanceMinor != 120000 {
+		t.Fatalf("balance after opening balance edit = %d, want 120000", updated.Wallet.CurrentBalanceMinor)
+	}
+	gotOccurredAt, err := time.Parse(time.RFC3339, updated.Transaction.OccurredAt)
+	if err != nil {
+		t.Fatalf("parse occurred_at %q: %v", updated.Transaction.OccurredAt, err)
+	}
+	if !gotOccurredAt.Equal(newDate) {
+		t.Fatalf("occurred_at = %v, want %v", gotOccurredAt, newDate)
+	}
+
+	// A STANDARD transaction must not be editable through this endpoint.
+	createBody, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 1000,
+		Currency: "EUR", Title: "Bar", IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
+	})
+	if err != nil {
+		t.Fatalf("CreateStandard() error = %v", err)
+	}
+	standardTxIDStr, _ := decodeCreateResponse(t, createBody)
+
+	_, err = h.service.UpdateOpeningBalance(ctx, transactions.UpdateOpeningBalanceInput{
+		UserID: h.userID, TransactionID: uuid.MustParse(standardTxIDStr), AmountMinor: 5000,
+		OccurredAt: newDate, ExpectedVersion: 1,
+	})
+	var apiErr *apierror.Error
+	if !errors.As(err, &apiErr) || apiErr.Status != 403 {
+		t.Fatalf("expected a 403 forbidding non-opening-balance edit, got %v", err)
+	}
+
+	// Stale version must be rejected as a conflict.
+	_, err = h.service.UpdateOpeningBalance(ctx, transactions.UpdateOpeningBalanceInput{
+		UserID: h.userID, TransactionID: h.openingTransaction, AmountMinor: 130000,
+		OccurredAt: newDate, ExpectedVersion: 1, // stale: real version is now 2
+	})
+	if !errors.As(err, &apiErr) || apiErr.Status != 409 {
+		t.Fatalf("expected a 409 conflict for a stale version, got %v", err)
+	}
+}
+
 func TestDelete_ReversesBalanceAndForbidsOpeningBalance(t *testing.T) {
 	h := newHarness(t, 100000)
 	ctx := context.Background()

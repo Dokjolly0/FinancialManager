@@ -30,6 +30,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Get("/v1/transactions", h.list)
 	r.Get("/v1/transactions/{id}", h.get)
 	r.Patch("/v1/transactions/{id}", h.update)
+	r.Patch("/v1/transactions/{id}/opening-balance", h.updateOpeningBalance)
 	r.Delete("/v1/transactions/{id}", h.delete)
 	r.Post("/v1/wallets", h.createWallet)
 	r.Post("/v1/wallets/{id}/balance-adjustments", h.createBalanceAdjustment)
@@ -362,6 +363,53 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		CategoryID:      categoryID,
 		TemplateID:      templateID,
 		MediaID:         mediaID,
+		OccurredAt:      occurredAt,
+		ExpectedVersion: req.ExpectedVersion,
+	})
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+type updateOpeningBalanceRequest struct {
+	AmountMinor     int64  `json:"amount_minor"`
+	OccurredAt      string `json:"occurred_at"`
+	ExpectedVersion int64  `json:"version"`
+}
+
+func (h *Handler) updateOpeningBalance(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+
+	var req updateOpeningBalanceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	occurredAt, ok := parseOccurredAt(req.OccurredAt)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"occurred_at": apierror.FieldInvalidRFC3339Date,
+		}))
+		return
+	}
+
+	result, err := h.service.UpdateOpeningBalance(r.Context(), UpdateOpeningBalanceInput{
+		UserID:          userID,
+		TransactionID:   id,
+		AmountMinor:     req.AmountMinor,
 		OccurredAt:      occurredAt,
 		ExpectedVersion: req.ExpectedVersion,
 	})

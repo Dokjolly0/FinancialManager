@@ -581,6 +581,96 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 	return result, err
 }
 
+// --- Update opening balance ---------------------------------------------------
+
+type UpdateOpeningBalanceInput struct {
+	UserID          uuid.UUID
+	TransactionID   uuid.UUID
+	AmountMinor     int64
+	OccurredAt      time.Time
+	ExpectedVersion int64
+}
+
+// UpdateOpeningBalance lets the user correct a wallet's OPENING_BALANCE
+// entry — the amount and date only, never wallet/title/category/direction,
+// which are structural to what makes it an opening balance rather than an
+// ordinary transaction. Kept separate from UpdateStandard (which requires
+// KindStandard) rather than relaxing that check, since the two share almost
+// no editable surface. Recomputes the wallet balance from the *difference*
+// like UpdateStandard, inside the same locked DB transaction.
+func (s *Service) UpdateOpeningBalance(ctx context.Context, in UpdateOpeningBalanceInput) (TransactionWithWallet, error) {
+	fieldErrors := map[string]string{}
+	if in.AmountMinor <= 0 {
+		fieldErrors["amount_minor"] = apierror.FieldAmountNotPositive
+	} else if in.AmountMinor > maxAmountMinor {
+		fieldErrors["amount_minor"] = apierror.FieldAmountImplausible
+	}
+	if len(fieldErrors) > 0 {
+		return TransactionWithWallet{}, apierror.NewValidation(fieldErrors)
+	}
+
+	occurredAt := in.OccurredAt
+	if occurredAt.IsZero() {
+		occurredAt = s.clock.Now()
+	}
+
+	var result TransactionWithWallet
+	var walletID uuid.UUID
+	err := s.db.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		existing, err := s.transactions.WithQuerier(tx).LockByIDAndUserID(ctx, in.TransactionID, in.UserID)
+		if errors.Is(err, ErrNotFound) {
+			return apierror.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if existing.Kind != KindOpeningBalance {
+			return apierror.New(http.StatusForbidden, "NOT_EDITABLE",
+				"Only the initial balance can be edited through this endpoint.")
+		}
+
+		wallet, err := s.wallets.WithQuerier(tx).LockByIDForUpdate(ctx, existing.WalletID, in.UserID)
+		if err != nil {
+			return fmt.Errorf("lock wallet: %w", err)
+		}
+		walletID = wallet.ID
+
+		diff := SignedDelta(existing.Direction, in.AmountMinor) - SignedDelta(existing.Direction, existing.AmountMinor)
+		newBalance := wallet.CurrentBalanceMinor + diff
+
+		updated, err := s.transactions.WithQuerier(tx).Update(ctx, in.TransactionID, in.UserID, in.ExpectedVersion, UpdateInput{
+			WalletID: existing.WalletID, Direction: existing.Direction, AmountMinor: in.AmountMinor, Title: existing.Title,
+			Description: existing.Description, CategoryID: existing.CategoryID, TemplateID: existing.TemplateID, MediaID: existing.MediaID,
+			OccurredAt: occurredAt,
+		})
+		if errors.Is(err, ErrNotFound) {
+			if _, getErr := s.transactions.WithQuerier(tx).GetByIDAndUserID(ctx, in.TransactionID, in.UserID); getErr == nil {
+				return apierror.ErrConflict
+			}
+			return apierror.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+
+		updatedWallet, err := s.wallets.WithQuerier(tx).UpdateBalance(ctx, wallet.ID, newBalance, wallet.Version)
+		if err != nil {
+			return fmt.Errorf("update wallet balance: %w", err)
+		}
+
+		if err := s.audit.WithQuerier(tx).Record(ctx, updated.ID, in.UserID, AuditActionUpdated, existing, updated); err != nil {
+			return err
+		}
+
+		result = TransactionWithWallet{Transaction: toTransactionResponse(updated), Wallet: toWalletSnapshot(updatedWallet)}
+		return nil
+	})
+	if err == nil {
+		s.bumpReportVersion(ctx, walletID)
+	}
+	return result, err
+}
+
 // --- Delete --------------------------------------------------------------------
 
 // Delete reverses the transaction's balance impact and soft-deletes it
