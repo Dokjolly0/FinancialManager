@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/semantic_colors.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/ledger_transaction.dart';
 import '../../domain/models/transaction_direction.dart';
 
@@ -43,9 +44,10 @@ class TransactionTile extends StatelessWidget {
     final amountColor = isCredit ? semantic.credit : semantic.debit;
     final sign = isCredit ? '+' : '−';
 
+    final l10n = AppLocalizations.of(context);
     final time = DateFormat.Hm().format(transaction.occurredAt.toLocal());
     final subtitle = isSpecial
-        ? _kindLabel(transaction.kind)
+        ? _kindLabel(l10n, transaction.kind)
         : (categoryName != null ? '$categoryName · $time' : time);
 
     return ListTile(
@@ -85,10 +87,12 @@ class TransactionTile extends StatelessWidget {
     );
   }
 
-  String _kindLabel(TransactionKind kind) => switch (kind) {
-    TransactionKind.openingBalance => 'Saldo iniziale',
-    TransactionKind.balanceAdjustment => 'Rettifica saldo',
-    TransactionKind.standard => '',
-    TransactionKind.unknown => '',
-  };
+  String _kindLabel(AppLocalizations l10n, TransactionKind kind) =>
+      switch (kind) {
+        TransactionKind.openingBalance => l10n.openingBalanceKindLabel,
+        TransactionKind.balanceAdjustment => l10n.balanceAdjustmentKindLabel,
+        TransactionKind.transfer => l10n.transferKindLabel,
+        TransactionKind.standard => '',
+        TransactionKind.unknown => '',
+      };
 }

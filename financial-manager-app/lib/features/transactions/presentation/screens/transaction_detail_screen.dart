@@ -93,6 +93,7 @@ class _Detail extends ConsumerWidget {
       switch (kind) {
         TransactionKind.openingBalance => l10n.openingBalanceKindLabel,
         TransactionKind.balanceAdjustment => l10n.balanceAdjustmentKindLabel,
+        TransactionKind.transfer => l10n.transferKindLabel,
         TransactionKind.standard => l10n.manualKindLabel,
         TransactionKind.unknown => '—',
       };

@@ -7,6 +7,7 @@ import '../../features/categories/data/providers.dart';
 import '../../features/history/presentation/view_models/history_controller.dart';
 import '../../features/home/presentation/view_models/home_controller.dart';
 import '../../features/reports/presentation/view_models/report_controller.dart';
+import '../../features/wallets/data/providers.dart';
 
 /// Providers caching data scoped to the signed-in account, whose build()
 /// only runs once per provider lifetime (none are .autoDispose, and the
@@ -39,8 +40,8 @@ void invalidateUserScopedProviders(Ref ref) {
   if (ref.exists(accountProfileProvider)) {
     ref.invalidate(accountProfileProvider);
   }
-  if (ref.exists(accountWalletProvider)) {
-    ref.invalidate(accountWalletProvider);
+  if (ref.exists(walletsListProvider)) {
+    ref.invalidate(walletsListProvider);
   }
   if (ref.exists(linkedAccountsControllerProvider)) {
     ref.invalidate(linkedAccountsControllerProvider);

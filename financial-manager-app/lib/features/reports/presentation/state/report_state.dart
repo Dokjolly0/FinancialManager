@@ -10,6 +10,7 @@ class ReportState {
     this.period = const ReportPeriodSelection(),
     this.includeAdjustments = false,
     this.groupBy = ReportGroupBy.title,
+    this.walletId,
     this.isLoading = false,
     this.isBreakdownLoading = false,
     this.error,
@@ -22,6 +23,11 @@ class ReportState {
   final ReportPeriodSelection period;
   final bool includeAdjustments;
   final String groupBy;
+
+  /// `null` means the reports wallet selector is set to "all wallets"
+  /// (plan.md's explicit requirement for a selector, not just an
+  /// aggregate-only view).
+  final String? walletId;
   final bool isLoading;
   final bool isBreakdownLoading;
   final AppError? error;
@@ -36,6 +42,8 @@ class ReportState {
     ReportPeriodSelection? period,
     bool? includeAdjustments,
     String? groupBy,
+    String? walletId,
+    bool clearWalletId = false,
     bool? isLoading,
     bool? isBreakdownLoading,
     AppError? error,
@@ -49,6 +57,7 @@ class ReportState {
       period: period ?? this.period,
       includeAdjustments: includeAdjustments ?? this.includeAdjustments,
       groupBy: groupBy ?? this.groupBy,
+      walletId: clearWalletId ? null : (walletId ?? this.walletId),
       isLoading: isLoading ?? this.isLoading,
       isBreakdownLoading: isBreakdownLoading ?? this.isBreakdownLoading,
       error: clearError ? null : (error ?? this.error),

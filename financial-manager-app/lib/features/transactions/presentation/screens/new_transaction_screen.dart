@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/error_code_localizations.dart';
 import '../../../../core/errors/error_presentation.dart';
+import '../../../../core/formatting/color_hex.dart';
 import '../../../../core/widgets/amount_field.dart';
 import '../../../../core/widgets/direction_segmented_control.dart';
 import '../../../../core/widgets/first_day_of_week_scope.dart';
@@ -16,6 +17,9 @@ import '../../../categories/presentation/widgets/category_picker_sheet.dart';
 import '../../../media/data/providers.dart';
 import '../../../media/domain/models/media_asset.dart';
 import '../../../media/presentation/widgets/image_picker_sheet.dart';
+import '../../../wallets/data/providers.dart';
+import '../../../wallets/presentation/widgets/wallet_icon_data.dart';
+import '../../../wallets/presentation/widgets/wallet_picker_sheet.dart';
 import '../../domain/models/transaction_direction.dart';
 import '../view_models/transaction_form_controller.dart';
 import '../widgets/title_autocomplete_field.dart';
@@ -73,6 +77,15 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
         );
   }
 
+  Future<void> _pickWallet(BuildContext context) async {
+    final controller = ref.read(
+      transactionFormControllerProvider(widget.editTransactionId).notifier,
+    );
+    final selected = await WalletPickerSheet.show(context);
+    if (!mounted || selected == null) return;
+    controller.setWallet(selected.id);
+  }
+
   Future<void> _pickCategory(
     BuildContext context,
     TransactionDirection direction,
@@ -122,6 +135,7 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
       transactionFormControllerProvider(widget.editTransactionId).notifier,
     );
     final categories = ref.watch(categoriesProvider).value ?? const [];
+    final wallets = ref.watch(walletsListProvider).value ?? const [];
     final l10n = AppLocalizations.of(context);
     String? fieldError(String key) {
       final code = state.fieldErrors[key];
@@ -145,6 +159,11 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
       final matches = categories.where((c) => c.id == state.categoryId);
       selectedCategory = matches.isEmpty ? null : matches.first;
     }
+
+    final selectedWalletMatches = wallets.where((w) => w.id == state.walletId);
+    final selectedWallet = selectedWalletMatches.isEmpty
+        ? null
+        : selectedWalletMatches.first;
 
     return Scaffold(
       appBar: AppBar(
@@ -170,6 +189,35 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
                     controller: _amountController,
                     errorText: fieldError('amount_minor'),
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: selectedWallet == null
+                        ? const Icon(Icons.account_balance_wallet_outlined)
+                        : CircleAvatar(
+                            backgroundColor: colorFromHex(selectedWallet.color),
+                            child: Icon(
+                              iconForWalletKey(selectedWallet.icon),
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                    title: Text(
+                      selectedWallet?.name ?? l10n.selectWalletPlaceholder,
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _pickWallet(context),
+                  ),
+                  if (fieldError('wallet_id') != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                      child: Text(
+                        fieldError('wallet_id')!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: AppSpacing.lg),
                   TitleAutocompleteField(
                     controller: _titleController,

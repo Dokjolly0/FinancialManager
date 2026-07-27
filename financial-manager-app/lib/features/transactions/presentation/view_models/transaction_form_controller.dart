@@ -6,6 +6,7 @@ import '../../../../core/state/ledger_revision_provider.dart';
 import '../../../categories/domain/models/category.dart';
 import '../../../templates/data/providers.dart';
 import '../../../templates/domain/models/transaction_template.dart';
+import '../../../wallets/data/providers.dart';
 import '../../data/providers.dart';
 import '../../domain/models/transaction_direction.dart';
 import '../../domain/repositories/transaction_repository.dart';
@@ -21,12 +22,31 @@ class TransactionFormController extends Notifier<TransactionFormState> {
 
   @override
   TransactionFormState build() {
+    // Defaults the wallet to the user's first one once the list resolves,
+    // but only if nothing has been picked yet (either by this listener
+    // firing again, or a manual pick / loaded-existing value already
+    // applied) — mirrors HomeController's "apply once" guard for the same
+    // reason: a later unrelated refetch must never clobber a real choice.
+    ref.listen(walletsListProvider, (_, next) {
+      final wallets = next.value;
+      if (wallets == null || wallets.isEmpty || state.walletId != null) {
+        return;
+      }
+      state = state.copyWith(walletId: wallets.first.id);
+    });
+
     final arg = this.arg;
     if (arg != null) {
       Future.microtask(() => _loadExisting(arg));
       return const TransactionFormState(isLoadingExisting: true);
     }
-    return TransactionFormState(occurredAt: DateTime.now());
+    final wallets = ref.read(walletsListProvider).value;
+    return TransactionFormState(
+      occurredAt: DateTime.now(),
+      walletId: (wallets != null && wallets.isNotEmpty)
+          ? wallets.first.id
+          : null,
+    );
   }
 
   Future<void> _loadExisting(String id) async {
@@ -37,6 +57,7 @@ class TransactionFormController extends Notifier<TransactionFormState> {
       state = state.copyWith(
         isLoadingExisting: false,
         isCredit: existing.direction.isCredit,
+        walletId: existing.walletId,
         amountInput: (existing.amount.minorUnits / 100).toStringAsFixed(2),
         title: existing.title,
         description: existing.description ?? '',
@@ -54,6 +75,9 @@ class TransactionFormController extends Notifier<TransactionFormState> {
 
   void setDirection(bool isCredit) =>
       state = state.copyWith(isCredit: isCredit);
+
+  void setWallet(String walletId) =>
+      state = state.copyWith(walletId: walletId);
 
   void setAmountInput(String value) =>
       state = state.copyWith(amountInput: value, fieldErrors: {}, error: null);
@@ -115,6 +139,9 @@ class TransactionFormController extends Notifier<TransactionFormState> {
     if (state.title.trim().isEmpty) {
       fieldErrors['title'] = 'REQUIRED_FIELD';
     }
+    if (state.walletId == null) {
+      fieldErrors['wallet_id'] = 'REQUIRED_FIELD';
+    }
     if (fieldErrors.isNotEmpty) {
       state = state.copyWith(fieldErrors: fieldErrors);
       return false;
@@ -133,6 +160,7 @@ class TransactionFormController extends Notifier<TransactionFormState> {
     final categoryId = state.categoryId;
     final templateId = state.selectedTemplateId;
     final mediaId = state.mediaId;
+    final walletId = state.walletId!;
 
     try {
       if (state.isEditMode) {
@@ -141,6 +169,7 @@ class TransactionFormController extends Notifier<TransactionFormState> {
             .updateStandard(
               arg!,
               UpdateTransactionParams(
+                walletId: walletId,
                 direction: direction,
                 amountMinor: amountMinor!,
                 title: title,
@@ -157,6 +186,7 @@ class TransactionFormController extends Notifier<TransactionFormState> {
             .read(transactionRepositoryProvider)
             .createStandard(
               CreateTransactionParams(
+                walletId: walletId,
                 direction: direction,
                 amountMinor: amountMinor!,
                 currency: 'EUR',
@@ -171,6 +201,7 @@ class TransactionFormController extends Notifier<TransactionFormState> {
       }
       state = state.copyWith(isSubmitting: false);
       ref.bumpLedgerRevision();
+      ref.invalidate(walletsListProvider);
       if (state.saveAsTemplate) {
         await _persistTemplate(direction, title, categoryId, description);
       }

@@ -4,6 +4,7 @@ class TransactionFormState {
   const TransactionFormState({
     this.isLoadingExisting = false,
     this.isCredit = false,
+    this.walletId,
     this.amountInput = '',
     this.title = '',
     this.description = '',
@@ -20,6 +21,13 @@ class TransactionFormState {
 
   final bool isLoadingExisting;
   final bool isCredit;
+
+  /// Which wallet the transaction is scaled against (plan.md: "poter
+  /// scegliere per ogni nuova spesa a che portafoglio scalarla"). Defaults
+  /// to the user's first wallet once loaded; editable at any time,
+  /// including in edit mode — this project explicitly allows moving a
+  /// transaction to a different wallet on edit.
+  final String? walletId;
   final String amountInput;
   final String title;
   final String description;
@@ -38,6 +46,7 @@ class TransactionFormState {
   TransactionFormState copyWith({
     bool? isLoadingExisting,
     bool? isCredit,
+    String? walletId,
     String? amountInput,
     String? title,
     String? description,
@@ -57,6 +66,7 @@ class TransactionFormState {
     return TransactionFormState(
       isLoadingExisting: isLoadingExisting ?? this.isLoadingExisting,
       isCredit: isCredit ?? this.isCredit,
+      walletId: walletId ?? this.walletId,
       amountInput: amountInput ?? this.amountInput,
       title: title ?? this.title,
       description: description ?? this.description,

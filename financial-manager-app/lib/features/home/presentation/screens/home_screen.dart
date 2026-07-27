@@ -6,6 +6,7 @@ import '../../../../app/router.dart';
 import '../../../../app/session/current_user_provider.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/error_presentation.dart';
+import '../../../../core/formatting/color_hex.dart';
 import '../../../../core/widgets/balance_card.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/inline_error.dart';
@@ -13,6 +14,7 @@ import '../../../../core/widgets/skeleton_list.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../media/data/providers.dart';
 import '../../../transactions/presentation/widgets/transaction_tile.dart';
+import '../../../wallets/presentation/widgets/wallet_icon_data.dart';
 import '../view_models/home_controller.dart';
 
 /// Home (plan.md section 7.5): balance, quick add actions, recent
@@ -38,7 +40,7 @@ class HomeScreen extends ConsumerWidget {
         onRefresh: controller.refresh,
         child: state.isLoading
             ? const SkeletonList()
-            : state.error != null && state.wallet == null
+            : state.error != null && state.wallets.isEmpty
             ? InlineError(
                 message: presentError(state.error!, l10n).message,
                 onRetry: controller.refresh,
@@ -46,12 +48,39 @@ class HomeScreen extends ConsumerWidget {
             : ListView(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
-                  if (state.wallet != null)
-                    BalanceCard(
-                      balance: state.wallet!.balance,
-                      obscured: state.balanceObscured,
-                      onToggleObscured: controller.toggleBalanceObscured,
-                    ),
+                  BalanceCard(
+                    balance: state.totalBalance,
+                    label: l10n.walletsTotalBalanceLabel,
+                    obscured: state.balanceObscured,
+                    onToggleObscured: controller.toggleBalanceObscured,
+                    onTap: () => context.push(AppRoutes.wallets),
+                  ),
+                  if (state.wallets.length > 1) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    for (final wallet in state.wallets)
+                      Card(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                        child: ListTile(
+                          dense: true,
+                          leading: CircleAvatar(
+                            radius: 16,
+                            backgroundColor: colorFromHex(wallet.color),
+                            child: Icon(
+                              iconForWalletKey(wallet.icon),
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                          title: Text(wallet.name),
+                          trailing: Text(
+                            state.balanceObscured
+                                ? '••••••'
+                                : wallet.balance.format(),
+                          ),
+                          onTap: () => context.push(AppRoutes.wallets),
+                        ),
+                      ),
+                  ],
                   const SizedBox(height: AppSpacing.md),
                   Row(
                     children: [

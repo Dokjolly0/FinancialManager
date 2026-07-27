@@ -6,13 +6,14 @@ import '../../../../app/router.dart';
 import '../../../../app/session/session_controller.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/formatting/color_hex.dart';
+import '../../../../core/formatting/money.dart';
 import '../../../../core/widgets/confirmation_sheet.dart';
 import '../../../../core/widgets/generated_avatar.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../authentication/data/providers.dart';
+import '../../../wallets/data/providers.dart';
 import '../view_models/account_providers.dart';
-import '../widgets/balance_adjustment_sheet.dart';
 
 /// Account (plan.md section 7.13): profile summary, wallet + rettifica,
 /// and a menu into Sicurezza/Account collegati/Preferenze/Dati, plus
@@ -49,7 +50,7 @@ class AccountScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(accountProfileProvider);
-    final walletAsync = ref.watch(accountWalletProvider);
+    final walletsAsync = ref.watch(walletsListProvider);
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
@@ -57,7 +58,7 @@ class AccountScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(accountProfileProvider);
-          ref.invalidate(accountWalletProvider);
+          ref.invalidate(walletsListProvider);
         },
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -89,40 +90,23 @@ class AccountScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            walletAsync.when(
+            walletsAsync.when(
               loading: () => const SizedBox.shrink(),
               error: (_, _) => const SizedBox.shrink(),
-              data: (wallet) => Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.accountWalletLabel,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            wallet.balance.format(),
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                          OutlinedButton(
-                            onPressed: () => BalanceAdjustmentSheet.show(
-                              context,
-                              wallet.balance,
-                            ),
-                            child: Text(l10n.accountBalanceAdjustmentAction),
-                          ),
-                        ],
-                      ),
-                    ],
+              data: (wallets) {
+                final total = wallets.isEmpty
+                    ? Money.zeroEur
+                    : wallets.map((w) => w.balance).reduce((a, b) => a + b);
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.account_balance_wallet_outlined),
+                    title: Text(l10n.accountWalletsMenuTitle),
+                    subtitle: Text(total.format()),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.wallets),
                   ),
-                ),
-              ),
+                );
+              },
             ),
             const SizedBox(height: AppSpacing.md),
             Card(

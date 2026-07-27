@@ -9,26 +9,39 @@ import '../../../../core/state/ledger_revision_provider.dart';
 import '../../../../core/widgets/amount_field.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../transactions/data/providers.dart';
-import '../view_models/account_providers.dart';
+import '../../data/providers.dart';
 
 /// Rettifica saldo (plan.md sections 7.13 "Portafoglio", 8.4, 13.5): sets
-/// the wallet to a target balance rather than asking for a delta — the
-/// backend computes the difference server-side.
+/// [walletId]'s balance to a target balance rather than asking for a
+/// delta — the backend computes the difference server-side.
 class BalanceAdjustmentSheet extends ConsumerStatefulWidget {
-  const BalanceAdjustmentSheet({super.key, required this.currentBalance});
+  const BalanceAdjustmentSheet({
+    super.key,
+    required this.walletId,
+    required this.currentBalance,
+  });
 
+  final String walletId;
   final Money currentBalance;
 
-  static Future<void> show(BuildContext context, Money currentBalance) {
-    return showModalBottomSheet<void>(
+  static Future<bool> show(
+    BuildContext context, {
+    required String walletId,
+    required Money currentBalance,
+  }) async {
+    final result = await showModalBottomSheet<bool>(
       context: context,
       // See ConfirmationSheet's useRootNavigator comment — otherwise
       // AppShell's centerDocked FAB sits above this sheet's own buttons.
       useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => BalanceAdjustmentSheet(currentBalance: currentBalance),
+      builder: (_) => BalanceAdjustmentSheet(
+        walletId: walletId,
+        currentBalance: currentBalance,
+      ),
     );
+    return result ?? false;
   }
 
   @override
@@ -70,14 +83,15 @@ class _BalanceAdjustmentSheetState
       await ref
           .read(transactionRepositoryProvider)
           .createBalanceAdjustment(
+            walletId: widget.walletId,
             targetBalanceMinor: targetMinor,
             reason: _reasonController.text.trim().isEmpty
                 ? null
                 : _reasonController.text.trim(),
           );
-      ref.invalidate(accountWalletProvider);
+      ref.invalidate(walletsListProvider);
       ref.read(ledgerRevisionProvider.notifier).state++;
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop(true);
     } on AppError catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -6,6 +6,7 @@ import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../core/widgets/skeleton_list.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../wallets/data/providers.dart';
 import '../view_models/report_controller.dart';
 import '../widgets/monthly_comparison_section.dart';
 import '../widgets/period_selector.dart';
@@ -23,6 +24,7 @@ class ReportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(reportControllerProvider);
     final controller = ref.read(reportControllerProvider.notifier);
+    final wallets = ref.watch(walletsListProvider).value ?? const [];
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
@@ -34,6 +36,24 @@ class ReportScreen extends ConsumerWidget {
             selection: state.period,
             onPresetSelected: controller.setPreset,
             onCustomRangeSelected: controller.setCustomRange,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: DropdownButtonFormField<String?>(
+              initialValue: state.walletId,
+              isDense: true,
+              decoration: InputDecoration(
+                labelText: l10n.walletPickerTitle,
+                isDense: true,
+              ),
+              items: [
+                DropdownMenuItem(value: null, child: Text(l10n.allWalletsLabel)),
+                for (final wallet in wallets)
+                  DropdownMenuItem(value: wallet.id, child: Text(wallet.name)),
+              ],
+              onChanged: controller.setWallet,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Padding(

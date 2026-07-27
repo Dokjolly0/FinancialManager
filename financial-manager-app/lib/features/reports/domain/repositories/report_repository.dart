@@ -8,10 +8,18 @@ import '../models/report_timeseries.dart';
 /// device's local timezone isn't sent — the backend already defaults to
 /// the user's profile timezone set at registration.
 class ReportQuery {
-  const ReportQuery({required this.period, this.includeAdjustments = false});
+  const ReportQuery({
+    required this.period,
+    this.includeAdjustments = false,
+    this.walletId,
+  });
 
   final ReportPeriodSelection period;
   final bool includeAdjustments;
+
+  /// `null` means "all wallets" (plan.md's explicit reports wallet
+  /// selector: aggregate across every wallet, or a single one).
+  final String? walletId;
 }
 
 abstract class ReportRepository {

@@ -18,6 +18,7 @@ class ReportApi {
       if (period.customTo != null)
         'to': period.customTo!.toUtc().toIso8601String(),
       'include_adjustments': query.includeAdjustments,
+      if (query.walletId != null) 'wallet_id': query.walletId,
     };
   }
 

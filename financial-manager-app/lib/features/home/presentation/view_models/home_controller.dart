@@ -4,6 +4,7 @@ import '../../../../core/errors/app_error.dart';
 import '../../../../core/state/ledger_revision_provider.dart';
 import '../../../account/presentation/view_models/account_providers.dart';
 import '../../../transactions/data/providers.dart';
+import '../../../wallets/data/providers.dart';
 import '../state/home_state.dart';
 
 /// Loads the wallet balance and recent transactions for the Home screen
@@ -39,13 +40,13 @@ class HomeController extends Notifier<HomeState> {
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final wallet = await ref.read(walletRepositoryProvider).getWallet();
+      final wallets = await ref.read(walletRepositoryProvider).listWallets();
       final page = await ref
           .read(transactionRepositoryProvider)
           .listTransactions(limit: 8);
       state = state.copyWith(
         isLoading: false,
-        wallet: wallet,
+        wallets: wallets,
         recentTransactions: page.transactions,
       );
     } on AppError catch (e) {

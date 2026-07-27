@@ -2,9 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_error.dart';
 import '../../../../core/state/ledger_revision_provider.dart';
+import '../../../wallets/data/providers.dart';
+import '../../../wallets/domain/models/wallet.dart';
 import '../../data/providers.dart';
 import '../../domain/models/ledger_transaction.dart';
-import '../../domain/models/wallet.dart';
 
 class TransactionDetailState {
   const TransactionDetailState({
@@ -67,6 +68,7 @@ class TransactionDetailController extends Notifier<TransactionDetailState> {
           .deleteTransaction(arg);
       state = state.copyWith(isDeleting: false);
       ref.bumpLedgerRevision();
+      ref.invalidate(walletsListProvider);
       return wallet;
     } on AppError catch (e) {
       state = state.copyWith(isDeleting: false, error: e);

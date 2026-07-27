@@ -22,6 +22,7 @@ class ReportController extends Notifier<ReportState> {
   ReportQuery get _query => ReportQuery(
     period: state.period,
     includeAdjustments: state.includeAdjustments,
+    walletId: state.walletId,
   );
 
   Future<void> refresh() async {
@@ -97,6 +98,13 @@ class ReportController extends Notifier<ReportState> {
     if (groupBy == state.groupBy) return;
     state = state.copyWith(groupBy: groupBy);
     _refreshBreakdown();
+  }
+
+  /// `null` selects "all wallets" (aggregate across every wallet).
+  void setWallet(String? walletId) {
+    if (walletId == state.walletId) return;
+    state = state.copyWith(walletId: walletId, clearWalletId: walletId == null);
+    refresh();
   }
 }
 
