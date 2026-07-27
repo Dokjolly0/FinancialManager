@@ -54,6 +54,26 @@ class TransactionRepositoryImpl implements TransactionRepository {
     }
   }
 
+  @override
+  Future<LedgerTransaction?> getOpeningBalanceTransaction(
+    String walletId,
+  ) async {
+    try {
+      final response = await _api.list(
+        limit: 1,
+        walletId: walletId,
+        kind: 'OPENING_BALANCE',
+      );
+      final rawTransactions = response['transactions'] as List<dynamic>? ?? [];
+      if (rawTransactions.isEmpty) return null;
+      return LedgerTransaction.fromJson(
+        rawTransactions.first as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
   /// Maps the "tutte/uscite/entrate/rettifiche" type filter (plan.md
   /// section 7.9) onto the backend's direction/kind query params. Standard
   /// transactions are filtered by direction; adjustments are a kind
@@ -121,6 +141,25 @@ class TransactionRepositoryImpl implements TransactionRepository {
         'media_id': params.mediaId,
         'occurred_at': params.occurredAt.toUtc().toIso8601String(),
         'version': params.expectedVersion,
+      });
+      return _parseWithWallet(response);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<TransactionWithWallet> updateOpeningBalance(
+    String id, {
+    required int amountMinor,
+    required DateTime occurredAt,
+    required int expectedVersion,
+  }) async {
+    try {
+      final response = await _api.updateOpeningBalance(id, {
+        'amount_minor': amountMinor,
+        'occurred_at': occurredAt.toUtc().toIso8601String(),
+        'version': expectedVersion,
       });
       return _parseWithWallet(response);
     } on DioException catch (e) {

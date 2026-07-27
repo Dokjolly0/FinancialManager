@@ -152,6 +152,11 @@ abstract class TransactionRepository {
 
   Future<LedgerTransaction> getTransaction(String id);
 
+  /// The wallet's OPENING_BALANCE row, or null if it has none — a wallet
+  /// created with a zero opening balance never gets one (the transactions
+  /// table's amount_minor > 0 constraint), so there's nothing to edit.
+  Future<LedgerTransaction?> getOpeningBalanceTransaction(String walletId);
+
   Future<TransactionPage> listTransactions({
     String? cursor,
     int limit = 20,
@@ -162,6 +167,16 @@ abstract class TransactionRepository {
     String id,
     UpdateTransactionParams params,
   );
+
+  /// Edits a wallet's OPENING_BALANCE entry — amount and date only, never
+  /// wallet/title/category/direction (those are structural to what makes it
+  /// an opening balance rather than an ordinary transaction).
+  Future<TransactionWithWallet> updateOpeningBalance(
+    String id, {
+    required int amountMinor,
+    required DateTime occurredAt,
+    required int expectedVersion,
+  });
 
   /// Returns the wallet's new balance after reversing the deleted
   /// transaction's effect.

@@ -316,6 +316,9 @@
   "descriptionLabel": "Descrizione",
   "createdLabel": "Creata il",
   "lastModifiedLabel": "Ultima modifica",
+  "editOpeningBalanceSheetTitle": "Modifica saldo iniziale",
+  "editOpeningBalanceHint": "È il punto di partenza del portafoglio, non una rettifica: modificarlo cambia anche report e grafici passati.",
+  "saveOpeningBalanceAction": "Salva saldo iniziale",
 
   "mediaPickerRecentTab": "Recenti",
   "mediaPickerLibraryTab": "Libreria",

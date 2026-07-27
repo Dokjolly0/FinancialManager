@@ -38,6 +38,11 @@ class LedgerTransaction {
 
   bool get isEditable => kind == TransactionKind.standard;
 
+  /// Whether this row's amount/date can be corrected through the dedicated
+  /// opening-balance edit sheet (never the full transaction form — see
+  /// [TransactionKind]'s doc comment for what stays fixed).
+  bool get isOpeningBalanceEditable => kind == TransactionKind.openingBalance;
+
   static LedgerTransaction fromJson(Map<String, dynamic> json) {
     return LedgerTransaction(
       id: json['id'] as String,

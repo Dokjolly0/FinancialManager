@@ -22,11 +22,12 @@ enum TransactionDirection {
 
 /// Technical nature of a transaction (plan.md section 4.2). Only
 /// [standard] can be created/edited/deleted through the ordinary UI;
-/// [openingBalance], [balanceAdjustment], and [transfer] are created by
-/// dedicated flows (registration, balance adjustment, wallet-to-wallet
-/// transfer) and shown read-only elsewhere. [transfer] rows are excluded
-/// from expense/income report totals by construction (the backend never
-/// queries them there).
+/// [openingBalance] additionally allows editing its amount and date (to fix
+/// a wrong initial balance) through a dedicated flow, but never deletion.
+/// [balanceAdjustment] and [transfer] are created by dedicated flows
+/// (balance adjustment, wallet-to-wallet transfer) and always shown
+/// read-only. [transfer] rows are excluded from expense/income report
+/// totals by construction (the backend never queries them there).
 enum TransactionKind {
   standard,
   openingBalance,

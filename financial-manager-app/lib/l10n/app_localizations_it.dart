@@ -882,6 +882,16 @@ class AppLocalizationsIt extends AppLocalizations {
   String get lastModifiedLabel => 'Ultima modifica';
 
   @override
+  String get editOpeningBalanceSheetTitle => 'Modifica saldo iniziale';
+
+  @override
+  String get editOpeningBalanceHint =>
+      'È il punto di partenza del portafoglio, non una rettifica: modificarlo cambia anche report e grafici passati.';
+
+  @override
+  String get saveOpeningBalanceAction => 'Salva saldo iniziale';
+
+  @override
   String get mediaPickerRecentTab => 'Recenti';
 
   @override

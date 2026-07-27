@@ -68,6 +68,17 @@ class TransactionApi {
     return response.data!;
   }
 
+  Future<Map<String, dynamic>> updateOpeningBalance(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/transactions/$id/opening-balance',
+      data: body,
+    );
+    return response.data!;
+  }
+
   Future<Map<String, dynamic>> delete(String id) async {
     final response = await _dio.delete<Map<String, dynamic>>(
       '/transactions/$id',

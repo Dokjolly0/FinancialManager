@@ -877,6 +877,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lastModifiedLabel => 'Last modified';
 
   @override
+  String get editOpeningBalanceSheetTitle => 'Edit initial balance';
+
+  @override
+  String get editOpeningBalanceHint =>
+      'This is the wallet\'s starting point, not a correction entry — changing it also changes past reports and charts.';
+
+  @override
+  String get saveOpeningBalanceAction => 'Save initial balance';
+
+  @override
   String get mediaPickerRecentTab => 'Recent';
 
   @override

@@ -334,6 +334,9 @@
   "descriptionLabel": "Description",
   "createdLabel": "Created",
   "lastModifiedLabel": "Last modified",
+  "editOpeningBalanceSheetTitle": "Edit initial balance",
+  "editOpeningBalanceHint": "This is the wallet's starting point, not a correction entry — changing it also changes past reports and charts.",
+  "saveOpeningBalanceAction": "Save initial balance",
 
   "mediaPickerRecentTab": "Recent",
   "mediaPickerLibraryTab": "Library",

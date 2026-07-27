@@ -11,6 +11,9 @@ import '../../../../core/formatting/money.dart';
 import '../../../../core/widgets/amount_field.dart';
 import '../../../../core/widgets/confirmation_sheet.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../transactions/data/providers.dart';
+import '../../../transactions/domain/models/ledger_transaction.dart';
+import '../../../transactions/presentation/widgets/opening_balance_edit_sheet.dart';
 import '../../data/providers.dart';
 import '../../domain/models/wallet.dart';
 import '../../domain/models/wallet_type.dart';
@@ -39,6 +42,7 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
   Color _color = colorFromHex(defaultWalletColor);
   int? _expectedVersion;
   Wallet? _existing;
+  LedgerTransaction? _openingBalanceTransaction;
   bool _isLoadingExisting = false;
   bool _isSaving = false;
   bool _isArchiving = false;
@@ -59,9 +63,13 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
   Future<void> _loadExisting(String id) async {
     try {
       final wallet = await ref.read(walletRepositoryProvider).getWallet(id);
+      final openingBalanceTransaction = await ref
+          .read(transactionRepositoryProvider)
+          .getOpeningBalanceTransaction(id);
       if (!mounted) return;
       setState(() {
         _existing = wallet;
+        _openingBalanceTransaction = openingBalanceTransaction;
         _nameController.text = wallet.name;
         _type = wallet.type;
         _icon = wallet.icon;
@@ -148,6 +156,18 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
     );
     if (changed && mounted) {
       await _loadExisting(existing.id);
+    }
+  }
+
+  Future<void> _editOpeningBalance() async {
+    final transaction = _openingBalanceTransaction;
+    if (transaction == null) return;
+    final changed = await OpeningBalanceEditSheet.show(
+      context,
+      transaction: transaction,
+    );
+    if (changed && mounted) {
+      await _loadExisting(widget.editWalletId!);
     }
   }
 
@@ -279,6 +299,17 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
                       trailing: const Icon(Icons.chevron_right),
                       onTap: _adjustBalance,
                     ),
+                    if (_openingBalanceTransaction != null)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.edit_calendar_outlined),
+                        title: Text(l10n.editOpeningBalanceSheetTitle),
+                        subtitle: Text(
+                          _openingBalanceTransaction!.amount.format(),
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: _editOpeningBalance,
+                      ),
                   ],
                   if (_isEditMode && _type == WalletType.cash) ...[
                     const SizedBox(height: AppSpacing.md),

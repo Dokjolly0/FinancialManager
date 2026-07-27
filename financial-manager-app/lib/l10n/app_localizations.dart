@@ -1698,6 +1698,24 @@ abstract class AppLocalizations {
   /// **'Ultima modifica'**
   String get lastModifiedLabel;
 
+  /// No description provided for @editOpeningBalanceSheetTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica saldo iniziale'**
+  String get editOpeningBalanceSheetTitle;
+
+  /// No description provided for @editOpeningBalanceHint.
+  ///
+  /// In it, this message translates to:
+  /// **'È il punto di partenza del portafoglio, non una rettifica: modificarlo cambia anche report e grafici passati.'**
+  String get editOpeningBalanceHint;
+
+  /// No description provided for @saveOpeningBalanceAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva saldo iniziale'**
+  String get saveOpeningBalanceAction;
+
   /// No description provided for @mediaPickerRecentTab.
   ///
   /// In it, this message translates to:
