@@ -1115,6 +1115,163 @@ func (s *Service) CreateTransfer(ctx context.Context, in CreateTransferInput) ([
 	return responseBody, http.StatusCreated, nil
 }
 
+// TransferWithWallets mirrors CreateTransfer's response shape so the
+// client's TransferResult parser works for both create and update.
+type TransferWithWallets struct {
+	DebitTransaction  transactionResponse `json:"debit_transaction"`
+	CreditTransaction transactionResponse `json:"credit_transaction"`
+	SourceWallet      walletSnapshot      `json:"source_wallet"`
+	DestinationWallet walletSnapshot      `json:"destination_wallet"`
+}
+
+type UpdateTransferInput struct {
+	UserID          uuid.UUID
+	TransactionID   uuid.UUID // either leg of the pair
+	AmountMinor     int64
+	OccurredAt      time.Time
+	ExpectedVersion int64 // version of the leg identified by TransactionID
+}
+
+// UpdateTransfer lets the user correct a transfer's amount and date — the
+// same narrow scope as UpdateOpeningBalance, and for the same reason:
+// source/destination wallet, title, and the DEBIT/CREDIT pairing are
+// structural to what makes the two rows a linked transfer, never editable.
+// TransactionID may be either leg (the transaction detail screen shows one
+// row per wallet, so the user could open either); both legs are located,
+// locked, and updated together so the pair never drifts out of sync.
+// Deletion stays forbidden (Delete already rejects KindTransfer) — a
+// transfer is reversed with a new transfer in the other direction, not by
+// deleting one leg without the other.
+func (s *Service) UpdateTransfer(ctx context.Context, in UpdateTransferInput) (TransferWithWallets, error) {
+	fieldErrors := map[string]string{}
+	if in.AmountMinor <= 0 {
+		fieldErrors["amount_minor"] = apierror.FieldAmountNotPositive
+	} else if in.AmountMinor > maxAmountMinor {
+		fieldErrors["amount_minor"] = apierror.FieldAmountImplausible
+	}
+	if len(fieldErrors) > 0 {
+		return TransferWithWallets{}, apierror.NewValidation(fieldErrors)
+	}
+
+	occurredAt := in.OccurredAt
+	if occurredAt.IsZero() {
+		occurredAt = s.clock.Now()
+	}
+
+	var result TransferWithWallets
+	var sourceWalletID, destWalletID uuid.UUID
+	err := s.db.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		existing, err := s.transactions.WithQuerier(tx).LockByIDAndUserID(ctx, in.TransactionID, in.UserID)
+		if errors.Is(err, ErrNotFound) {
+			return apierror.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if existing.Kind != KindTransfer {
+			return apierror.New(http.StatusForbidden, "NOT_EDITABLE",
+				"Only transfers can be edited through this endpoint.")
+		}
+
+		pair, err := s.transactions.WithQuerier(tx).LockByIDAndUserID(ctx, *existing.TransferPairID, in.UserID)
+		if err != nil {
+			return fmt.Errorf("lock transfer pair: %w", err)
+		}
+
+		debitTx, creditTx := existing, pair
+		if existing.Direction == DirectionCredit {
+			debitTx, creditTx = pair, existing
+		}
+
+		// Lock both wallets in a fixed order, mirroring CreateTransfer, so a
+		// concurrent transfer touching the same two wallets can't deadlock
+		// against this one.
+		firstID, secondID := orderedWalletIDs(debitTx.WalletID, creditTx.WalletID)
+		firstWallet, err := s.wallets.WithQuerier(tx).LockByIDForUpdate(ctx, firstID, in.UserID)
+		if err != nil {
+			return fmt.Errorf("lock wallet: %w", err)
+		}
+		secondWallet, err := s.wallets.WithQuerier(tx).LockByIDForUpdate(ctx, secondID, in.UserID)
+		if err != nil {
+			return fmt.Errorf("lock wallet: %w", err)
+		}
+		source, dest := firstWallet, secondWallet
+		if source.ID != debitTx.WalletID {
+			source, dest = secondWallet, firstWallet
+		}
+		sourceWalletID, destWalletID = source.ID, dest.ID
+
+		expectedDebitVersion, expectedCreditVersion := debitTx.Version, creditTx.Version
+		if in.TransactionID == debitTx.ID {
+			expectedDebitVersion = in.ExpectedVersion
+		} else {
+			expectedCreditVersion = in.ExpectedVersion
+		}
+
+		updatedDebit, err := s.transactions.WithQuerier(tx).Update(ctx, debitTx.ID, in.UserID, expectedDebitVersion, UpdateInput{
+			WalletID: debitTx.WalletID, Direction: DirectionDebit, AmountMinor: in.AmountMinor, Title: debitTx.Title,
+			Description: debitTx.Description, CategoryID: debitTx.CategoryID, TemplateID: debitTx.TemplateID, MediaID: debitTx.MediaID,
+			OccurredAt: occurredAt,
+		})
+		if errors.Is(err, ErrNotFound) {
+			if _, getErr := s.transactions.WithQuerier(tx).GetByIDAndUserID(ctx, debitTx.ID, in.UserID); getErr == nil {
+				return apierror.ErrConflict
+			}
+			return apierror.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+
+		updatedCredit, err := s.transactions.WithQuerier(tx).Update(ctx, creditTx.ID, in.UserID, expectedCreditVersion, UpdateInput{
+			WalletID: creditTx.WalletID, Direction: DirectionCredit, AmountMinor: in.AmountMinor, Title: creditTx.Title,
+			Description: creditTx.Description, CategoryID: creditTx.CategoryID, TemplateID: creditTx.TemplateID, MediaID: creditTx.MediaID,
+			OccurredAt: occurredAt,
+		})
+		if errors.Is(err, ErrNotFound) {
+			if _, getErr := s.transactions.WithQuerier(tx).GetByIDAndUserID(ctx, creditTx.ID, in.UserID); getErr == nil {
+				return apierror.ErrConflict
+			}
+			return apierror.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+
+		sourceDiff := SignedDelta(DirectionDebit, in.AmountMinor) - SignedDelta(DirectionDebit, debitTx.AmountMinor)
+		destDiff := SignedDelta(DirectionCredit, in.AmountMinor) - SignedDelta(DirectionCredit, creditTx.AmountMinor)
+
+		updatedSource, err := s.wallets.WithQuerier(tx).UpdateBalance(ctx, source.ID, source.CurrentBalanceMinor+sourceDiff, source.Version)
+		if err != nil {
+			return fmt.Errorf("update source wallet balance: %w", err)
+		}
+		updatedDest, err := s.wallets.WithQuerier(tx).UpdateBalance(ctx, dest.ID, dest.CurrentBalanceMinor+destDiff, dest.Version)
+		if err != nil {
+			return fmt.Errorf("update destination wallet balance: %w", err)
+		}
+
+		if err := s.audit.WithQuerier(tx).Record(ctx, updatedDebit.ID, in.UserID, AuditActionUpdated, debitTx, updatedDebit); err != nil {
+			return err
+		}
+		if err := s.audit.WithQuerier(tx).Record(ctx, updatedCredit.ID, in.UserID, AuditActionUpdated, creditTx, updatedCredit); err != nil {
+			return err
+		}
+
+		result = TransferWithWallets{
+			DebitTransaction:  toTransactionResponse(updatedDebit),
+			CreditTransaction: toTransactionResponse(updatedCredit),
+			SourceWallet:      toWalletSnapshot(updatedSource),
+			DestinationWallet: toWalletSnapshot(updatedDest),
+		}
+		return nil
+	})
+	if err == nil {
+		s.bumpReportVersion(ctx, sourceWalletID)
+		s.bumpReportVersion(ctx, destWalletID)
+	}
+	return result, err
+}
+
 // --- Reconciliation ----------------------------------------------------------
 
 // Mismatch describes a wallet whose denormalized balance disagrees with

@@ -365,6 +365,79 @@ func TestReconcile_FindsNoMismatchAfterNormalOperations(t *testing.T) {
 	}
 }
 
+func TestUpdateTransfer_AdjustsBothWalletsAndRejectsOtherKinds(t *testing.T) {
+	h := newHarness(t, 100000) // source wallet: 1000.00 EUR
+	ctx := context.Background()
+
+	destWallet, err := h.wallets.Create(ctx, h.userID, "Second wallet", "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, 50000)
+	if err != nil {
+		t.Fatalf("create second wallet: %v", err)
+	}
+
+	createBody, status, err := h.service.CreateTransfer(ctx, transactions.CreateTransferInput{
+		UserID: h.userID, SourceWalletID: h.walletID, DestinationWalletID: destWallet.ID, AmountMinor: 10000,
+		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
+	})
+	if err != nil {
+		t.Fatalf("CreateTransfer() error = %v", err)
+	}
+	if status != 201 {
+		t.Fatalf("status = %d, want 201", status)
+	}
+	var decoded struct {
+		DebitTransaction struct {
+			ID string `json:"id"`
+		} `json:"debit_transaction"`
+	}
+	if err := json.Unmarshal(createBody, &decoded); err != nil {
+		t.Fatalf("decode create transfer response: %v", err)
+	}
+	debitTxID := uuid.MustParse(decoded.DebitTransaction.ID)
+
+	// Editing via the debit leg's id must update both wallets and both legs.
+	updated, err := h.service.UpdateTransfer(ctx, transactions.UpdateTransferInput{
+		UserID: h.userID, TransactionID: debitTxID, AmountMinor: 15000, ExpectedVersion: 1,
+	})
+	if err != nil {
+		t.Fatalf("UpdateTransfer() error = %v", err)
+	}
+	if updated.SourceWallet.CurrentBalanceMinor != 85000 {
+		t.Fatalf("source balance after update = %d, want 85000 (1000.00 - 150.00)", updated.SourceWallet.CurrentBalanceMinor)
+	}
+	if updated.DestinationWallet.CurrentBalanceMinor != 65000 {
+		t.Fatalf("destination balance after update = %d, want 65000 (500.00 + 150.00)", updated.DestinationWallet.CurrentBalanceMinor)
+	}
+	if updated.DebitTransaction.AmountMinor != 15000 || updated.CreditTransaction.AmountMinor != 15000 {
+		t.Fatalf("leg amounts = %d/%d, want both 15000", updated.DebitTransaction.AmountMinor, updated.CreditTransaction.AmountMinor)
+	}
+
+	// A STANDARD transaction must not be editable through this endpoint.
+	standardBody, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 1000,
+		Currency: "EUR", Title: "Bar", IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
+	})
+	if err != nil {
+		t.Fatalf("CreateStandard() error = %v", err)
+	}
+	standardTxIDStr, _ := decodeCreateResponse(t, standardBody)
+
+	_, err = h.service.UpdateTransfer(ctx, transactions.UpdateTransferInput{
+		UserID: h.userID, TransactionID: uuid.MustParse(standardTxIDStr), AmountMinor: 5000, ExpectedVersion: 1,
+	})
+	var apiErr *apierror.Error
+	if !errors.As(err, &apiErr) || apiErr.Status != 403 {
+		t.Fatalf("expected a 403 forbidding non-transfer edit, got %v", err)
+	}
+
+	// Stale version on the leg being edited must be rejected as a conflict.
+	_, err = h.service.UpdateTransfer(ctx, transactions.UpdateTransferInput{
+		UserID: h.userID, TransactionID: debitTxID, AmountMinor: 20000, ExpectedVersion: 1, // stale: real version is now 2
+	})
+	if !errors.As(err, &apiErr) || apiErr.Status != 409 {
+		t.Fatalf("expected a 409 conflict for a stale version, got %v", err)
+	}
+}
+
 // TestCrossUserAccess_IsAlwaysRejected covers plan.md section 19.1/23.8
 // (BOLA/IDOR): user B must not be able to read, edit, or delete user A's
 // transaction just by knowing its ID.
