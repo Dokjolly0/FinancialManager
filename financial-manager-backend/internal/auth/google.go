@@ -268,7 +268,7 @@ func (s *Service) CompleteGoogleRegistration(ctx context.Context, in CompleteGoo
 			user.EmailVerifiedAt = &verifiedAt
 		}
 
-		wallet, walletErr := s.wallets.WithQuerier(tx).Create(ctx, user.ID, in.Currency, in.InitialBalanceMinor)
+		wallet, walletErr := s.wallets.WithQuerier(tx).Create(ctx, user.ID, wallets.DefaultName, in.Currency, wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, in.InitialBalanceMinor)
 		if walletErr != nil {
 			return fmt.Errorf("create wallet: %w", walletErr)
 		}

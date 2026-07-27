@@ -243,7 +243,7 @@ func TestDelete_RejectsWhileReferencedByATransaction(t *testing.T) {
 	mediaID := uuid.MustParse(asset.ID)
 
 	walletsRepo := wallets.NewRepository(h.dbPool)
-	wallet, err := walletsRepo.Create(ctx, h.userID, "EUR", 100000)
+	wallet, err := walletsRepo.Create(ctx, h.userID, wallets.DefaultName, "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, 100000)
 	if err != nil {
 		t.Fatalf("create test wallet: %v", err)
 	}
@@ -253,9 +253,8 @@ func TestDelete_RejectsWhileReferencedByATransaction(t *testing.T) {
 		Audit: transactions.NewAuditRepository(h.dbPool), Categories: nil, Templates: nil, Media: h.repo,
 		Clock: clock.System{},
 	})
-	_ = wallet
 	_, _, err = transactionsService.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionDebit, AmountMinor: 500,
+		UserID: h.userID, WalletID: wallet.ID, Direction: transactions.DirectionDebit, AmountMinor: 500,
 		Currency: "EUR", Title: "Con immagine", MediaID: &mediaID,
 		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	})
