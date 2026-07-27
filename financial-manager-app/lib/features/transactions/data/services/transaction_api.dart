@@ -26,6 +26,7 @@ class TransactionApi {
   Future<Map<String, dynamic>> list({
     String? cursor,
     required int limit,
+    String? walletId,
     String? direction,
     String? kind,
     String? categoryId,
@@ -40,6 +41,7 @@ class TransactionApi {
       queryParameters: {
         'limit': limit,
         'cursor': ?cursor,
+        'wallet_id': ?walletId,
         'direction': ?direction,
         'kind': ?kind,
         'category_id': ?categoryId,
@@ -74,10 +76,20 @@ class TransactionApi {
   }
 
   Future<Map<String, dynamic>> createBalanceAdjustment(
+    String walletId,
     Map<String, dynamic> body,
   ) async {
     final response = await _dio.post<Map<String, dynamic>>(
-      '/wallet/balance-adjustments',
+      '/wallets/$walletId/balance-adjustments',
+      data: body,
+      options: Options(headers: {'Idempotency-Key': _uuid.v4()}),
+    );
+    return response.data!;
+  }
+
+  Future<Map<String, dynamic>> createTransfer(Map<String, dynamic> body) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/transfers',
       data: body,
       options: Options(headers: {'Idempotency-Key': _uuid.v4()}),
     );

@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 
 import '../../../../core/errors/error_mapper.dart';
+import '../../../wallets/domain/models/wallet.dart';
 import '../../domain/models/ledger_transaction.dart';
 import '../../domain/models/transaction_page.dart';
-import '../../domain/models/wallet.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../services/transaction_api.dart';
 
@@ -28,6 +28,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
   ) async {
     try {
       final response = await _api.create({
+        'wallet_id': params.walletId,
         'direction': params.direction.toApi(),
         'amount_minor': params.amountMinor,
         'currency': params.currency,
@@ -78,6 +79,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       final response = await _api.list(
         cursor: cursor,
         limit: limit,
+        walletId: filter.walletId,
         direction: direction,
         kind: kind,
         categoryId: filter.categoryId,
@@ -109,6 +111,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
   ) async {
     try {
       final response = await _api.update(id, {
+        'wallet_id': params.walletId,
         'direction': params.direction.toApi(),
         'amount_minor': params.amountMinor,
         'title': params.title,
@@ -137,15 +140,51 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<TransactionWithWallet> createBalanceAdjustment({
+    required String walletId,
     required int targetBalanceMinor,
     String? reason,
   }) async {
     try {
-      final response = await _api.createBalanceAdjustment({
+      final response = await _api.createBalanceAdjustment(walletId, {
         'target_balance_minor': targetBalanceMinor,
         'reason': reason,
       });
       return _parseWithWallet(response);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<TransferResult> createTransfer({
+    required String sourceWalletId,
+    required String destinationWalletId,
+    required int amountMinor,
+    String? note,
+    DateTime? occurredAt,
+  }) async {
+    try {
+      final response = await _api.createTransfer({
+        'source_wallet_id': sourceWalletId,
+        'destination_wallet_id': destinationWalletId,
+        'amount_minor': amountMinor,
+        'note': note,
+        'occurred_at': (occurredAt ?? DateTime.now()).toUtc().toIso8601String(),
+      });
+      return TransferResult(
+        debitTransaction: LedgerTransaction.fromJson(
+          response['debit_transaction'] as Map<String, dynamic>,
+        ),
+        creditTransaction: LedgerTransaction.fromJson(
+          response['credit_transaction'] as Map<String, dynamic>,
+        ),
+        sourceWallet: Wallet.fromJson(
+          response['source_wallet'] as Map<String, dynamic>,
+        ),
+        destinationWallet: Wallet.fromJson(
+          response['destination_wallet'] as Map<String, dynamic>,
+        ),
+      );
     } on DioException catch (e) {
       throw ErrorMapper.fromException(e);
     }

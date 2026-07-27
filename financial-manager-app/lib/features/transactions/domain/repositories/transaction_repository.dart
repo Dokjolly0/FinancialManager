@@ -1,10 +1,11 @@
+import '../../../wallets/domain/models/wallet.dart';
 import '../models/ledger_transaction.dart';
 import '../models/transaction_direction.dart';
 import '../models/transaction_page.dart';
-import '../models/wallet.dart';
 
 class CreateTransactionParams {
   const CreateTransactionParams({
+    required this.walletId,
     required this.direction,
     required this.amountMinor,
     required this.currency,
@@ -16,6 +17,7 @@ class CreateTransactionParams {
     required this.occurredAt,
   });
 
+  final String walletId;
   final TransactionDirection direction;
   final int amountMinor;
   final String currency;
@@ -29,6 +31,7 @@ class CreateTransactionParams {
 
 class UpdateTransactionParams {
   const UpdateTransactionParams({
+    required this.walletId,
     required this.direction,
     required this.amountMinor,
     required this.title,
@@ -40,6 +43,12 @@ class UpdateTransactionParams {
     required this.expectedVersion,
   });
 
+  /// The wallet the transaction should belong to after this update. If it
+  /// differs from the transaction's current wallet, the backend moves it —
+  /// this project's product decision explicitly allows changing a
+  /// transaction's wallet on edit (unlike most other fixed-at-creation
+  /// choices).
+  final String walletId;
   final TransactionDirection direction;
   final int amountMinor;
   final String title;
@@ -63,6 +72,7 @@ enum TransactionTypeFilter { all, debit, credit, adjustments }
 class TransactionListFilter {
   const TransactionListFilter({
     this.type = TransactionTypeFilter.all,
+    this.walletId,
     this.title,
     this.categoryId,
     this.amountMinMinor,
@@ -72,6 +82,10 @@ class TransactionListFilter {
   });
 
   final TransactionTypeFilter type;
+
+  /// `null` means unfiltered — every wallet's transactions show up
+  /// together, matching plan.md's default history view.
+  final String? walletId;
   final String? title;
   final String? categoryId;
   final int? amountMinMinor;
@@ -82,6 +96,7 @@ class TransactionListFilter {
   int get activeCount {
     var count = 0;
     if (type != TransactionTypeFilter.all) count++;
+    if (walletId != null) count++;
     if (title != null && title!.isNotEmpty) count++;
     if (categoryId != null) count++;
     if (amountMinMinor != null) count++;
@@ -95,6 +110,8 @@ class TransactionListFilter {
   /// alone can't distinguish "leave unchanged" from "clear back to null".
   TransactionListFilter copyWith({
     TransactionTypeFilter? type,
+    String? walletId,
+    bool clearWalletId = false,
     String? title,
     bool clearTitle = false,
     String? categoryId,
@@ -110,6 +127,7 @@ class TransactionListFilter {
   }) {
     return TransactionListFilter(
       type: type ?? this.type,
+      walletId: clearWalletId ? null : (walletId ?? this.walletId),
       title: clearTitle ? null : (title ?? this.title),
       categoryId: clearCategoryId ? null : (categoryId ?? this.categoryId),
       amountMinMinor: clearAmountMinMinor
@@ -149,11 +167,40 @@ abstract class TransactionRepository {
   /// transaction's effect.
   Future<Wallet> deleteTransaction(String id);
 
-  /// Sets the wallet's balance to [targetBalanceMinor]; the backend
+  /// Sets [walletId]'s balance to [targetBalanceMinor]; the backend
   /// computes the delta and creates a BALANCE_ADJUSTMENT entry for it
   /// (plan.md section 13.5).
   Future<TransactionWithWallet> createBalanceAdjustment({
+    required String walletId,
     required int targetBalanceMinor,
     String? reason,
   });
+
+  /// Atomically moves money from one wallet to another: a linked DEBIT/
+  /// CREDIT pair of kind=TRANSFER, excluded from expense/income report
+  /// totals (plan.md's "aggiunta o ricarica di credito da un conto ad un
+  /// altro").
+  Future<TransferResult> createTransfer({
+    required String sourceWalletId,
+    required String destinationWalletId,
+    required int amountMinor,
+    String? note,
+    DateTime? occurredAt,
+  });
+}
+
+/// What a transfer returns: both ledger legs plus both wallets' new
+/// authoritative balances — the client never computes them itself.
+class TransferResult {
+  const TransferResult({
+    required this.debitTransaction,
+    required this.creditTransaction,
+    required this.sourceWallet,
+    required this.destinationWallet,
+  });
+
+  final LedgerTransaction debitTransaction;
+  final LedgerTransaction creditTransaction;
+  final Wallet sourceWallet;
+  final Wallet destinationWallet;
 }

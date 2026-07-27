@@ -13,6 +13,7 @@ LedgerTransaction _tx({
 }) {
   return LedgerTransaction(
     id: id,
+    walletId: 'wallet-1',
     direction: direction,
     kind: TransactionKind.standard,
     amount: Money(minorUnits: amountMinor, currency: 'EUR'),

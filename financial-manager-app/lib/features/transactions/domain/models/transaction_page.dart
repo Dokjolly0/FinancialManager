@@ -1,5 +1,5 @@
+import '../../../wallets/domain/models/wallet.dart';
 import 'ledger_transaction.dart';
-import 'wallet.dart';
 
 class TransactionPage {
   const TransactionPage({
