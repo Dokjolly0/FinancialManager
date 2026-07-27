@@ -78,7 +78,7 @@ func newHarness(t *testing.T) harness {
 	if err != nil {
 		t.Fatalf("create test user: %v", err)
 	}
-	wallet, err := walletsRepo.Create(context.Background(), user.ID, "EUR", 10000)
+	wallet, err := walletsRepo.Create(context.Background(), user.ID, wallets.DefaultName, "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, 10000)
 	if err != nil {
 		t.Fatalf("create test wallet: %v", err)
 	}
@@ -178,9 +178,9 @@ func TestRequestExport_JSON_ContainsProfileWalletAndTransactions(t *testing.T) {
 		Profile struct {
 			ID string `json:"id"`
 		} `json:"profilo"`
-		Wallet struct {
+		Wallets []struct {
 			Currency string `json:"currency"`
-		} `json:"portafoglio"`
+		} `json:"portafogli"`
 		Transactions []struct {
 			Title string `json:"title"`
 		} `json:"transazioni"`
@@ -191,8 +191,8 @@ func TestRequestExport_JSON_ContainsProfileWalletAndTransactions(t *testing.T) {
 	if decoded.Profile.ID != h.userID.String() {
 		t.Errorf("profilo.id = %q, want %q", decoded.Profile.ID, h.userID.String())
 	}
-	if decoded.Wallet.Currency != "EUR" {
-		t.Errorf("portafoglio.currency = %q, want EUR", decoded.Wallet.Currency)
+	if len(decoded.Wallets) == 0 || decoded.Wallets[0].Currency != "EUR" {
+		t.Errorf("portafogli = %+v, want at least one wallet with currency EUR", decoded.Wallets)
 	}
 	found := false
 	for _, tx := range decoded.Transactions {

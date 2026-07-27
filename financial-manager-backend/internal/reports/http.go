@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"financial-manager-backend/internal/platform/apierror"
 	"financial-manager-backend/internal/platform/reqctx"
@@ -48,6 +49,14 @@ func parseCommonParams(r *http.Request) (contextInput, bool, error) {
 		UserID:   userID,
 		Preset:   query.Get("preset"),
 		Timezone: query.Get("timezone"),
+	}
+
+	if raw := query.Get("wallet_id"); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return contextInput{}, false, apierror.NewValidation(map[string]string{"wallet_id": apierror.FieldInvalidUUID})
+		}
+		in.WalletID = &id
 	}
 
 	if raw := query.Get("from"); raw != "" {

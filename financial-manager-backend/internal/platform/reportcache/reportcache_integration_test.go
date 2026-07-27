@@ -58,11 +58,11 @@ func TestCached_HitsAfterFirstCompute(t *testing.T) {
 		return summaryLike{NetMinor: 1234}, nil
 	}
 
-	first, err := reportcache.Cached(ctx, store, walletID, "summary", "key-a", compute)
+	first, err := reportcache.Cached(ctx, store, []uuid.UUID{walletID}, "summary", "key-a", compute)
 	if err != nil {
 		t.Fatalf("first Cached() error = %v", err)
 	}
-	second, err := reportcache.Cached(ctx, store, walletID, "summary", "key-a", compute)
+	second, err := reportcache.Cached(ctx, store, []uuid.UUID{walletID}, "summary", "key-a", compute)
 	if err != nil {
 		t.Fatalf("second Cached() error = %v", err)
 	}
@@ -86,14 +86,14 @@ func TestCached_BumpInvalidatesPreviousVersion(t *testing.T) {
 		return summaryLike{NetMinor: int64(calls)}, nil
 	}
 
-	first, err := reportcache.Cached(ctx, store, walletID, "summary", "key-a", compute)
+	first, err := reportcache.Cached(ctx, store, []uuid.UUID{walletID}, "summary", "key-a", compute)
 	if err != nil {
 		t.Fatalf("first Cached() error = %v", err)
 	}
 	if err := store.Bump(ctx, walletID); err != nil {
 		t.Fatalf("Bump() error = %v", err)
 	}
-	second, err := reportcache.Cached(ctx, store, walletID, "summary", "key-a", compute)
+	second, err := reportcache.Cached(ctx, store, []uuid.UUID{walletID}, "summary", "key-a", compute)
 	if err != nil {
 		t.Fatalf("second Cached() error = %v", err)
 	}
@@ -111,13 +111,13 @@ func TestCached_DifferentParamsKeysDoNotCollide(t *testing.T) {
 	ctx := context.Background()
 	walletID := uuid.New()
 
-	a, err := reportcache.Cached(ctx, store, walletID, "summary", "key-a", func() (summaryLike, error) {
+	a, err := reportcache.Cached(ctx, store, []uuid.UUID{walletID}, "summary", "key-a", func() (summaryLike, error) {
 		return summaryLike{NetMinor: 1}, nil
 	})
 	if err != nil {
 		t.Fatalf("Cached(key-a) error = %v", err)
 	}
-	b, err := reportcache.Cached(ctx, store, walletID, "summary", "key-b", func() (summaryLike, error) {
+	b, err := reportcache.Cached(ctx, store, []uuid.UUID{walletID}, "summary", "key-b", func() (summaryLike, error) {
 		return summaryLike{NetMinor: 2}, nil
 	})
 	if err != nil {
@@ -135,7 +135,7 @@ func TestCached_ComputeErrorIsNotCached(t *testing.T) {
 	walletID := uuid.New()
 	wantErr := errors.New("boom")
 
-	_, err := reportcache.Cached(ctx, store, walletID, "summary", "key-err", func() (summaryLike, error) {
+	_, err := reportcache.Cached(ctx, store, []uuid.UUID{walletID}, "summary", "key-err", func() (summaryLike, error) {
 		return summaryLike{}, wantErr
 	})
 	if !errors.Is(err, wantErr) {
@@ -143,7 +143,7 @@ func TestCached_ComputeErrorIsNotCached(t *testing.T) {
 	}
 
 	calls := 0
-	value, err := reportcache.Cached(ctx, store, walletID, "summary", "key-err", func() (summaryLike, error) {
+	value, err := reportcache.Cached(ctx, store, []uuid.UUID{walletID}, "summary", "key-err", func() (summaryLike, error) {
 		calls++
 		return summaryLike{NetMinor: 99}, nil
 	})
@@ -167,11 +167,11 @@ func TestNilStore_BypassesCaching(t *testing.T) {
 		return summaryLike{NetMinor: int64(calls)}, nil
 	}
 
-	first, err := reportcache.Cached(ctx, store, walletID, "summary", "key-a", compute)
+	first, err := reportcache.Cached(ctx, store, []uuid.UUID{walletID}, "summary", "key-a", compute)
 	if err != nil {
 		t.Fatalf("first Cached() error = %v", err)
 	}
-	second, err := reportcache.Cached(ctx, store, walletID, "summary", "key-a", compute)
+	second, err := reportcache.Cached(ctx, store, []uuid.UUID{walletID}, "summary", "key-a", compute)
 	if err != nil {
 		t.Fatalf("second Cached() error = %v", err)
 	}

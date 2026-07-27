@@ -2,6 +2,7 @@ package reports
 
 import (
 	"context"
+	"errors"
 	"math"
 	"sort"
 	"strconv"
@@ -74,15 +75,18 @@ func paramsKey(in contextInput, endpoint string, extra ...string) string {
 }
 
 // reportContext is what every report endpoint needs after resolving the
-// request's period/timezone/preset against the user's own wallet.
+// request's period/timezone/preset and wallet selection (plan.md's reports
+// wallet selector: a specific wallet, or "all wallets" aggregated).
 type reportContext struct {
-	wallet wallets.Wallet
-	loc    *time.Location
-	period Period
+	walletIDs []uuid.UUID
+	currency  string
+	loc       *time.Location
+	period    Period
 }
 
 type contextInput struct {
 	UserID     uuid.UUID
+	WalletID   *uuid.UUID
 	Preset     string
 	CustomFrom *time.Time
 	CustomTo   *time.Time
@@ -90,7 +94,7 @@ type contextInput struct {
 }
 
 func (s *Service) resolveContext(ctx context.Context, in contextInput) (reportContext, error) {
-	wallet, err := s.wallets.GetByUserID(ctx, in.UserID)
+	walletIDs, currency, err := s.resolveWallets(ctx, in.UserID, in.WalletID)
 	if err != nil {
 		return reportContext{}, err
 	}
@@ -121,7 +125,38 @@ func (s *Service) resolveContext(ctx context.Context, in contextInput) (reportCo
 		return reportContext{}, apierror.NewValidation(map[string]string{"from": apierror.FieldCustomRangeRequired})
 	}
 
-	return reportContext{wallet: wallet, loc: loc, period: period}, nil
+	return reportContext{walletIDs: walletIDs, currency: currency, loc: loc, period: period}, nil
+}
+
+// resolveWallets turns the request's optional wallet_id into the set of
+// wallets a report should span: a single wallet if selected (ownership-
+// checked so a cross-user id simply reports "not found"), or every wallet
+// the user has ever owned — including archived ones, since their history
+// still happened — when no wallet_id is given (the "all wallets" view).
+func (s *Service) resolveWallets(ctx context.Context, userID uuid.UUID, walletID *uuid.UUID) ([]uuid.UUID, string, error) {
+	if walletID != nil {
+		wallet, err := s.wallets.GetByID(ctx, *walletID, userID)
+		if err != nil {
+			if errors.Is(err, wallets.ErrNotFound) {
+				return nil, "", apierror.NewValidation(map[string]string{"wallet_id": "WALLET_NOT_FOUND"})
+			}
+			return nil, "", err
+		}
+		return []uuid.UUID{wallet.ID}, wallet.Currency, nil
+	}
+
+	all, err := s.wallets.ListAllByUserID(ctx, userID)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(all) == 0 {
+		return nil, "", apierror.NewValidation(map[string]string{"wallet_id": "WALLET_NOT_FOUND"})
+	}
+	ids := make([]uuid.UUID, len(all))
+	for i, w := range all {
+		ids[i] = w.ID
+	}
+	return ids, all[0].Currency, nil
 }
 
 // --- Summary -----------------------------------------------------------------
@@ -151,7 +186,7 @@ func (s *Service) Summary(ctx context.Context, in SummaryInput) (summaryResponse
 		return summaryResponse{}, err
 	}
 	key := paramsKey(in.contextInput, "summary", strconv.FormatBool(in.IncludeAdjustments))
-	return reportcache.Cached(ctx, s.cache, rc.wallet.ID, "summary", key, func() (summaryResponse, error) {
+	return reportcache.Cached(ctx, s.cache, rc.walletIDs, "summary", key, func() (summaryResponse, error) {
 		return s.computeSummary(ctx, rc, in)
 	})
 }
@@ -160,18 +195,18 @@ func (s *Service) computeSummary(ctx context.Context, rc reportContext, in Summa
 	var opening int64
 	var err error
 	if rc.period.From != nil {
-		opening, err = s.repo.SignedImpact(ctx, rc.wallet.ID, nil, rc.period.From)
+		opening, err = s.repo.SignedImpact(ctx, rc.walletIDs, nil, rc.period.From)
 		if err != nil {
 			return summaryResponse{}, err
 		}
 	}
 
-	impact, err := s.repo.SignedImpact(ctx, rc.wallet.ID, rc.period.From, &rc.period.To)
+	impact, err := s.repo.SignedImpact(ctx, rc.walletIDs, rc.period.From, &rc.period.To)
 	if err != nil {
 		return summaryResponse{}, err
 	}
 
-	totals, err := s.repo.Totals(ctx, rc.wallet.ID, kindsFor(in.IncludeAdjustments), rc.period.From, rc.period.To)
+	totals, err := s.repo.Totals(ctx, rc.walletIDs, kindsFor(in.IncludeAdjustments), rc.period.From, rc.period.To)
 	if err != nil {
 		return summaryResponse{}, err
 	}
@@ -197,7 +232,7 @@ func (s *Service) computeSummary(ctx context.Context, rc reportContext, in Summa
 		NetMinor:            net,
 		SavingsRatePercent:  savingsRate,
 		TransactionCount:    totals.Count,
-		Currency:            rc.wallet.Currency,
+		Currency:            rc.currency,
 		From:                fromStr,
 		To:                  rc.period.To.Format(timeLayout),
 	}, nil
@@ -236,7 +271,7 @@ func (s *Service) Timeseries(ctx context.Context, in TimeseriesInput) (timeserie
 		return timeseriesResponse{}, err
 	}
 	key := paramsKey(in.contextInput, "timeseries", strconv.FormatBool(in.IncludeAdjustments))
-	return reportcache.Cached(ctx, s.cache, rc.wallet.ID, "timeseries", key, func() (timeseriesResponse, error) {
+	return reportcache.Cached(ctx, s.cache, rc.walletIDs, "timeseries", key, func() (timeseriesResponse, error) {
 		return s.computeTimeseries(ctx, rc, in)
 	})
 }
@@ -244,18 +279,18 @@ func (s *Service) Timeseries(ctx context.Context, in TimeseriesInput) (timeserie
 func (s *Service) computeTimeseries(ctx context.Context, rc reportContext, in TimeseriesInput) (timeseriesResponse, error) {
 	granularity := GranularityFor(rc.period)
 
-	displayBuckets, err := s.repo.Buckets(ctx, rc.wallet.ID, kindsFor(in.IncludeAdjustments), rc.period.From, rc.period.To, granularity, rc.loc.String())
+	displayBuckets, err := s.repo.Buckets(ctx, rc.walletIDs, kindsFor(in.IncludeAdjustments), rc.period.From, rc.period.To, granularity, rc.loc.String())
 	if err != nil {
 		return timeseriesResponse{}, err
 	}
-	balanceBuckets, err := s.repo.Buckets(ctx, rc.wallet.ID, allKinds, rc.period.From, rc.period.To, granularity, rc.loc.String())
+	balanceBuckets, err := s.repo.Buckets(ctx, rc.walletIDs, allKinds, rc.period.From, rc.period.To, granularity, rc.loc.String())
 	if err != nil {
 		return timeseriesResponse{}, err
 	}
 
 	var opening int64
 	if rc.period.From != nil {
-		opening, err = s.repo.SignedImpact(ctx, rc.wallet.ID, nil, rc.period.From)
+		opening, err = s.repo.SignedImpact(ctx, rc.walletIDs, nil, rc.period.From)
 		if err != nil {
 			return timeseriesResponse{}, err
 		}
@@ -326,7 +361,7 @@ func (s *Service) Breakdown(ctx context.Context, in BreakdownInput) (breakdownRe
 		return breakdownResponse{}, err
 	}
 	key := paramsKey(in.contextInput, "breakdown", in.GroupBy, strconv.FormatBool(in.IncludeAdjustments))
-	return reportcache.Cached(ctx, s.cache, rc.wallet.ID, "breakdown", key, func() (breakdownResponse, error) {
+	return reportcache.Cached(ctx, s.cache, rc.walletIDs, "breakdown", key, func() (breakdownResponse, error) {
 		return s.computeBreakdown(ctx, rc, in)
 	})
 }
@@ -339,11 +374,11 @@ func (s *Service) computeBreakdown(ctx context.Context, rc reportContext, in Bre
 		query = s.repo.BreakdownByCategory
 	}
 
-	credits, err := query(ctx, rc.wallet.ID, transactions.DirectionCredit, kinds, rc.period.From, rc.period.To)
+	credits, err := query(ctx, rc.walletIDs, transactions.DirectionCredit, kinds, rc.period.From, rc.period.To)
 	if err != nil {
 		return breakdownResponse{}, err
 	}
-	debits, err := query(ctx, rc.wallet.ID, transactions.DirectionDebit, kinds, rc.period.From, rc.period.To)
+	debits, err := query(ctx, rc.walletIDs, transactions.DirectionDebit, kinds, rc.period.From, rc.period.To)
 	if err != nil {
 		return breakdownResponse{}, err
 	}
@@ -411,13 +446,13 @@ func (s *Service) MonthlyComparison(ctx context.Context, in MonthlyComparisonInp
 		return monthlyComparisonResponse{}, err
 	}
 	key := paramsKey(in.contextInput, "monthly-comparison", strconv.FormatBool(in.IncludeAdjustments))
-	return reportcache.Cached(ctx, s.cache, rc.wallet.ID, "monthly-comparison", key, func() (monthlyComparisonResponse, error) {
+	return reportcache.Cached(ctx, s.cache, rc.walletIDs, "monthly-comparison", key, func() (monthlyComparisonResponse, error) {
 		return s.computeMonthlyComparison(ctx, rc, in)
 	})
 }
 
 func (s *Service) computeMonthlyComparison(ctx context.Context, rc reportContext, in MonthlyComparisonInput) (monthlyComparisonResponse, error) {
-	buckets, err := s.repo.Buckets(ctx, rc.wallet.ID, kindsFor(in.IncludeAdjustments), rc.period.From, rc.period.To, GranularityMonthly, rc.loc.String())
+	buckets, err := s.repo.Buckets(ctx, rc.walletIDs, kindsFor(in.IncludeAdjustments), rc.period.From, rc.period.To, GranularityMonthly, rc.loc.String())
 	if err != nil {
 		return monthlyComparisonResponse{}, err
 	}

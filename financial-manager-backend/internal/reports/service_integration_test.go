@@ -30,11 +30,13 @@ func envOrDefault(key, def string) string {
 }
 
 type harness struct {
-	reports      *Service
-	transactions *transactions.Service
-	categories   *categories.Service
-	templates    *templates.Service
-	userID       uuid.UUID
+	reports        *Service
+	transactions   *transactions.Service
+	categories     *categories.Service
+	templates      *templates.Service
+	userID         uuid.UUID
+	walletID       uuid.UUID
+	secondWalletID uuid.UUID
 }
 
 func newHarness(t *testing.T, openingBalanceMinor int64, now time.Time) harness {
@@ -68,9 +70,13 @@ func newHarness(t *testing.T, openingBalanceMinor int64, now time.Time) harness 
 		t.Fatalf("create test user: %v", err)
 	}
 
-	wallet, err := walletsRepo.Create(context.Background(), user.ID, "EUR", openingBalanceMinor)
+	wallet, err := walletsRepo.Create(context.Background(), user.ID, wallets.DefaultName, "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, openingBalanceMinor)
 	if err != nil {
 		t.Fatalf("create test wallet: %v", err)
+	}
+	secondWallet, err := walletsRepo.Create(context.Background(), user.ID, "Contanti", "EUR", wallets.TypeCash, wallets.DefaultIcon, wallets.DefaultColor, 0)
+	if err != nil {
+		t.Fatalf("create second test wallet: %v", err)
 	}
 	if openingBalanceMinor > 0 {
 		if _, err := transactionsRepo.Create(context.Background(), transactions.CreateInput{
@@ -96,14 +102,19 @@ func newHarness(t *testing.T, openingBalanceMinor int64, now time.Time) harness 
 	return harness{
 		reports: reportsService, transactions: transactionsService,
 		categories: categories.NewService(categoriesRepo), templates: templates.NewService(templatesRepo),
-		userID: user.ID,
+		userID: user.ID, walletID: wallet.ID, secondWalletID: secondWallet.ID,
 	}
 }
 
 func (h harness) createStandard(t *testing.T, direction string, amountMinor int64, title string, occurredAt time.Time, categoryID, templateID *uuid.UUID) {
 	t.Helper()
+	h.createStandardOn(t, h.walletID, direction, amountMinor, title, occurredAt, categoryID, templateID)
+}
+
+func (h harness) createStandardOn(t *testing.T, walletID uuid.UUID, direction string, amountMinor int64, title string, occurredAt time.Time, categoryID, templateID *uuid.UUID) {
+	t.Helper()
 	_, _, err := h.transactions.CreateStandard(context.Background(), transactions.CreateStandardInput{
-		UserID: h.userID, Direction: direction, AmountMinor: amountMinor, Currency: "EUR",
+		UserID: h.userID, WalletID: walletID, Direction: direction, AmountMinor: amountMinor, Currency: "EUR",
 		Title: title, CategoryID: categoryID, TemplateID: templateID, OccurredAt: occurredAt,
 		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	})
@@ -195,7 +206,7 @@ func TestSummary_IncludeAdjustmentsTogglesFoldedTotals(t *testing.T) {
 	to := time.Date(2026, 6, 10, 0, 0, 0, 0, time.UTC)
 	h.createStandard(t, transactions.DirectionDebit, 10000, "Spesa", from.AddDate(0, 0, 2), nil, nil)
 	if _, _, err := h.transactions.CreateBalanceAdjustment(context.Background(), transactions.CreateBalanceAdjustmentInput{
-		UserID: h.userID, TargetBalanceMinor: 200000, Reason: "Allineamento",
+		UserID: h.userID, WalletID: h.walletID, TargetBalanceMinor: 200000, Reason: "Allineamento",
 		OccurredAt: from.AddDate(0, 0, 3), IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	}); err != nil {
 		t.Fatalf("CreateBalanceAdjustment() error = %v", err)
@@ -399,5 +410,50 @@ func TestMonthlyComparison_SpansMultipleMonthsFlag(t *testing.T) {
 	}
 	if multi.Months[0].CreditsMinor != 5000 || multi.Months[1].CreditsMinor != 7000 {
 		t.Errorf("months = %+v, want [5000, 7000]", multi.Months)
+	}
+}
+
+func TestSummary_WalletSelector_AggregatesByDefaultAndFiltersWhenWalletIDGiven(t *testing.T) {
+	now := time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC)
+	h := newHarness(t, 0, now)
+
+	from := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 6, 10, 0, 0, 0, 0, time.UTC)
+	h.createStandardOn(t, h.walletID, transactions.DirectionCredit, 30000, "Stipendio conto", from.AddDate(0, 0, 1), nil, nil)
+	h.createStandardOn(t, h.secondWalletID, transactions.DirectionCredit, 5000, "Contante trovato", from.AddDate(0, 0, 2), nil, nil)
+
+	preset, customFrom, customTo := customPeriod(from, to.AddDate(0, 0, -1))
+
+	all, err := h.reports.Summary(context.Background(), SummaryInput{
+		contextInput: h.ctxInput(preset, customFrom, customTo, "UTC"),
+	})
+	if err != nil {
+		t.Fatalf("Summary(all wallets) error = %v", err)
+	}
+	if all.TotalCreditsMinor != 35000 {
+		t.Errorf("all wallets: TotalCreditsMinor = %d, want 35000 (both wallets combined)", all.TotalCreditsMinor)
+	}
+
+	in := h.ctxInput(preset, customFrom, customTo, "UTC")
+	in.WalletID = &h.walletID
+	single, err := h.reports.Summary(context.Background(), SummaryInput{contextInput: in})
+	if err != nil {
+		t.Fatalf("Summary(single wallet) error = %v", err)
+	}
+	if single.TotalCreditsMinor != 30000 {
+		t.Errorf("single wallet: TotalCreditsMinor = %d, want 30000 (only the selected wallet)", single.TotalCreditsMinor)
+	}
+}
+
+func TestSummary_WalletSelector_UnknownOrForeignWalletIDIsRejected(t *testing.T) {
+	now := time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC)
+	h := newHarness(t, 0, now)
+
+	foreign := uuid.New()
+	in := h.ctxInput(PresetAllTime, nil, nil, "UTC")
+	in.WalletID = &foreign
+	_, err := h.reports.Summary(context.Background(), SummaryInput{contextInput: in})
+	if err == nil {
+		t.Fatal("Summary() with an unknown wallet_id, want an error, got nil")
 	}
 }

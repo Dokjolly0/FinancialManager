@@ -144,16 +144,16 @@ func (s *Service) buildContent(ctx context.Context, userID uuid.UUID, format str
 	if err != nil {
 		return nil, "", fmt.Errorf("get user: %w", err)
 	}
-	wallet, err := s.wallets.GetByUserID(ctx, userID)
+	userWallets, err := s.wallets.ListAllByUserID(ctx, userID)
 	if err != nil {
-		return nil, "", fmt.Errorf("get wallet: %w", err)
+		return nil, "", fmt.Errorf("list wallets: %w", err)
 	}
 	tmpls, err := s.templates.ListAllForUser(ctx, userID)
 	if err != nil {
 		return nil, "", fmt.Errorf("list templates: %w", err)
 	}
 
-	content, err := buildJSON(user, wallet, cats, tmpls, txs)
+	content, err := buildJSON(user, userWallets, cats, tmpls, txs)
 	return content, "application/json", err
 }
 
@@ -202,11 +202,13 @@ func formatAmount(amountMinor int64) string {
 }
 
 // buildJSON implements plan.md section 20.2's JSON shape: profilo,
-// portafoglio, categorie personalizzate, modelli, transazioni. Image
-// bytes are never embedded — media_id on each transaction/category is
+// portafogli, categorie personalizzate, modelli, transazioni. Every wallet
+// the user has ever owned is included (not just one), since a user may now
+// hold several — each transaction's wallet_id says which one it belongs to.
+// Image bytes are never embedded — media_id on each transaction/category is
 // already a reference into the separate object-storage archive (section
 // 20.2: "riferimenti immagini o archivio separato").
-func buildJSON(user users.User, wallet wallets.Wallet, cats []categories.Category, tmpls []templates.Template, txs []transactions.Transaction) ([]byte, error) {
+func buildJSON(user users.User, userWallets []wallets.Wallet, cats []categories.Category, tmpls []templates.Template, txs []transactions.Transaction) ([]byte, error) {
 	type profileJSON struct {
 		ID        string `json:"id"`
 		FirstName string `json:"first_name"`
@@ -218,9 +220,12 @@ func buildJSON(user users.User, wallet wallets.Wallet, cats []categories.Categor
 		CreatedAt string `json:"created_at"`
 	}
 	type walletJSON struct {
-		ID                  string `json:"id"`
-		Currency            string `json:"currency"`
-		CurrentBalanceMinor int64  `json:"current_balance_minor"`
+		ID                  string  `json:"id"`
+		Name                string  `json:"name"`
+		Type                string  `json:"type"`
+		Currency            string  `json:"currency"`
+		CurrentBalanceMinor int64   `json:"current_balance_minor"`
+		ArchivedAt          *string `json:"archived_at,omitempty"`
 	}
 	type categoryJSON struct {
 		ID             string  `json:"id"`
@@ -238,6 +243,7 @@ func buildJSON(user users.User, wallet wallets.Wallet, cats []categories.Categor
 	}
 	type transactionJSON struct {
 		ID          string  `json:"id"`
+		WalletID    string  `json:"wallet_id"`
 		Direction   string  `json:"direction"`
 		Kind        string  `json:"kind"`
 		AmountMinor int64   `json:"amount_minor"`
@@ -284,15 +290,28 @@ func buildJSON(user users.User, wallet wallets.Wallet, cats []categories.Categor
 			mediaID = &s
 		}
 		transactionList = append(transactionList, transactionJSON{
-			ID: t.ID.String(), Direction: t.Direction, Kind: t.Kind, AmountMinor: t.AmountMinor,
+			ID: t.ID.String(), WalletID: t.WalletID.String(), Direction: t.Direction, Kind: t.Kind, AmountMinor: t.AmountMinor,
 			Currency: t.Currency, Title: t.Title, Description: t.Description,
 			CategoryID: categoryID, MediaID: mediaID, OccurredAt: t.OccurredAt.Format(timeLayout),
 		})
 	}
 
+	walletList := make([]walletJSON, 0, len(userWallets))
+	for _, w := range userWallets {
+		var archivedAt *string
+		if w.ArchivedAt != nil {
+			s := w.ArchivedAt.Format(timeLayout)
+			archivedAt = &s
+		}
+		walletList = append(walletList, walletJSON{
+			ID: w.ID.String(), Name: w.Name, Type: w.Type,
+			Currency: w.Currency, CurrentBalanceMinor: w.CurrentBalanceMinor, ArchivedAt: archivedAt,
+		})
+	}
+
 	return json.MarshalIndent(struct {
 		Profile          profileJSON       `json:"profilo"`
-		Wallet           walletJSON        `json:"portafoglio"`
+		Wallets          []walletJSON      `json:"portafogli"`
 		CustomCategories []categoryJSON    `json:"categorie_personalizzate"`
 		Templates        []templateJSON    `json:"modelli"`
 		Transactions     []transactionJSON `json:"transazioni"`
@@ -303,9 +322,7 @@ func buildJSON(user users.User, wallet wallets.Wallet, cats []categories.Categor
 			Username: user.Username, Email: user.Email, Locale: user.Locale, Timezone: user.Timezone,
 			CreatedAt: user.CreatedAt.Format(timeLayout),
 		},
-		Wallet: walletJSON{
-			ID: wallet.ID.String(), Currency: wallet.Currency, CurrentBalanceMinor: wallet.CurrentBalanceMinor,
-		},
+		Wallets:          walletList,
 		CustomCategories: customCategories,
 		Templates:        templateList,
 		Transactions:     transactionList,

@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -52,23 +53,33 @@ func (s *Store) version(ctx context.Context, walletID uuid.UUID) (int64, error) 
 	return v, err
 }
 
-// Cached returns the cached value for (walletID, endpoint, paramsKey) under
-// the wallet's current report version if present, otherwise it calls
-// compute, caches the JSON-encoded result, and returns it. A nil Store (as
-// left unset in tests that don't wire Redis) or any Redis error simply
-// bypasses caching — correctness never depends on the cache being up.
-func Cached[T any](ctx context.Context, s *Store, walletID uuid.UUID, endpoint, paramsKey string, compute func() (T, error)) (T, error) {
+// Cached returns the cached value for (walletIDs, endpoint, paramsKey) under
+// the current report version of every wallet in walletIDs if present,
+// otherwise it calls compute, caches the JSON-encoded result, and returns
+// it. Reports scoped to "all wallets" (plan.md's wallet selector) pass every
+// wallet the aggregate spans; a mutation on any one of them changes the key,
+// so the cached aggregate is invalidated exactly like a single-wallet report
+// would be. A nil Store (as left unset in tests that don't wire Redis) or
+// any Redis error simply bypasses caching — correctness never depends on
+// the cache being up.
+func Cached[T any](ctx context.Context, s *Store, walletIDs []uuid.UUID, endpoint, paramsKey string, compute func() (T, error)) (T, error) {
 	if s == nil {
 		metrics.ReportCacheResult.WithLabelValues("bypass").Inc()
 		return compute()
 	}
 
-	version, err := s.version(ctx, walletID)
-	if err != nil {
-		metrics.ReportCacheResult.WithLabelValues("bypass").Inc()
-		return compute()
+	versions := make([]string, len(walletIDs))
+	ids := make([]string, len(walletIDs))
+	for i, id := range walletIDs {
+		v, err := s.version(ctx, id)
+		if err != nil {
+			metrics.ReportCacheResult.WithLabelValues("bypass").Inc()
+			return compute()
+		}
+		versions[i] = fmt.Sprintf("%d", v)
+		ids[i] = id.String()
 	}
-	key := fmt.Sprintf("reports:%d:%s:%s:%s", version, walletID, endpoint, paramsKey)
+	key := fmt.Sprintf("reports:%s:%s:%s:%s", strings.Join(versions, ","), strings.Join(ids, ","), endpoint, paramsKey)
 
 	if raw, err := s.redis.Get(ctx, key).Bytes(); err == nil {
 		var cached T
