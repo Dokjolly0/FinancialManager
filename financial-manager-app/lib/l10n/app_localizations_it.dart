@@ -322,6 +322,135 @@ class AppLocalizationsIt extends AppLocalizations {
   String get accountBalanceAdjustmentAction => 'Rettifica saldo';
 
   @override
+  String get accountWalletsMenuTitle => 'Portafogli';
+
+  @override
+  String get accountWalletsMenuSubtitle =>
+      'Gestisci i tuoi conti e il contante';
+
+  @override
+  String get walletsScreenTitle => 'Portafogli';
+
+  @override
+  String get walletsTotalBalanceLabel => 'Saldo totale';
+
+  @override
+  String get addWalletAction => 'Nuovo portafoglio';
+
+  @override
+  String get walletsLoadError => 'Impossibile caricare i portafogli.';
+
+  @override
+  String get walletsEmptyStateMessage => 'Nessun portafoglio attivo.';
+
+  @override
+  String get transferAction => 'Trasferisci';
+
+  @override
+  String get newWalletScreenTitle => 'Nuovo portafoglio';
+
+  @override
+  String get editWalletScreenTitle => 'Modifica portafoglio';
+
+  @override
+  String get walletNameLabel => 'Nome';
+
+  @override
+  String get walletTypeLabel => 'Tipo';
+
+  @override
+  String get walletTypeCash => 'Contante';
+
+  @override
+  String get walletTypeBank => 'Conto bancario';
+
+  @override
+  String get walletTypeOther => 'Altro';
+
+  @override
+  String get walletIconLabel => 'Icona';
+
+  @override
+  String get walletColorLabel => 'Colore';
+
+  @override
+  String get saveWalletAction => 'Salva portafoglio';
+
+  @override
+  String get createWalletError => 'Impossibile creare il portafoglio.';
+
+  @override
+  String get updateWalletError => 'Impossibile salvare il portafoglio.';
+
+  @override
+  String get archiveWalletAction => 'Archivia portafoglio';
+
+  @override
+  String get archiveWalletConfirmTitle => 'Archiviare questo portafoglio?';
+
+  @override
+  String get archiveWalletConfirmMessage =>
+      'Il portafoglio verrà archiviato e non sarà più selezionabile per nuove operazioni; la sua cronologia resterà nei report.';
+
+  @override
+  String archiveWalletConfirmMessageWithBalance(String balance) {
+    return 'Il portafoglio ha ancora un saldo di $balance. Verrà archiviato e non sarà più selezionabile per nuove operazioni; la sua cronologia resterà nei report.';
+  }
+
+  @override
+  String get archiveWalletError => 'Impossibile archiviare il portafoglio.';
+
+  @override
+  String get walletDenominationsAction => 'Banconote e monete';
+
+  @override
+  String get walletDenominationsScreenTitle => 'Banconote e monete';
+
+  @override
+  String get denominationCountLabel => 'Quantità';
+
+  @override
+  String get saveDenominationsAction => 'Salva conteggio';
+
+  @override
+  String get denominationsLoadError =>
+      'Impossibile caricare le banconote e monete.';
+
+  @override
+  String get walletPickerTitle => 'Scegli portafoglio';
+
+  @override
+  String get selectWalletPlaceholder => 'Seleziona un portafoglio';
+
+  @override
+  String get transferSheetTitle => 'Trasferimento tra portafogli';
+
+  @override
+  String get transferSourceWalletLabel => 'Da';
+
+  @override
+  String get transferDestinationWalletLabel => 'A';
+
+  @override
+  String get transferAmountLabel => 'Importo';
+
+  @override
+  String get transferNoteLabel => 'Nota (opzionale)';
+
+  @override
+  String get submitTransferAction => 'Trasferisci';
+
+  @override
+  String get transferSameWalletError =>
+      'Il portafoglio di destinazione deve essere diverso da quello di partenza.';
+
+  @override
+  String get walletBadgeArchived => 'Archiviato';
+
+  @override
+  String get allWalletsLabel => 'Tutti i portafogli';
+
+  @override
   String get accountSecurityMenuTitle => 'Sicurezza';
 
   @override
@@ -735,6 +864,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get manualKindLabel => 'Manuale';
+
+  @override
+  String get transferKindLabel => 'Trasferimento';
 
   @override
   String get categoryLabel => 'Categoria';

@@ -320,6 +320,133 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountBalanceAdjustmentAction => 'Adjust balance';
 
   @override
+  String get accountWalletsMenuTitle => 'Wallets';
+
+  @override
+  String get accountWalletsMenuSubtitle => 'Manage your accounts and cash';
+
+  @override
+  String get walletsScreenTitle => 'Wallets';
+
+  @override
+  String get walletsTotalBalanceLabel => 'Total balance';
+
+  @override
+  String get addWalletAction => 'New wallet';
+
+  @override
+  String get walletsLoadError => 'Couldn\'t load your wallets.';
+
+  @override
+  String get walletsEmptyStateMessage => 'No active wallets.';
+
+  @override
+  String get transferAction => 'Transfer';
+
+  @override
+  String get newWalletScreenTitle => 'New wallet';
+
+  @override
+  String get editWalletScreenTitle => 'Edit wallet';
+
+  @override
+  String get walletNameLabel => 'Name';
+
+  @override
+  String get walletTypeLabel => 'Type';
+
+  @override
+  String get walletTypeCash => 'Cash';
+
+  @override
+  String get walletTypeBank => 'Bank account';
+
+  @override
+  String get walletTypeOther => 'Other';
+
+  @override
+  String get walletIconLabel => 'Icon';
+
+  @override
+  String get walletColorLabel => 'Color';
+
+  @override
+  String get saveWalletAction => 'Save wallet';
+
+  @override
+  String get createWalletError => 'Couldn\'t create the wallet.';
+
+  @override
+  String get updateWalletError => 'Couldn\'t save the wallet.';
+
+  @override
+  String get archiveWalletAction => 'Archive wallet';
+
+  @override
+  String get archiveWalletConfirmTitle => 'Archive this wallet?';
+
+  @override
+  String get archiveWalletConfirmMessage =>
+      'The wallet will be archived and no longer selectable for new transactions; its history stays in reports.';
+
+  @override
+  String archiveWalletConfirmMessageWithBalance(String balance) {
+    return 'This wallet still has a balance of $balance. It will be archived and no longer selectable for new transactions; its history stays in reports.';
+  }
+
+  @override
+  String get archiveWalletError => 'Couldn\'t archive the wallet.';
+
+  @override
+  String get walletDenominationsAction => 'Banknotes and coins';
+
+  @override
+  String get walletDenominationsScreenTitle => 'Banknotes and coins';
+
+  @override
+  String get denominationCountLabel => 'Count';
+
+  @override
+  String get saveDenominationsAction => 'Save count';
+
+  @override
+  String get denominationsLoadError => 'Couldn\'t load banknotes and coins.';
+
+  @override
+  String get walletPickerTitle => 'Choose a wallet';
+
+  @override
+  String get selectWalletPlaceholder => 'Select a wallet';
+
+  @override
+  String get transferSheetTitle => 'Transfer between wallets';
+
+  @override
+  String get transferSourceWalletLabel => 'From';
+
+  @override
+  String get transferDestinationWalletLabel => 'To';
+
+  @override
+  String get transferAmountLabel => 'Amount';
+
+  @override
+  String get transferNoteLabel => 'Note (optional)';
+
+  @override
+  String get submitTransferAction => 'Transfer';
+
+  @override
+  String get transferSameWalletError =>
+      'The destination wallet must be different from the source.';
+
+  @override
+  String get walletBadgeArchived => 'Archived';
+
+  @override
+  String get allWalletsLabel => 'All wallets';
+
+  @override
   String get accountSecurityMenuTitle => 'Security';
 
   @override
@@ -732,6 +859,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get manualKindLabel => 'Manual';
+
+  @override
+  String get transferKindLabel => 'Transfer';
 
   @override
   String get categoryLabel => 'Category';

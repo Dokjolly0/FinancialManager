@@ -650,6 +650,252 @@ abstract class AppLocalizations {
   /// **'Rettifica saldo'**
   String get accountBalanceAdjustmentAction;
 
+  /// No description provided for @accountWalletsMenuTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Portafogli'**
+  String get accountWalletsMenuTitle;
+
+  /// No description provided for @accountWalletsMenuSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Gestisci i tuoi conti e il contante'**
+  String get accountWalletsMenuSubtitle;
+
+  /// No description provided for @walletsScreenTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Portafogli'**
+  String get walletsScreenTitle;
+
+  /// No description provided for @walletsTotalBalanceLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Saldo totale'**
+  String get walletsTotalBalanceLabel;
+
+  /// No description provided for @addWalletAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuovo portafoglio'**
+  String get addWalletAction;
+
+  /// No description provided for @walletsLoadError.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile caricare i portafogli.'**
+  String get walletsLoadError;
+
+  /// No description provided for @walletsEmptyStateMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun portafoglio attivo.'**
+  String get walletsEmptyStateMessage;
+
+  /// No description provided for @transferAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Trasferisci'**
+  String get transferAction;
+
+  /// No description provided for @newWalletScreenTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuovo portafoglio'**
+  String get newWalletScreenTitle;
+
+  /// No description provided for @editWalletScreenTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica portafoglio'**
+  String get editWalletScreenTitle;
+
+  /// No description provided for @walletNameLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Nome'**
+  String get walletNameLabel;
+
+  /// No description provided for @walletTypeLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Tipo'**
+  String get walletTypeLabel;
+
+  /// No description provided for @walletTypeCash.
+  ///
+  /// In it, this message translates to:
+  /// **'Contante'**
+  String get walletTypeCash;
+
+  /// No description provided for @walletTypeBank.
+  ///
+  /// In it, this message translates to:
+  /// **'Conto bancario'**
+  String get walletTypeBank;
+
+  /// No description provided for @walletTypeOther.
+  ///
+  /// In it, this message translates to:
+  /// **'Altro'**
+  String get walletTypeOther;
+
+  /// No description provided for @walletIconLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Icona'**
+  String get walletIconLabel;
+
+  /// No description provided for @walletColorLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Colore'**
+  String get walletColorLabel;
+
+  /// No description provided for @saveWalletAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva portafoglio'**
+  String get saveWalletAction;
+
+  /// No description provided for @createWalletError.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile creare il portafoglio.'**
+  String get createWalletError;
+
+  /// No description provided for @updateWalletError.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile salvare il portafoglio.'**
+  String get updateWalletError;
+
+  /// No description provided for @archiveWalletAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Archivia portafoglio'**
+  String get archiveWalletAction;
+
+  /// No description provided for @archiveWalletConfirmTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Archiviare questo portafoglio?'**
+  String get archiveWalletConfirmTitle;
+
+  /// No description provided for @archiveWalletConfirmMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Il portafoglio verrà archiviato e non sarà più selezionabile per nuove operazioni; la sua cronologia resterà nei report.'**
+  String get archiveWalletConfirmMessage;
+
+  /// No description provided for @archiveWalletConfirmMessageWithBalance.
+  ///
+  /// In it, this message translates to:
+  /// **'Il portafoglio ha ancora un saldo di {balance}. Verrà archiviato e non sarà più selezionabile per nuove operazioni; la sua cronologia resterà nei report.'**
+  String archiveWalletConfirmMessageWithBalance(String balance);
+
+  /// No description provided for @archiveWalletError.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile archiviare il portafoglio.'**
+  String get archiveWalletError;
+
+  /// No description provided for @walletDenominationsAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Banconote e monete'**
+  String get walletDenominationsAction;
+
+  /// No description provided for @walletDenominationsScreenTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Banconote e monete'**
+  String get walletDenominationsScreenTitle;
+
+  /// No description provided for @denominationCountLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Quantità'**
+  String get denominationCountLabel;
+
+  /// No description provided for @saveDenominationsAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva conteggio'**
+  String get saveDenominationsAction;
+
+  /// No description provided for @denominationsLoadError.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile caricare le banconote e monete.'**
+  String get denominationsLoadError;
+
+  /// No description provided for @walletPickerTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli portafoglio'**
+  String get walletPickerTitle;
+
+  /// No description provided for @selectWalletPlaceholder.
+  ///
+  /// In it, this message translates to:
+  /// **'Seleziona un portafoglio'**
+  String get selectWalletPlaceholder;
+
+  /// No description provided for @transferSheetTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Trasferimento tra portafogli'**
+  String get transferSheetTitle;
+
+  /// No description provided for @transferSourceWalletLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Da'**
+  String get transferSourceWalletLabel;
+
+  /// No description provided for @transferDestinationWalletLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'A'**
+  String get transferDestinationWalletLabel;
+
+  /// No description provided for @transferAmountLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Importo'**
+  String get transferAmountLabel;
+
+  /// No description provided for @transferNoteLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Nota (opzionale)'**
+  String get transferNoteLabel;
+
+  /// No description provided for @submitTransferAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Trasferisci'**
+  String get submitTransferAction;
+
+  /// No description provided for @transferSameWalletError.
+  ///
+  /// In it, this message translates to:
+  /// **'Il portafoglio di destinazione deve essere diverso da quello di partenza.'**
+  String get transferSameWalletError;
+
+  /// No description provided for @walletBadgeArchived.
+  ///
+  /// In it, this message translates to:
+  /// **'Archiviato'**
+  String get walletBadgeArchived;
+
+  /// No description provided for @allWalletsLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Tutti i portafogli'**
+  String get allWalletsLabel;
+
   /// No description provided for @accountSecurityMenuTitle.
   ///
   /// In it, this message translates to:
@@ -1415,6 +1661,12 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Manuale'**
   String get manualKindLabel;
+
+  /// No description provided for @transferKindLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Trasferimento'**
+  String get transferKindLabel;
 
   /// No description provided for @categoryLabel.
   ///
