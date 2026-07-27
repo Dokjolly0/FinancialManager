@@ -17,6 +17,8 @@ import '../features/home/presentation/screens/home_screen.dart';
 import '../features/reports/presentation/screens/report_screen.dart';
 import '../features/transactions/presentation/screens/new_transaction_screen.dart';
 import '../features/transactions/presentation/screens/transaction_detail_screen.dart';
+import '../features/wallets/presentation/screens/wallet_form_screen.dart';
+import '../features/wallets/presentation/screens/wallets_screen.dart';
 import 'app_shell.dart';
 import 'session/session_controller.dart';
 import 'session/session_status.dart';
@@ -42,9 +44,12 @@ abstract final class AppRoutes {
   static const accountLinkedAccounts = '/app/account/linked-accounts';
   static const accountPreferences = '/app/account/preferences';
   static const accountData = '/app/account/data';
+  static const wallets = '/app/account/wallets';
+  static const walletsNew = '/app/account/wallets/new';
 
   static String transactionDetail(String id) => '/app/transactions/$id';
   static String transactionEdit(String id) => '/app/transactions/$id/edit';
+  static String walletEdit(String id) => '/app/account/wallets/$id/edit';
 }
 
 /// Bridges Riverpod state changes to go_router's [Listenable]-based
@@ -136,6 +141,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.accountData,
         builder: (_, _) => const AccountDataScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.wallets,
+        builder: (_, _) => const WalletsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.walletsNew,
+        builder: (_, _) => const WalletFormScreen(),
+      ),
+      GoRoute(
+        path: '/app/account/wallets/:id/edit',
+        builder: (_, state) =>
+            WalletFormScreen(editWalletId: state.pathParameters['id']),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
