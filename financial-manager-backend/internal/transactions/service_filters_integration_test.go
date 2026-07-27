@@ -41,7 +41,7 @@ func TestCreateStandard_LinksValidCategoryAndBumpsTemplateUsage(t *testing.T) {
 	templateID := uuid.MustParse(template.ID)
 
 	body, status, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionDebit, AmountMinor: 150,
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 150,
 		Currency: "EUR", Title: "Biglietto autobus", CategoryID: &categoryID, TemplateID: &templateID,
 		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	})
@@ -94,7 +94,7 @@ func TestCreateStandard_RejectsAnotherUsersCategoryAndTemplate(t *testing.T) {
 	foreignCategoryID := uuid.MustParse(foreignCategory.ID)
 
 	_, _, err = h.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionDebit, AmountMinor: 500,
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 500,
 		Currency: "EUR", Title: "Tentativo", CategoryID: &foreignCategoryID,
 		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	})
@@ -127,14 +127,14 @@ func TestList_FiltersByTitleAmountRangeAndCategory(t *testing.T) {
 	groceriesID := uuid.MustParse(groceries.ID)
 
 	if _, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionDebit, AmountMinor: 2000,
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 2000,
 		Currency: "EUR", Title: "Supermercato Conad", CategoryID: &groceriesID,
 		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	}); err != nil {
 		t.Fatalf("create tx1: %v", err)
 	}
 	if _, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionDebit, AmountMinor: 9000,
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 9000,
 		Currency: "EUR", Title: "Bar Centrale",
 		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	}); err != nil {
@@ -174,14 +174,14 @@ func TestList_FiltersByOccurredAtRange(t *testing.T) {
 	recent := time.Now().UTC()
 
 	if _, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionDebit, AmountMinor: 1000,
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 1000,
 		Currency: "EUR", Title: "Vecchia spesa", OccurredAt: past,
 		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	}); err != nil {
 		t.Fatalf("create past tx: %v", err)
 	}
 	if _, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionDebit, AmountMinor: 1000,
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 1000,
 		Currency: "EUR", Title: "Spesa recente", OccurredAt: recent,
 		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	}); err != nil {

@@ -32,7 +32,7 @@ func (r *Repository) WithQuerier(q database.Querier) *Repository {
 const transactionColumns = `
 	id, wallet_id, user_id, direction, kind, amount_minor, currency,
 	title, title_normalized, description, category_id, template_id, media_id, occurred_at,
-	created_at, updated_at, deleted_at, version, created_by_session_id
+	created_at, updated_at, deleted_at, version, created_by_session_id, transfer_pair_id
 `
 
 func scanTransaction(row pgx.Row) (Transaction, error) {
@@ -40,7 +40,7 @@ func scanTransaction(row pgx.Row) (Transaction, error) {
 	err := row.Scan(
 		&t.ID, &t.WalletID, &t.UserID, &t.Direction, &t.Kind, &t.AmountMinor, &t.Currency,
 		&t.Title, &t.TitleNormalized, &t.Description, &t.CategoryID, &t.TemplateID, &t.MediaID, &t.OccurredAt,
-		&t.CreatedAt, &t.UpdatedAt, &t.DeletedAt, &t.Version, &t.CreatedBySessionID,
+		&t.CreatedAt, &t.UpdatedAt, &t.DeletedAt, &t.Version, &t.CreatedBySessionID, &t.TransferPairID,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Transaction{}, ErrNotFound
@@ -65,6 +65,7 @@ type CreateInput struct {
 	MediaID            *uuid.UUID
 	OccurredAt         time.Time
 	CreatedBySessionID *uuid.UUID
+	TransferPairID     *uuid.UUID
 }
 
 // Create inserts a ledger entry. Callers are responsible for updating the
@@ -74,13 +75,27 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (Transaction, e
 	row := r.db.QueryRow(ctx, `
 		INSERT INTO transactions (
 			wallet_id, user_id, direction, kind, amount_minor, currency,
-			title, title_normalized, description, category_id, template_id, media_id, occurred_at, created_by_session_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			title, title_normalized, description, category_id, template_id, media_id, occurred_at, created_by_session_id,
+			transfer_pair_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING `+transactionColumns,
 		in.WalletID, in.UserID, in.Direction, in.Kind, in.AmountMinor, in.Currency,
 		in.Title, NormalizeTitle(in.Title), in.Description, in.CategoryID, in.TemplateID, in.MediaID, in.OccurredAt, in.CreatedBySessionID,
+		in.TransferPairID,
 	)
 	return scanTransaction(row)
+}
+
+// SetTransferPairID backfills the first-inserted row of a transfer pair
+// with the second row's ID, once it exists (plan.md/migration 0023: both
+// rows are created in the same DB transaction, but one must exist before
+// the other can reference it).
+func (r *Repository) SetTransferPairID(ctx context.Context, id, transferPairID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `UPDATE transactions SET transfer_pair_id = $1 WHERE id = $2`, transferPairID, id)
+	if err != nil {
+		return fmt.Errorf("set transfer pair id: %w", err)
+	}
+	return nil
 }
 
 // GetByIDAndUserID enforces plan.md section 19.1: never resolve a
@@ -105,6 +120,7 @@ func (r *Repository) LockByIDAndUserID(ctx context.Context, id, userID uuid.UUID
 }
 
 type UpdateInput struct {
+	WalletID    uuid.UUID
 	Direction   string
 	AmountMinor int64
 	Title       string
@@ -119,16 +135,18 @@ type UpdateInput struct {
 // (optimistic concurrency, plan.md section 7.11/26.3). Returns ErrNotFound
 // if the row doesn't exist, is deleted, or the version doesn't match —
 // callers that already loaded the row can distinguish "gone" from
-// "conflict" by re-fetching.
+// "conflict" by re-fetching. WalletID may differ from the row's current
+// wallet_id — the caller (transactions.Service) is responsible for having
+// already adjusted both wallets' balances when moving a transaction.
 func (r *Repository) Update(ctx context.Context, id, userID uuid.UUID, expectedVersion int64, in UpdateInput) (Transaction, error) {
 	row := r.db.QueryRow(ctx, `
 		UPDATE transactions SET
-			direction = $1, amount_minor = $2, title = $3, title_normalized = $4,
-			description = $5, category_id = $6, template_id = $7, media_id = $8, occurred_at = $9,
+			wallet_id = $1, direction = $2, amount_minor = $3, title = $4, title_normalized = $5,
+			description = $6, category_id = $7, template_id = $8, media_id = $9, occurred_at = $10,
 			updated_at = now(), version = version + 1
-		WHERE id = $10 AND user_id = $11 AND version = $12 AND deleted_at IS NULL
+		WHERE id = $11 AND user_id = $12 AND version = $13 AND deleted_at IS NULL
 		RETURNING `+transactionColumns,
-		in.Direction, in.AmountMinor, in.Title, NormalizeTitle(in.Title),
+		in.WalletID, in.Direction, in.AmountMinor, in.Title, NormalizeTitle(in.Title),
 		in.Description, in.CategoryID, in.TemplateID, in.MediaID, in.OccurredAt, id, userID, expectedVersion,
 	)
 	return scanTransaction(row)
@@ -212,6 +230,7 @@ func (r *Repository) ClearMediaForUser(ctx context.Context, userID uuid.UUID) er
 // offered in the MVP (plan.md section 17.2 example query).
 type ListFilter struct {
 	UserID         uuid.UUID
+	WalletID       uuid.UUID // uuid.Nil = any wallet
 	Direction      string // "" = any
 	Kind           string // "" = any
 	CategoryID     uuid.UUID
@@ -266,6 +285,10 @@ func (r *Repository) List(ctx context.Context, filter ListFilter) (Page, error) 
 		args       = []any{filter.UserID}
 	)
 
+	if filter.WalletID != uuid.Nil {
+		args = append(args, filter.WalletID)
+		conditions = append(conditions, "wallet_id = $"+strconv.Itoa(len(args)))
+	}
 	if filter.Direction != "" {
 		args = append(args, filter.Direction)
 		conditions = append(conditions, "direction = $"+strconv.Itoa(len(args)))

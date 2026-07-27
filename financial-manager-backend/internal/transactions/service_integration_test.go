@@ -79,7 +79,7 @@ func newHarness(t *testing.T, openingBalanceMinor int64) harness {
 		t.Fatalf("create test user: %v", err)
 	}
 
-	wallet, err := walletsRepo.Create(context.Background(), user.ID, "EUR", openingBalanceMinor)
+	wallet, err := walletsRepo.Create(context.Background(), user.ID, wallets.DefaultName, "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, openingBalanceMinor)
 	if err != nil {
 		t.Fatalf("create test wallet: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestCreateStandard_DebitsWalletAndIsIdempotent(t *testing.T) {
 
 	key := uuid.New()
 	body, status, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionDebit, AmountMinor: 5000,
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 5000,
 		Currency: "EUR", Title: "Spesa supermercato", IdempotencyKey: key, RequestBody: []byte("{}"),
 	})
 	if err != nil {
@@ -161,7 +161,7 @@ func TestCreateStandard_DebitsWalletAndIsIdempotent(t *testing.T) {
 
 	// Retry with the same key must not double-debit.
 	retryBody, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionDebit, AmountMinor: 5000,
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 5000,
 		Currency: "EUR", Title: "Spesa supermercato", IdempotencyKey: key, RequestBody: []byte("{}"),
 	})
 	if err != nil {
@@ -186,7 +186,7 @@ func TestUpdateStandard_AppliesOnlyTheDifference(t *testing.T) {
 	ctx := context.Background()
 
 	createBody, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionDebit, AmountMinor: 3000,
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 3000,
 		Currency: "EUR", Title: "Bar", IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	})
 	if err != nil {
@@ -199,7 +199,7 @@ func TestUpdateStandard_AppliesOnlyTheDifference(t *testing.T) {
 	txID := uuid.MustParse(txIDStr)
 
 	updated, err := h.service.UpdateStandard(ctx, transactions.UpdateStandardInput{
-		UserID: h.userID, TransactionID: txID, Direction: transactions.DirectionDebit,
+		UserID: h.userID, TransactionID: txID, WalletID: h.walletID, Direction: transactions.DirectionDebit,
 		AmountMinor: 5000, Title: "Bar (corretto)", ExpectedVersion: 1,
 	})
 	if err != nil {
@@ -211,7 +211,7 @@ func TestUpdateStandard_AppliesOnlyTheDifference(t *testing.T) {
 
 	// Stale version must be rejected as a conflict.
 	_, err = h.service.UpdateStandard(ctx, transactions.UpdateStandardInput{
-		UserID: h.userID, TransactionID: txID, Direction: transactions.DirectionDebit,
+		UserID: h.userID, TransactionID: txID, WalletID: h.walletID, Direction: transactions.DirectionDebit,
 		AmountMinor: 6000, Title: "Bar (di nuovo)", ExpectedVersion: 1, // stale: real version is now 2
 	})
 	var apiErr *apierror.Error
@@ -225,7 +225,7 @@ func TestDelete_ReversesBalanceAndForbidsOpeningBalance(t *testing.T) {
 	ctx := context.Background()
 
 	createBody, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionCredit, AmountMinor: 2000,
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionCredit, AmountMinor: 2000,
 		Currency: "EUR", Title: "Rimborso", IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	})
 	if err != nil {
@@ -258,7 +258,7 @@ func TestBalanceAdjustment_SetsExactTarget(t *testing.T) {
 	ctx := context.Background()
 
 	body, status, err := h.service.CreateBalanceAdjustment(ctx, transactions.CreateBalanceAdjustmentInput{
-		UserID: h.userID, TargetBalanceMinor: 47000, Reason: "Allineamento con saldo reale",
+		UserID: h.userID, WalletID: h.walletID, TargetBalanceMinor: 47000, Reason: "Allineamento con saldo reale",
 		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	})
 	if err != nil {
@@ -296,7 +296,7 @@ func TestReconcile_FindsNoMismatchAfterNormalOperations(t *testing.T) {
 	ctx := context.Background()
 
 	if _, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: h.userID, Direction: transactions.DirectionDebit, AmountMinor: 2500,
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 2500,
 		Currency: "EUR", Title: "Caffè", IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	}); err != nil {
 		t.Fatalf("CreateStandard() error = %v", err)
@@ -322,7 +322,7 @@ func TestCrossUserAccess_IsAlwaysRejected(t *testing.T) {
 	ctx := context.Background()
 
 	body, _, err := owner.service.CreateStandard(ctx, transactions.CreateStandardInput{
-		UserID: owner.userID, Direction: transactions.DirectionDebit, AmountMinor: 1500,
+		UserID: owner.userID, WalletID: owner.walletID, Direction: transactions.DirectionDebit, AmountMinor: 1500,
 		Currency: "EUR", Title: "Privato di A", IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
 	})
 	if err != nil {
@@ -339,7 +339,7 @@ func TestCrossUserAccess_IsAlwaysRejected(t *testing.T) {
 	}
 
 	_, err = owner.service.UpdateStandard(ctx, transactions.UpdateStandardInput{
-		UserID: intruder.userID, TransactionID: txID, Direction: transactions.DirectionDebit,
+		UserID: intruder.userID, TransactionID: txID, WalletID: intruder.walletID, Direction: transactions.DirectionDebit,
 		AmountMinor: 999999, Title: "Hijacked", ExpectedVersion: 1,
 	})
 	if !errors.Is(err, apierror.ErrNotFound) {

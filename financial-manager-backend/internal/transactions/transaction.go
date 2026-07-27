@@ -18,6 +18,7 @@ const (
 	KindStandard          = "STANDARD"
 	KindOpeningBalance    = "OPENING_BALANCE"
 	KindBalanceAdjustment = "BALANCE_ADJUSTMENT"
+	KindTransfer          = "TRANSFER"
 )
 
 type Transaction struct {
@@ -40,6 +41,7 @@ type Transaction struct {
 	DeletedAt          *time.Time
 	Version            int64
 	CreatedBySessionID *uuid.UUID
+	TransferPairID     *uuid.UUID
 }
 
 // NormalizeTitle mirrors plan.md section 4.4: trim, compact internal

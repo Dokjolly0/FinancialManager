@@ -31,7 +31,22 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Get("/v1/transactions/{id}", h.get)
 	r.Patch("/v1/transactions/{id}", h.update)
 	r.Delete("/v1/transactions/{id}", h.delete)
-	r.Post("/v1/wallet/balance-adjustments", h.createBalanceAdjustment)
+	r.Post("/v1/wallets", h.createWallet)
+	r.Post("/v1/wallets/{id}/balance-adjustments", h.createBalanceAdjustment)
+	r.Post("/v1/transfers", h.createTransfer)
+}
+
+// requireWalletID parses a required wallet_id-shaped field, distinguishing
+// "missing" from "malformed" so the client gets the more specific error.
+func requireWalletID(raw string) (uuid.UUID, *apierror.Error) {
+	if raw == "" {
+		return uuid.Nil, apierror.NewValidation(map[string]string{"wallet_id": apierror.FieldRequired})
+	}
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		return uuid.Nil, apierror.NewValidation(map[string]string{"wallet_id": apierror.FieldInvalidUUID})
+	}
+	return id, nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {
@@ -62,6 +77,7 @@ func parseOptionalUUID(raw string) (*uuid.UUID, bool) {
 }
 
 type createRequest struct {
+	WalletID      string  `json:"wallet_id"`
 	Direction     string  `json:"direction"`
 	AmountMinor   int64   `json:"amount_minor"`
 	Currency      string  `json:"currency"`
@@ -109,6 +125,11 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		}))
 		return
 	}
+	walletID, walletErr := requireWalletID(req.WalletID)
+	if walletErr != nil {
+		apierror.Write(w, r, walletErr)
+		return
+	}
 	categoryID, ok := parseOptionalUUID(req.CategoryID)
 	if !ok {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": apierror.FieldInvalidUUID}))
@@ -127,6 +148,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 
 	responseBody, status, err := h.service.CreateStandard(r.Context(), CreateStandardInput{
 		UserID:         userID,
+		WalletID:       walletID,
 		Direction:      req.Direction,
 		AmountMinor:    req.AmountMinor,
 		Currency:       req.Currency,
@@ -202,6 +224,16 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		categoryID = parsed
 	}
 
+	var walletID uuid.UUID
+	if raw := query.Get("wallet_id"); raw != "" {
+		parsed, err := uuid.Parse(raw)
+		if err != nil {
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"wallet_id": apierror.FieldInvalidUUID}))
+			return
+		}
+		walletID = parsed
+	}
+
 	var amountMin, amountMax int64
 	if raw := query.Get("amount_min_minor"); raw != "" {
 		parsed, err := strconv.ParseInt(raw, 10, 64)
@@ -240,6 +272,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.service.List(r.Context(), ListFilter{
 		UserID:         userID,
+		WalletID:       walletID,
 		Direction:      direction,
 		Kind:           query.Get("kind"),
 		CategoryID:     categoryID,
@@ -259,6 +292,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateRequest struct {
+	WalletID        string  `json:"wallet_id"`
 	Direction       string  `json:"direction"`
 	AmountMinor     int64   `json:"amount_minor"`
 	Title           string  `json:"title"`
@@ -296,6 +330,11 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		}))
 		return
 	}
+	walletID, walletErr := requireWalletID(req.WalletID)
+	if walletErr != nil {
+		apierror.Write(w, r, walletErr)
+		return
+	}
 	categoryID, ok := parseOptionalUUID(req.CategoryID)
 	if !ok {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": apierror.FieldInvalidUUID}))
@@ -315,6 +354,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	result, err := h.service.UpdateStandard(r.Context(), UpdateStandardInput{
 		UserID:          userID,
 		TransactionID:   id,
+		WalletID:        walletID,
 		Direction:       req.Direction,
 		AmountMinor:     req.AmountMinor,
 		Title:           req.Title,
@@ -367,6 +407,12 @@ func (h *Handler) createBalanceAdjustment(w http.ResponseWriter, r *http.Request
 	}
 	sessionID, _ := reqctx.SessionID(r.Context())
 
+	walletID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+
 	idempotencyKey, err := uuid.Parse(r.Header.Get("Idempotency-Key"))
 	if err != nil {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{
@@ -397,12 +443,151 @@ func (h *Handler) createBalanceAdjustment(w http.ResponseWriter, r *http.Request
 
 	responseBody, status, err := h.service.CreateBalanceAdjustment(r.Context(), CreateBalanceAdjustmentInput{
 		UserID:             userID,
+		WalletID:           walletID,
 		TargetBalanceMinor: req.TargetBalanceMinor,
 		Reason:             req.Reason,
 		OccurredAt:         occurredAt,
 		SessionID:          &sessionID,
 		IdempotencyKey:     idempotencyKey,
 		RequestBody:        body,
+	})
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write(responseBody)
+}
+
+type createWalletRequest struct {
+	Name                string `json:"name"`
+	Type                string `json:"type"`
+	Icon                string `json:"icon"`
+	Color               string `json:"color"`
+	OpeningBalanceMinor int64  `json:"opening_balance_minor"`
+}
+
+func (h *Handler) createWallet(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+	sessionID, _ := reqctx.SessionID(r.Context())
+
+	idempotencyKey, err := uuid.Parse(r.Header.Get("Idempotency-Key"))
+	if err != nil {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"Idempotency-Key": apierror.FieldInvalidUUID,
+		}))
+		return
+	}
+
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<16))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	var req createWalletRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	responseBody, status, err := h.service.CreateWallet(r.Context(), CreateWalletInput{
+		UserID:              userID,
+		Name:                req.Name,
+		Type:                req.Type,
+		Icon:                req.Icon,
+		Color:               req.Color,
+		OpeningBalanceMinor: req.OpeningBalanceMinor,
+		SessionID:           &sessionID,
+		IdempotencyKey:      idempotencyKey,
+		RequestBody:         body,
+	})
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write(responseBody)
+}
+
+type createTransferRequest struct {
+	SourceWalletID      string  `json:"source_wallet_id"`
+	DestinationWalletID string  `json:"destination_wallet_id"`
+	AmountMinor         int64   `json:"amount_minor"`
+	Note                *string `json:"note"`
+	OccurredAt          string  `json:"occurred_at"`
+}
+
+func (h *Handler) createTransfer(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+	sessionID, _ := reqctx.SessionID(r.Context())
+
+	idempotencyKey, err := uuid.Parse(r.Header.Get("Idempotency-Key"))
+	if err != nil {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"Idempotency-Key": apierror.FieldInvalidUUID,
+		}))
+		return
+	}
+
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<16))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	var req createTransferRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	occurredAt, ok := parseOccurredAt(req.OccurredAt)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"occurred_at": apierror.FieldInvalidRFC3339Date,
+		}))
+		return
+	}
+
+	var sourceWalletID, destWalletID uuid.UUID
+	if req.SourceWalletID != "" {
+		sourceWalletID, err = uuid.Parse(req.SourceWalletID)
+		if err != nil {
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"source_wallet_id": apierror.FieldInvalidUUID}))
+			return
+		}
+	}
+	if req.DestinationWalletID != "" {
+		destWalletID, err = uuid.Parse(req.DestinationWalletID)
+		if err != nil {
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"destination_wallet_id": apierror.FieldInvalidUUID}))
+			return
+		}
+	}
+
+	responseBody, status, err := h.service.CreateTransfer(r.Context(), CreateTransferInput{
+		UserID:              userID,
+		SourceWalletID:      sourceWalletID,
+		DestinationWalletID: destWalletID,
+		AmountMinor:         req.AmountMinor,
+		Note:                req.Note,
+		OccurredAt:          occurredAt,
+		SessionID:           &sessionID,
+		IdempotencyKey:      idempotencyKey,
+		RequestBody:         body,
 	})
 	if err != nil {
 		apierror.Write(w, r, err)
