@@ -441,6 +441,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'The destination wallet must be different from the source.';
 
   @override
+  String get editTransferSheetTitle => 'Edit transfer';
+
+  @override
+  String get saveTransferAction => 'Save transfer';
+
+  @override
   String get walletBadgeArchived => 'Archived';
 
   @override

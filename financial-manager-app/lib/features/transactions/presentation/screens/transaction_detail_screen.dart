@@ -15,11 +15,12 @@ import '../../../media/data/providers.dart';
 import '../../domain/models/transaction_direction.dart';
 import '../view_models/transaction_detail_controller.dart';
 import '../widgets/opening_balance_edit_sheet.dart';
+import '../widgets/transfer_edit_sheet.dart';
 
 /// Transaction detail (plan.md section 7.10): view, edit, delete. Edit and
-/// delete are only offered for STANDARD transactions. OPENING_BALANCE also
-/// allows editing its amount/date, through a dedicated sheet rather than
-/// the full form — BALANCE_ADJUSTMENT and TRANSFER stay fully read-only.
+/// delete are only offered for STANDARD transactions. OPENING_BALANCE and
+/// TRANSFER also allow editing their amount/date, through a dedicated sheet
+/// rather than the full form — BALANCE_ADJUSTMENT stays fully read-only.
 class TransactionDetailScreen extends ConsumerWidget {
   const TransactionDetailScreen({super.key, required this.transactionId});
 
@@ -74,6 +75,18 @@ class TransactionDetailScreen extends ConsumerWidget {
               tooltip: l10n.editTooltip,
               onPressed: () async {
                 final changed = await OpeningBalanceEditSheet.show(
+                  context,
+                  transaction: state.transaction!,
+                );
+                if (changed) controller.load();
+              },
+            ),
+          ] else if (state.transaction?.isTransferEditable ?? false) ...[
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: l10n.editTooltip,
+              onPressed: () async {
+                final changed = await TransferEditSheet.show(
                   context,
                   transaction: state.transaction!,
                 );

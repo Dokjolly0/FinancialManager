@@ -98,6 +98,17 @@ class TransactionApi {
     return response.data!;
   }
 
+  Future<Map<String, dynamic>> updateTransfer(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/transactions/$id/transfer',
+      data: body,
+    );
+    return response.data!;
+  }
+
   Future<Map<String, dynamic>> createTransfer(Map<String, dynamic> body) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/transfers',

@@ -43,6 +43,12 @@ class LedgerTransaction {
   /// [TransactionKind]'s doc comment for what stays fixed).
   bool get isOpeningBalanceEditable => kind == TransactionKind.openingBalance;
 
+  /// Whether this row's amount/date can be corrected through the dedicated
+  /// transfer edit sheet — never the source/destination wallets, which are
+  /// structural to the linked DEBIT/CREDIT pair (see [TransactionKind]'s
+  /// doc comment).
+  bool get isTransferEditable => kind == TransactionKind.transfer;
+
   static LedgerTransaction fromJson(Map<String, dynamic> json) {
     return LedgerTransaction(
       id: json['id'] as String,

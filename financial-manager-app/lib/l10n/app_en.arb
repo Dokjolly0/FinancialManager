@@ -166,6 +166,8 @@
   "transferNoteLabel": "Note (optional)",
   "submitTransferAction": "Transfer",
   "transferSameWalletError": "The destination wallet must be different from the source.",
+  "editTransferSheetTitle": "Edit transfer",
+  "saveTransferAction": "Save transfer",
   "walletBadgeArchived": "Archived",
   "allWalletsLabel": "All wallets",
   "accountSecurityMenuTitle": "Security",

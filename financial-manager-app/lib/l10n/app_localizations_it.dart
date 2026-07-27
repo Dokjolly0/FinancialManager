@@ -445,6 +445,12 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il portafoglio di destinazione deve essere diverso da quello di partenza.';
 
   @override
+  String get editTransferSheetTitle => 'Modifica trasferimento';
+
+  @override
+  String get saveTransferAction => 'Salva trasferimento';
+
+  @override
   String get walletBadgeArchived => 'Archiviato';
 
   @override

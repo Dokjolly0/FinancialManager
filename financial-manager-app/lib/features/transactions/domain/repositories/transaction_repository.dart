@@ -202,6 +202,18 @@ abstract class TransactionRepository {
     String? note,
     DateTime? occurredAt,
   });
+
+  /// Edits a transfer's amount and date only — never the source/destination
+  /// wallets, which are structural to the linked DEBIT/CREDIT pair. [id]
+  /// may be either leg (the transaction list shows one row per wallet), and
+  /// [expectedVersion] is that leg's version; the backend locates and
+  /// updates its pair together so the two rows never drift out of sync.
+  Future<TransferResult> updateTransfer(
+    String id, {
+    required int amountMinor,
+    required DateTime occurredAt,
+    required int expectedVersion,
+  });
 }
 
 /// What a transfer returns: both ledger legs plus both wallets' new

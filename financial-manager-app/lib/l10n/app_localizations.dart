@@ -884,6 +884,18 @@ abstract class AppLocalizations {
   /// **'Il portafoglio di destinazione deve essere diverso da quello di partenza.'**
   String get transferSameWalletError;
 
+  /// No description provided for @editTransferSheetTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica trasferimento'**
+  String get editTransferSheetTitle;
+
+  /// No description provided for @saveTransferAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva trasferimento'**
+  String get saveTransferAction;
+
   /// No description provided for @walletBadgeArchived.
   ///
   /// In it, this message translates to:

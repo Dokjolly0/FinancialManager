@@ -148,6 +148,8 @@
   "transferNoteLabel": "Nota (opzionale)",
   "submitTransferAction": "Trasferisci",
   "transferSameWalletError": "Il portafoglio di destinazione deve essere diverso da quello di partenza.",
+  "editTransferSheetTitle": "Modifica trasferimento",
+  "saveTransferAction": "Salva trasferimento",
   "walletBadgeArchived": "Archiviato",
   "allWalletsLabel": "Tutti i portafogli",
   "accountSecurityMenuTitle": "Sicurezza",

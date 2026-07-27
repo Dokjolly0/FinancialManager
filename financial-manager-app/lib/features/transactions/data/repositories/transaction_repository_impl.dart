@@ -194,6 +194,42 @@ class TransactionRepositoryImpl implements TransactionRepository {
     }
   }
 
+  TransferResult _parseTransferResult(Map<String, dynamic> response) {
+    return TransferResult(
+      debitTransaction: LedgerTransaction.fromJson(
+        response['debit_transaction'] as Map<String, dynamic>,
+      ),
+      creditTransaction: LedgerTransaction.fromJson(
+        response['credit_transaction'] as Map<String, dynamic>,
+      ),
+      sourceWallet: Wallet.fromJson(
+        response['source_wallet'] as Map<String, dynamic>,
+      ),
+      destinationWallet: Wallet.fromJson(
+        response['destination_wallet'] as Map<String, dynamic>,
+      ),
+    );
+  }
+
+  @override
+  Future<TransferResult> updateTransfer(
+    String id, {
+    required int amountMinor,
+    required DateTime occurredAt,
+    required int expectedVersion,
+  }) async {
+    try {
+      final response = await _api.updateTransfer(id, {
+        'amount_minor': amountMinor,
+        'occurred_at': occurredAt.toUtc().toIso8601String(),
+        'version': expectedVersion,
+      });
+      return _parseTransferResult(response);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
   @override
   Future<TransferResult> createTransfer({
     required String sourceWalletId,
@@ -210,20 +246,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
         'note': note,
         'occurred_at': (occurredAt ?? DateTime.now()).toUtc().toIso8601String(),
       });
-      return TransferResult(
-        debitTransaction: LedgerTransaction.fromJson(
-          response['debit_transaction'] as Map<String, dynamic>,
-        ),
-        creditTransaction: LedgerTransaction.fromJson(
-          response['credit_transaction'] as Map<String, dynamic>,
-        ),
-        sourceWallet: Wallet.fromJson(
-          response['source_wallet'] as Map<String, dynamic>,
-        ),
-        destinationWallet: Wallet.fromJson(
-          response['destination_wallet'] as Map<String, dynamic>,
-        ),
-      );
+      return _parseTransferResult(response);
     } on DioException catch (e) {
       throw ErrorMapper.fromException(e);
     }
