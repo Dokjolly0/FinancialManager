@@ -511,11 +511,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get languageLabel => 'Lingua';
 
   @override
-  String exportSavedMessage(String path) {
-    return 'Esportazione salvata in $path';
-  }
-
-  @override
   String get deleteAccountConfirmTitle => 'Eliminare l\'account?';
 
   @override

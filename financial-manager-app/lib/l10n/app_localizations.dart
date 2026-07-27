@@ -1010,12 +1010,6 @@ abstract class AppLocalizations {
   /// **'Lingua'**
   String get languageLabel;
 
-  /// No description provided for @exportSavedMessage.
-  ///
-  /// In it, this message translates to:
-  /// **'Esportazione salvata in {path}'**
-  String exportSavedMessage(String path);
-
   /// No description provided for @deleteAccountConfirmTitle.
   ///
   /// In it, this message translates to:

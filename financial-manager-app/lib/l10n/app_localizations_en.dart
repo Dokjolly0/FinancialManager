@@ -506,11 +506,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageLabel => 'Language';
 
   @override
-  String exportSavedMessage(String path) {
-    return 'Export saved to $path';
-  }
-
-  @override
   String get deleteAccountConfirmTitle => 'Delete account?';
 
   @override

@@ -171,10 +171,6 @@
   "timezoneLabel": "Fuso orario",
   "languageLabel": "Lingua",
 
-  "exportSavedMessage": "Esportazione salvata in {path}",
-  "@exportSavedMessage": {
-    "placeholders": { "path": { "type": "String" } }
-  },
   "deleteAccountConfirmTitle": "Eliminare l'account?",
   "deleteAccountConfirmMessage": "Questa azione è irreversibile. Il tuo profilo verrà rimosso; le operazioni registrate restano solo a fini contabili.",
   "confirmPasswordDialogTitle": "Conferma la password",

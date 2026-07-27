@@ -25,11 +25,7 @@ class AccountDataScreen extends ConsumerWidget {
 
     final state = ref.read(dataControllerProvider);
     final l10n = AppLocalizations.of(context);
-    if (state.savedFilePath != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportSavedMessage(state.savedFilePath!))),
-      );
-    } else if (state.error != null) {
+    if (state.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(presentError(state.error!, l10n).message)),
       );

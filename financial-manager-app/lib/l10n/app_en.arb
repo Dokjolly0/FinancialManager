@@ -189,10 +189,6 @@
   "timezoneLabel": "Timezone",
   "languageLabel": "Language",
 
-  "exportSavedMessage": "Export saved to {path}",
-  "@exportSavedMessage": {
-    "placeholders": { "path": { "type": "String" } }
-  },
   "deleteAccountConfirmTitle": "Delete account?",
   "deleteAccountConfirmMessage": "This action is irreversible. Your profile will be removed; recorded transactions remain for accounting purposes only.",
   "confirmPasswordDialogTitle": "Confirm your password",

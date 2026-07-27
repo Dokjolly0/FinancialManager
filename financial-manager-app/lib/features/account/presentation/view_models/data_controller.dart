@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/api/providers.dart';
 import '../../../../core/errors/app_error.dart';
@@ -10,50 +11,36 @@ import '../../data/providers.dart';
 import '../../domain/models/export_record.dart';
 
 class DataState {
-  const DataState({
-    this.isExporting = false,
-    this.export,
-    this.error,
-    this.savedFilePath,
-  });
+  const DataState({this.isExporting = false, this.export, this.error});
 
   final bool isExporting;
   final ExportRecord? export;
   final AppError? error;
-  final String? savedFilePath;
 
   DataState copyWith({
     bool? isExporting,
     ExportRecord? export,
     AppError? error,
     bool clearError = false,
-    String? savedFilePath,
-    bool clearSavedFilePath = false,
   }) {
     return DataState(
       isExporting: isExporting ?? this.isExporting,
       export: export ?? this.export,
       error: clearError ? null : (error ?? this.error),
-      savedFilePath: clearSavedFilePath
-          ? null
-          : (savedFilePath ?? this.savedFilePath),
     );
   }
 }
 
-/// Dati (plan.md section 7.13, 20.2): richiede un export, lo scarica e lo
-/// salva nella cartella documenti dell'app (sandbox, nessun permesso di
-/// archiviazione richiesto su Android).
+/// Dati (plan.md section 7.13, 20.2): richiede un export, lo scarica in un
+/// file temporaneo e apre il foglio di condivisione nativo cosi' l'utente
+/// sceglie dove salvarlo (Files/Drive/email/...), senza permessi di
+/// archiviazione su Android.
 class DataController extends Notifier<DataState> {
   @override
   DataState build() => const DataState();
 
   Future<void> requestExport(String format) async {
-    state = state.copyWith(
-      isExporting: true,
-      clearError: true,
-      clearSavedFilePath: true,
-    );
+    state = state.copyWith(isExporting: true, clearError: true);
     try {
       final record = await ref
           .read(accountRepositoryProvider)
@@ -86,12 +73,14 @@ class DataController extends Notifier<DataState> {
         ),
       );
 
-      final dir = await getApplicationDocumentsDirectory();
+      final dir = await getTemporaryDirectory();
       final filename = 'export-${record.id}.${record.format}';
       final file = File('${dir.path}/$filename');
       await file.writeAsBytes(response.data!);
 
-      state = state.copyWith(savedFilePath: file.path);
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)]),
+      );
     } on DioException {
       state = state.copyWith(
         error: const DomainError(code: 'EXPORT_FAILED', message: ''),
