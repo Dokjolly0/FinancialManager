@@ -101,8 +101,9 @@ class WalletsScreen extends ConsumerWidget {
                         final changed = await context.push<bool>(
                           AppRoutes.walletEdit(wallet.id),
                         );
-                        if (changed == true)
+                        if (changed == true) {
                           ref.invalidate(walletsListProvider);
+                        }
                       },
                     ),
                   ),
