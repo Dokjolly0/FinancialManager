@@ -78,9 +78,7 @@ class DataController extends Notifier<DataState> {
       final file = File('${dir.path}/$filename');
       await file.writeAsBytes(response.data!);
 
-      await SharePlus.instance.share(
-        ShareParams(files: [XFile(file.path)]),
-      );
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
     } on DioException {
       state = state.copyWith(
         error: const DomainError(code: 'EXPORT_FAILED', message: ''),

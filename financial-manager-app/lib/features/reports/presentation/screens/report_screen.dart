@@ -48,7 +48,10 @@ class ReportScreen extends ConsumerWidget {
                 isDense: true,
               ),
               items: [
-                DropdownMenuItem(value: null, child: Text(l10n.allWalletsLabel)),
+                DropdownMenuItem(
+                  value: null,
+                  child: Text(l10n.allWalletsLabel),
+                ),
                 for (final wallet in wallets)
                   DropdownMenuItem(value: wallet.id, child: Text(wallet.name)),
               ],

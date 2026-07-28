@@ -22,9 +22,7 @@ class WalletsScreen extends ConsumerWidget {
 
   Money _aggregateBalance(List<Wallet> wallets) {
     if (wallets.isEmpty) return Money.zeroEur;
-    return wallets
-        .map((w) => w.balance)
-        .reduce((a, b) => a + b);
+    return wallets.map((w) => w.balance).reduce((a, b) => a + b);
   }
 
   @override
@@ -103,7 +101,8 @@ class WalletsScreen extends ConsumerWidget {
                         final changed = await context.push<bool>(
                           AppRoutes.walletEdit(wallet.id),
                         );
-                        if (changed == true) ref.invalidate(walletsListProvider);
+                        if (changed == true)
+                          ref.invalidate(walletsListProvider);
                       },
                     ),
                   ),

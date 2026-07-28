@@ -76,8 +76,7 @@ class TransactionFormController extends Notifier<TransactionFormState> {
   void setDirection(bool isCredit) =>
       state = state.copyWith(isCredit: isCredit);
 
-  void setWallet(String walletId) =>
-      state = state.copyWith(walletId: walletId);
+  void setWallet(String walletId) => state = state.copyWith(walletId: walletId);
 
   void setAmountInput(String value) =>
       state = state.copyWith(amountInput: value, fieldErrors: {}, error: null);

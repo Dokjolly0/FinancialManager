@@ -118,7 +118,12 @@ class _TransferSheetState extends ConsumerState<TransferSheet> {
     }
   }
 
-  Widget _walletTile(BuildContext context, String label, Wallet? wallet, VoidCallback onTap) {
+  Widget _walletTile(
+    BuildContext context,
+    String label,
+    Wallet? wallet,
+    VoidCallback onTap,
+  ) {
     final l10n = AppLocalizations.of(context);
     return ListTile(
       contentPadding: EdgeInsets.zero,

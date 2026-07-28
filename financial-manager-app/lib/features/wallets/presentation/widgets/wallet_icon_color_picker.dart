@@ -43,7 +43,10 @@ class WalletIconColorPicker extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        Text(l10n.walletIconLabel, style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          l10n.walletIconLabel,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
         const SizedBox(height: AppSpacing.xs),
         Wrap(
           spacing: AppSpacing.xs,
@@ -62,8 +65,13 @@ class WalletIconColorPicker extends StatelessWidget {
                       ? Theme.of(context).colorScheme.secondaryContainer
                       : null,
                   border: isSelected
-                      ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
-                      : Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                      ? Border.all(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 2,
+                        )
+                      : Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
                 ),
                 child: Icon(entry.value),
               ),
@@ -71,7 +79,10 @@ class WalletIconColorPicker extends StatelessWidget {
           }).toList(),
         ),
         const SizedBox(height: AppSpacing.md),
-        Text(l10n.walletColorLabel, style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          l10n.walletColorLabel,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
         const SizedBox(height: AppSpacing.xs),
         Wrap(
           spacing: AppSpacing.xs,

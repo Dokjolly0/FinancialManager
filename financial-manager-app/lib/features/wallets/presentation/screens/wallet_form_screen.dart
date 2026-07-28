@@ -277,8 +277,7 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
                     selectedIcon: _icon,
                     selectedColor: _color,
                     onIconSelected: (icon) => setState(() => _icon = icon),
-                    onColorSelected: (color) =>
-                        setState(() => _color = color),
+                    onColorSelected: (color) => setState(() => _color = color),
                   ),
                   if (!_isEditMode) ...[
                     const SizedBox(height: AppSpacing.lg),

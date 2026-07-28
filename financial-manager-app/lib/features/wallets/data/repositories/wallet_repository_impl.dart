@@ -83,8 +83,7 @@ class WalletRepositoryImpl implements WalletRepository {
       final raw = await _api.getDenominations(walletId);
       return raw
           .map(
-            (json) =>
-                WalletDenomination.fromJson(json as Map<String, dynamic>),
+            (json) => WalletDenomination.fromJson(json as Map<String, dynamic>),
           )
           .toList();
     } on DioException catch (e) {
@@ -104,8 +103,7 @@ class WalletRepositoryImpl implements WalletRepository {
       );
       return raw
           .map(
-            (json) =>
-                WalletDenomination.fromJson(json as Map<String, dynamic>),
+            (json) => WalletDenomination.fromJson(json as Map<String, dynamic>),
           )
           .toList();
     } on DioException catch (e) {

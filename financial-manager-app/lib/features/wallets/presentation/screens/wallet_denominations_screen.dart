@@ -160,8 +160,7 @@ class _WalletDenominationsScreenState
                             ),
                             Expanded(
                               child: TextField(
-                                controller:
-                                    _controllers[row.denominationMinor],
+                                controller: _controllers[row.denominationMinor],
                                 enabled: row.enabled,
                                 keyboardType: TextInputType.number,
                                 textAlign: TextAlign.center,
