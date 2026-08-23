@@ -1339,6 +1339,18 @@ abstract class AppLocalizations {
   /// **'Titolo'**
   String get titleFieldLabel;
 
+  /// No description provided for @titleOrDescriptionFilterLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Titolo o descrizione'**
+  String get titleOrDescriptionFilterLabel;
+
+  /// No description provided for @historySearchHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca per titolo o descrizione'**
+  String get historySearchHint;
+
   /// No description provided for @minAmountLabel.
   ///
   /// In it, this message translates to:
@@ -1398,6 +1410,12 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Rettifiche'**
   String get typeFilterAdjustments;
+
+  /// No description provided for @typeFilterTransfers.
+  ///
+  /// In it, this message translates to:
+  /// **'Trasferimenti'**
+  String get typeFilterTransfers;
 
   /// No description provided for @categoryPickerTitle.
   ///

@@ -13,13 +13,26 @@ import 'wallet_icon_data.dart';
 /// (plan.md: "poter scegliere per ogni nuova spesa a che portafoglio
 /// scalarla"). Returns the selected [Wallet], or `null` if dismissed.
 class WalletPickerSheet extends ConsumerWidget {
-  const WalletPickerSheet({super.key, this.excludeWalletId});
+  const WalletPickerSheet({
+    super.key,
+    this.excludeWalletId,
+    this.showAllWalletsOption = false,
+  });
 
   /// Hides one wallet from the list — used by the transfer sheet so the
   /// destination picker can't offer the wallet already chosen as source.
   final String? excludeWalletId;
 
-  static Future<Wallet?> show(BuildContext context, {String? excludeWalletId}) {
+  /// Prepends an "all wallets" tile that pops `null` — used by the history
+  /// filters sheet, where no wallet selected means "every wallet" (unlike
+  /// the transaction form/transfer sheet, where a wallet is required).
+  final bool showAllWalletsOption;
+
+  static Future<Wallet?> show(
+    BuildContext context, {
+    String? excludeWalletId,
+    bool showAllWalletsOption = false,
+  }) {
     return showModalBottomSheet<Wallet?>(
       context: context,
       // See ConfirmationSheet's useRootNavigator comment — otherwise
@@ -27,7 +40,10 @@ class WalletPickerSheet extends ConsumerWidget {
       useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => WalletPickerSheet(excludeWalletId: excludeWalletId),
+      builder: (_) => WalletPickerSheet(
+        excludeWalletId: excludeWalletId,
+        showAllWalletsOption: showAllWalletsOption,
+      ),
     );
   }
 
@@ -68,6 +84,12 @@ class WalletPickerSheet extends ConsumerWidget {
                   return ListView(
                     shrinkWrap: true,
                     children: [
+                      if (showAllWalletsOption)
+                        ListTile(
+                          leading: const Icon(Icons.list_alt_outlined),
+                          title: Text(l10n.allWalletsLabel),
+                          onTap: () => Navigator.of(context).pop(null),
+                        ),
                       for (final wallet in visible)
                         ListTile(
                           leading: CircleAvatar(

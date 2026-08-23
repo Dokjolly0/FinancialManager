@@ -100,10 +100,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             ),
             child: TextField(
               controller: _searchController,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Cerca per titolo',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: AppLocalizations.of(context).historySearchHint,
+                border: const OutlineInputBorder(),
                 isDense: true,
               ),
               onChanged: controller.setSearchQuery,

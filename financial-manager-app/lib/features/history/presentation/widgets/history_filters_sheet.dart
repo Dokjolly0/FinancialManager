@@ -10,10 +10,12 @@ import '../../../account/presentation/view_models/account_providers.dart';
 import '../../../categories/data/providers.dart';
 import '../../../categories/presentation/widgets/category_picker_sheet.dart';
 import '../../../transactions/domain/repositories/transaction_repository.dart';
+import '../../../wallets/data/providers.dart';
+import '../../../wallets/presentation/widgets/wallet_picker_sheet.dart';
 
 /// Full-height filters sheet (plan.md section 7.9): title, amount range,
-/// date range, type, category. Edits a local draft and only reports it back
-/// via "Applica" — "Azzera" resets to an empty filter.
+/// date range, type, category, wallet. Edits a local draft and only reports
+/// it back via "Applica" — "Azzera" resets to an empty filter.
 class HistoryFiltersSheet extends ConsumerStatefulWidget {
   const HistoryFiltersSheet({super.key, required this.initialFilter});
 
@@ -42,6 +44,7 @@ class HistoryFiltersSheet extends ConsumerStatefulWidget {
 class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
   late TransactionTypeFilter _type;
   late String? _categoryId;
+  late String? _walletId;
   late final TextEditingController _titleController;
   late final TextEditingController _minController;
   late final TextEditingController _maxController;
@@ -54,6 +57,7 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
     final filter = widget.initialFilter;
     _type = filter.type;
     _categoryId = filter.categoryId;
+    _walletId = filter.walletId;
     _titleController = TextEditingController(text: filter.title ?? '');
     _minController = TextEditingController(
       text: filter.amountMinMinor == null
@@ -117,6 +121,7 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
         type: _type,
         title: title.isEmpty ? null : title,
         categoryId: _categoryId,
+        walletId: _walletId,
         amountMinMinor: amountMin,
         amountMaxMinor: amountMax,
         // "Data finale" is inclusive of the whole day (plan.md section
@@ -150,6 +155,9 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
     final selectedCategory = matchingCategory.isEmpty
         ? null
         : matchingCategory.first;
+    final wallets = ref.watch(walletsListProvider).value ?? const [];
+    final matchingWallet = wallets.where((w) => w.id == _walletId).toList();
+    final selectedWallet = matchingWallet.isEmpty ? null : matchingWallet.first;
     final dateFormat = DateFormat('d MMM y', 'it_IT');
     final l10n = AppLocalizations.of(context);
 
@@ -190,7 +198,7 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
                     TextField(
                       controller: _titleController,
                       decoration: InputDecoration(
-                        labelText: l10n.titleFieldLabel,
+                        labelText: l10n.titleOrDescriptionFilterLabel,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -270,6 +278,21 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
                         setState(() => _categoryId = selected?.id);
                       },
                     ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.account_balance_wallet_outlined,
+                      ),
+                      title: Text(selectedWallet?.name ?? l10n.allWalletsLabel),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () async {
+                        final selected = await WalletPickerSheet.show(
+                          context,
+                          showAllWalletsOption: true,
+                        );
+                        setState(() => _walletId = selected?.id);
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -305,5 +328,6 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
         TransactionTypeFilter.debit => l10n.debitsColumnLabel,
         TransactionTypeFilter.credit => l10n.creditsColumnLabel,
         TransactionTypeFilter.adjustments => l10n.typeFilterAdjustments,
+        TransactionTypeFilter.transfers => l10n.typeFilterTransfers,
       };
 }

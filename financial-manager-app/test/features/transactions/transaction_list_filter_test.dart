@@ -11,6 +11,7 @@ void main() {
     test('counts every non-default field', () {
       final filter = TransactionListFilter(
         type: TransactionTypeFilter.debit,
+        walletId: 'wallet-1',
         title: 'caffè',
         categoryId: 'cat-1',
         amountMinMinor: 100,
@@ -18,7 +19,7 @@ void main() {
         occurredFrom: DateTime(2026, 1, 1),
         occurredTo: DateTime(2026, 2, 1),
       );
-      expect(filter.activeCount, 7);
+      expect(filter.activeCount, 8);
     });
   });
 
@@ -39,6 +40,14 @@ void main() {
       expect(cleared.title, isNull);
       expect(cleared.categoryId, isNull);
       expect(cleared.amountMinMinor, isNull);
+    });
+
+    test('clearWalletId resets the wallet filter to null', () {
+      const original = TransactionListFilter(walletId: 'wallet-1');
+
+      final cleared = original.copyWith(clearWalletId: true);
+
+      expect(cleared.walletId, isNull);
     });
 
     test('omitting a field leaves its previous value untouched', () {

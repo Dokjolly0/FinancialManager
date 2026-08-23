@@ -62,9 +62,11 @@ class UpdateTransactionParams {
 
 /// Which transaction kinds a history query should include (plan.md section
 /// 7.9 "Tipo: tutte, uscite, entrate, rettifiche"). [all] means no
-/// direction/kind filter at all — STANDARD, OPENING_BALANCE, and
-/// BALANCE_ADJUSTMENT rows all show up, each with their own tile styling.
-enum TransactionTypeFilter { all, debit, credit, adjustments }
+/// direction/kind filter at all — STANDARD, OPENING_BALANCE,
+/// BALANCE_ADJUSTMENT, and TRANSFER rows all show up, each with their own
+/// tile styling. [transfers] isolates TRANSFER-kind rows, which otherwise
+/// blend into [debit]/[credit] results.
+enum TransactionTypeFilter { all, debit, credit, adjustments, transfers }
 
 /// Filters for [TransactionRepository.listTransactions] (plan.md section
 /// 7.9, 17.1). All fields are optional; a `null`/empty field means

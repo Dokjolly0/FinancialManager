@@ -234,7 +234,7 @@ type ListFilter struct {
 	Direction      string // "" = any
 	Kind           string // "" = any
 	CategoryID     uuid.UUID
-	Title          string // prefix match against title_normalized (plan.md section 17.3)
+	Title          string // prefix match against title_normalized, or a contains match against description (plan.md section 17.3)
 	AmountMinMinor int64  // 0 = no lower bound
 	AmountMaxMinor int64  // 0 = no upper bound
 	OccurredFrom   time.Time
@@ -302,8 +302,10 @@ func (r *Repository) List(ctx context.Context, filter ListFilter) (Page, error) 
 		conditions = append(conditions, "category_id = $"+strconv.Itoa(len(args)))
 	}
 	if filter.Title != "" {
-		args = append(args, NormalizeTitle(filter.Title)+"%")
-		conditions = append(conditions, "title_normalized LIKE $"+strconv.Itoa(len(args)))
+		needle := NormalizeTitle(filter.Title)
+		args = append(args, needle+"%", "%"+needle+"%")
+		conditions = append(conditions, "(title_normalized LIKE $"+strconv.Itoa(len(args)-1)+
+			" OR lower(description) LIKE $"+strconv.Itoa(len(args))+")")
 	}
 	if filter.AmountMinMinor > 0 {
 		args = append(args, filter.AmountMinMinor)

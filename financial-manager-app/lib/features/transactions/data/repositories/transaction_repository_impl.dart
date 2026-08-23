@@ -74,17 +74,19 @@ class TransactionRepositoryImpl implements TransactionRepository {
     }
   }
 
-  /// Maps the "tutte/uscite/entrate/rettifiche" type filter (plan.md
-  /// section 7.9) onto the backend's direction/kind query params. Standard
-  /// transactions are filtered by direction; adjustments are a kind
-  /// regardless of direction; "all" leaves both unset so OPENING_BALANCE
-  /// and BALANCE_ADJUSTMENT rows still show up with their own tile style.
+  /// Maps the "tutte/uscite/entrate/rettifiche/trasferimenti" type filter
+  /// (plan.md section 7.9) onto the backend's direction/kind query params.
+  /// Standard transactions are filtered by direction; adjustments and
+  /// transfers are each a kind regardless of direction; "all" leaves both
+  /// unset so OPENING_BALANCE, BALANCE_ADJUSTMENT, and TRANSFER rows still
+  /// show up with their own tile style.
   (String?, String?) _directionAndKindFor(TransactionTypeFilter type) {
     return switch (type) {
       TransactionTypeFilter.all => (null, null),
       TransactionTypeFilter.debit => ('DEBIT', 'STANDARD'),
       TransactionTypeFilter.credit => ('CREDIT', 'STANDARD'),
       TransactionTypeFilter.adjustments => (null, 'BALANCE_ADJUSTMENT'),
+      TransactionTypeFilter.transfers => (null, 'TRANSFER'),
     };
   }
 

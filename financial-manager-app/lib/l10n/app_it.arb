@@ -247,6 +247,8 @@
   "filtersTitle": "Filtri",
   "typeLabel": "Tipo",
   "titleFieldLabel": "Titolo",
+  "titleOrDescriptionFilterLabel": "Titolo o descrizione",
+  "historySearchHint": "Cerca per titolo o descrizione",
   "minAmountLabel": "Importo minimo",
   "maxAmountLabel": "Importo massimo",
   "startDateLabel": "Data iniziale",
@@ -257,6 +259,7 @@
   "applyAction": "Applica",
   "typeFilterAll": "Tutte",
   "typeFilterAdjustments": "Rettifiche",
+  "typeFilterTransfers": "Trasferimenti",
 
   "categoryPickerTitle": "Categoria",
   "categoriesLoadError": "Impossibile caricare le categorie.",

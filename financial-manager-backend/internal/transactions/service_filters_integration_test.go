@@ -13,6 +13,7 @@ import (
 	"financial-manager-backend/internal/platform/apierror"
 	"financial-manager-backend/internal/templates"
 	"financial-manager-backend/internal/transactions"
+	"financial-manager-backend/internal/wallets"
 )
 
 // Exercises the Fase 5 additions to the ledger: category/template linkage
@@ -197,5 +198,108 @@ func TestList_FiltersByOccurredAtRange(t *testing.T) {
 	}
 	if len(result.Transactions) != 1 || result.Transactions[0].Title != "Spesa recente" {
 		t.Fatalf("List(occurred_from=2025) = %+v, want exactly \"Spesa recente\"", result.Transactions)
+	}
+}
+
+func TestList_FiltersByWallet(t *testing.T) {
+	h := newHarness(t, 1000000)
+	ctx := context.Background()
+
+	secondWallet, err := h.wallets.Create(ctx, h.userID, "Secondo portafoglio", "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, 0)
+	if err != nil {
+		t.Fatalf("create second wallet: %v", err)
+	}
+
+	if _, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 1000,
+		Currency: "EUR", Title: "Sul primo portafoglio",
+		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
+	}); err != nil {
+		t.Fatalf("create tx on first wallet: %v", err)
+	}
+	if _, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
+		UserID: h.userID, WalletID: secondWallet.ID, Direction: transactions.DirectionDebit, AmountMinor: 2000,
+		Currency: "EUR", Title: "Sul secondo portafoglio",
+		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
+	}); err != nil {
+		t.Fatalf("create tx on second wallet: %v", err)
+	}
+
+	result, err := h.service.List(ctx, transactions.ListFilter{
+		UserID: h.userID, WalletID: secondWallet.ID, Kind: transactions.KindStandard, Limit: 10,
+	})
+	if err != nil {
+		t.Fatalf("List(wallet_id) error = %v", err)
+	}
+	if len(result.Transactions) != 1 || result.Transactions[0].Title != "Sul secondo portafoglio" {
+		t.Fatalf("List(wallet_id=second) = %+v, want exactly \"Sul secondo portafoglio\"", result.Transactions)
+	}
+}
+
+func TestList_FiltersByKindTransfer(t *testing.T) {
+	h := newHarness(t, 1000000)
+	ctx := context.Background()
+
+	destWallet, err := h.wallets.Create(ctx, h.userID, "Destinazione", "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, 0)
+	if err != nil {
+		t.Fatalf("create destination wallet: %v", err)
+	}
+
+	if _, _, err := h.service.CreateTransfer(ctx, transactions.CreateTransferInput{
+		UserID: h.userID, SourceWalletID: h.walletID, DestinationWalletID: destWallet.ID, AmountMinor: 5000,
+		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
+	}); err != nil {
+		t.Fatalf("CreateTransfer() error = %v", err)
+	}
+	if _, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 1000,
+		Currency: "EUR", Title: "Spesa ordinaria",
+		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
+	}); err != nil {
+		t.Fatalf("create standard tx: %v", err)
+	}
+
+	result, err := h.service.List(ctx, transactions.ListFilter{
+		UserID: h.userID, Kind: transactions.KindTransfer, Limit: 10,
+	})
+	if err != nil {
+		t.Fatalf("List(kind=TRANSFER) error = %v", err)
+	}
+	if len(result.Transactions) != 2 {
+		t.Fatalf("List(kind=TRANSFER) = %+v, want exactly the transfer's two legs", result.Transactions)
+	}
+	for _, tx := range result.Transactions {
+		if tx.Kind != transactions.KindTransfer {
+			t.Fatalf("List(kind=TRANSFER) returned a non-transfer row: %+v", tx)
+		}
+	}
+}
+
+func TestList_FiltersByTitleMatchesDescriptionToo(t *testing.T) {
+	h := newHarness(t, 1000000)
+	ctx := context.Background()
+
+	description := "Rimborso spese trasferta Milano"
+	if _, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionCredit, AmountMinor: 3000,
+		Currency: "EUR", Title: "Bonifico", Description: &description,
+		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
+	}); err != nil {
+		t.Fatalf("create tx with description: %v", err)
+	}
+	if _, _, err := h.service.CreateStandard(ctx, transactions.CreateStandardInput{
+		UserID: h.userID, WalletID: h.walletID, Direction: transactions.DirectionDebit, AmountMinor: 1000,
+		Currency: "EUR", Title: "Altra spesa",
+		IdempotencyKey: uuid.New(), RequestBody: []byte("{}"),
+	}); err != nil {
+		t.Fatalf("create unrelated tx: %v", err)
+	}
+
+	result, err := h.service.List(ctx, transactions.ListFilter{UserID: h.userID, Title: "trasferta", Limit: 10})
+	if err != nil {
+		t.Fatalf("List(title=trasferta) error = %v", err)
+	}
+	if len(result.Transactions) != 1 || result.Transactions[0].Title != "Bonifico" {
+		t.Fatalf("List(title=trasferta) = %+v, want exactly \"Bonifico\" (matched via description)", result.Transactions)
 	}
 }

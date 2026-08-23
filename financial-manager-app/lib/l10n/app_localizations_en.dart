@@ -686,6 +686,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get titleFieldLabel => 'Title';
 
   @override
+  String get titleOrDescriptionFilterLabel => 'Title or description';
+
+  @override
+  String get historySearchHint => 'Search by title or description';
+
+  @override
   String get minAmountLabel => 'Minimum amount';
 
   @override
@@ -714,6 +720,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get typeFilterAdjustments => 'Adjustments';
+
+  @override
+  String get typeFilterTransfers => 'Transfers';
 
   @override
   String get categoryPickerTitle => 'Category';

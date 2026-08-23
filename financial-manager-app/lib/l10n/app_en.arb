@@ -265,6 +265,8 @@
   "filtersTitle": "Filters",
   "typeLabel": "Type",
   "titleFieldLabel": "Title",
+  "titleOrDescriptionFilterLabel": "Title or description",
+  "historySearchHint": "Search by title or description",
   "minAmountLabel": "Minimum amount",
   "maxAmountLabel": "Maximum amount",
   "startDateLabel": "Start date",
@@ -275,6 +277,7 @@
   "applyAction": "Apply",
   "typeFilterAll": "All",
   "typeFilterAdjustments": "Adjustments",
+  "typeFilterTransfers": "Transfers",
 
   "categoryPickerTitle": "Category",
   "categoriesLoadError": "Couldn't load categories.",
