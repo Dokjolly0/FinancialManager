@@ -1,6 +1,6 @@
 {
-    "name": "financialmanager",
-    "short_name": "financialmanager",
+    "name": "Financial Manager",
+    "short_name": "Financial Manager",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
