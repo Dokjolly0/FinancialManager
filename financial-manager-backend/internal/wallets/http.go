@@ -36,6 +36,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Post("/v1/wallets/{id}/archive", h.archive)
 	r.Get("/v1/wallets/{id}/denominations", h.getDenominations)
 	r.Put("/v1/wallets/{id}/denominations", h.replaceDenominations)
+	r.Get("/v1/wallets/{id}/voucher-lots", h.getVoucherLots)
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {
@@ -110,7 +111,10 @@ type walletRequest struct {
 
 type updateWalletRequest struct {
 	walletRequest
-	ExpectedVersion int64 `json:"version"`
+	ExpectedVersion          int64 `json:"version"`
+	VoucherExpiryCutoffMonth *int  `json:"voucher_expiry_cutoff_month,omitempty"`
+	VoucherExpiryMonth       *int  `json:"voucher_expiry_month,omitempty"`
+	VoucherExpiryDay         *int  `json:"voucher_expiry_day,omitempty"`
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +137,10 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := h.service.Update(r.Context(), UpdateServiceInput{
 		UserID: userID, WalletID: id, Name: req.Name, Type: req.Type, Icon: req.Icon, Color: req.Color,
-		ExpectedVersion: req.ExpectedVersion,
+		ExpectedVersion:          req.ExpectedVersion,
+		VoucherExpiryCutoffMonth: req.VoucherExpiryCutoffMonth,
+		VoucherExpiryMonth:       req.VoucherExpiryMonth,
+		VoucherExpiryDay:         req.VoucherExpiryDay,
 	})
 	if err != nil {
 		apierror.Write(w, r, err)
@@ -196,6 +203,26 @@ type denominationRequest struct {
 	DenominationMinor int  `json:"denomination_minor"`
 	Count             int  `json:"count"`
 	Enabled           bool `json:"enabled"`
+}
+
+func (h *Handler) getVoucherLots(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+
+	list, err := h.service.GetVoucherLots(r.Context(), userID, id)
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"voucher_lots": list})
 }
 
 func (h *Handler) replaceDenominations(w http.ResponseWriter, r *http.Request) {

@@ -4,11 +4,13 @@
 enum WalletType {
   cash,
   bank,
-  other;
+  other,
+  mealVoucher;
 
   static WalletType fromApi(String value) => switch (value) {
     'CASH' => WalletType.cash,
     'BANK' => WalletType.bank,
+    'MEAL_VOUCHER' => WalletType.mealVoucher,
     'OTHER' => WalletType.other,
     _ => WalletType.other,
   };
@@ -17,6 +19,7 @@ enum WalletType {
     WalletType.cash => 'CASH',
     WalletType.bank => 'BANK',
     WalletType.other => 'OTHER',
+    WalletType.mealVoucher => 'MEAL_VOUCHER',
   };
 }
 
@@ -37,7 +40,16 @@ const List<String> walletIconKeys = [
   'shopping_bag',
   'home',
   'savings',
+  'restaurant',
 ];
 
 const String defaultWalletIcon = 'wallet';
 const String defaultWalletColor = '#6750A4';
+
+/// Meal-voucher expiry policy defaults (mirrors
+/// wallets.DefaultVoucherExpiry* in the backend): vouchers loaded
+/// January-August expire December 31 of the same year; loaded
+/// September-December, December 31 of the following year.
+const int defaultVoucherExpiryCutoffMonth = 8;
+const int defaultVoucherExpiryMonth = 12;
+const int defaultVoucherExpiryDay = 31;

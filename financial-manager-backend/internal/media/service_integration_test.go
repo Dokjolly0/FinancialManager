@@ -243,7 +243,10 @@ func TestDelete_RejectsWhileReferencedByATransaction(t *testing.T) {
 	mediaID := uuid.MustParse(asset.ID)
 
 	walletsRepo := wallets.NewRepository(h.dbPool)
-	wallet, err := walletsRepo.Create(ctx, h.userID, wallets.DefaultName, "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, 100000)
+	wallet, err := walletsRepo.Create(ctx, wallets.CreateRowInput{
+		UserID: h.userID, Name: wallets.DefaultName, Currency: "EUR", Type: wallets.TypeOther,
+		Icon: wallets.DefaultIcon, Color: wallets.DefaultColor, OpeningBalanceMinor: 100000,
+	})
 	if err != nil {
 		t.Fatalf("create test wallet: %v", err)
 	}

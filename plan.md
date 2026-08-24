@@ -184,6 +184,8 @@ The architecture must nonetheless avoid choices that would make these features i
 
 ## 3. MVP scope and later features
 
+> **Status note (2026-08):** several §3.2 post-MVP items are already delivered and superseded by later sections — multiple accounts/wallets and transfers between them (§11.6, §14.4), and a `MEAL_VOUCHER` wallet type with voucher lots, expiry tracking, and split expenses (§4.1, §11.6, §11.14/§11.15, §14.4/14.5) that wasn't on this list at all when it was written. This note is left inline rather than rewriting the roadmap below, which still reflects the original MVP-era planning.
+
 ### 3.1 Mandatory MVP
 
 - Full manual registration.
@@ -242,6 +244,7 @@ The architecture must nonetheless avoid choices that would make these features i
 - **Category:** economic classification, e.g. "Home," "Transport," "Salary."
 - **Media asset:** an uploaded, searched, or reused image.
 - **Adjustment:** a special transaction used to align the balance.
+- **Voucher lot:** a batch of meal vouchers loaded onto a `MEAL_VOUCHER` wallet in one operation, all sharing one expiry date computed from the wallet's expiry policy; consumed FIFO by that date (§11.14/§11.15, §14.4).
 
 ### 4.2 Transaction types
 
@@ -255,7 +258,10 @@ Technical nature:
 - `STANDARD`: a normal income or expense;
 - `OPENING_BALANCE`: initial balance;
 - `BALANCE_ADJUSTMENT`: manual adjustment;
-- in the future `TRANSFER`, `IMPORT`, `RECURRING_GENERATED`.
+- `TRANSFER`: a wallet-to-wallet move, two linked rows via `transfer_pair_id`, excluded from expense/income report totals;
+- in the future `IMPORT`, `RECURRING_GENERATED`.
+
+A meal-voucher expense that isn't fully covered by vouchers produces two `STANDARD` rows linked via `linked_transaction_id` instead — the voucher-wallet leg and an other-wallet leg for the shortfall. Unlike `transfer_pair_id`, both legs stay `STANDARD` (not a new kind) so they count normally in expense reports.
 
 ### 4.3 Rules for amounts
 
@@ -266,6 +272,7 @@ Technical nature:
 - The initial balance must be `>= 0`.
 - After registration, the balance may become negative as a result of debits, unless a product decision states otherwise.
 - The backend validates reasonable maximum limits to prevent overflow or anomalous input.
+- For a `MEAL_VOUCHER` wallet, every amount affecting its balance is quantized: always `N × voucher_unit_value_minor` for a whole number of vouchers `N`, never an arbitrary amount (§11.14).
 
 ### 4.4 Rules for title and template
 
@@ -1335,14 +1342,23 @@ user_id UUID NOT NULL FK users
 name VARCHAR(80) NOT NULL DEFAULT 'Main wallet'
 currency CHAR(3) NOT NULL DEFAULT 'EUR'
 current_balance_minor BIGINT NOT NULL
+type VARCHAR(16) NOT NULL DEFAULT 'OTHER'  -- CASH/BANK/OTHER/MEAL_VOUCHER
+icon VARCHAR(32) NOT NULL DEFAULT 'wallet'
+color CHAR(7) NOT NULL DEFAULT '#6750A4'
 created_at TIMESTAMPTZ NOT NULL
 updated_at TIMESTAMPTZ NOT NULL
 version BIGINT NOT NULL DEFAULT 1
 archived_at TIMESTAMPTZ NULL
-UNIQUE(user_id) WHERE archived_at IS NULL  -- MVP rule
+-- MEAL_VOUCHER only, all four set together (paired NULL-ness CHECKs):
+voucher_unit_value_minor INT NULL       -- fixed at creation, never editable afterwards
+voucher_expiry_cutoff_month INT NULL    -- 1-12
+voucher_expiry_month INT NULL           -- 1-12
+voucher_expiry_day INT NULL             -- 1-31
 ```
 
-The current balance is a denormalized value maintained transactionally. The ability to recompute it from the ledger must be available as an administrative control.
+Multi-wallet: a user may have more than one active wallet (post-MVP extension of the original single-wallet-per-user rule). The current balance is a denormalized value maintained transactionally. The ability to recompute it from the ledger must be available as an administrative control.
+
+A `MEAL_VOUCHER` wallet's balance is never set directly — it's always the sum of its active lots' remaining quantity × `voucher_unit_value_minor` (§11.14). A voucher loaded in a month at or before `voucher_expiry_cutoff_month` expires on `voucher_expiry_month`/`voucher_expiry_day` of the same year; loaded after, of the following year — the default (month 8, December 31) mirrors the common Italian digital-voucher issuer convention (loaded Jan-Aug → expires Dec 31 same year; loaded Sep-Dec → Dec 31 next year), but every wallet can override it. The three expiry fields stay editable after creation (only affecting future loads); `voucher_unit_value_minor` does not — changing the face value means creating a new wallet.
 
 ### 11.7 `categories` table
 
@@ -1434,6 +1450,9 @@ version BIGINT NOT NULL DEFAULT 1
 created_by_session_id UUID NULL
 idempotency_key UUID NULL
 metadata JSONB NOT NULL DEFAULT '{}'
+transfer_pair_id UUID NULL FK transactions      -- links a TRANSFER's two rows to each other
+linked_transaction_id UUID NULL FK transactions -- links a split meal-voucher expense's two STANDARD legs
+system_generated BOOLEAN NOT NULL DEFAULT FALSE -- true only for the automatic "vouchers expired" write-off
 UNIQUE(user_id, idempotency_key) WHERE idempotency_key IS NOT NULL
 ```
 
@@ -1443,7 +1462,8 @@ Application and database constraints:
 - `OPENING_BALANCE` only credit, and only once per wallet;
 - `BALANCE_ADJUSTMENT` can be credit or debit;
 - title and amount required;
-- a deleted transaction does not contribute to the balance.
+- a deleted transaction does not contribute to the balance;
+- `system_generated` rows are never user-editable or user-deletable.
 
 ### 11.11 `transaction_audit_events` table
 
@@ -1488,6 +1508,34 @@ sessions(user_id, expires_at) WHERE revoked_at IS NULL
 ```
 
 For advanced text search, a PostgreSQL trigram index can be added in a later phase. For the MVP, prefix search on the normalized title is sufficient.
+
+### 11.14 `wallet_voucher_lots` table
+
+```text
+id UUID PK
+wallet_id UUID NOT NULL FK wallets
+quantity_total INT NOT NULL CHECK (quantity_total > 0)
+quantity_remaining INT NOT NULL CHECK (0 <= quantity_remaining <= quantity_total)
+quantity_expired INT NOT NULL DEFAULT 0 CHECK (0 <= quantity_expired <= quantity_total)
+expires_at DATE NOT NULL
+created_by_transaction_id UUID NOT NULL FK transactions
+expired_by_transaction_id UUID NULL FK transactions
+created_at TIMESTAMPTZ NOT NULL
+```
+
+One row per batch of vouchers loaded in a single operation (wallet creation with an initial quantity, or a later voucher credit), all sharing one `expires_at` computed at load time from the wallet's expiry policy (§11.6). `quantity_remaining` decreases both from spending/removal (recorded in §11.15) and from expiry (`applyVoucherLotExpiry`, no §11.15 row — a loss, not a spend); `quantity_expired`/`expired_by_transaction_id` record how many were lost and which system-generated "vouchers expired" transaction realized it, so the lot stays visible as history once `quantity_remaining` hits 0. Expiry is swept both lazily (on the next mutation touching the wallet) and by a scheduled worker job, so a wallet nobody touches for a long time still ends up correct.
+
+### 11.15 `wallet_voucher_lot_consumptions` table
+
+```text
+id UUID PK
+transaction_id UUID NOT NULL FK transactions
+lot_id UUID NOT NULL FK wallet_voucher_lots
+quantity INT NOT NULL CHECK (quantity > 0)
+created_at TIMESTAMPTZ NOT NULL
+```
+
+Join table recording exactly how many vouchers a transaction (a voucher-expense leg, or a manual voucher removal) drew from each lot it touched, consumed FIFO by `expires_at`. Needed so editing or deleting that transaction can credit the right quantities back to the right lots, even when the original consumption spanned multiple lots or other activity happened on the wallet since.
 
 ---
 
@@ -1678,12 +1726,26 @@ For link and unlink, require recent authentication.
 
 ### 14.4 Wallet
 
+Multi-wallet extension: `GET /v1/wallet` is kept for backward compatibility (the caller's oldest active wallet), superseded by the plural endpoints below. `POST /v1/wallets` is served from the transactions module, not wallets, because a non-zero opening balance (or, for `MEAL_VOUCHER`, an initial voucher quantity) must insert the matching ledger row in the same DB transaction as the wallet itself.
+
 ```http
-GET  /v1/wallet
-POST /v1/wallet/balance-adjustments
+GET    /v1/wallet                                    -- legacy single-wallet shape
+GET    /v1/wallets
+GET    /v1/wallets/{id}
+POST   /v1/wallets
+PATCH  /v1/wallets/{id}
+POST   /v1/wallets/{id}/archive
+POST   /v1/wallets/{id}/balance-adjustments           -- not for MEAL_VOUCHER wallets, see below
+GET    /v1/wallets/{id}/denominations                 -- CASH only, informational
+PUT    /v1/wallets/{id}/denominations
+GET    /v1/wallets/{id}/voucher-lots                  -- MEAL_VOUCHER only
+POST   /v1/wallets/{id}/voucher-credits                -- MEAL_VOUCHER only
+PATCH  /v1/wallets/{id}/voucher-credits/{creditId}
+POST   /v1/transfers
+PATCH  /v1/transactions/{id}/transfer
 ```
 
-`GET /wallet` response:
+`GET /v1/wallets/{id}` response (`type` is `CASH`/`BANK`/`OTHER`/`MEAL_VOUCHER`; the `voucher_*` fields are only present for `MEAL_VOUCHER`, §11.6):
 
 ```json
 {
@@ -1691,10 +1753,22 @@ POST /v1/wallet/balance-adjustments
   "name": "Main wallet",
   "currency": "EUR",
   "current_balance_minor": 243050,
+  "type": "OTHER",
+  "icon": "wallet",
+  "color": "#6750A4",
   "version": 42,
-  "updated_at": "..."
+  "updated_at": "...",
+  "voucher_unit_value_minor": 800,
+  "voucher_expiry_cutoff_month": 8,
+  "voucher_expiry_month": 12,
+  "voucher_expiry_day": 31,
+  "voucher_expiring_soon_count": 2
 }
 ```
+
+`POST /v1/wallets/{id}/voucher-credits` takes a signed `quantity` — positive adds a new lot (its `expires_at` computed from the wallet's expiry policy), negative removes vouchers FIFO by expiry, both outside of a purchase (received from an employer, lost, miscounted). `GET /v1/wallets/{id}/voucher-lots` returns every lot (active and expired history, §11.14) — the client buckets them into active/expiring-soon/expired.
+
+A `POST /v1/wallets` or generic-endpoint call against a `MEAL_VOUCHER` wallet where the operation isn't voucher-specific (`balance-adjustments`, `POST /v1/transactions`, `/v1/transfers`) is rejected with `WALLET_IS_MEAL_VOUCHER` — every mutation there must keep the "balance = Σ active lots × voucher_unit_value_minor" invariant, which only the voucher-specific endpoints preserve.
 
 ### 14.5 Transactions
 
@@ -1703,9 +1777,14 @@ GET    /v1/transactions
 POST   /v1/transactions
 GET    /v1/transactions/{id}
 PATCH  /v1/transactions/{id}
+PATCH  /v1/transactions/{id}/opening-balance
 DELETE /v1/transactions/{id}
 POST   /v1/transactions/{id}/restore   -- optional
+POST   /v1/voucher-expenses
+PATCH  /v1/voucher-expenses/{id}
 ```
+
+`POST /v1/voucher-expenses` records a purchase paid partly or fully with meal vouchers: `voucher_wallet_id`, `voucher_quantity`, `total_expense_minor`, and — only if the vouchers' value falls short of `total_expense_minor` — `other_wallet_id` for a second linked leg covering the difference. The voucher-wallet leg always debits `voucher_quantity × voucher_unit_value_minor` in full (never just the real cost — the excess is lost, matching real meal-voucher behavior); both legs are `kind=STANDARD` (unlike `TRANSFER`) so they count normally in reports, linked via `linked_transaction_id` (§11.10) rather than `transfer_pair_id`. `PATCH /v1/voucher-expenses/{id}` (addressed by the voucher-wallet leg's id) edits quantity, real cost, difference wallet, and/or date, reversing and recomputing the lot consumption from scratch. `DELETE /v1/transactions/{id}` on either leg of a voucher expense, or on a voucher credit/removal, reverses the associated lot bookkeeping — see §11.14/§11.15.
 
 List parameters:
 

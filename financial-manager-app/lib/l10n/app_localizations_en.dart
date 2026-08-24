@@ -182,6 +182,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorCodeMediaNotFound => 'Image not found.';
 
   @override
+  String get errorCodeWalletNotMealVoucher =>
+      'Only available for meal-voucher wallets.';
+
+  @override
+  String get errorCodeWalletIsMealVoucher =>
+      'Not available for meal-voucher wallets: use the voucher-specific operations.';
+
+  @override
+  String get errorCodeVoucherInsufficientBalance =>
+      'Not enough vouchers available.';
+
+  @override
+  String get errorCodeVoucherLotAlreadyUsed =>
+      'Some of these vouchers have already been spent or removed.';
+
+  @override
+  String get errorCodeVoucherLotAlreadyExpired =>
+      'This voucher lot has already expired and can no longer be edited.';
+
+  @override
+  String get errorCodeVoucherAutoAdjustmentNotDeletable =>
+      'Automatic voucher expiry adjustments can\'t be deleted.';
+
+  @override
+  String get errorCodeOtherWalletRequired =>
+      'Select the wallet that paid the difference.';
+
+  @override
+  String get errorCodeOtherWalletNotAllowed =>
+      'The chosen vouchers already cover the whole expense: no other wallet is needed.';
+
+  @override
+  String get errorCodeSameAsVoucherWallet =>
+      'The difference wallet must be different from the voucher wallet.';
+
+  @override
+  String get errorCodeInvalidMonth => 'Invalid month.';
+
+  @override
+  String get errorCodeInvalidDay => 'Invalid day.';
+
+  @override
+  String get errorCodeNotAllowedForWalletType =>
+      'Not allowed for this wallet type.';
+
+  @override
   String get errorCodeRequiredField => 'This field is required.';
 
   @override
@@ -451,6 +497,127 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get allWalletsLabel => 'All wallets';
+
+  @override
+  String get walletTypeMealVoucher => 'Meal vouchers';
+
+  @override
+  String get voucherUnitValueLabel => 'Voucher face value';
+
+  @override
+  String get voucherExpiryPolicyLabel => 'Voucher expiry';
+
+  @override
+  String get voucherExpiryCutoffMonthLabel => 'Through month';
+
+  @override
+  String get voucherExpiryMonthLabel => 'Expiry month';
+
+  @override
+  String get voucherExpiryDayLabel => 'Expiry day';
+
+  @override
+  String get voucherInitialQuantityLabel => 'Initial number of vouchers';
+
+  @override
+  String get voucherLoadedAtLabel => 'Load date';
+
+  @override
+  String get voucherLotsAction => 'Meal vouchers';
+
+  @override
+  String get voucherLotsScreenTitle => 'Meal vouchers';
+
+  @override
+  String get voucherLotsLoadError => 'Couldn\'t load meal vouchers.';
+
+  @override
+  String get voucherActiveSectionTitle => 'Active';
+
+  @override
+  String get voucherActiveEmptyMessage => 'No active vouchers.';
+
+  @override
+  String get voucherExpiringSoonSectionTitle => 'Expiring soon';
+
+  @override
+  String get voucherExpiredSectionTitle => 'Expired';
+
+  @override
+  String get voucherExpiredEmptyMessage => 'No expired vouchers.';
+
+  @override
+  String voucherLotQuantityLabel(int count) {
+    return '$count vouchers';
+  }
+
+  @override
+  String voucherLotExpiresOnLabel(String date) {
+    return 'Expires on $date';
+  }
+
+  @override
+  String voucherLotExpiredOnLabel(String date) {
+    return 'Expired on $date';
+  }
+
+  @override
+  String voucherExpiringSoonBadge(int count) {
+    return '$count vouchers expiring soon';
+  }
+
+  @override
+  String get addVouchersAction => 'Add vouchers';
+
+  @override
+  String get removeVouchersAction => 'Remove vouchers';
+
+  @override
+  String get addVouchersSheetTitle => 'Add vouchers';
+
+  @override
+  String get removeVouchersSheetTitle => 'Remove vouchers';
+
+  @override
+  String get voucherQuantityLabel => 'Number of vouchers';
+
+  @override
+  String get voucherExpenseAction => 'Expense with meal vouchers';
+
+  @override
+  String get voucherExpenseSheetTitle => 'Expense with meal vouchers';
+
+  @override
+  String get editVoucherExpenseSheetTitle => 'Edit meal voucher expense';
+
+  @override
+  String get voucherWalletLabel => 'Voucher wallet';
+
+  @override
+  String get voucherOtherWalletLabel => 'Paid with';
+
+  @override
+  String get voucherOtherWalletRequiredError =>
+      'Select the wallet that paid the difference.';
+
+  @override
+  String get voucherTotalExpenseLabel => 'Total expense';
+
+  @override
+  String voucherShortfallLabel(String amount) {
+    return 'Difference to pay: $amount';
+  }
+
+  @override
+  String voucherSuggestedQuantityHelper(int count) {
+    return 'Suggested minimum: $count';
+  }
+
+  @override
+  String get submitVoucherExpenseAction => 'Record expense';
+
+  @override
+  String get saveVoucherExpenseAction => 'Save expense';
 
   @override
   String get accountSecurityMenuTitle => 'Security';

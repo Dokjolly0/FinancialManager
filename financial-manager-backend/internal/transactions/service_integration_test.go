@@ -79,7 +79,10 @@ func newHarness(t *testing.T, openingBalanceMinor int64) harness {
 		t.Fatalf("create test user: %v", err)
 	}
 
-	wallet, err := walletsRepo.Create(context.Background(), user.ID, wallets.DefaultName, "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, openingBalanceMinor)
+	wallet, err := walletsRepo.Create(context.Background(), wallets.CreateRowInput{
+		UserID: user.ID, Name: wallets.DefaultName, Currency: "EUR", Type: wallets.TypeOther,
+		Icon: wallets.DefaultIcon, Color: wallets.DefaultColor, OpeningBalanceMinor: openingBalanceMinor,
+	})
 	if err != nil {
 		t.Fatalf("create test wallet: %v", err)
 	}
@@ -369,7 +372,10 @@ func TestUpdateTransfer_AdjustsBothWalletsAndRejectsOtherKinds(t *testing.T) {
 	h := newHarness(t, 100000) // source wallet: 1000.00 EUR
 	ctx := context.Background()
 
-	destWallet, err := h.wallets.Create(ctx, h.userID, "Second wallet", "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, 50000)
+	destWallet, err := h.wallets.Create(ctx, wallets.CreateRowInput{
+		UserID: h.userID, Name: "Second wallet", Currency: "EUR", Type: wallets.TypeOther,
+		Icon: wallets.DefaultIcon, Color: wallets.DefaultColor, OpeningBalanceMinor: 50000,
+	})
 	if err != nil {
 		t.Fatalf("create second wallet: %v", err)
 	}

@@ -42,6 +42,19 @@ String localizeErrorCode(AppLocalizations l10n, String code) {
     'CATEGORY_NOT_FOUND' => l10n.errorCodeCategoryNotFound,
     'TEMPLATE_NOT_FOUND' => l10n.errorCodeTemplateNotFound,
     'MEDIA_NOT_FOUND' => l10n.errorCodeMediaNotFound,
+    'WALLET_NOT_MEAL_VOUCHER' => l10n.errorCodeWalletNotMealVoucher,
+    'WALLET_IS_MEAL_VOUCHER' => l10n.errorCodeWalletIsMealVoucher,
+    'VOUCHER_INSUFFICIENT_BALANCE' => l10n.errorCodeVoucherInsufficientBalance,
+    'VOUCHER_LOT_ALREADY_USED' => l10n.errorCodeVoucherLotAlreadyUsed,
+    'VOUCHER_LOT_ALREADY_EXPIRED' => l10n.errorCodeVoucherLotAlreadyExpired,
+    'VOUCHER_AUTO_ADJUSTMENT_NOT_DELETABLE' =>
+      l10n.errorCodeVoucherAutoAdjustmentNotDeletable,
+    'OTHER_WALLET_REQUIRED' => l10n.errorCodeOtherWalletRequired,
+    'OTHER_WALLET_NOT_ALLOWED' => l10n.errorCodeOtherWalletNotAllowed,
+    'SAME_AS_VOUCHER_WALLET' => l10n.errorCodeSameAsVoucherWallet,
+    'INVALID_MONTH' => l10n.errorCodeInvalidMonth,
+    'INVALID_DAY' => l10n.errorCodeInvalidDay,
+    'NOT_ALLOWED_FOR_WALLET_TYPE' => l10n.errorCodeNotAllowedForWalletType,
 
     // Field-error codes (apierror.go Field* constants).
     'REQUIRED_FIELD' => l10n.errorCodeRequiredField,

@@ -6,6 +6,7 @@ import '../../../../core/formatting/color_hex.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/providers.dart';
 import '../../domain/models/wallet.dart';
+import '../../domain/models/wallet_type.dart';
 import 'wallet_icon_data.dart';
 
 /// Bottom sheet listing every active wallet, used by the transaction form's
@@ -17,6 +18,7 @@ class WalletPickerSheet extends ConsumerWidget {
     super.key,
     this.excludeWalletId,
     this.showAllWalletsOption = false,
+    this.typeFilter,
   });
 
   /// Hides one wallet from the list — used by the transfer sheet so the
@@ -28,10 +30,17 @@ class WalletPickerSheet extends ConsumerWidget {
   /// the transaction form/transfer sheet, where a wallet is required).
   final bool showAllWalletsOption;
 
+  /// Restricts the list to wallets of these types — used by
+  /// VoucherExpenseSheet, whose voucher-wallet picker only makes sense over
+  /// MEAL_VOUCHER wallets, and whose "other wallet" picker excludes them.
+  /// `null` means unfiltered.
+  final Set<WalletType>? typeFilter;
+
   static Future<Wallet?> show(
     BuildContext context, {
     String? excludeWalletId,
     bool showAllWalletsOption = false,
+    Set<WalletType>? typeFilter,
   }) {
     return showModalBottomSheet<Wallet?>(
       context: context,
@@ -43,6 +52,7 @@ class WalletPickerSheet extends ConsumerWidget {
       builder: (_) => WalletPickerSheet(
         excludeWalletId: excludeWalletId,
         showAllWalletsOption: showAllWalletsOption,
+        typeFilter: typeFilter,
       ),
     );
   }
@@ -80,6 +90,7 @@ class WalletPickerSheet extends ConsumerWidget {
                 data: (wallets) {
                   final visible = wallets
                       .where((w) => w.id != excludeWalletId)
+                      .where((w) => typeFilter?.contains(w.type) ?? true)
                       .toList();
                   return ListView(
                     shrinkWrap: true,

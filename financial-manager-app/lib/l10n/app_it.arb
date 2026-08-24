@@ -58,6 +58,18 @@
   "errorCodeCategoryNotFound": "Categoria non trovata.",
   "errorCodeTemplateNotFound": "Modello non trovato.",
   "errorCodeMediaNotFound": "Immagine non trovata.",
+  "errorCodeWalletNotMealVoucher": "Disponibile solo per i portafogli buoni pasto.",
+  "errorCodeWalletIsMealVoucher": "Non disponibile per i portafogli buoni pasto: usa le operazioni dedicate ai buoni.",
+  "errorCodeVoucherInsufficientBalance": "Non ci sono abbastanza buoni disponibili.",
+  "errorCodeVoucherLotAlreadyUsed": "Alcuni di questi buoni sono già stati spesi o rimossi.",
+  "errorCodeVoucherLotAlreadyExpired": "Questo lotto di buoni è già scaduto e non può più essere modificato.",
+  "errorCodeVoucherAutoAdjustmentNotDeletable": "Le rettifiche automatiche per buoni scaduti non possono essere eliminate.",
+  "errorCodeOtherWalletRequired": "Seleziona il portafoglio con cui hai pagato la differenza.",
+  "errorCodeOtherWalletNotAllowed": "I buoni scelti coprono già l'intera spesa: non serve un altro portafoglio.",
+  "errorCodeSameAsVoucherWallet": "Il portafoglio della differenza deve essere diverso da quello dei buoni.",
+  "errorCodeInvalidMonth": "Mese non valido.",
+  "errorCodeInvalidDay": "Giorno non valido.",
+  "errorCodeNotAllowedForWalletType": "Non consentito per questo tipo di portafoglio.",
 
   "errorCodeRequiredField": "Campo obbligatorio.",
   "errorCodeUsernameLengthInvalid": "Deve avere tra 3 e 40 caratteri.",
@@ -152,6 +164,61 @@
   "saveTransferAction": "Salva trasferimento",
   "walletBadgeArchived": "Archiviato",
   "allWalletsLabel": "Tutti i portafogli",
+
+  "walletTypeMealVoucher": "Buoni pasto",
+  "voucherUnitValueLabel": "Valore del buono",
+  "voucherExpiryPolicyLabel": "Scadenza dei buoni",
+  "voucherExpiryCutoffMonthLabel": "Fino al mese di",
+  "voucherExpiryMonthLabel": "Mese di scadenza",
+  "voucherExpiryDayLabel": "Giorno di scadenza",
+  "voucherInitialQuantityLabel": "Numero di buoni iniziali",
+  "voucherLoadedAtLabel": "Data di carico",
+  "voucherLotsAction": "Buoni pasto",
+  "voucherLotsScreenTitle": "Buoni pasto",
+  "voucherLotsLoadError": "Impossibile caricare i buoni pasto.",
+  "voucherActiveSectionTitle": "Attivi",
+  "voucherActiveEmptyMessage": "Nessun buono attivo.",
+  "voucherExpiringSoonSectionTitle": "In scadenza a breve",
+  "voucherExpiredSectionTitle": "Scaduti",
+  "voucherExpiredEmptyMessage": "Nessun buono scaduto.",
+  "voucherLotQuantityLabel": "{count} buoni",
+  "@voucherLotQuantityLabel": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "voucherLotExpiresOnLabel": "Scade il {date}",
+  "@voucherLotExpiresOnLabel": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "voucherLotExpiredOnLabel": "Scaduto il {date}",
+  "@voucherLotExpiredOnLabel": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "voucherExpiringSoonBadge": "{count} buoni in scadenza",
+  "@voucherExpiringSoonBadge": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "addVouchersAction": "Aggiungi buoni",
+  "removeVouchersAction": "Rimuovi buoni",
+  "addVouchersSheetTitle": "Aggiungi buoni",
+  "removeVouchersSheetTitle": "Rimuovi buoni",
+  "voucherQuantityLabel": "Numero di buoni",
+  "voucherExpenseAction": "Spesa con buoni pasto",
+  "voucherExpenseSheetTitle": "Spesa con buoni pasto",
+  "editVoucherExpenseSheetTitle": "Modifica spesa con buoni pasto",
+  "voucherWalletLabel": "Portafoglio buoni",
+  "voucherOtherWalletLabel": "Pagato con",
+  "voucherOtherWalletRequiredError": "Seleziona il portafoglio con cui hai pagato la differenza.",
+  "voucherTotalExpenseLabel": "Totale della spesa",
+  "voucherShortfallLabel": "Differenza da pagare: {amount}",
+  "@voucherShortfallLabel": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+  "voucherSuggestedQuantityHelper": "Minimo consigliato: {count}",
+  "@voucherSuggestedQuantityHelper": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "submitVoucherExpenseAction": "Registra spesa",
+  "saveVoucherExpenseAction": "Salva spesa",
   "accountSecurityMenuTitle": "Sicurezza",
   "accountSecurityMenuSubtitle": "Password, sessioni attive, logout",
   "accountLinkedAccountsMenuTitle": "Account collegati",

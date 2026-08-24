@@ -78,7 +78,10 @@ func newHarness(t *testing.T) harness {
 	if err != nil {
 		t.Fatalf("create test user: %v", err)
 	}
-	wallet, err := walletsRepo.Create(context.Background(), user.ID, wallets.DefaultName, "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, 10000)
+	wallet, err := walletsRepo.Create(context.Background(), wallets.CreateRowInput{
+		UserID: user.ID, Name: wallets.DefaultName, Currency: "EUR", Type: wallets.TypeOther,
+		Icon: wallets.DefaultIcon, Color: wallets.DefaultColor, OpeningBalanceMinor: 10000,
+	})
 	if err != nil {
 		t.Fatalf("create test wallet: %v", err)
 	}

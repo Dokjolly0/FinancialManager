@@ -4,12 +4,168 @@ info:
   version: "1"
   description: >
     REST API for the FinancialManager app (plan.md section 14). This
-    document grows alongside each backend module as it is implemented;
-    only platform/health endpoints exist so far.
+    document grows alongside each backend module as it is implemented —
+    coverage today is partial: platform/health endpoints, plus the
+    meal-voucher surface of the wallets/transactions modules
+    (plan.md section 4.1, 11.6, 11.14, 11.15, 14.4, 14.5). The rest of
+    wallets/transactions (plain CRUD, standard transactions, transfers,
+    balance adjustments) predates this file and isn't documented here yet.
 servers:
   - url: /v1
 
 paths:
+  /wallets/{id}/voucher-lots:
+    get:
+      summary: List every lot (active and expired history) for a MEAL_VOUCHER wallet.
+      operationId: getWalletVoucherLots
+      tags: [vouchers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Lots, oldest expires_at first. The client buckets them into active/expiring-soon/expired.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  voucher_lots:
+                    type: array
+                    items: { $ref: "#/components/schemas/VoucherLot" }
+        "403":
+          description: The wallet isn't type MEAL_VOUCHER.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /wallets/{id}/voucher-credits:
+    post:
+      summary: Add (positive quantity) or remove (negative) vouchers outside of a purchase.
+      operationId: createVoucherCredit
+      tags: [vouchers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VoucherCreditRequest" }
+      responses:
+        "201":
+          description: The new/adjusted credit transaction and the wallet's updated balance.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transaction: { $ref: "#/components/schemas/Transaction" }
+                  wallet: { $ref: "#/components/schemas/Wallet" }
+        "422":
+          description: Validation error, e.g. removing more vouchers than are available (field code VOUCHER_INSUFFICIENT_BALANCE).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /wallets/{id}/voucher-credits/{creditId}:
+    patch:
+      summary: Edit a previously created voucher credit/removal's quantity and/or date.
+      operationId: updateVoucherCredit
+      tags: [vouchers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: creditId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateVoucherCreditRequest" }
+      responses:
+        "200":
+          description: The updated transaction and the wallet's updated balance.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transaction: { $ref: "#/components/schemas/Transaction" }
+                  wallet: { $ref: "#/components/schemas/Wallet" }
+
+  /voucher-expenses:
+    post:
+      summary: Record a purchase paid partly or fully with meal vouchers.
+      operationId: createVoucherExpense
+      tags: [vouchers]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VoucherExpenseRequest" }
+      responses:
+        "201":
+          description: >
+            The voucher-wallet leg (and, if the vouchers didn't cover the
+            full expense, the other-wallet leg), with both wallets' updated
+            balances.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VoucherExpenseResult" }
+        "422":
+          description: >
+            Validation error — insufficient vouchers (VOUCHER_INSUFFICIENT_BALANCE),
+            a missing/unneeded other_wallet_id (OTHER_WALLET_REQUIRED /
+            OTHER_WALLET_NOT_ALLOWED), or the usual field checks.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /voucher-expenses/{id}:
+    patch:
+      summary: Edit a voucher expense's quantity, real cost, difference wallet, and/or date.
+      operationId: updateVoucherExpense
+      tags: [vouchers]
+      description: >
+        [id] is always the voucher-wallet leg's transaction id, never the
+        optional other-wallet leg's. Internally reverses the expense's
+        prior lot consumption and shortfall-leg effect, then recomputes
+        from scratch against the wallet's current lots and the new inputs.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VoucherExpenseRequest" }
+      responses:
+        "200":
+          description: Same shape as creation.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VoucherExpenseResult" }
+
   /health/live:
     get:
       summary: Liveness probe. Never depends on external services.
@@ -39,6 +195,117 @@ paths:
 
 components:
   schemas:
+    # Only the fields the voucher endpoints' payloads need — not a full
+    # retroactive spec of the wallet/transaction resources (see the top-level
+    # description). type is CASH/BANK/OTHER/MEAL_VOUCHER; the voucher_* fields
+    # are only present when type=MEAL_VOUCHER (plan.md section 11.6).
+    Wallet:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        currency: { type: string }
+        current_balance_minor: { type: integer, format: int64 }
+        type: { type: string, enum: [CASH, BANK, OTHER, MEAL_VOUCHER] }
+        icon: { type: string }
+        color: { type: string }
+        version: { type: integer, format: int64 }
+        updated_at: { type: string, format: date-time }
+        voucher_unit_value_minor:
+          type: integer
+          format: int64
+          description: Fixed face value of one voucher, in minor currency units. Immutable after creation.
+        voucher_expiry_cutoff_month: { type: integer, minimum: 1, maximum: 12 }
+        voucher_expiry_month: { type: integer, minimum: 1, maximum: 12 }
+        voucher_expiry_day: { type: integer, minimum: 1, maximum: 31 }
+        voucher_expiring_soon_count:
+          type: integer
+          description: Active lots expiring within 30 days. Only populated by list/get, not by mutation responses.
+
+    Transaction:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        wallet_id: { type: string, format: uuid }
+        direction: { type: string, enum: [CREDIT, DEBIT] }
+        kind: { type: string, enum: [STANDARD, OPENING_BALANCE, BALANCE_ADJUSTMENT, TRANSFER] }
+        amount_minor: { type: integer, format: int64 }
+        currency: { type: string }
+        title: { type: string }
+        occurred_at: { type: string, format: date-time }
+        version: { type: integer, format: int64 }
+        linked_transaction_id:
+          type: string
+          format: uuid
+          description: Pairs a voucher expense's two STANDARD legs. Null on a fully-covered expense.
+        system_generated:
+          type: boolean
+          description: True only for the automatic "vouchers expired" write-off — never user-created or user-editable.
+
+    VoucherLot:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        quantity_total: { type: integer }
+        quantity_remaining: { type: integer }
+        quantity_expired: { type: integer }
+        expires_at: { type: string, format: date }
+        created_by_transaction_id: { type: string, format: uuid }
+        expired_by_transaction_id: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+
+    VoucherCreditRequest:
+      type: object
+      required: [quantity]
+      properties:
+        quantity:
+          type: integer
+          description: Positive to add vouchers (creates a lot), negative to remove them (consumed FIFO by expiry).
+        reason: { type: string }
+        occurred_at: { type: string, format: date-time }
+
+    UpdateVoucherCreditRequest:
+      type: object
+      required: [quantity, version]
+      properties:
+        quantity:
+          type: integer
+          description: New absolute quantity (always positive) — the sign/direction can't change on edit.
+        reason: { type: string }
+        occurred_at: { type: string, format: date-time }
+        version: { type: integer, format: int64 }
+
+    VoucherExpenseRequest:
+      type: object
+      required: [voucher_wallet_id, voucher_quantity, total_expense_minor, title]
+      properties:
+        voucher_wallet_id: { type: string, format: uuid }
+        voucher_quantity: { type: integer }
+        total_expense_minor:
+          type: integer
+          format: int64
+          description: The real cost. May be less than voucher_quantity × voucher_unit_value_minor — the excess is lost, never refunded.
+        other_wallet_id:
+          type: string
+          format: uuid
+          description: Required iff the vouchers' value falls short of total_expense_minor; forbidden otherwise.
+        title: { type: string }
+        occurred_at: { type: string, format: date-time }
+        version:
+          type: integer
+          format: int64
+          description: Required on PATCH /voucher-expenses/{id} only — the voucher-wallet leg's version.
+
+    VoucherExpenseResult:
+      type: object
+      properties:
+        voucher_transaction: { $ref: "#/components/schemas/Transaction" }
+        other_transaction:
+          allOf: [{ $ref: "#/components/schemas/Transaction" }]
+          description: Present only when the vouchers didn't cover the full expense.
+        voucher_wallet: { $ref: "#/components/schemas/Wallet" }
+        other_wallet: { $ref: "#/components/schemas/Wallet" }
+
     Error:
       type: object
       description: Uniform error envelope (plan.md section 10.6).

@@ -392,6 +392,78 @@ abstract class AppLocalizations {
   /// **'Immagine non trovata.'**
   String get errorCodeMediaNotFound;
 
+  /// No description provided for @errorCodeWalletNotMealVoucher.
+  ///
+  /// In it, this message translates to:
+  /// **'Disponibile solo per i portafogli buoni pasto.'**
+  String get errorCodeWalletNotMealVoucher;
+
+  /// No description provided for @errorCodeWalletIsMealVoucher.
+  ///
+  /// In it, this message translates to:
+  /// **'Non disponibile per i portafogli buoni pasto: usa le operazioni dedicate ai buoni.'**
+  String get errorCodeWalletIsMealVoucher;
+
+  /// No description provided for @errorCodeVoucherInsufficientBalance.
+  ///
+  /// In it, this message translates to:
+  /// **'Non ci sono abbastanza buoni disponibili.'**
+  String get errorCodeVoucherInsufficientBalance;
+
+  /// No description provided for @errorCodeVoucherLotAlreadyUsed.
+  ///
+  /// In it, this message translates to:
+  /// **'Alcuni di questi buoni sono già stati spesi o rimossi.'**
+  String get errorCodeVoucherLotAlreadyUsed;
+
+  /// No description provided for @errorCodeVoucherLotAlreadyExpired.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo lotto di buoni è già scaduto e non può più essere modificato.'**
+  String get errorCodeVoucherLotAlreadyExpired;
+
+  /// No description provided for @errorCodeVoucherAutoAdjustmentNotDeletable.
+  ///
+  /// In it, this message translates to:
+  /// **'Le rettifiche automatiche per buoni scaduti non possono essere eliminate.'**
+  String get errorCodeVoucherAutoAdjustmentNotDeletable;
+
+  /// No description provided for @errorCodeOtherWalletRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Seleziona il portafoglio con cui hai pagato la differenza.'**
+  String get errorCodeOtherWalletRequired;
+
+  /// No description provided for @errorCodeOtherWalletNotAllowed.
+  ///
+  /// In it, this message translates to:
+  /// **'I buoni scelti coprono già l\'intera spesa: non serve un altro portafoglio.'**
+  String get errorCodeOtherWalletNotAllowed;
+
+  /// No description provided for @errorCodeSameAsVoucherWallet.
+  ///
+  /// In it, this message translates to:
+  /// **'Il portafoglio della differenza deve essere diverso da quello dei buoni.'**
+  String get errorCodeSameAsVoucherWallet;
+
+  /// No description provided for @errorCodeInvalidMonth.
+  ///
+  /// In it, this message translates to:
+  /// **'Mese non valido.'**
+  String get errorCodeInvalidMonth;
+
+  /// No description provided for @errorCodeInvalidDay.
+  ///
+  /// In it, this message translates to:
+  /// **'Giorno non valido.'**
+  String get errorCodeInvalidDay;
+
+  /// No description provided for @errorCodeNotAllowedForWalletType.
+  ///
+  /// In it, this message translates to:
+  /// **'Non consentito per questo tipo di portafoglio.'**
+  String get errorCodeNotAllowedForWalletType;
+
   /// No description provided for @errorCodeRequiredField.
   ///
   /// In it, this message translates to:
@@ -907,6 +979,222 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Tutti i portafogli'**
   String get allWalletsLabel;
+
+  /// No description provided for @walletTypeMealVoucher.
+  ///
+  /// In it, this message translates to:
+  /// **'Buoni pasto'**
+  String get walletTypeMealVoucher;
+
+  /// No description provided for @voucherUnitValueLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Valore del buono'**
+  String get voucherUnitValueLabel;
+
+  /// No description provided for @voucherExpiryPolicyLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Scadenza dei buoni'**
+  String get voucherExpiryPolicyLabel;
+
+  /// No description provided for @voucherExpiryCutoffMonthLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Fino al mese di'**
+  String get voucherExpiryCutoffMonthLabel;
+
+  /// No description provided for @voucherExpiryMonthLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Mese di scadenza'**
+  String get voucherExpiryMonthLabel;
+
+  /// No description provided for @voucherExpiryDayLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Giorno di scadenza'**
+  String get voucherExpiryDayLabel;
+
+  /// No description provided for @voucherInitialQuantityLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Numero di buoni iniziali'**
+  String get voucherInitialQuantityLabel;
+
+  /// No description provided for @voucherLoadedAtLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Data di carico'**
+  String get voucherLoadedAtLabel;
+
+  /// No description provided for @voucherLotsAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Buoni pasto'**
+  String get voucherLotsAction;
+
+  /// No description provided for @voucherLotsScreenTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Buoni pasto'**
+  String get voucherLotsScreenTitle;
+
+  /// No description provided for @voucherLotsLoadError.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile caricare i buoni pasto.'**
+  String get voucherLotsLoadError;
+
+  /// No description provided for @voucherActiveSectionTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Attivi'**
+  String get voucherActiveSectionTitle;
+
+  /// No description provided for @voucherActiveEmptyMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun buono attivo.'**
+  String get voucherActiveEmptyMessage;
+
+  /// No description provided for @voucherExpiringSoonSectionTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'In scadenza a breve'**
+  String get voucherExpiringSoonSectionTitle;
+
+  /// No description provided for @voucherExpiredSectionTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Scaduti'**
+  String get voucherExpiredSectionTitle;
+
+  /// No description provided for @voucherExpiredEmptyMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun buono scaduto.'**
+  String get voucherExpiredEmptyMessage;
+
+  /// No description provided for @voucherLotQuantityLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'{count} buoni'**
+  String voucherLotQuantityLabel(int count);
+
+  /// No description provided for @voucherLotExpiresOnLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Scade il {date}'**
+  String voucherLotExpiresOnLabel(String date);
+
+  /// No description provided for @voucherLotExpiredOnLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Scaduto il {date}'**
+  String voucherLotExpiredOnLabel(String date);
+
+  /// No description provided for @voucherExpiringSoonBadge.
+  ///
+  /// In it, this message translates to:
+  /// **'{count} buoni in scadenza'**
+  String voucherExpiringSoonBadge(int count);
+
+  /// No description provided for @addVouchersAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi buoni'**
+  String get addVouchersAction;
+
+  /// No description provided for @removeVouchersAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovi buoni'**
+  String get removeVouchersAction;
+
+  /// No description provided for @addVouchersSheetTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi buoni'**
+  String get addVouchersSheetTitle;
+
+  /// No description provided for @removeVouchersSheetTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovi buoni'**
+  String get removeVouchersSheetTitle;
+
+  /// No description provided for @voucherQuantityLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Numero di buoni'**
+  String get voucherQuantityLabel;
+
+  /// No description provided for @voucherExpenseAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Spesa con buoni pasto'**
+  String get voucherExpenseAction;
+
+  /// No description provided for @voucherExpenseSheetTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Spesa con buoni pasto'**
+  String get voucherExpenseSheetTitle;
+
+  /// No description provided for @editVoucherExpenseSheetTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica spesa con buoni pasto'**
+  String get editVoucherExpenseSheetTitle;
+
+  /// No description provided for @voucherWalletLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Portafoglio buoni'**
+  String get voucherWalletLabel;
+
+  /// No description provided for @voucherOtherWalletLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Pagato con'**
+  String get voucherOtherWalletLabel;
+
+  /// No description provided for @voucherOtherWalletRequiredError.
+  ///
+  /// In it, this message translates to:
+  /// **'Seleziona il portafoglio con cui hai pagato la differenza.'**
+  String get voucherOtherWalletRequiredError;
+
+  /// No description provided for @voucherTotalExpenseLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Totale della spesa'**
+  String get voucherTotalExpenseLabel;
+
+  /// No description provided for @voucherShortfallLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Differenza da pagare: {amount}'**
+  String voucherShortfallLabel(String amount);
+
+  /// No description provided for @voucherSuggestedQuantityHelper.
+  ///
+  /// In it, this message translates to:
+  /// **'Minimo consigliato: {count}'**
+  String voucherSuggestedQuantityHelper(int count);
+
+  /// No description provided for @submitVoucherExpenseAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Registra spesa'**
+  String get submitVoucherExpenseAction;
+
+  /// No description provided for @saveVoucherExpenseAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva spesa'**
+  String get saveVoucherExpenseAction;
 
   /// No description provided for @accountSecurityMenuTitle.
   ///

@@ -11,7 +11,9 @@ import '../../../../l10n/app_localizations.dart';
 import '../../data/providers.dart';
 import '../../domain/models/wallet.dart';
 import '../widgets/transfer_sheet.dart';
+import '../widgets/voucher_expense_sheet.dart';
 import '../widgets/wallet_icon_data.dart';
+import 'voucher_lots_screen.dart';
 
 /// Wallet management screen (plan.md multi-wallet extension): aggregate
 /// total up top, active wallets below — reached from the Account hub's
@@ -29,11 +31,22 @@ class WalletsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final walletsAsync = ref.watch(walletsListProvider);
     final l10n = AppLocalizations.of(context);
+    final hasVoucherWallet =
+        walletsAsync.value?.any((w) => w.isMealVoucher) ?? false;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.walletsScreenTitle),
         actions: [
+          if (hasVoucherWallet)
+            IconButton(
+              icon: const Icon(Icons.restaurant_outlined),
+              tooltip: l10n.voucherExpenseAction,
+              onPressed: () async {
+                final completed = await VoucherExpenseSheet.show(context);
+                if (completed) ref.invalidate(walletsListProvider);
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.swap_horiz),
             tooltip: l10n.transferAction,
@@ -96,7 +109,28 @@ class WalletsScreen extends ConsumerWidget {
                       ),
                       title: Text(wallet.name),
                       subtitle: Text(wallet.balance.format()),
-                      trailing: const Icon(Icons.chevron_right),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if ((wallet.voucherExpiringSoonCount ?? 0) > 0)
+                            IconButton(
+                              icon: Icon(
+                                Icons.warning_amber_rounded,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                              tooltip: l10n.voucherExpiringSoonBadge(
+                                wallet.voucherExpiringSoonCount!,
+                              ),
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      VoucherLotsScreen(walletId: wallet.id),
+                                ),
+                              ),
+                            ),
+                          const Icon(Icons.chevron_right),
+                        ],
+                      ),
                       onTap: () async {
                         final changed = await context.push<bool>(
                           AppRoutes.walletEdit(wallet.id),

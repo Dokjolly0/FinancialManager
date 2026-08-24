@@ -17,6 +17,7 @@ const Map<String, IconData> walletIconData = {
   'shopping_bag': Icons.shopping_bag,
   'home': Icons.home,
   'savings': Icons.savings_outlined,
+  'restaurant': Icons.restaurant,
 };
 
 IconData iconForWalletKey(String key) =>

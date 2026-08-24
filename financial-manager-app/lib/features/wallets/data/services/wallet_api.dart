@@ -65,4 +65,11 @@ class WalletApi {
     );
     return response.data!['denominations'] as List<dynamic>? ?? [];
   }
+
+  Future<List<dynamic>> getVoucherLots(String walletId) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/wallets/$walletId/voucher-lots',
+    );
+    return response.data!['voucher_lots'] as List<dynamic>? ?? [];
+  }
 }

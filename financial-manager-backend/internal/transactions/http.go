@@ -36,6 +36,10 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Post("/v1/wallets", h.createWallet)
 	r.Post("/v1/wallets/{id}/balance-adjustments", h.createBalanceAdjustment)
 	r.Post("/v1/transfers", h.createTransfer)
+	r.Post("/v1/wallets/{id}/voucher-credits", h.createVoucherCredit)
+	r.Patch("/v1/wallets/{id}/voucher-credits/{creditId}", h.updateVoucherCredit)
+	r.Post("/v1/voucher-expenses", h.createVoucherExpense)
+	r.Patch("/v1/voucher-expenses/{id}", h.updateVoucherExpense)
 }
 
 // requireWalletID parses a required wallet_id-shaped field, distinguishing
@@ -563,6 +567,14 @@ type createWalletRequest struct {
 	Icon                string `json:"icon"`
 	Color               string `json:"color"`
 	OpeningBalanceMinor int64  `json:"opening_balance_minor"`
+
+	// Only meaningful when Type == "MEAL_VOUCHER".
+	VoucherUnitValueMinor    *int64 `json:"voucher_unit_value_minor,omitempty"`
+	VoucherExpiryCutoffMonth *int   `json:"voucher_expiry_cutoff_month,omitempty"`
+	VoucherExpiryMonth       *int   `json:"voucher_expiry_month,omitempty"`
+	VoucherExpiryDay         *int   `json:"voucher_expiry_day,omitempty"`
+	InitialVoucherQuantity   int    `json:"initial_voucher_quantity"`
+	VoucherLoadedAt          string `json:"voucher_loaded_at"`
 }
 
 func (h *Handler) createWallet(w http.ResponseWriter, r *http.Request) {
@@ -593,6 +605,14 @@ func (h *Handler) createWallet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	voucherLoadedAt, ok := parseOccurredAt(req.VoucherLoadedAt)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"voucher_loaded_at": apierror.FieldInvalidRFC3339Date,
+		}))
+		return
+	}
+
 	responseBody, status, err := h.service.CreateWallet(r.Context(), CreateWalletInput{
 		UserID:              userID,
 		Name:                req.Name,
@@ -603,6 +623,13 @@ func (h *Handler) createWallet(w http.ResponseWriter, r *http.Request) {
 		SessionID:           &sessionID,
 		IdempotencyKey:      idempotencyKey,
 		RequestBody:         body,
+
+		VoucherUnitValueMinor:    req.VoucherUnitValueMinor,
+		VoucherExpiryCutoffMonth: req.VoucherExpiryCutoffMonth,
+		VoucherExpiryMonth:       req.VoucherExpiryMonth,
+		VoucherExpiryDay:         req.VoucherExpiryDay,
+		InitialVoucherQuantity:   req.InitialVoucherQuantity,
+		VoucherLoadedAt:          voucherLoadedAt,
 	})
 	if err != nil {
 		apierror.Write(w, r, err)
@@ -693,4 +720,287 @@ func (h *Handler) createTransfer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_, _ = w.Write(responseBody)
+}
+
+type voucherCreditRequest struct {
+	Quantity   int    `json:"quantity"`
+	Reason     string `json:"reason"`
+	OccurredAt string `json:"occurred_at"`
+}
+
+func (h *Handler) createVoucherCredit(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+	sessionID, _ := reqctx.SessionID(r.Context())
+
+	walletID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+
+	idempotencyKey, err := uuid.Parse(r.Header.Get("Idempotency-Key"))
+	if err != nil {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"Idempotency-Key": apierror.FieldInvalidUUID,
+		}))
+		return
+	}
+
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<16))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	var req voucherCreditRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	occurredAt, ok := parseOccurredAt(req.OccurredAt)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"occurred_at": apierror.FieldInvalidRFC3339Date,
+		}))
+		return
+	}
+
+	responseBody, status, err := h.service.CreateVoucherCredit(r.Context(), CreateVoucherCreditInput{
+		UserID: userID, WalletID: walletID, Quantity: req.Quantity, Reason: req.Reason,
+		OccurredAt: occurredAt, SessionID: &sessionID, IdempotencyKey: idempotencyKey, RequestBody: body,
+	})
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write(responseBody)
+}
+
+type updateVoucherCreditRequest struct {
+	Quantity        int    `json:"quantity"`
+	Reason          string `json:"reason"`
+	OccurredAt      string `json:"occurred_at"`
+	ExpectedVersion int64  `json:"version"`
+}
+
+func (h *Handler) updateVoucherCredit(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+
+	walletID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+	creditID, err := uuid.Parse(chi.URLParam(r, "creditId"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+
+	var req updateVoucherCreditRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	occurredAt, ok := parseOccurredAt(req.OccurredAt)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"occurred_at": apierror.FieldInvalidRFC3339Date,
+		}))
+		return
+	}
+
+	result, err := h.service.UpdateVoucherCredit(r.Context(), UpdateVoucherCreditInput{
+		UserID: userID, WalletID: walletID, TransactionID: creditID, Quantity: req.Quantity, Reason: req.Reason,
+		OccurredAt: occurredAt, ExpectedVersion: req.ExpectedVersion,
+	})
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+type createVoucherExpenseRequest struct {
+	VoucherWalletID   string  `json:"voucher_wallet_id"`
+	VoucherQuantity   int     `json:"voucher_quantity"`
+	TotalExpenseMinor int64   `json:"total_expense_minor"`
+	OtherWalletID     string  `json:"other_wallet_id"`
+	Title             string  `json:"title"`
+	Description       *string `json:"description"`
+	CategoryID        string  `json:"category_id"`
+	TemplateID        string  `json:"template_id"`
+	MediaID           string  `json:"media_id"`
+	OccurredAt        string  `json:"occurred_at"`
+}
+
+func (h *Handler) createVoucherExpense(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+	sessionID, _ := reqctx.SessionID(r.Context())
+
+	idempotencyKey, err := uuid.Parse(r.Header.Get("Idempotency-Key"))
+	if err != nil {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"Idempotency-Key": apierror.FieldInvalidUUID,
+		}))
+		return
+	}
+
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<16))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	var req createVoucherExpenseRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	occurredAt, ok := parseOccurredAt(req.OccurredAt)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"occurred_at": apierror.FieldInvalidRFC3339Date,
+		}))
+		return
+	}
+	voucherWalletID, walletErr := requireWalletID(req.VoucherWalletID)
+	if walletErr != nil {
+		apierror.Write(w, r, walletErr)
+		return
+	}
+	var otherWalletID *uuid.UUID
+	if req.OtherWalletID != "" {
+		id, err := uuid.Parse(req.OtherWalletID)
+		if err != nil {
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"other_wallet_id": apierror.FieldInvalidUUID}))
+			return
+		}
+		otherWalletID = &id
+	}
+	categoryID, ok := parseOptionalUUID(req.CategoryID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": apierror.FieldInvalidUUID}))
+		return
+	}
+	templateID, ok := parseOptionalUUID(req.TemplateID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"template_id": apierror.FieldInvalidUUID}))
+		return
+	}
+	mediaID, ok := parseOptionalUUID(req.MediaID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"media_id": apierror.FieldInvalidUUID}))
+		return
+	}
+
+	responseBody, status, err := h.service.CreateVoucherExpense(r.Context(), CreateVoucherExpenseInput{
+		UserID: userID, VoucherWalletID: voucherWalletID, VoucherQuantity: req.VoucherQuantity,
+		TotalExpenseMinor: req.TotalExpenseMinor, OtherWalletID: otherWalletID, Title: req.Title, Description: req.Description,
+		CategoryID: categoryID, TemplateID: templateID, MediaID: mediaID, OccurredAt: occurredAt,
+		SessionID: &sessionID, IdempotencyKey: idempotencyKey, RequestBody: body,
+	})
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write(responseBody)
+}
+
+type updateVoucherExpenseRequest struct {
+	VoucherQuantity   int     `json:"voucher_quantity"`
+	TotalExpenseMinor int64   `json:"total_expense_minor"`
+	OtherWalletID     string  `json:"other_wallet_id"`
+	Title             string  `json:"title"`
+	Description       *string `json:"description"`
+	CategoryID        string  `json:"category_id"`
+	TemplateID        string  `json:"template_id"`
+	MediaID           string  `json:"media_id"`
+	OccurredAt        string  `json:"occurred_at"`
+	ExpectedVersion   int64   `json:"version"`
+}
+
+func (h *Handler) updateVoucherExpense(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+
+	var req updateVoucherExpenseRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apierror.Write(w, r, apierror.ErrBadRequest)
+		return
+	}
+
+	occurredAt, ok := parseOccurredAt(req.OccurredAt)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{
+			"occurred_at": apierror.FieldInvalidRFC3339Date,
+		}))
+		return
+	}
+	var otherWalletID *uuid.UUID
+	if req.OtherWalletID != "" {
+		wid, err := uuid.Parse(req.OtherWalletID)
+		if err != nil {
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"other_wallet_id": apierror.FieldInvalidUUID}))
+			return
+		}
+		otherWalletID = &wid
+	}
+	categoryID, ok := parseOptionalUUID(req.CategoryID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": apierror.FieldInvalidUUID}))
+		return
+	}
+	templateID, ok := parseOptionalUUID(req.TemplateID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"template_id": apierror.FieldInvalidUUID}))
+		return
+	}
+	mediaID, ok := parseOptionalUUID(req.MediaID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"media_id": apierror.FieldInvalidUUID}))
+		return
+	}
+
+	result, err := h.service.UpdateVoucherExpense(r.Context(), UpdateVoucherExpenseInput{
+		UserID: userID, TransactionID: id, VoucherQuantity: req.VoucherQuantity, TotalExpenseMinor: req.TotalExpenseMinor,
+		OtherWalletID: otherWalletID, Title: req.Title, Description: req.Description,
+		CategoryID: categoryID, TemplateID: templateID, MediaID: mediaID, OccurredAt: occurredAt,
+		ExpectedVersion: req.ExpectedVersion,
+	})
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
 }

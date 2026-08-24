@@ -1,3 +1,4 @@
+import '../models/voucher_lot.dart';
 import '../models/wallet.dart';
 import '../models/wallet_denomination.dart';
 import '../models/wallet_type.dart';
@@ -9,6 +10,12 @@ class CreateWalletParams {
     required this.icon,
     required this.color,
     this.openingBalanceMinor = 0,
+    this.voucherUnitValueMinor,
+    this.voucherExpiryCutoffMonth,
+    this.voucherExpiryMonth,
+    this.voucherExpiryDay,
+    this.initialVoucherQuantity = 0,
+    this.voucherLoadedAt,
   });
 
   final String name;
@@ -16,6 +23,14 @@ class CreateWalletParams {
   final String icon;
   final String color;
   final int openingBalanceMinor;
+
+  /// Only sent when [type] is [WalletType.mealVoucher].
+  final int? voucherUnitValueMinor;
+  final int? voucherExpiryCutoffMonth;
+  final int? voucherExpiryMonth;
+  final int? voucherExpiryDay;
+  final int initialVoucherQuantity;
+  final DateTime? voucherLoadedAt;
 }
 
 class UpdateWalletParams {
@@ -25,6 +40,9 @@ class UpdateWalletParams {
     required this.icon,
     required this.color,
     required this.expectedVersion,
+    this.voucherExpiryCutoffMonth,
+    this.voucherExpiryMonth,
+    this.voucherExpiryDay,
   });
 
   final String name;
@@ -32,6 +50,12 @@ class UpdateWalletParams {
   final String icon;
   final String color;
   final int expectedVersion;
+
+  /// Only meaningful when [type] is [WalletType.mealVoucher] — the face
+  /// value stays fixed after creation and is never part of an update.
+  final int? voucherExpiryCutoffMonth;
+  final int? voucherExpiryMonth;
+  final int? voucherExpiryDay;
 }
 
 /// Domain-facing wallet CRUD (plan.md multi-wallet extension). Ledger
@@ -66,4 +90,9 @@ abstract class WalletRepository {
     String walletId,
     List<WalletDenomination> denominations,
   );
+
+  /// Every lot for a MEAL_VOUCHER wallet — active and expired history — the
+  /// caller buckets them into active/expiring-soon/expired. 403s with a
+  /// WALLET_NOT_MEAL_VOUCHER domain error for any other wallet type.
+  Future<List<VoucherLot>> getVoucherLots(String walletId);
 }

@@ -35,6 +35,7 @@ import (
 const reconciliationInterval = time.Hour
 const mediaCleanupInterval = time.Hour
 const accountPurgeInterval = time.Hour
+const voucherExpiryInterval = time.Hour
 
 // mediaOrphanGraceHours is how long an unreferenced asset survives before
 // cleanup (plan.md section 16.6: "Pulire asset orfani dopo un periodo di
@@ -132,6 +133,7 @@ func run() error {
 	runReconciliation(ctx, logger, transactionsService)
 	runMediaCleanup(ctx, logger, mediaService)
 	runAccountPurge(ctx, logger, purger)
+	runVoucherExpiry(ctx, logger, transactionsService)
 
 	reconciliationTicker := time.NewTicker(reconciliationInterval)
 	defer reconciliationTicker.Stop()
@@ -139,6 +141,8 @@ func run() error {
 	defer mediaCleanupTicker.Stop()
 	accountPurgeTicker := time.NewTicker(accountPurgeInterval)
 	defer accountPurgeTicker.Stop()
+	voucherExpiryTicker := time.NewTicker(voucherExpiryInterval)
+	defer voucherExpiryTicker.Stop()
 
 	for {
 		select {
@@ -151,8 +155,30 @@ func run() error {
 			runMediaCleanup(ctx, logger, mediaService)
 		case <-accountPurgeTicker.C:
 			runAccountPurge(ctx, logger, purger)
+		case <-voucherExpiryTicker.C:
+			runVoucherExpiry(ctx, logger, transactionsService)
 		}
 	}
+}
+
+// runVoucherExpiry sweeps every meal-voucher wallet for lots that expired
+// unused, writing off each as a system-generated "Buoni scaduti"
+// adjustment (internal/transactions applyVoucherLotExpiry). The same sweep
+// also runs lazily on every voucher-specific mutation — this proactive pass
+// only matters for a wallet nobody touches for a long time.
+func runVoucherExpiry(ctx context.Context, logger *slog.Logger, svc *transactions.Service) {
+	swept, failed, err := svc.ExpireAllVoucherLots(ctx)
+	if err != nil {
+		metrics.JobRunsTotal.WithLabelValues("voucher_expiry", "failed").Inc()
+		logger.Error("voucher_expiry_failed", slog.String("error", err.Error()))
+		return
+	}
+	outcome := "ok"
+	if failed > 0 {
+		outcome = "failed"
+	}
+	metrics.JobRunsTotal.WithLabelValues("voucher_expiry", outcome).Inc()
+	logger.Info("voucher_expiry_ok", slog.Int("swept", swept), slog.Int("failed", failed))
 }
 
 func runMediaCleanup(ctx context.Context, logger *slog.Logger, svc *media.Service) {

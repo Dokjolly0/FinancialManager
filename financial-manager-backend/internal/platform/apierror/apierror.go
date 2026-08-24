@@ -87,6 +87,9 @@ const (
 	FieldInvalidMediaKind      = "INVALID_MEDIA_KIND"
 	FieldProviderNotSupported  = "PROVIDER_NOT_SUPPORTED"
 	FieldMediaNameLength       = "MEDIA_NAME_LENGTH_INVALID"
+	FieldInvalidMonth          = "INVALID_MONTH"
+	FieldInvalidDay            = "INVALID_DAY"
+	FieldNotAllowedForWalletType = "NOT_ALLOWED_FOR_WALLET_TYPE"
 )
 
 // Write renders err as the section 10.6 JSON envelope. Any error that is

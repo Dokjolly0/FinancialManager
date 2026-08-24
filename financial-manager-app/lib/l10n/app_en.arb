@@ -76,6 +76,18 @@
   "errorCodeCategoryNotFound": "Category not found.",
   "errorCodeTemplateNotFound": "Template not found.",
   "errorCodeMediaNotFound": "Image not found.",
+  "errorCodeWalletNotMealVoucher": "Only available for meal-voucher wallets.",
+  "errorCodeWalletIsMealVoucher": "Not available for meal-voucher wallets: use the voucher-specific operations.",
+  "errorCodeVoucherInsufficientBalance": "Not enough vouchers available.",
+  "errorCodeVoucherLotAlreadyUsed": "Some of these vouchers have already been spent or removed.",
+  "errorCodeVoucherLotAlreadyExpired": "This voucher lot has already expired and can no longer be edited.",
+  "errorCodeVoucherAutoAdjustmentNotDeletable": "Automatic voucher expiry adjustments can't be deleted.",
+  "errorCodeOtherWalletRequired": "Select the wallet that paid the difference.",
+  "errorCodeOtherWalletNotAllowed": "The chosen vouchers already cover the whole expense: no other wallet is needed.",
+  "errorCodeSameAsVoucherWallet": "The difference wallet must be different from the voucher wallet.",
+  "errorCodeInvalidMonth": "Invalid month.",
+  "errorCodeInvalidDay": "Invalid day.",
+  "errorCodeNotAllowedForWalletType": "Not allowed for this wallet type.",
 
   "errorCodeRequiredField": "This field is required.",
   "errorCodeUsernameLengthInvalid": "Must be between 3 and 40 characters.",
@@ -170,6 +182,61 @@
   "saveTransferAction": "Save transfer",
   "walletBadgeArchived": "Archived",
   "allWalletsLabel": "All wallets",
+
+  "walletTypeMealVoucher": "Meal vouchers",
+  "voucherUnitValueLabel": "Voucher face value",
+  "voucherExpiryPolicyLabel": "Voucher expiry",
+  "voucherExpiryCutoffMonthLabel": "Through month",
+  "voucherExpiryMonthLabel": "Expiry month",
+  "voucherExpiryDayLabel": "Expiry day",
+  "voucherInitialQuantityLabel": "Initial number of vouchers",
+  "voucherLoadedAtLabel": "Load date",
+  "voucherLotsAction": "Meal vouchers",
+  "voucherLotsScreenTitle": "Meal vouchers",
+  "voucherLotsLoadError": "Couldn't load meal vouchers.",
+  "voucherActiveSectionTitle": "Active",
+  "voucherActiveEmptyMessage": "No active vouchers.",
+  "voucherExpiringSoonSectionTitle": "Expiring soon",
+  "voucherExpiredSectionTitle": "Expired",
+  "voucherExpiredEmptyMessage": "No expired vouchers.",
+  "voucherLotQuantityLabel": "{count} vouchers",
+  "@voucherLotQuantityLabel": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "voucherLotExpiresOnLabel": "Expires on {date}",
+  "@voucherLotExpiresOnLabel": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "voucherLotExpiredOnLabel": "Expired on {date}",
+  "@voucherLotExpiredOnLabel": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "voucherExpiringSoonBadge": "{count} vouchers expiring soon",
+  "@voucherExpiringSoonBadge": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "addVouchersAction": "Add vouchers",
+  "removeVouchersAction": "Remove vouchers",
+  "addVouchersSheetTitle": "Add vouchers",
+  "removeVouchersSheetTitle": "Remove vouchers",
+  "voucherQuantityLabel": "Number of vouchers",
+  "voucherExpenseAction": "Expense with meal vouchers",
+  "voucherExpenseSheetTitle": "Expense with meal vouchers",
+  "editVoucherExpenseSheetTitle": "Edit meal voucher expense",
+  "voucherWalletLabel": "Voucher wallet",
+  "voucherOtherWalletLabel": "Paid with",
+  "voucherOtherWalletRequiredError": "Select the wallet that paid the difference.",
+  "voucherTotalExpenseLabel": "Total expense",
+  "voucherShortfallLabel": "Difference to pay: {amount}",
+  "@voucherShortfallLabel": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+  "voucherSuggestedQuantityHelper": "Suggested minimum: {count}",
+  "@voucherSuggestedQuantityHelper": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "submitVoucherExpenseAction": "Record expense",
+  "saveVoucherExpenseAction": "Save expense",
   "accountSecurityMenuTitle": "Security",
   "accountSecurityMenuSubtitle": "Password, active sessions, logout",
   "accountLinkedAccountsMenuTitle": "Linked accounts",

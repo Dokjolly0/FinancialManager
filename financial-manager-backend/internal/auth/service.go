@@ -286,7 +286,10 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) ([]byte, int, 
 			return createErr
 		}
 
-		wallet, walletErr := s.wallets.WithQuerier(tx).Create(ctx, user.ID, wallets.DefaultName, in.Currency, wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, in.InitialBalanceMinor)
+		wallet, walletErr := s.wallets.WithQuerier(tx).Create(ctx, wallets.CreateRowInput{
+			UserID: user.ID, Name: wallets.DefaultName, Currency: in.Currency, Type: wallets.TypeOther,
+			Icon: wallets.DefaultIcon, Color: wallets.DefaultColor, OpeningBalanceMinor: in.InitialBalanceMinor,
+		})
 		if walletErr != nil {
 			return fmt.Errorf("create wallet: %w", walletErr)
 		}

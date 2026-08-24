@@ -14,6 +14,8 @@ class LedgerTransaction {
     this.templateId,
     this.mediaId,
     this.transferPairId,
+    this.linkedTransactionId,
+    this.systemGenerated = false,
     required this.occurredAt,
     required this.createdAt,
     required this.updatedAt,
@@ -31,12 +33,34 @@ class LedgerTransaction {
   final String? templateId;
   final String? mediaId;
   final String? transferPairId;
+
+  /// Pairs a meal-voucher expense's two DEBIT legs (the voucher-wallet leg
+  /// and, if the vouchers didn't cover the full expense, the other-wallet
+  /// leg for the difference) — a generic analogue of [transferPairId] that
+  /// stays [TransactionKind.standard]. Null on a fully-covered voucher
+  /// expense (no second leg), so it alone can't identify every voucher
+  /// expense — see [VoucherExpenseSheet]'s callers, which also check the
+  /// transaction's wallet type.
+  final String? linkedTransactionId;
+
+  /// True only for the automatic "Buoni scaduti" voucher-expiry write-off —
+  /// never created or editable by the user.
+  final bool systemGenerated;
   final DateTime occurredAt;
   final DateTime createdAt;
   final DateTime updatedAt;
   final int version;
 
-  bool get isEditable => kind == TransactionKind.standard;
+  /// A voucher expense's other-wallet (shortfall) leg is also
+  /// [TransactionKind.standard] but must only be edited/deleted as part of
+  /// its pair through [VoucherExpenseSheet], never the plain transaction
+  /// form — [linkedTransactionId] alone identifies that leg (the
+  /// voucher-wallet leg needs an additional wallet-type check, done by
+  /// callers that have access to the wallet list).
+  bool get isEditable =>
+      kind == TransactionKind.standard &&
+      linkedTransactionId == null &&
+      !systemGenerated;
 
   /// Whether this row's amount/date can be corrected through the dedicated
   /// opening-balance edit sheet (never the full transaction form — see
@@ -65,6 +89,8 @@ class LedgerTransaction {
       templateId: json['template_id'] as String?,
       mediaId: json['media_id'] as String?,
       transferPairId: json['transfer_pair_id'] as String?,
+      linkedTransactionId: json['linked_transaction_id'] as String?,
+      systemGenerated: json['system_generated'] as bool? ?? false,
       occurredAt: DateTime.parse(json['occurred_at'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),

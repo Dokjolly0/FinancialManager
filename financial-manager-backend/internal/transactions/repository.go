@@ -32,7 +32,8 @@ func (r *Repository) WithQuerier(q database.Querier) *Repository {
 const transactionColumns = `
 	id, wallet_id, user_id, direction, kind, amount_minor, currency,
 	title, title_normalized, description, category_id, template_id, media_id, occurred_at,
-	created_at, updated_at, deleted_at, version, created_by_session_id, transfer_pair_id
+	created_at, updated_at, deleted_at, version, created_by_session_id, transfer_pair_id,
+	linked_transaction_id, system_generated
 `
 
 func scanTransaction(row pgx.Row) (Transaction, error) {
@@ -41,6 +42,7 @@ func scanTransaction(row pgx.Row) (Transaction, error) {
 		&t.ID, &t.WalletID, &t.UserID, &t.Direction, &t.Kind, &t.AmountMinor, &t.Currency,
 		&t.Title, &t.TitleNormalized, &t.Description, &t.CategoryID, &t.TemplateID, &t.MediaID, &t.OccurredAt,
 		&t.CreatedAt, &t.UpdatedAt, &t.DeletedAt, &t.Version, &t.CreatedBySessionID, &t.TransferPairID,
+		&t.LinkedTransactionID, &t.SystemGenerated,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Transaction{}, ErrNotFound
@@ -52,20 +54,22 @@ func scanTransaction(row pgx.Row) (Transaction, error) {
 }
 
 type CreateInput struct {
-	WalletID           uuid.UUID
-	UserID             uuid.UUID
-	Direction          string
-	Kind               string
-	AmountMinor        int64
-	Currency           string
-	Title              string
-	Description        *string
-	CategoryID         *uuid.UUID
-	TemplateID         *uuid.UUID
-	MediaID            *uuid.UUID
-	OccurredAt         time.Time
-	CreatedBySessionID *uuid.UUID
-	TransferPairID     *uuid.UUID
+	WalletID            uuid.UUID
+	UserID              uuid.UUID
+	Direction           string
+	Kind                string
+	AmountMinor         int64
+	Currency            string
+	Title               string
+	Description         *string
+	CategoryID          *uuid.UUID
+	TemplateID          *uuid.UUID
+	MediaID             *uuid.UUID
+	OccurredAt          time.Time
+	CreatedBySessionID  *uuid.UUID
+	TransferPairID      *uuid.UUID
+	LinkedTransactionID *uuid.UUID
+	SystemGenerated     bool
 }
 
 // Create inserts a ledger entry. Callers are responsible for updating the
@@ -76,12 +80,12 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (Transaction, e
 		INSERT INTO transactions (
 			wallet_id, user_id, direction, kind, amount_minor, currency,
 			title, title_normalized, description, category_id, template_id, media_id, occurred_at, created_by_session_id,
-			transfer_pair_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+			transfer_pair_id, linked_transaction_id, system_generated
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		RETURNING `+transactionColumns,
 		in.WalletID, in.UserID, in.Direction, in.Kind, in.AmountMinor, in.Currency,
 		in.Title, NormalizeTitle(in.Title), in.Description, in.CategoryID, in.TemplateID, in.MediaID, in.OccurredAt, in.CreatedBySessionID,
-		in.TransferPairID,
+		in.TransferPairID, in.LinkedTransactionID, in.SystemGenerated,
 	)
 	return scanTransaction(row)
 }
@@ -94,6 +98,18 @@ func (r *Repository) SetTransferPairID(ctx context.Context, id, transferPairID u
 	_, err := r.db.Exec(ctx, `UPDATE transactions SET transfer_pair_id = $1 WHERE id = $2`, transferPairID, id)
 	if err != nil {
 		return fmt.Errorf("set transfer pair id: %w", err)
+	}
+	return nil
+}
+
+// SetLinkedTransactionID links (or, passing nil, clears the link on) a
+// transaction row — mirrors SetTransferPairID. Used by voucher-expense
+// creation (both legs backfill each other's ID once both exist) and by
+// editing a voucher expense, when its shortfall leg is added or removed.
+func (r *Repository) SetLinkedTransactionID(ctx context.Context, id uuid.UUID, linkedID *uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `UPDATE transactions SET linked_transaction_id = $1 WHERE id = $2`, linkedID, id)
+	if err != nil {
+		return fmt.Errorf("set linked transaction id: %w", err)
 	}
 	return nil
 }

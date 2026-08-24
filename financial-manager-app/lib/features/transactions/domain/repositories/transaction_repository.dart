@@ -216,6 +216,145 @@ abstract class TransactionRepository {
     required DateTime occurredAt,
     required int expectedVersion,
   });
+
+  /// Adds (positive [quantity]) or removes (negative) vouchers on a
+  /// MEAL_VOUCHER wallet outside of a purchase — e.g. a new batch received
+  /// from an employer, or a correction for lost/miscounted vouchers. An
+  /// addition creates a new lot (expiry computed server-side from the
+  /// wallet's policy); a removal consumes existing lots FIFO by expiry.
+  Future<TransactionWithWallet> createVoucherCredit(
+    CreateVoucherCreditParams params,
+  );
+
+  /// Edits a previously created voucher credit/removal's quantity and/or
+  /// date.
+  Future<TransactionWithWallet> updateVoucherCredit(
+    String transactionId,
+    UpdateVoucherCreditParams params,
+  );
+
+  /// Records a purchase paid partly or fully with meal vouchers. The
+  /// voucher-wallet leg always debits the full value of the vouchers used
+  /// (never just the real cost — any excess is lost, matching how meal
+  /// vouchers work); if the real cost exceeds that, [CreateVoucherExpenseParams.otherWalletId]
+  /// must be set and a second linked leg covers the difference there.
+  Future<VoucherExpenseResult> createVoucherExpense(
+    CreateVoucherExpenseParams params,
+  );
+
+  /// Edits a voucher expense's quantity, real cost, difference wallet,
+  /// and/or date. [voucherTransactionId] is always the voucher-wallet leg's
+  /// id, never the optional other-wallet leg's.
+  Future<VoucherExpenseResult> updateVoucherExpense(
+    String voucherTransactionId,
+    UpdateVoucherExpenseParams params,
+  );
+}
+
+class CreateVoucherCreditParams {
+  const CreateVoucherCreditParams({
+    required this.walletId,
+    required this.quantity,
+    this.reason,
+    this.occurredAt,
+  });
+
+  final String walletId;
+
+  /// Positive to add vouchers, negative to remove them.
+  final int quantity;
+  final String? reason;
+  final DateTime? occurredAt;
+}
+
+class UpdateVoucherCreditParams {
+  const UpdateVoucherCreditParams({
+    required this.walletId,
+    required this.quantity,
+    this.reason,
+    required this.occurredAt,
+    required this.expectedVersion,
+  });
+
+  final String walletId;
+
+  /// New absolute quantity (always positive) — the sign/direction (add vs.
+  /// remove) is fixed from the original record and can't change on edit.
+  final int quantity;
+  final String? reason;
+  final DateTime occurredAt;
+  final int expectedVersion;
+}
+
+class CreateVoucherExpenseParams {
+  const CreateVoucherExpenseParams({
+    required this.voucherWalletId,
+    required this.voucherQuantity,
+    required this.totalExpenseMinor,
+    this.otherWalletId,
+    required this.title,
+    this.description,
+    this.categoryId,
+    this.templateId,
+    this.mediaId,
+    this.occurredAt,
+  });
+
+  final String voucherWalletId;
+  final int voucherQuantity;
+  final int totalExpenseMinor;
+
+  /// Required iff the vouchers' value doesn't cover [totalExpenseMinor].
+  final String? otherWalletId;
+  final String title;
+  final String? description;
+  final String? categoryId;
+  final String? templateId;
+  final String? mediaId;
+  final DateTime? occurredAt;
+}
+
+class UpdateVoucherExpenseParams {
+  const UpdateVoucherExpenseParams({
+    required this.voucherQuantity,
+    required this.totalExpenseMinor,
+    this.otherWalletId,
+    required this.title,
+    this.description,
+    this.categoryId,
+    this.templateId,
+    this.mediaId,
+    required this.occurredAt,
+    required this.expectedVersion,
+  });
+
+  final int voucherQuantity;
+  final int totalExpenseMinor;
+  final String? otherWalletId;
+  final String title;
+  final String? description;
+  final String? categoryId;
+  final String? templateId;
+  final String? mediaId;
+  final DateTime occurredAt;
+  final int expectedVersion;
+}
+
+/// A voucher expense's full result: the voucher-wallet leg is always
+/// present; [otherTransaction]/[otherWallet] are null when the vouchers
+/// alone covered the expense.
+class VoucherExpenseResult {
+  const VoucherExpenseResult({
+    required this.voucherTransaction,
+    this.otherTransaction,
+    required this.voucherWallet,
+    this.otherWallet,
+  });
+
+  final LedgerTransaction voucherTransaction;
+  final LedgerTransaction? otherTransaction;
+  final Wallet voucherWallet;
+  final Wallet? otherWallet;
 }
 
 /// What a transfer returns: both ledger legs plus both wallets' new

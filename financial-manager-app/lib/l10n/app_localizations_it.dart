@@ -183,6 +183,52 @@ class AppLocalizationsIt extends AppLocalizations {
   String get errorCodeMediaNotFound => 'Immagine non trovata.';
 
   @override
+  String get errorCodeWalletNotMealVoucher =>
+      'Disponibile solo per i portafogli buoni pasto.';
+
+  @override
+  String get errorCodeWalletIsMealVoucher =>
+      'Non disponibile per i portafogli buoni pasto: usa le operazioni dedicate ai buoni.';
+
+  @override
+  String get errorCodeVoucherInsufficientBalance =>
+      'Non ci sono abbastanza buoni disponibili.';
+
+  @override
+  String get errorCodeVoucherLotAlreadyUsed =>
+      'Alcuni di questi buoni sono già stati spesi o rimossi.';
+
+  @override
+  String get errorCodeVoucherLotAlreadyExpired =>
+      'Questo lotto di buoni è già scaduto e non può più essere modificato.';
+
+  @override
+  String get errorCodeVoucherAutoAdjustmentNotDeletable =>
+      'Le rettifiche automatiche per buoni scaduti non possono essere eliminate.';
+
+  @override
+  String get errorCodeOtherWalletRequired =>
+      'Seleziona il portafoglio con cui hai pagato la differenza.';
+
+  @override
+  String get errorCodeOtherWalletNotAllowed =>
+      'I buoni scelti coprono già l\'intera spesa: non serve un altro portafoglio.';
+
+  @override
+  String get errorCodeSameAsVoucherWallet =>
+      'Il portafoglio della differenza deve essere diverso da quello dei buoni.';
+
+  @override
+  String get errorCodeInvalidMonth => 'Mese non valido.';
+
+  @override
+  String get errorCodeInvalidDay => 'Giorno non valido.';
+
+  @override
+  String get errorCodeNotAllowedForWalletType =>
+      'Non consentito per questo tipo di portafoglio.';
+
+  @override
   String get errorCodeRequiredField => 'Campo obbligatorio.';
 
   @override
@@ -455,6 +501,127 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get allWalletsLabel => 'Tutti i portafogli';
+
+  @override
+  String get walletTypeMealVoucher => 'Buoni pasto';
+
+  @override
+  String get voucherUnitValueLabel => 'Valore del buono';
+
+  @override
+  String get voucherExpiryPolicyLabel => 'Scadenza dei buoni';
+
+  @override
+  String get voucherExpiryCutoffMonthLabel => 'Fino al mese di';
+
+  @override
+  String get voucherExpiryMonthLabel => 'Mese di scadenza';
+
+  @override
+  String get voucherExpiryDayLabel => 'Giorno di scadenza';
+
+  @override
+  String get voucherInitialQuantityLabel => 'Numero di buoni iniziali';
+
+  @override
+  String get voucherLoadedAtLabel => 'Data di carico';
+
+  @override
+  String get voucherLotsAction => 'Buoni pasto';
+
+  @override
+  String get voucherLotsScreenTitle => 'Buoni pasto';
+
+  @override
+  String get voucherLotsLoadError => 'Impossibile caricare i buoni pasto.';
+
+  @override
+  String get voucherActiveSectionTitle => 'Attivi';
+
+  @override
+  String get voucherActiveEmptyMessage => 'Nessun buono attivo.';
+
+  @override
+  String get voucherExpiringSoonSectionTitle => 'In scadenza a breve';
+
+  @override
+  String get voucherExpiredSectionTitle => 'Scaduti';
+
+  @override
+  String get voucherExpiredEmptyMessage => 'Nessun buono scaduto.';
+
+  @override
+  String voucherLotQuantityLabel(int count) {
+    return '$count buoni';
+  }
+
+  @override
+  String voucherLotExpiresOnLabel(String date) {
+    return 'Scade il $date';
+  }
+
+  @override
+  String voucherLotExpiredOnLabel(String date) {
+    return 'Scaduto il $date';
+  }
+
+  @override
+  String voucherExpiringSoonBadge(int count) {
+    return '$count buoni in scadenza';
+  }
+
+  @override
+  String get addVouchersAction => 'Aggiungi buoni';
+
+  @override
+  String get removeVouchersAction => 'Rimuovi buoni';
+
+  @override
+  String get addVouchersSheetTitle => 'Aggiungi buoni';
+
+  @override
+  String get removeVouchersSheetTitle => 'Rimuovi buoni';
+
+  @override
+  String get voucherQuantityLabel => 'Numero di buoni';
+
+  @override
+  String get voucherExpenseAction => 'Spesa con buoni pasto';
+
+  @override
+  String get voucherExpenseSheetTitle => 'Spesa con buoni pasto';
+
+  @override
+  String get editVoucherExpenseSheetTitle => 'Modifica spesa con buoni pasto';
+
+  @override
+  String get voucherWalletLabel => 'Portafoglio buoni';
+
+  @override
+  String get voucherOtherWalletLabel => 'Pagato con';
+
+  @override
+  String get voucherOtherWalletRequiredError =>
+      'Seleziona il portafoglio con cui hai pagato la differenza.';
+
+  @override
+  String get voucherTotalExpenseLabel => 'Totale della spesa';
+
+  @override
+  String voucherShortfallLabel(String amount) {
+    return 'Differenza da pagare: $amount';
+  }
+
+  @override
+  String voucherSuggestedQuantityHelper(int count) {
+    return 'Minimo consigliato: $count';
+  }
+
+  @override
+  String get submitVoucherExpenseAction => 'Registra spesa';
+
+  @override
+  String get saveVoucherExpenseAction => 'Salva spesa';
 
   @override
   String get accountSecurityMenuTitle => 'Sicurezza';

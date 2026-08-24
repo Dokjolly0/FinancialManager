@@ -29,6 +29,8 @@ const (
 	balanceAdjustmentEndpoint = "POST /v1/wallets/{id}/balance-adjustments"
 	createWalletEndpoint      = "POST /v1/wallets"
 	transferEndpoint          = "POST /v1/transfers"
+	voucherCreditEndpoint     = "POST /v1/wallets/{id}/voucher-credits"
+	voucherExpenseEndpoint    = "POST /v1/voucher-expenses"
 	idempotencyTTL            = 24 * time.Hour
 
 	// Sanity cap against overflow/anomalous input (plan.md section 4.3),
@@ -138,22 +140,24 @@ func (s *Service) resolveAttachments(ctx context.Context, tx pgx.Tx, userID uuid
 // --- DTOs shared by create/update/get/list --------------------------------
 
 type transactionResponse struct {
-	ID             string  `json:"id"`
-	WalletID       string  `json:"wallet_id"`
-	Direction      string  `json:"direction"`
-	Kind           string  `json:"kind"`
-	AmountMinor    int64   `json:"amount_minor"`
-	Currency       string  `json:"currency"`
-	Title          string  `json:"title"`
-	Description    *string `json:"description,omitempty"`
-	CategoryID     *string `json:"category_id,omitempty"`
-	TemplateID     *string `json:"template_id,omitempty"`
-	MediaID        *string `json:"media_id,omitempty"`
-	OccurredAt     string  `json:"occurred_at"`
-	CreatedAt      string  `json:"created_at"`
-	UpdatedAt      string  `json:"updated_at"`
-	Version        int64   `json:"version"`
-	TransferPairID *string `json:"transfer_pair_id,omitempty"`
+	ID                  string  `json:"id"`
+	WalletID            string  `json:"wallet_id"`
+	Direction           string  `json:"direction"`
+	Kind                string  `json:"kind"`
+	AmountMinor         int64   `json:"amount_minor"`
+	Currency            string  `json:"currency"`
+	Title               string  `json:"title"`
+	Description         *string `json:"description,omitempty"`
+	CategoryID          *string `json:"category_id,omitempty"`
+	TemplateID          *string `json:"template_id,omitempty"`
+	MediaID             *string `json:"media_id,omitempty"`
+	OccurredAt          string  `json:"occurred_at"`
+	CreatedAt           string  `json:"created_at"`
+	UpdatedAt           string  `json:"updated_at"`
+	Version             int64   `json:"version"`
+	TransferPairID      *string `json:"transfer_pair_id,omitempty"`
+	LinkedTransactionID *string `json:"linked_transaction_id,omitempty"`
+	SystemGenerated     bool    `json:"system_generated,omitempty"`
 }
 
 const timeLayout = "2006-01-02T15:04:05Z07:00"
@@ -179,23 +183,30 @@ func toTransactionResponse(t Transaction) transactionResponse {
 		s := t.TransferPairID.String()
 		transferPairID = &s
 	}
+	var linkedTransactionID *string
+	if t.LinkedTransactionID != nil {
+		s := t.LinkedTransactionID.String()
+		linkedTransactionID = &s
+	}
 	return transactionResponse{
-		ID:             t.ID.String(),
-		WalletID:       t.WalletID.String(),
-		Direction:      t.Direction,
-		Kind:           t.Kind,
-		AmountMinor:    t.AmountMinor,
-		Currency:       t.Currency,
-		Title:          t.Title,
-		Description:    t.Description,
-		CategoryID:     categoryID,
-		TemplateID:     templateID,
-		MediaID:        mediaID,
-		OccurredAt:     t.OccurredAt.Format(timeLayout),
-		CreatedAt:      t.CreatedAt.Format(timeLayout),
-		UpdatedAt:      t.UpdatedAt.Format(timeLayout),
-		Version:        t.Version,
-		TransferPairID: transferPairID,
+		ID:                  t.ID.String(),
+		WalletID:            t.WalletID.String(),
+		Direction:           t.Direction,
+		Kind:                t.Kind,
+		AmountMinor:         t.AmountMinor,
+		Currency:            t.Currency,
+		Title:               t.Title,
+		Description:         t.Description,
+		CategoryID:          categoryID,
+		TemplateID:          templateID,
+		MediaID:             mediaID,
+		OccurredAt:          t.OccurredAt.Format(timeLayout),
+		CreatedAt:           t.CreatedAt.Format(timeLayout),
+		UpdatedAt:           t.UpdatedAt.Format(timeLayout),
+		Version:             t.Version,
+		TransferPairID:      transferPairID,
+		LinkedTransactionID: linkedTransactionID,
+		SystemGenerated:     t.SystemGenerated,
 	}
 }
 
@@ -205,16 +216,20 @@ func toTransactionResponse(t Transaction) transactionResponse {
 // consistent JSON shape. A partial shape here previously broke the
 // Flutter client's shared Wallet.fromJson parser.
 type walletSnapshot struct {
-	ID                  string  `json:"id"`
-	Name                string  `json:"name"`
-	Currency            string  `json:"currency"`
-	CurrentBalanceMinor int64   `json:"current_balance_minor"`
-	Type                string  `json:"type"`
-	Icon                string  `json:"icon"`
-	Color               string  `json:"color"`
-	Version             int64   `json:"version"`
-	UpdatedAt           string  `json:"updated_at"`
-	ArchivedAt          *string `json:"archived_at,omitempty"`
+	ID                       string  `json:"id"`
+	Name                     string  `json:"name"`
+	Currency                 string  `json:"currency"`
+	CurrentBalanceMinor      int64   `json:"current_balance_minor"`
+	Type                     string  `json:"type"`
+	Icon                     string  `json:"icon"`
+	Color                    string  `json:"color"`
+	Version                  int64   `json:"version"`
+	UpdatedAt                string  `json:"updated_at"`
+	ArchivedAt               *string `json:"archived_at,omitempty"`
+	VoucherUnitValueMinor    *int64  `json:"voucher_unit_value_minor,omitempty"`
+	VoucherExpiryCutoffMonth *int    `json:"voucher_expiry_cutoff_month,omitempty"`
+	VoucherExpiryMonth       *int    `json:"voucher_expiry_month,omitempty"`
+	VoucherExpiryDay         *int    `json:"voucher_expiry_day,omitempty"`
 }
 
 func toWalletSnapshot(w wallets.Wallet) walletSnapshot {
@@ -224,17 +239,35 @@ func toWalletSnapshot(w wallets.Wallet) walletSnapshot {
 		archivedAt = &s
 	}
 	return walletSnapshot{
-		ID:                  w.ID.String(),
-		Name:                w.Name,
-		Currency:            w.Currency,
-		CurrentBalanceMinor: w.CurrentBalanceMinor,
-		Type:                w.Type,
-		Icon:                w.Icon,
-		Color:               w.Color,
-		Version:             w.Version,
-		UpdatedAt:           w.UpdatedAt.Format(timeLayout),
-		ArchivedAt:          archivedAt,
+		ID:                       w.ID.String(),
+		Name:                     w.Name,
+		Currency:                 w.Currency,
+		CurrentBalanceMinor:      w.CurrentBalanceMinor,
+		Type:                     w.Type,
+		Icon:                     w.Icon,
+		Color:                    w.Color,
+		Version:                  w.Version,
+		UpdatedAt:                w.UpdatedAt.Format(timeLayout),
+		ArchivedAt:               archivedAt,
+		VoucherUnitValueMinor:    w.VoucherUnitValueMinor,
+		VoucherExpiryCutoffMonth: w.VoucherExpiryCutoffMonth,
+		VoucherExpiryMonth:       w.VoucherExpiryMonth,
+		VoucherExpiryDay:         w.VoucherExpiryDay,
 	}
+}
+
+// rejectMealVoucherWallet gates the generic mutation endpoints (standard
+// transaction, balance adjustment, transfer) off of MEAL_VOUCHER wallets:
+// every mutation there must go through the dedicated voucher endpoints
+// (CreateVoucherCredit, CreateVoucherExpense, ...) so the
+// "balance == Σ active lots × unit value" invariant can never be broken by
+// an arbitrary amount_minor.
+func rejectMealVoucherWallet(w wallets.Wallet) error {
+	if w.Type == wallets.TypeMealVoucher {
+		return apierror.New(http.StatusForbidden, "WALLET_IS_MEAL_VOUCHER",
+			"This operation isn't available for meal-voucher wallets; use the voucher-specific endpoints.")
+	}
+	return nil
 }
 
 func sha256Sum(b []byte) []byte {
@@ -335,6 +368,9 @@ func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([
 			return fmt.Errorf("lock wallet: %w", err)
 		}
 		walletID = wallet.ID
+		if err := rejectMealVoucherWallet(wallet); err != nil {
+			return err
+		}
 		if in.Currency != wallet.Currency {
 			return apierror.NewValidation(map[string]string{"currency": apierror.FieldCurrencyMismatch})
 		}
@@ -473,6 +509,13 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 			return apierror.New(http.StatusForbidden, "NOT_EDITABLE",
 				"Only standard transactions can be edited.")
 		}
+		// A voucher-expense leg is also Kind=STANDARD (so it counts in
+		// reports) but must only be edited through UpdateVoucherExpense,
+		// which knows how to rebalance the meal-voucher lots it consumed.
+		if existing.LinkedTransactionID != nil {
+			return apierror.New(http.StatusForbidden, "NOT_EDITABLE",
+				"Voucher expenses can only be edited through the voucher expense endpoint.")
+		}
 		if err := s.resolveAttachments(ctx, tx, in.UserID, in.CategoryID, in.TemplateID, in.MediaID); err != nil {
 			return err
 		}
@@ -486,6 +529,9 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 				return fmt.Errorf("lock wallet: %w", err)
 			}
 			affectedWalletIDs = append(affectedWalletIDs, wallet.ID)
+			if err := rejectMealVoucherWallet(wallet); err != nil {
+				return err
+			}
 
 			diff := SignedDelta(in.Direction, in.AmountMinor) - SignedDelta(existing.Direction, existing.AmountMinor)
 			newBalance := wallet.CurrentBalanceMinor + diff
@@ -539,6 +585,12 @@ func (s *Service) UpdateStandard(ctx context.Context, in UpdateStandardInput) (T
 			oldWallet, newWallet = secondWallet, firstWallet
 		}
 		affectedWalletIDs = append(affectedWalletIDs, oldWallet.ID, newWallet.ID)
+		if err := rejectMealVoucherWallet(oldWallet); err != nil {
+			return err
+		}
+		if err := rejectMealVoucherWallet(newWallet); err != nil {
+			return err
+		}
 
 		oldBalance := oldWallet.CurrentBalanceMinor - SignedDelta(existing.Direction, existing.AmountMinor)
 		newBalance := newWallet.CurrentBalanceMinor + SignedDelta(in.Direction, in.AmountMinor)
@@ -678,12 +730,20 @@ func (s *Service) UpdateOpeningBalance(ctx context.Context, in UpdateOpeningBala
 // (section 13.4: "should not be deletable from the ordinary UI"), and
 // neither can TRANSFER — deleting one leg of a linked pair without the
 // other would corrupt the pairing; a transfer must be reversed with a new
-// transfer instead. The affected wallet is resolved from the transaction
-// row itself, not a client-supplied ID, since this endpoint only takes a
-// transaction id.
+// transfer instead. A system-generated row (the automatic "Buoni scaduti"
+// voucher-expiry write-off) can never be deleted — it's a realized loss,
+// not a correction.
+//
+// A meal-voucher credit/removal or expense additionally needs its lot
+// bookkeeping reversed, and a voucher expense may have a second, linked leg
+// on another wallet that must be deleted alongside it — see
+// deleteVoucherCreditOrRemoval/deleteVoucherExpense in voucher.go. Locking
+// resolves both wallets up front (in a fixed order, mirroring
+// CreateTransfer) whenever a linked leg exists, so this never deadlocks
+// against a concurrent operation touching the same two wallets.
 func (s *Service) Delete(ctx context.Context, userID, transactionID uuid.UUID) (walletSnapshot, error) {
 	var result walletSnapshot
-	var walletID uuid.UUID
+	var walletIDs []uuid.UUID
 	err := s.db.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		existing, err := s.transactions.WithQuerier(tx).LockByIDAndUserID(ctx, transactionID, userID)
 		if errors.Is(err, ErrNotFound) {
@@ -700,33 +760,102 @@ func (s *Service) Delete(ctx context.Context, userID, transactionID uuid.UUID) (
 			return apierror.New(http.StatusForbidden, "TRANSFER_NOT_DELETABLE",
 				"Transfers cannot be deleted directly.")
 		}
-
-		wallet, err := s.wallets.WithQuerier(tx).LockByIDForUpdate(ctx, existing.WalletID, userID)
-		if err != nil {
-			return fmt.Errorf("lock wallet: %w", err)
-		}
-		walletID = wallet.ID
-
-		newBalance := wallet.CurrentBalanceMinor - SignedDelta(existing.Direction, existing.AmountMinor)
-
-		if err := s.transactions.WithQuerier(tx).SoftDelete(ctx, transactionID, userID); err != nil {
-			return err
+		if existing.SystemGenerated {
+			return apierror.New(http.StatusForbidden, "VOUCHER_AUTO_ADJUSTMENT_NOT_DELETABLE",
+				"Automatic voucher expiry adjustments cannot be deleted.")
 		}
 
-		updatedWallet, err := s.wallets.WithQuerier(tx).UpdateBalance(ctx, wallet.ID, newBalance, wallet.Version)
-		if err != nil {
-			return fmt.Errorf("update wallet balance: %w", err)
+		var linked *Transaction
+		if existing.LinkedTransactionID != nil {
+			l, err := s.transactions.WithQuerier(tx).LockByIDAndUserID(ctx, *existing.LinkedTransactionID, userID)
+			if err != nil {
+				return fmt.Errorf("lock linked transaction: %w", err)
+			}
+			linked = &l
 		}
 
-		if err := s.audit.WithQuerier(tx).Record(ctx, transactionID, userID, AuditActionDeleted, existing, nil); err != nil {
-			return err
+		var primaryWallet, linkedWallet wallets.Wallet
+		if linked == nil {
+			primaryWallet, err = s.wallets.WithQuerier(tx).LockByIDForUpdate(ctx, existing.WalletID, userID)
+			if err != nil {
+				return fmt.Errorf("lock wallet: %w", err)
+			}
+		} else {
+			firstID, secondID := orderedWalletIDs(existing.WalletID, linked.WalletID)
+			firstWallet, err := s.wallets.WithQuerier(tx).LockByIDForUpdate(ctx, firstID, userID)
+			if err != nil {
+				return fmt.Errorf("lock wallet: %w", err)
+			}
+			secondWallet, err := s.wallets.WithQuerier(tx).LockByIDForUpdate(ctx, secondID, userID)
+			if err != nil {
+				return fmt.Errorf("lock wallet: %w", err)
+			}
+			if firstWallet.ID == existing.WalletID {
+				primaryWallet, linkedWallet = firstWallet, secondWallet
+			} else {
+				primaryWallet, linkedWallet = secondWallet, firstWallet
+			}
+		}
+		walletIDs = append(walletIDs, primaryWallet.ID)
+		if linked != nil {
+			walletIDs = append(walletIDs, linkedWallet.ID)
 		}
 
-		result = toWalletSnapshot(updatedWallet)
+		switch {
+		case primaryWallet.Type == wallets.TypeMealVoucher && existing.Kind == KindBalanceAdjustment:
+			snap, err := s.deleteVoucherCreditOrRemoval(ctx, tx, userID, existing, primaryWallet)
+			if err != nil {
+				return err
+			}
+			result = snap
+
+		case primaryWallet.Type == wallets.TypeMealVoucher && existing.Kind == KindStandard:
+			// existing IS the voucher-wallet leg; linked (if any) is the
+			// shortfall leg on another wallet.
+			var otherLeg *Transaction
+			var otherWallet wallets.Wallet
+			if linked != nil {
+				otherLeg, otherWallet = linked, linkedWallet
+			}
+			snap, err := s.deleteVoucherExpense(ctx, tx, userID, existing, primaryWallet, otherLeg, otherWallet)
+			if err != nil {
+				return err
+			}
+			result = snap
+
+		case existing.Kind == KindStandard && linked != nil:
+			// existing is the shortfall leg (primaryWallet isn't
+			// MEAL_VOUCHER, ruled out above); linked is the voucher leg —
+			// LinkedTransactionID is only ever set on a voucher-expense
+			// pair, so this is unambiguous.
+			voucherLeg := *linked
+			otherLeg := existing
+			snap, err := s.deleteVoucherExpense(ctx, tx, userID, voucherLeg, linkedWallet, &otherLeg, primaryWallet)
+			if err != nil {
+				return err
+			}
+			result = snap
+
+		default:
+			newBalance := primaryWallet.CurrentBalanceMinor - SignedDelta(existing.Direction, existing.AmountMinor)
+			if err := s.transactions.WithQuerier(tx).SoftDelete(ctx, transactionID, userID); err != nil {
+				return err
+			}
+			updatedWallet, err := s.wallets.WithQuerier(tx).UpdateBalance(ctx, primaryWallet.ID, newBalance, primaryWallet.Version)
+			if err != nil {
+				return fmt.Errorf("update wallet balance: %w", err)
+			}
+			if err := s.audit.WithQuerier(tx).Record(ctx, transactionID, userID, AuditActionDeleted, existing, nil); err != nil {
+				return err
+			}
+			result = toWalletSnapshot(updatedWallet)
+		}
 		return nil
 	})
 	if err == nil {
-		s.bumpReportVersion(ctx, walletID)
+		for _, id := range walletIDs {
+			s.bumpReportVersion(ctx, id)
+		}
 	}
 	return result, err
 }
@@ -789,6 +918,9 @@ func (s *Service) CreateBalanceAdjustment(ctx context.Context, in CreateBalanceA
 		}
 		if err != nil {
 			return fmt.Errorf("lock wallet: %w", err)
+		}
+		if err := rejectMealVoucherWallet(wallet); err != nil {
+			return err
 		}
 
 		delta := in.TargetBalanceMinor - wallet.CurrentBalanceMinor
@@ -879,12 +1011,61 @@ type CreateWalletInput struct {
 	SessionID           *uuid.UUID
 	IdempotencyKey      uuid.UUID
 	RequestBody         []byte
+
+	// Only meaningful (and only accepted) when Type == wallets.TypeMealVoucher.
+	// The three expiry fields default to wallets.DefaultVoucherExpiry* when
+	// omitted, so a client can create a voucher wallet without deciding on
+	// a policy up front. InitialVoucherQuantity (default 0) creates the
+	// first lot atomically alongside the wallet, dated VoucherLoadedAt
+	// (default now) — the same operation CreateVoucherCredit performs for
+	// every later top-up.
+	VoucherUnitValueMinor    *int64
+	VoucherExpiryCutoffMonth *int
+	VoucherExpiryMonth       *int
+	VoucherExpiryDay         *int
+	InitialVoucherQuantity   int
+	VoucherLoadedAt          time.Time
 }
 
 func (s *Service) CreateWallet(ctx context.Context, in CreateWalletInput) ([]byte, int, error) {
 	fieldErrors := wallets.ValidateFields(in.Name, in.Type, in.Icon, in.Color)
-	if in.OpeningBalanceMinor < 0 {
-		fieldErrors["opening_balance_minor"] = apierror.FieldNegativeNotAllowed
+	for k, v := range wallets.ValidateVoucherUnitValue(in.Type, in.VoucherUnitValueMinor) {
+		fieldErrors[k] = v
+	}
+
+	cutoffMonth, expiryMonth, expiryDay := in.VoucherExpiryCutoffMonth, in.VoucherExpiryMonth, in.VoucherExpiryDay
+	if in.Type == wallets.TypeMealVoucher {
+		if cutoffMonth == nil {
+			d := wallets.DefaultVoucherExpiryCutoffMonth
+			cutoffMonth = &d
+		}
+		if expiryMonth == nil {
+			d := wallets.DefaultVoucherExpiryMonth
+			expiryMonth = &d
+		}
+		if expiryDay == nil {
+			d := wallets.DefaultVoucherExpiryDay
+			expiryDay = &d
+		}
+	}
+	for k, v := range wallets.ValidateVoucherExpiryFields(in.Type, cutoffMonth, expiryMonth, expiryDay) {
+		fieldErrors[k] = v
+	}
+
+	if in.Type == wallets.TypeMealVoucher {
+		if in.OpeningBalanceMinor != 0 {
+			fieldErrors["opening_balance_minor"] = apierror.FieldNotAllowedForWalletType
+		}
+		if in.InitialVoucherQuantity < 0 {
+			fieldErrors["initial_voucher_quantity"] = apierror.FieldNegativeNotAllowed
+		}
+	} else {
+		if in.OpeningBalanceMinor < 0 {
+			fieldErrors["opening_balance_minor"] = apierror.FieldNegativeNotAllowed
+		}
+		if in.InitialVoucherQuantity != 0 {
+			fieldErrors["initial_voucher_quantity"] = apierror.FieldNotAllowedForWalletType
+		}
 	}
 	if in.IdempotencyKey == uuid.Nil {
 		fieldErrors["idempotency_key"] = apierror.FieldRequired
@@ -894,6 +1075,10 @@ func (s *Service) CreateWallet(ctx context.Context, in CreateWalletInput) ([]byt
 	}
 
 	now := s.clock.Now()
+	loadedAt := in.VoucherLoadedAt
+	if loadedAt.IsZero() {
+		loadedAt = now
+	}
 	requestHash := sha256Sum(in.RequestBody)
 
 	var responseBody []byte
@@ -912,15 +1097,43 @@ func (s *Service) CreateWallet(ctx context.Context, in CreateWalletInput) ([]byt
 			return nil
 		}
 
-		wallet, err := s.wallets.WithQuerier(tx).Create(ctx, in.UserID, in.Name, "EUR", in.Type, in.Icon, in.Color, in.OpeningBalanceMinor)
+		wallet, err := s.wallets.WithQuerier(tx).Create(ctx, wallets.CreateRowInput{
+			UserID: in.UserID, Name: in.Name, Currency: "EUR", Type: in.Type, Icon: in.Icon, Color: in.Color,
+			OpeningBalanceMinor:      in.OpeningBalanceMinor,
+			VoucherUnitValueMinor:    in.VoucherUnitValueMinor,
+			VoucherExpiryCutoffMonth: cutoffMonth, VoucherExpiryMonth: expiryMonth, VoucherExpiryDay: expiryDay,
+		})
 		if err != nil {
 			return fmt.Errorf("create wallet: %w", err)
 		}
 
+		switch {
+		case in.Type == wallets.TypeMealVoucher && in.InitialVoucherQuantity > 0:
+			created, err := s.transactions.WithQuerier(tx).Create(ctx, CreateInput{
+				WalletID: wallet.ID, UserID: in.UserID, Direction: DirectionCredit, Kind: KindBalanceAdjustment,
+				AmountMinor: int64(in.InitialVoucherQuantity) * (*in.VoucherUnitValueMinor), Currency: "EUR",
+				Title: "Buoni ricevuti", OccurredAt: loadedAt, CreatedBySessionID: in.SessionID,
+			})
+			if err != nil {
+				return fmt.Errorf("create initial voucher credit: %w", err)
+			}
+			expiresAt := wallets.ComputeLotExpiry(*cutoffMonth, *expiryMonth, *expiryDay, loadedAt)
+			if _, err := s.wallets.WithQuerier(tx).CreateVoucherLot(ctx, wallet.ID, in.InitialVoucherQuantity, expiresAt, created.ID); err != nil {
+				return fmt.Errorf("create initial voucher lot: %w", err)
+			}
+			newBalance := int64(in.InitialVoucherQuantity) * (*in.VoucherUnitValueMinor)
+			wallet, err = s.wallets.WithQuerier(tx).UpdateBalance(ctx, wallet.ID, newBalance, wallet.Version)
+			if err != nil {
+				return fmt.Errorf("update wallet balance: %w", err)
+			}
+			if err := s.audit.WithQuerier(tx).Record(ctx, created.ID, in.UserID, AuditActionCreated, nil, created); err != nil {
+				return err
+			}
+
 		// amount_minor must be > 0 per the transactions table constraint — a
 		// zero opening balance is valid but simply has no OPENING_BALANCE
 		// ledger row (mirrors registration's identical rule).
-		if in.OpeningBalanceMinor > 0 {
+		case in.Type != wallets.TypeMealVoucher && in.OpeningBalanceMinor > 0:
 			created, err := s.transactions.WithQuerier(tx).Create(ctx, CreateInput{
 				WalletID: wallet.ID, UserID: in.UserID, Direction: DirectionCredit, Kind: KindOpeningBalance,
 				AmountMinor: in.OpeningBalanceMinor, Currency: "EUR", Title: "Saldo iniziale",
@@ -1044,6 +1257,12 @@ func (s *Service) CreateTransfer(ctx context.Context, in CreateTransferInput) ([
 		}
 		sourceWalletID, destWalletID = source.ID, dest.ID
 
+		if err := rejectMealVoucherWallet(source); err != nil {
+			return err
+		}
+		if err := rejectMealVoucherWallet(dest); err != nil {
+			return err
+		}
 		if source.Currency != dest.Currency {
 			return apierror.NewValidation(map[string]string{"destination_wallet_id": apierror.FieldCurrencyMismatch})
 		}

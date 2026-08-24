@@ -205,7 +205,10 @@ func TestList_FiltersByWallet(t *testing.T) {
 	h := newHarness(t, 1000000)
 	ctx := context.Background()
 
-	secondWallet, err := h.wallets.Create(ctx, h.userID, "Secondo portafoglio", "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, 0)
+	secondWallet, err := h.wallets.Create(ctx, wallets.CreateRowInput{
+		UserID: h.userID, Name: "Secondo portafoglio", Currency: "EUR", Type: wallets.TypeOther,
+		Icon: wallets.DefaultIcon, Color: wallets.DefaultColor, OpeningBalanceMinor: 0,
+	})
 	if err != nil {
 		t.Fatalf("create second wallet: %v", err)
 	}
@@ -240,7 +243,10 @@ func TestList_FiltersByKindTransfer(t *testing.T) {
 	h := newHarness(t, 1000000)
 	ctx := context.Background()
 
-	destWallet, err := h.wallets.Create(ctx, h.userID, "Destinazione", "EUR", wallets.TypeOther, wallets.DefaultIcon, wallets.DefaultColor, 0)
+	destWallet, err := h.wallets.Create(ctx, wallets.CreateRowInput{
+		UserID: h.userID, Name: "Destinazione", Currency: "EUR", Type: wallets.TypeOther,
+		Icon: wallets.DefaultIcon, Color: wallets.DefaultColor, OpeningBalanceMinor: 0,
+	})
 	if err != nil {
 		t.Fatalf("create destination wallet: %v", err)
 	}

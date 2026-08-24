@@ -12,10 +12,20 @@ import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../categories/data/providers.dart';
 import '../../../media/data/providers.dart';
+import '../../../wallets/data/providers.dart';
+import '../../../wallets/domain/models/wallet.dart';
+import '../../../wallets/presentation/widgets/voucher_expense_sheet.dart';
+import '../../data/providers.dart';
+import '../../domain/models/ledger_transaction.dart';
 import '../../domain/models/transaction_direction.dart';
 import '../view_models/transaction_detail_controller.dart';
 import '../widgets/opening_balance_edit_sheet.dart';
 import '../widgets/transfer_edit_sheet.dart';
+
+Wallet? _findWallet(List<Wallet> wallets, String id) {
+  final matches = wallets.where((w) => w.id == id);
+  return matches.isEmpty ? null : matches.first;
+}
 
 /// Transaction detail (plan.md section 7.10): view, edit, delete. Edit and
 /// delete are only offered for STANDARD transactions. OPENING_BALANCE and
@@ -34,11 +44,84 @@ class TransactionDetailScreen extends ConsumerWidget {
     );
     final l10n = AppLocalizations.of(context);
 
+    final transactionWallet = state.transaction == null
+        ? null
+        : _findWallet(
+            ref.watch(walletsListProvider).value ?? const [],
+            state.transaction!.walletId,
+          );
+    final isVoucherExpense =
+        state.transaction?.kind == TransactionKind.standard &&
+        !(state.transaction?.systemGenerated ?? false) &&
+        (state.transaction?.linkedTransactionId != null ||
+            (transactionWallet?.isMealVoucher ?? false));
+
+    Future<void> openVoucherExpenseEdit() async {
+      final transaction = state.transaction!;
+      final repo = ref.read(transactionRepositoryProvider);
+      final wallets = await ref.read(walletsListProvider.future);
+
+      LedgerTransaction voucherTx;
+      Wallet? voucherWallet;
+      LedgerTransaction? otherTx;
+      Wallet? otherWallet;
+
+      if (transactionWallet?.isMealVoucher ?? false) {
+        voucherTx = transaction;
+        voucherWallet = transactionWallet;
+        if (transaction.linkedTransactionId != null) {
+          otherTx = await repo.getTransaction(transaction.linkedTransactionId!);
+          otherWallet = _findWallet(wallets, otherTx.walletId);
+        }
+      } else {
+        voucherTx = await repo.getTransaction(transaction.linkedTransactionId!);
+        voucherWallet = _findWallet(wallets, voucherTx.walletId);
+        otherTx = transaction;
+        otherWallet = transactionWallet;
+      }
+
+      if (!context.mounted) return;
+      final changed = await VoucherExpenseSheet.show(
+        context,
+        editVoucherTransaction: voucherTx,
+        editVoucherWallet: voucherWallet,
+        editOtherTransaction: otherTx,
+        editOtherWallet: otherWallet,
+      );
+      if (changed) controller.load();
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.transactionDetailScreenTitle),
         actions: [
-          if (state.transaction?.isEditable ?? false) ...[
+          if (isVoucherExpense) ...[
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: l10n.editTooltip,
+              onPressed: openVoucherExpenseEdit,
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: l10n.deleteTooltip,
+              onPressed: state.isDeleting
+                  ? null
+                  : () async {
+                      final confirmed = await ConfirmationSheet.show(
+                        context,
+                        title: l10n.deleteTransactionConfirmTitle,
+                        message: l10n.deleteTransactionConfirmMessage,
+                        confirmLabel: l10n.commonDelete,
+                        isDestructive: true,
+                      );
+                      if (!confirmed) return;
+                      final wallet = await controller.delete();
+                      if (wallet != null && context.mounted) {
+                        context.pop();
+                      }
+                    },
+            ),
+          ] else if (state.transaction?.isEditable ?? false) ...[
             IconButton(
               icon: const Icon(Icons.edit_outlined),
               tooltip: l10n.editTooltip,

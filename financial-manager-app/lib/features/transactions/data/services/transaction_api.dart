@@ -117,4 +117,50 @@ class TransactionApi {
     );
     return response.data!;
   }
+
+  Future<Map<String, dynamic>> createVoucherCredit(
+    String walletId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/wallets/$walletId/voucher-credits',
+      data: body,
+      options: Options(headers: {'Idempotency-Key': _uuid.v4()}),
+    );
+    return response.data!;
+  }
+
+  Future<Map<String, dynamic>> updateVoucherCredit(
+    String walletId,
+    String creditId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/wallets/$walletId/voucher-credits/$creditId',
+      data: body,
+    );
+    return response.data!;
+  }
+
+  Future<Map<String, dynamic>> createVoucherExpense(
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/voucher-expenses',
+      data: body,
+      options: Options(headers: {'Idempotency-Key': _uuid.v4()}),
+    );
+    return response.data!;
+  }
+
+  Future<Map<String, dynamic>> updateVoucherExpense(
+    String id,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/voucher-expenses/$id',
+      data: body,
+    );
+    return response.data!;
+  }
 }

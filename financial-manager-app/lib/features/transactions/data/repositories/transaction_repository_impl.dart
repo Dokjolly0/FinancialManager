@@ -253,4 +253,111 @@ class TransactionRepositoryImpl implements TransactionRepository {
       throw ErrorMapper.fromException(e);
     }
   }
+
+  @override
+  Future<TransactionWithWallet> createVoucherCredit(
+    CreateVoucherCreditParams params,
+  ) async {
+    try {
+      final response = await _api.createVoucherCredit(params.walletId, {
+        'quantity': params.quantity,
+        'reason': params.reason,
+        'occurred_at': params.occurredAt?.toUtc().toIso8601String(),
+      });
+      return _parseWithWallet(response);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<TransactionWithWallet> updateVoucherCredit(
+    String transactionId,
+    UpdateVoucherCreditParams params,
+  ) async {
+    try {
+      final response = await _api.updateVoucherCredit(
+        params.walletId,
+        transactionId,
+        {
+          'quantity': params.quantity,
+          'reason': params.reason,
+          'occurred_at': params.occurredAt.toUtc().toIso8601String(),
+          'version': params.expectedVersion,
+        },
+      );
+      return _parseWithWallet(response);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  VoucherExpenseResult _parseVoucherExpenseResult(
+    Map<String, dynamic> response,
+  ) {
+    final rawOtherTransaction =
+        response['other_transaction'] as Map<String, dynamic>?;
+    final rawOtherWallet = response['other_wallet'] as Map<String, dynamic>?;
+    return VoucherExpenseResult(
+      voucherTransaction: LedgerTransaction.fromJson(
+        response['voucher_transaction'] as Map<String, dynamic>,
+      ),
+      otherTransaction: rawOtherTransaction == null
+          ? null
+          : LedgerTransaction.fromJson(rawOtherTransaction),
+      voucherWallet: Wallet.fromJson(
+        response['voucher_wallet'] as Map<String, dynamic>,
+      ),
+      otherWallet: rawOtherWallet == null
+          ? null
+          : Wallet.fromJson(rawOtherWallet),
+    );
+  }
+
+  @override
+  Future<VoucherExpenseResult> createVoucherExpense(
+    CreateVoucherExpenseParams params,
+  ) async {
+    try {
+      final response = await _api.createVoucherExpense({
+        'voucher_wallet_id': params.voucherWalletId,
+        'voucher_quantity': params.voucherQuantity,
+        'total_expense_minor': params.totalExpenseMinor,
+        'other_wallet_id': params.otherWalletId,
+        'title': params.title,
+        'description': params.description,
+        'category_id': params.categoryId,
+        'template_id': params.templateId,
+        'media_id': params.mediaId,
+        'occurred_at': params.occurredAt?.toUtc().toIso8601String(),
+      });
+      return _parseVoucherExpenseResult(response);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<VoucherExpenseResult> updateVoucherExpense(
+    String voucherTransactionId,
+    UpdateVoucherExpenseParams params,
+  ) async {
+    try {
+      final response = await _api.updateVoucherExpense(voucherTransactionId, {
+        'voucher_quantity': params.voucherQuantity,
+        'total_expense_minor': params.totalExpenseMinor,
+        'other_wallet_id': params.otherWalletId,
+        'title': params.title,
+        'description': params.description,
+        'category_id': params.categoryId,
+        'template_id': params.templateId,
+        'media_id': params.mediaId,
+        'occurred_at': params.occurredAt.toUtc().toIso8601String(),
+        'version': params.expectedVersion,
+      });
+      return _parseVoucherExpenseResult(response);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
 }

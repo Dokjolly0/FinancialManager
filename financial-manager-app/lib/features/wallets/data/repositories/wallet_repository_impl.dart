@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../../core/errors/error_mapper.dart';
+import '../../domain/models/voucher_lot.dart';
 import '../../domain/models/wallet.dart';
 import '../../domain/models/wallet_denomination.dart';
 import '../../domain/repositories/wallet_repository.dart';
@@ -41,6 +42,14 @@ class WalletRepositoryImpl implements WalletRepository {
         'icon': params.icon,
         'color': params.color,
         'opening_balance_minor': params.openingBalanceMinor,
+        'voucher_unit_value_minor': params.voucherUnitValueMinor,
+        'voucher_expiry_cutoff_month': params.voucherExpiryCutoffMonth,
+        'voucher_expiry_month': params.voucherExpiryMonth,
+        'voucher_expiry_day': params.voucherExpiryDay,
+        'initial_voucher_quantity': params.initialVoucherQuantity,
+        'voucher_loaded_at': params.voucherLoadedAt
+            ?.toUtc()
+            .toIso8601String(),
       });
       return Wallet.fromJson(response);
     } on DioException catch (e) {
@@ -57,6 +66,9 @@ class WalletRepositoryImpl implements WalletRepository {
         'icon': params.icon,
         'color': params.color,
         'version': params.expectedVersion,
+        'voucher_expiry_cutoff_month': params.voucherExpiryCutoffMonth,
+        'voucher_expiry_month': params.voucherExpiryMonth,
+        'voucher_expiry_day': params.voucherExpiryDay,
       });
       return Wallet.fromJson(response);
     } on DioException catch (e) {
@@ -105,6 +117,18 @@ class WalletRepositoryImpl implements WalletRepository {
           .map(
             (json) => WalletDenomination.fromJson(json as Map<String, dynamic>),
           )
+          .toList();
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<List<VoucherLot>> getVoucherLots(String walletId) async {
+    try {
+      final raw = await _api.getVoucherLots(walletId);
+      return raw
+          .map((json) => VoucherLot.fromJson(json as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
       throw ErrorMapper.fromException(e);

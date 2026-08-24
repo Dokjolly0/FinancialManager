@@ -42,6 +42,20 @@ type Transaction struct {
 	Version            int64
 	CreatedBySessionID *uuid.UUID
 	TransferPairID     *uuid.UUID
+
+	// LinkedTransactionID pairs a meal-voucher expense's two DEBIT legs (the
+	// voucher-wallet leg and, if the vouchers didn't cover the full expense,
+	// the other-wallet leg for the shortfall) — a generic analogue of
+	// TransferPairID for a pairing that stays Kind=STANDARD (so both legs
+	// count in reports, unlike TRANSFER) rather than a wallet-to-wallet
+	// transfer. Nil when the expense was fully covered by vouchers.
+	LinkedTransactionID *uuid.UUID
+
+	// SystemGenerated marks a row the backend wrote itself rather than in
+	// response to a user action — today only the "Buoni scaduti"
+	// BALANCE_ADJUSTMENT rows applyVoucherLotExpiry creates when meal-voucher
+	// lots expire unused. Never editable or deletable by the user.
+	SystemGenerated bool
 }
 
 // NormalizeTitle mirrors plan.md section 4.4: trim, compact internal
