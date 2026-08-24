@@ -237,6 +237,8 @@
   },
   "submitVoucherExpenseAction": "Record expense",
   "saveVoucherExpenseAction": "Save expense",
+  "noImageSelectedLabel": "No image",
+  "imageSelectedLabel": "Image selected",
   "accountSecurityMenuTitle": "Security",
   "accountSecurityMenuSubtitle": "Password, active sessions, logout",
   "accountLinkedAccountsMenuTitle": "Linked accounts",

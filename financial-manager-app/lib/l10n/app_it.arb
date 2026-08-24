@@ -219,6 +219,8 @@
   },
   "submitVoucherExpenseAction": "Registra spesa",
   "saveVoucherExpenseAction": "Salva spesa",
+  "noImageSelectedLabel": "Nessuna immagine",
+  "imageSelectedLabel": "Immagine selezionata",
   "accountSecurityMenuTitle": "Sicurezza",
   "accountSecurityMenuSubtitle": "Password, sessioni attive, logout",
   "accountLinkedAccountsMenuTitle": "Account collegati",

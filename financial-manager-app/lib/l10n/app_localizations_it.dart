@@ -624,6 +624,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get saveVoucherExpenseAction => 'Salva spesa';
 
   @override
+  String get noImageSelectedLabel => 'Nessuna immagine';
+
+  @override
+  String get imageSelectedLabel => 'Immagine selezionata';
+
+  @override
   String get accountSecurityMenuTitle => 'Sicurezza';
 
   @override

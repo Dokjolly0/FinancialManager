@@ -12,6 +12,9 @@ import '../../../../core/widgets/amount_field.dart';
 import '../../../../core/widgets/first_day_of_week_scope.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../account/presentation/view_models/account_providers.dart';
+import '../../../media/data/providers.dart';
+import '../../../media/domain/models/media_asset.dart';
+import '../../../media/presentation/widgets/image_picker_sheet.dart';
 import '../../../transactions/data/providers.dart';
 import '../../../transactions/domain/models/ledger_transaction.dart';
 import '../../../transactions/domain/repositories/transaction_repository.dart';
@@ -25,10 +28,9 @@ import 'wallet_picker_sheet.dart';
 /// a total real cost, how many vouchers to use (validated against
 /// availability server-side, with a client-side minimum-needed suggestion),
 /// and — only if the vouchers' value falls short of the real cost — which
-/// other wallet covers the difference. Deliberately narrower than the
-/// standard transaction form (no category/template/image) since it's a
-/// focused flow; those can be added to the expense afterwards like any
-/// other transaction if needed.
+/// other wallet covers the difference. Also lets the user attach an image,
+/// same as the standard transaction form (plan.md section 7.7) — no
+/// category/template though, since this is a focused flow.
 class VoucherExpenseSheet extends ConsumerStatefulWidget {
   const VoucherExpenseSheet({
     super.key,
@@ -87,8 +89,12 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
   late final _titleController = TextEditingController(
     text: widget.editVoucherTransaction?.title ?? '',
   );
+  late final _descriptionController = TextEditingController(
+    text: widget.editVoucherTransaction?.description ?? '',
+  );
   Wallet? _voucherWallet;
   Wallet? _otherWallet;
+  late String? _mediaId = widget.editVoucherTransaction?.mediaId;
   late DateTime _occurredAt =
       widget.editVoucherTransaction?.occurredAt.toLocal() ?? DateTime.now();
   String? _totalError;
@@ -140,10 +146,16 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
     _totalController.dispose();
     _quantityController.dispose();
     _titleController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
   int get _quantity => int.tryParse(_quantityController.text.trim()) ?? 0;
+
+  String? get _description =>
+      _descriptionController.text.trim().isEmpty
+      ? null
+      : _descriptionController.text.trim();
 
   int get _shortfallMinor {
     final wallet = _voucherWallet;
@@ -180,6 +192,15 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
       _otherWallet = selected;
       _walletError = null;
     });
+  }
+
+  Future<void> _pickImage() async {
+    final selected = await ImagePickerSheet.show(
+      context,
+      kind: MediaKind.transaction,
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _mediaId = selected.id);
   }
 
   Future<void> _pickDate() async {
@@ -253,6 +274,8 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
             totalExpenseMinor: totalMinor!,
             otherWalletId: shortfall > 0 ? _otherWallet!.id : null,
             title: _titleController.text.trim(),
+            description: _description,
+            mediaId: _mediaId,
             occurredAt: _occurredAt,
             expectedVersion: widget.editVoucherTransaction!.version,
           ),
@@ -265,6 +288,8 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
             totalExpenseMinor: totalMinor!,
             otherWalletId: shortfall > 0 ? _otherWallet!.id : null,
             title: _titleController.text.trim(),
+            description: _description,
+            mediaId: _mediaId,
             occurredAt: _occurredAt,
           ),
         );
@@ -365,6 +390,14 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
                     errorText: _titleError,
                   ),
                 ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _descriptionController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: l10n.descriptionOptionalLabel,
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   l10n.voucherTotalExpenseLabel,
@@ -404,6 +437,37 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
                     _pickOtherWallet,
                   ),
                 ],
+                const SizedBox(height: AppSpacing.sm),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: _mediaId == null
+                      ? const Icon(Icons.image_outlined)
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.inputRadius,
+                          ),
+                          child: Image(
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.cover,
+                            image: NetworkImage(
+                              ref
+                                  .read(mediaRepositoryProvider)
+                                  .contentUrl(_mediaId!),
+                              headers: ref
+                                  .read(mediaRepositoryProvider)
+                                  .authHeaders(),
+                            ),
+                          ),
+                        ),
+                  title: Text(
+                    _mediaId == null
+                        ? l10n.noImageSelectedLabel
+                        : l10n.imageSelectedLabel,
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _pickImage,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 ListTile(
                   contentPadding: EdgeInsets.zero,

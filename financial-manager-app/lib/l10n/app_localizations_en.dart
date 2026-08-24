@@ -620,6 +620,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveVoucherExpenseAction => 'Save expense';
 
   @override
+  String get noImageSelectedLabel => 'No image';
+
+  @override
+  String get imageSelectedLabel => 'Image selected';
+
+  @override
   String get accountSecurityMenuTitle => 'Security';
 
   @override

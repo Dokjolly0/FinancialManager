@@ -1196,6 +1196,18 @@ abstract class AppLocalizations {
   /// **'Salva spesa'**
   String get saveVoucherExpenseAction;
 
+  /// No description provided for @noImageSelectedLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna immagine'**
+  String get noImageSelectedLabel;
+
+  /// No description provided for @imageSelectedLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Immagine selezionata'**
+  String get imageSelectedLabel;
+
   /// No description provided for @accountSecurityMenuTitle.
   ///
   /// In it, this message translates to:
