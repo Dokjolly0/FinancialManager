@@ -227,6 +227,9 @@ class _Detail extends ConsumerWidget {
       categoryName = matches.isEmpty ? null : matches.first.name;
     }
 
+    final wallets = ref.watch(walletsListProvider).value ?? const [];
+    final walletName = _findWallet(wallets, transaction.walletId)?.name;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -259,6 +262,7 @@ class _Detail extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           _Row(label: l10n.titleFieldLabel, value: transaction.title),
+          _Row(label: l10n.walletLabel, value: walletName ?? '—'),
           if (categoryName != null)
             _Row(label: l10n.categoryLabel, value: categoryName),
           _Row(

@@ -384,6 +384,7 @@
   "balanceAdjustmentKindLabel": "Rettifica saldo",
   "manualKindLabel": "Manuale",
   "transferKindLabel": "Trasferimento",
+  "walletLabel": "Portafoglio",
   "categoryLabel": "Categoria",
   "sourceLabel": "Origine",
   "dateAndTimeLabel": "Data e ora",

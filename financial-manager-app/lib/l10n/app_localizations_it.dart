@@ -1052,6 +1052,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get transferKindLabel => 'Trasferimento';
 
   @override
+  String get walletLabel => 'Portafoglio';
+
+  @override
   String get categoryLabel => 'Categoria';
 
   @override

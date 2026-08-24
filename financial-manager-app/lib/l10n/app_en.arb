@@ -402,6 +402,7 @@
   "balanceAdjustmentKindLabel": "Balance adjustment",
   "manualKindLabel": "Manual",
   "transferKindLabel": "Transfer",
+  "walletLabel": "Wallet",
   "categoryLabel": "Category",
   "sourceLabel": "Source",
   "dateAndTimeLabel": "Date and time",

@@ -1992,6 +1992,12 @@ abstract class AppLocalizations {
   /// **'Trasferimento'**
   String get transferKindLabel;
 
+  /// No description provided for @walletLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Portafoglio'**
+  String get walletLabel;
+
   /// No description provided for @categoryLabel.
   ///
   /// In it, this message translates to:
