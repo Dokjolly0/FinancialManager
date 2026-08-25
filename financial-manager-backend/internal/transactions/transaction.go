@@ -56,6 +56,17 @@ type Transaction struct {
 	// BALANCE_ADJUSTMENT rows applyVoucherLotExpiry creates when meal-voucher
 	// lots expire unused. Never editable or deletable by the user.
 	SystemGenerated bool
+
+	// PaymentGroupID groups two or more STANDARD transactions the user has
+	// explicitly linked as installments of the same logical expense (e.g.
+	// an acconto followed by a saldo) — migration 0029. Unlike
+	// TransferPairID/LinkedTransactionID, this is not a pointer to one
+	// specific sibling row: it's a shared group key with no accounting
+	// effect at all. Every member keeps its own Kind=STANDARD ledger entry,
+	// counts individually in reports/totals, and stays independently
+	// editable/deletable — the group is purely a display/navigation
+	// grouping, resolved by querying every row that shares this value.
+	PaymentGroupID *uuid.UUID
 }
 
 // NormalizeTitle mirrors plan.md section 4.4: trim, compact internal

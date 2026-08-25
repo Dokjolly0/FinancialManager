@@ -33,7 +33,7 @@ const transactionColumns = `
 	id, wallet_id, user_id, direction, kind, amount_minor, currency,
 	title, title_normalized, description, category_id, template_id, media_id, occurred_at,
 	created_at, updated_at, deleted_at, version, created_by_session_id, transfer_pair_id,
-	linked_transaction_id, system_generated
+	linked_transaction_id, system_generated, payment_group_id
 `
 
 func scanTransaction(row pgx.Row) (Transaction, error) {
@@ -42,7 +42,7 @@ func scanTransaction(row pgx.Row) (Transaction, error) {
 		&t.ID, &t.WalletID, &t.UserID, &t.Direction, &t.Kind, &t.AmountMinor, &t.Currency,
 		&t.Title, &t.TitleNormalized, &t.Description, &t.CategoryID, &t.TemplateID, &t.MediaID, &t.OccurredAt,
 		&t.CreatedAt, &t.UpdatedAt, &t.DeletedAt, &t.Version, &t.CreatedBySessionID, &t.TransferPairID,
-		&t.LinkedTransactionID, &t.SystemGenerated,
+		&t.LinkedTransactionID, &t.SystemGenerated, &t.PaymentGroupID,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Transaction{}, ErrNotFound
@@ -70,6 +70,7 @@ type CreateInput struct {
 	TransferPairID      *uuid.UUID
 	LinkedTransactionID *uuid.UUID
 	SystemGenerated     bool
+	PaymentGroupID      *uuid.UUID
 }
 
 // Create inserts a ledger entry. Callers are responsible for updating the
@@ -80,12 +81,12 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (Transaction, e
 		INSERT INTO transactions (
 			wallet_id, user_id, direction, kind, amount_minor, currency,
 			title, title_normalized, description, category_id, template_id, media_id, occurred_at, created_by_session_id,
-			transfer_pair_id, linked_transaction_id, system_generated
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+			transfer_pair_id, linked_transaction_id, system_generated, payment_group_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 		RETURNING `+transactionColumns,
 		in.WalletID, in.UserID, in.Direction, in.Kind, in.AmountMinor, in.Currency,
 		in.Title, NormalizeTitle(in.Title), in.Description, in.CategoryID, in.TemplateID, in.MediaID, in.OccurredAt, in.CreatedBySessionID,
-		in.TransferPairID, in.LinkedTransactionID, in.SystemGenerated,
+		in.TransferPairID, in.LinkedTransactionID, in.SystemGenerated, in.PaymentGroupID,
 	)
 	return scanTransaction(row)
 }
@@ -110,6 +111,19 @@ func (r *Repository) SetLinkedTransactionID(ctx context.Context, id uuid.UUID, l
 	_, err := r.db.Exec(ctx, `UPDATE transactions SET linked_transaction_id = $1 WHERE id = $2`, linkedID, id)
 	if err != nil {
 		return fmt.Errorf("set linked transaction id: %w", err)
+	}
+	return nil
+}
+
+// SetPaymentGroupID assigns (or, passing nil, clears) the shared group key
+// that marks a transaction as linked to one or more sibling payments
+// toward the same logical expense (migration 0029). Unlike
+// SetTransferPairID/SetLinkedTransactionID, groupID doesn't identify a
+// single sibling row — every member of the group carries the same value.
+func (r *Repository) SetPaymentGroupID(ctx context.Context, id uuid.UUID, groupID *uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `UPDATE transactions SET payment_group_id = $1 WHERE id = $2`, groupID, id)
+	if err != nil {
+		return fmt.Errorf("set payment group id: %w", err)
 	}
 	return nil
 }
@@ -247,14 +261,15 @@ func (r *Repository) ClearMediaForUser(ctx context.Context, userID uuid.UUID) er
 type ListFilter struct {
 	UserID         uuid.UUID
 	WalletID       uuid.UUID // uuid.Nil = any wallet
-	Direction      string // "" = any
-	Kind           string // "" = any
+	Direction      string    // "" = any
+	Kind           string    // "" = any
 	CategoryID     uuid.UUID
 	Title          string // prefix match against title_normalized, or a contains match against description (plan.md section 17.3)
 	AmountMinMinor int64  // 0 = no lower bound
 	AmountMaxMinor int64  // 0 = no upper bound
 	OccurredFrom   time.Time
 	OccurredTo     time.Time
+	PaymentGroupID uuid.UUID // uuid.Nil = any; non-nil fetches every member of one payment group
 	Limit          int
 	Cursor         string // opaque, from PageInfo.NextCursor
 }
@@ -339,6 +354,10 @@ func (r *Repository) List(ctx context.Context, filter ListFilter) (Page, error) 
 		args = append(args, filter.OccurredTo)
 		conditions = append(conditions, "occurred_at < $"+strconv.Itoa(len(args)))
 	}
+	if filter.PaymentGroupID != uuid.Nil {
+		args = append(args, filter.PaymentGroupID)
+		conditions = append(conditions, "payment_group_id = $"+strconv.Itoa(len(args)))
+	}
 	if filter.Cursor != "" {
 		occurredAt, id, err := decodeCursor(filter.Cursor)
 		if err != nil {
@@ -388,4 +407,54 @@ func (r *Repository) List(ctx context.Context, filter ListFilter) (Page, error) 
 		page.NextCursor = encodeCursor(last.OccurredAt, last.ID)
 	}
 	return page, nil
+}
+
+// PaymentGroupSummary describes one payment group for the "pagamenti
+// collegati" list (plan.md linked-transactions feature): how many
+// transactions it has, their combined signed total, and a representative
+// transaction (the earliest by occurred_at) to show/link to. Nothing here
+// is denormalized/stored — it's recomputed on every read, so a group can
+// never go stale when its earliest member is deleted.
+type PaymentGroupSummary struct {
+	PaymentGroupID      uuid.UUID
+	MemberCount         int
+	NetAmountMinor      int64
+	Currency            string
+	RepresentativeID    uuid.UUID
+	RepresentativeTitle string
+}
+
+// ListPaymentGroupSummaries returns every payment group with 2+ live
+// members for userID, most recently active first. Groups that have
+// dissolved down to a single member (Service.Delete's cleanup) never have
+// payment_group_id set on their last remaining row, so they don't appear
+// here without any extra filtering.
+func (r *Repository) ListPaymentGroupSummaries(ctx context.Context, userID uuid.UUID) ([]PaymentGroupSummary, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT payment_group_id,
+		       COUNT(*),
+		       SUM(CASE WHEN direction = 'CREDIT' THEN amount_minor ELSE -amount_minor END),
+		       (array_agg(currency ORDER BY occurred_at ASC, id ASC))[1],
+		       (array_agg(id ORDER BY occurred_at ASC, id ASC))[1],
+		       (array_agg(title ORDER BY occurred_at ASC, id ASC))[1]
+		FROM transactions
+		WHERE user_id = $1 AND deleted_at IS NULL AND payment_group_id IS NOT NULL
+		GROUP BY payment_group_id
+		HAVING COUNT(*) > 1
+		ORDER BY MAX(occurred_at) DESC
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list payment group summaries: %w", err)
+	}
+	defer rows.Close()
+
+	var out []PaymentGroupSummary
+	for rows.Next() {
+		var s PaymentGroupSummary
+		if err := rows.Scan(&s.PaymentGroupID, &s.MemberCount, &s.NetAmountMinor, &s.Currency, &s.RepresentativeID, &s.RepresentativeTitle); err != nil {
+			return nil, fmt.Errorf("scan payment group summary: %w", err)
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
 }

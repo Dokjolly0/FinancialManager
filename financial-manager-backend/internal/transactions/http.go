@@ -28,11 +28,13 @@ func NewHandler(service *Service) *Handler {
 func (h *Handler) Mount(r chi.Router) {
 	r.Post("/v1/transactions", h.create)
 	r.Get("/v1/transactions", h.list)
+	r.Get("/v1/transactions/payment-groups", h.listPaymentGroups)
 	r.Get("/v1/transactions/{id}", h.get)
 	r.Patch("/v1/transactions/{id}", h.update)
 	r.Patch("/v1/transactions/{id}/opening-balance", h.updateOpeningBalance)
 	r.Patch("/v1/transactions/{id}/transfer", h.updateTransfer)
 	r.Delete("/v1/transactions/{id}", h.delete)
+	r.Delete("/v1/transactions/{id}/payment-group-link", h.unlinkPaymentGroup)
 	r.Post("/v1/wallets", h.createWallet)
 	r.Post("/v1/wallets/{id}/balance-adjustments", h.createBalanceAdjustment)
 	r.Post("/v1/transfers", h.createTransfer)
@@ -83,17 +85,18 @@ func parseOptionalUUID(raw string) (*uuid.UUID, bool) {
 }
 
 type createRequest struct {
-	WalletID      string  `json:"wallet_id"`
-	Direction     string  `json:"direction"`
-	AmountMinor   int64   `json:"amount_minor"`
-	Currency      string  `json:"currency"`
-	Title         string  `json:"title"`
-	Description   *string `json:"description"`
-	CategoryID    string  `json:"category_id"`
-	TemplateID    string  `json:"template_id"`
-	MediaID       string  `json:"media_id"`
-	OccurredAt    string  `json:"occurred_at"`
-	DeviceSession string  `json:"-"`
+	WalletID            string  `json:"wallet_id"`
+	Direction           string  `json:"direction"`
+	AmountMinor         int64   `json:"amount_minor"`
+	Currency            string  `json:"currency"`
+	Title               string  `json:"title"`
+	Description         *string `json:"description"`
+	CategoryID          string  `json:"category_id"`
+	TemplateID          string  `json:"template_id"`
+	MediaID             string  `json:"media_id"`
+	OccurredAt          string  `json:"occurred_at"`
+	LinkToTransactionID string  `json:"link_to_transaction_id"`
+	DeviceSession       string  `json:"-"`
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -151,22 +154,28 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		apierror.Write(w, r, apierror.NewValidation(map[string]string{"media_id": apierror.FieldInvalidUUID}))
 		return
 	}
+	linkToTransactionID, ok := parseOptionalUUID(req.LinkToTransactionID)
+	if !ok {
+		apierror.Write(w, r, apierror.NewValidation(map[string]string{"link_to_transaction_id": apierror.FieldInvalidUUID}))
+		return
+	}
 
 	responseBody, status, err := h.service.CreateStandard(r.Context(), CreateStandardInput{
-		UserID:         userID,
-		WalletID:       walletID,
-		Direction:      req.Direction,
-		AmountMinor:    req.AmountMinor,
-		Currency:       req.Currency,
-		Title:          req.Title,
-		Description:    req.Description,
-		CategoryID:     categoryID,
-		TemplateID:     templateID,
-		MediaID:        mediaID,
-		OccurredAt:     occurredAt,
-		SessionID:      &sessionID,
-		IdempotencyKey: idempotencyKey,
-		RequestBody:    body,
+		UserID:              userID,
+		WalletID:            walletID,
+		Direction:           req.Direction,
+		AmountMinor:         req.AmountMinor,
+		Currency:            req.Currency,
+		Title:               req.Title,
+		Description:         req.Description,
+		CategoryID:          categoryID,
+		TemplateID:          templateID,
+		MediaID:             mediaID,
+		OccurredAt:          occurredAt,
+		SessionID:           &sessionID,
+		IdempotencyKey:      idempotencyKey,
+		RequestBody:         body,
+		LinkToTransactionID: linkToTransactionID,
 	})
 	if err != nil {
 		apierror.Write(w, r, err)
@@ -240,6 +249,16 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		walletID = parsed
 	}
 
+	var paymentGroupID uuid.UUID
+	if raw := query.Get("payment_group_id"); raw != "" {
+		parsed, err := uuid.Parse(raw)
+		if err != nil {
+			apierror.Write(w, r, apierror.NewValidation(map[string]string{"payment_group_id": apierror.FieldInvalidUUID}))
+			return
+		}
+		paymentGroupID = parsed
+	}
+
 	var amountMin, amountMax int64
 	if raw := query.Get("amount_min_minor"); raw != "" {
 		parsed, err := strconv.ParseInt(raw, 10, 64)
@@ -287,9 +306,46 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		AmountMaxMinor: amountMax,
 		OccurredFrom:   occurredFrom,
 		OccurredTo:     occurredTo,
+		PaymentGroupID: paymentGroupID,
 		Limit:          limit,
 		Cursor:         query.Get("cursor"),
 	})
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) listPaymentGroups(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+
+	result, err := h.service.ListPaymentGroups(r.Context(), userID)
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"payment_groups": result})
+}
+
+func (h *Handler) unlinkPaymentGroup(w http.ResponseWriter, r *http.Request) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+
+	result, err := h.service.UnlinkPaymentGroup(r.Context(), userID, id)
 	if err != nil {
 		apierror.Write(w, r, err)
 		return

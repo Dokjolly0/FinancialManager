@@ -158,6 +158,7 @@ type transactionResponse struct {
 	TransferPairID      *string `json:"transfer_pair_id,omitempty"`
 	LinkedTransactionID *string `json:"linked_transaction_id,omitempty"`
 	SystemGenerated     bool    `json:"system_generated,omitempty"`
+	PaymentGroupID      *string `json:"payment_group_id,omitempty"`
 }
 
 const timeLayout = "2006-01-02T15:04:05Z07:00"
@@ -188,6 +189,11 @@ func toTransactionResponse(t Transaction) transactionResponse {
 		s := t.LinkedTransactionID.String()
 		linkedTransactionID = &s
 	}
+	var paymentGroupID *string
+	if t.PaymentGroupID != nil {
+		s := t.PaymentGroupID.String()
+		paymentGroupID = &s
+	}
 	return transactionResponse{
 		ID:                  t.ID.String(),
 		WalletID:            t.WalletID.String(),
@@ -207,6 +213,7 @@ func toTransactionResponse(t Transaction) transactionResponse {
 		TransferPairID:      transferPairID,
 		LinkedTransactionID: linkedTransactionID,
 		SystemGenerated:     t.SystemGenerated,
+		PaymentGroupID:      paymentGroupID,
 	}
 }
 
@@ -296,6 +303,14 @@ type CreateStandardInput struct {
 	SessionID      *uuid.UUID
 	IdempotencyKey uuid.UUID
 	RequestBody    []byte
+
+	// LinkToTransactionID, if set, marks the new transaction as an
+	// installment of the same logical expense as an existing STANDARD
+	// transaction the user already owns (plan.md linked-transactions
+	// feature) — e.g. a saldo linked to a previously recorded acconto. Both
+	// transactions are then grouped by a shared PaymentGroupID, purely for
+	// display; neither's own accounting changes.
+	LinkToTransactionID *uuid.UUID
 }
 
 // validateTransactionFields covers the rules shared by create and update
@@ -360,6 +375,47 @@ func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([
 			return nil
 		}
 
+		// The link target's row must be locked BEFORE any wallet lock in
+		// this transaction, matching the row-then-wallet order used
+		// everywhere else a mutation locks both (UpdateStandard, Delete) —
+		// locking wallet-then-row here instead would deadlock against a
+		// concurrent Delete/UpdateStandard of the target that locks its own
+		// wallet then its own row. The FOR UPDATE lock also makes "reuse the
+		// target's existing payment group vs. mint a new one" race-safe: a
+		// second concurrent link to the same target blocks here and then
+		// observes the first link's freshly-written PaymentGroupID instead
+		// of minting a duplicate group.
+		var paymentGroupID *uuid.UUID
+		if in.LinkToTransactionID != nil {
+			target, err := s.transactions.WithQuerier(tx).LockByIDAndUserID(ctx, *in.LinkToTransactionID, in.UserID)
+			if errors.Is(err, ErrNotFound) {
+				return apierror.NewValidation(map[string]string{"link_to_transaction_id": "LINK_TARGET_NOT_FOUND"})
+			}
+			if err != nil {
+				return fmt.Errorf("lock link target: %w", err)
+			}
+			if target.Kind != KindStandard || target.SystemGenerated || target.LinkedTransactionID != nil {
+				return apierror.NewValidation(map[string]string{"link_to_transaction_id": "LINK_TARGET_NOT_LINKABLE"})
+			}
+			targetWallet, err := s.wallets.WithQuerier(tx).GetByID(ctx, target.WalletID, in.UserID)
+			if err != nil {
+				return fmt.Errorf("load link target wallet: %w", err)
+			}
+			if targetWallet.Type == wallets.TypeMealVoucher {
+				return apierror.NewValidation(map[string]string{"link_to_transaction_id": "LINK_TARGET_NOT_LINKABLE"})
+			}
+
+			if target.PaymentGroupID != nil {
+				paymentGroupID = target.PaymentGroupID
+			} else {
+				newGroupID := uuid.New()
+				if err := s.transactions.WithQuerier(tx).SetPaymentGroupID(ctx, target.ID, &newGroupID); err != nil {
+					return fmt.Errorf("set payment group id on link target: %w", err)
+				}
+				paymentGroupID = &newGroupID
+			}
+		}
+
 		wallet, err := s.wallets.WithQuerier(tx).LockByIDForUpdate(ctx, in.WalletID, in.UserID)
 		if errors.Is(err, wallets.ErrNotFound) {
 			return apierror.NewValidation(map[string]string{"wallet_id": "WALLET_NOT_FOUND"})
@@ -384,7 +440,7 @@ func (s *Service) CreateStandard(ctx context.Context, in CreateStandardInput) ([
 			WalletID: wallet.ID, UserID: in.UserID, Direction: in.Direction, Kind: KindStandard,
 			AmountMinor: in.AmountMinor, Currency: in.Currency, Title: in.Title, Description: in.Description,
 			CategoryID: in.CategoryID, TemplateID: in.TemplateID, MediaID: in.MediaID,
-			OccurredAt: occurredAt, CreatedBySessionID: in.SessionID,
+			OccurredAt: occurredAt, CreatedBySessionID: in.SessionID, PaymentGroupID: paymentGroupID,
 		})
 		if err != nil {
 			return fmt.Errorf("create transaction: %w", err)
@@ -449,6 +505,80 @@ func (s *Service) List(ctx context.Context, filter ListFilter) (ListResult, erro
 		out = append(out, toTransactionResponse(t))
 	}
 	return ListResult{Transactions: out, NextCursor: page.NextCursor, HasMore: page.HasMore}, nil
+}
+
+// ListPaymentGroupMembers returns every transaction that shares groupID —
+// i.e. every installment linked to the same logical expense — for the
+// "pagamenti collegati" section of a transaction's detail view.
+func (s *Service) ListPaymentGroupMembers(ctx context.Context, userID, groupID uuid.UUID) (ListResult, error) {
+	return s.List(ctx, ListFilter{UserID: userID, PaymentGroupID: groupID})
+}
+
+type paymentGroupSummaryResponse struct {
+	PaymentGroupID      string `json:"payment_group_id"`
+	MemberCount         int    `json:"member_count"`
+	NetAmountMinor      int64  `json:"net_amount_minor"`
+	Currency            string `json:"currency"`
+	RepresentativeID    string `json:"representative_transaction_id"`
+	RepresentativeTitle string `json:"representative_title"`
+}
+
+// ListPaymentGroups returns every group of 2+ linked transactions for the
+// new "pagamenti collegati" list screen (plan.md linked-transactions
+// feature).
+func (s *Service) ListPaymentGroups(ctx context.Context, userID uuid.UUID) ([]paymentGroupSummaryResponse, error) {
+	summaries, err := s.transactions.ListPaymentGroupSummaries(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]paymentGroupSummaryResponse, 0, len(summaries))
+	for _, sm := range summaries {
+		out = append(out, paymentGroupSummaryResponse{
+			PaymentGroupID:      sm.PaymentGroupID.String(),
+			MemberCount:         sm.MemberCount,
+			NetAmountMinor:      sm.NetAmountMinor,
+			Currency:            sm.Currency,
+			RepresentativeID:    sm.RepresentativeID.String(),
+			RepresentativeTitle: sm.RepresentativeTitle,
+		})
+	}
+	return out, nil
+}
+
+// UnlinkPaymentGroup detaches a single transaction from its payment group
+// without deleting it — a pure metadata change with no effect on any
+// wallet's balance, so it needs only the one row locked (never a wallet).
+// If this leaves the group with exactly one other member, that member is
+// dissolved back to standalone too (dissolveGroupIfSingleton).
+func (s *Service) UnlinkPaymentGroup(ctx context.Context, userID, transactionID uuid.UUID) (transactionResponse, error) {
+	var result transactionResponse
+	err := s.db.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		existing, err := s.transactions.WithQuerier(tx).LockByIDAndUserID(ctx, transactionID, userID)
+		if errors.Is(err, ErrNotFound) {
+			return apierror.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if existing.PaymentGroupID == nil {
+			return apierror.New(http.StatusConflict, "NOT_IN_PAYMENT_GROUP",
+				"This transaction isn't linked to any other payment.")
+		}
+		groupID := *existing.PaymentGroupID
+		if err := s.transactions.WithQuerier(tx).SetPaymentGroupID(ctx, transactionID, nil); err != nil {
+			return err
+		}
+		if err := s.dissolveGroupIfSingleton(ctx, tx, userID, groupID); err != nil {
+			return err
+		}
+		updated, err := s.transactions.WithQuerier(tx).GetByIDAndUserID(ctx, transactionID, userID)
+		if err != nil {
+			return err
+		}
+		result = toTransactionResponse(updated)
+		return nil
+	})
+	return result, err
 }
 
 // --- Update ------------------------------------------------------------------
@@ -848,6 +978,18 @@ func (s *Service) Delete(ctx context.Context, userID, transactionID uuid.UUID) (
 			if err := s.audit.WithQuerier(tx).Record(ctx, transactionID, userID, AuditActionDeleted, existing, nil); err != nil {
 				return err
 			}
+			// This is the only branch a payment-group member can ever reach:
+			// CreateStandard's link-target validation already rejects a
+			// meal-voucher-wallet target and any transaction with a
+			// LinkedTransactionID, which is what would otherwise route a
+			// group member into the voucher-expense branches above — a
+			// transfer leg is rejected even earlier (line ~815) and is never
+			// deletable through this endpoint at all.
+			if existing.PaymentGroupID != nil {
+				if err := s.dissolveGroupIfSingleton(ctx, tx, userID, *existing.PaymentGroupID); err != nil {
+					return err
+				}
+			}
 			result = toWalletSnapshot(updatedWallet)
 		}
 		return nil
@@ -858,6 +1000,25 @@ func (s *Service) Delete(ctx context.Context, userID, transactionID uuid.UUID) (
 		}
 	}
 	return result, err
+}
+
+// dissolveGroupIfSingleton reverts a payment group back to a plain
+// standalone transaction once deleting/unlinking a member leaves it with
+// exactly one — a group of one is meaningless, and leaving payment_group_id
+// set would make that lone survivor render an empty "linked payments"
+// section forever. Shared by Delete's cleanup and UnlinkPaymentGroup so the
+// two paths can't drift apart.
+func (s *Service) dissolveGroupIfSingleton(ctx context.Context, tx pgx.Tx, userID, groupID uuid.UUID) error {
+	page, err := s.transactions.WithQuerier(tx).List(ctx, ListFilter{UserID: userID, PaymentGroupID: groupID, Limit: 2})
+	if err != nil {
+		return fmt.Errorf("list remaining payment group members: %w", err)
+	}
+	if len(page.Transactions) == 1 {
+		if err := s.transactions.WithQuerier(tx).SetPaymentGroupID(ctx, page.Transactions[0].ID, nil); err != nil {
+			return fmt.Errorf("dissolve payment group: %w", err)
+		}
+	}
+	return nil
 }
 
 // --- Balance adjustment ----------------------------------------------------
