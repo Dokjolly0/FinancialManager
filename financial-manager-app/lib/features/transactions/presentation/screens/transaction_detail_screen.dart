@@ -283,9 +283,8 @@ class _Detail extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(left: AppSpacing.lg),
                 child: InkWell(
-                  onTap: () => context.push(
-                    AppRoutes.transactionDetail(member.id),
-                  ),
+                  onTap: () =>
+                      context.push(AppRoutes.transactionDetail(member.id)),
                   child: summaryFor(member, isPrimary: false),
                 ),
               ),
@@ -363,8 +362,9 @@ class _TransactionSummary extends StatelessWidget {
         Center(
           child: Text(
             '${isCredit ? '+' : '−'} ${transaction.amount.format()}',
-            style: (isPrimary ? textTheme.displayLarge : textTheme.headlineSmall)
-                ?.copyWith(color: amountColor),
+            style:
+                (isPrimary ? textTheme.displayLarge : textTheme.headlineSmall)
+                    ?.copyWith(color: amountColor),
           ),
         ),
         SizedBox(height: isPrimary ? AppSpacing.lg : AppSpacing.sm),

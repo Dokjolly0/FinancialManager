@@ -56,8 +56,7 @@ class VoucherCreditSheet extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<VoucherCreditSheet> createState() =>
-      _VoucherCreditSheetState();
+  ConsumerState<VoucherCreditSheet> createState() => _VoucherCreditSheetState();
 }
 
 class _VoucherCreditSheetState extends ConsumerState<VoucherCreditSheet> {
@@ -179,9 +178,7 @@ class _VoucherCreditSheetState extends ConsumerState<VoucherCreditSheet> {
                   ? l10n.voucherLoadedAtLabel
                   : l10n.dateAndTimeLabel,
             ),
-            subtitle: Text(
-              DateFormat('d MMMM y', 'it_IT').format(_occurredAt),
-            ),
+            subtitle: Text(DateFormat('d MMMM y', 'it_IT').format(_occurredAt)),
             trailing: const Icon(Icons.calendar_today_outlined),
             onTap: _pickDate,
           ),

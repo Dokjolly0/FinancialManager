@@ -279,16 +279,13 @@ class TransactionRepositoryImpl implements TransactionRepository {
     UpdateVoucherCreditParams params,
   ) async {
     try {
-      final response = await _api.updateVoucherCredit(
-        params.walletId,
-        transactionId,
-        {
-          'quantity': params.quantity,
-          'reason': params.reason,
-          'occurred_at': params.occurredAt.toUtc().toIso8601String(),
-          'version': params.expectedVersion,
-        },
-      );
+      final response = await _api
+          .updateVoucherCredit(params.walletId, transactionId, {
+            'quantity': params.quantity,
+            'reason': params.reason,
+            'occurred_at': params.occurredAt.toUtc().toIso8601String(),
+            'version': params.expectedVersion,
+          });
       return _parseWithWallet(response);
     } on DioException catch (e) {
       throw ErrorMapper.fromException(e);
@@ -371,8 +368,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       final rawGroups = response['payment_groups'] as List<dynamic>? ?? [];
       return rawGroups
           .map(
-            (raw) =>
-                PaymentGroupSummary.fromJson(raw as Map<String, dynamic>),
+            (raw) => PaymentGroupSummary.fromJson(raw as Map<String, dynamic>),
           )
           .toList();
     } on DioException catch (e) {

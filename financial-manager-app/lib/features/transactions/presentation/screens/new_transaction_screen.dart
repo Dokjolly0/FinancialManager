@@ -81,9 +81,7 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
     if (time == null) return;
 
     ref
-        .read(
-          transactionFormControllerProvider(_formArg).notifier,
-        )
+        .read(transactionFormControllerProvider(_formArg).notifier)
         .setOccurredAt(
           DateTime(date.year, date.month, date.day, time.hour, time.minute),
         );
@@ -140,9 +138,7 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(
-      transactionFormControllerProvider(_formArg),
-    );
+    final state = ref.watch(transactionFormControllerProvider(_formArg));
     final controller = ref.read(
       transactionFormControllerProvider(_formArg).notifier,
     );

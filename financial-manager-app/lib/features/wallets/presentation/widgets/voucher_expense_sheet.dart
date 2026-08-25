@@ -152,8 +152,7 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
 
   int get _quantity => int.tryParse(_quantityController.text.trim()) ?? 0;
 
-  String? get _description =>
-      _descriptionController.text.trim().isEmpty
+  String? get _description => _descriptionController.text.trim().isEmpty
       ? null
       : _descriptionController.text.trim();
 
@@ -241,9 +240,7 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
       _totalError = (totalMinor == null || totalMinor <= 0)
           ? l10n.errorCodeAmountNotPositive
           : null;
-      _quantityError = _quantity <= 0
-          ? l10n.errorCodeAmountNotPositive
-          : null;
+      _quantityError = _quantity <= 0 ? l10n.errorCodeAmountNotPositive : null;
       _titleError = _titleController.text.trim().isEmpty
           ? l10n.errorCodeRequiredField
           : null;
@@ -379,7 +376,9 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     _walletError!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.md),
@@ -415,9 +414,7 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
                     labelText: l10n.voucherQuantityLabel,
                     errorText: _quantityError,
                     helperText: suggestedQuantity != null
-                        ? l10n.voucherSuggestedQuantityHelper(
-                            suggestedQuantity,
-                          )
+                        ? l10n.voucherSuggestedQuantityHelper(suggestedQuantity)
                         : null,
                   ),
                   onChanged: (_) => setState(() {}),
@@ -473,10 +470,7 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
                   contentPadding: EdgeInsets.zero,
                   title: Text(l10n.dateAndTimeLabel),
                   subtitle: Text(
-                    DateFormat(
-                      'd MMMM y, HH:mm',
-                      'it_IT',
-                    ).format(_occurredAt),
+                    DateFormat('d MMMM y, HH:mm', 'it_IT').format(_occurredAt),
                   ),
                   trailing: const Icon(Icons.calendar_today_outlined),
                   onTap: _pickDate,

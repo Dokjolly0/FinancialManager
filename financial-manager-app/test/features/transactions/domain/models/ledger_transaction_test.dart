@@ -33,14 +33,17 @@ void main() {
   });
 
   group('LedgerTransaction.isEditable', () {
-    test('stays true for a plain standard transaction with a payment group', () {
-      // Being linked to other payments doesn't change how a plain
-      // transaction is edited/deleted — the link is purely a display
-      // grouping, unlike linkedTransactionId's accounting-driven pairing.
-      final transaction = LedgerTransaction.fromJson(
-        _baseJson(paymentGroupId: 'group-1'),
-      );
-      expect(transaction.isEditable, isTrue);
-    });
+    test(
+      'stays true for a plain standard transaction with a payment group',
+      () {
+        // Being linked to other payments doesn't change how a plain
+        // transaction is edited/deleted — the link is purely a display
+        // grouping, unlike linkedTransactionId's accounting-driven pairing.
+        final transaction = LedgerTransaction.fromJson(
+          _baseJson(paymentGroupId: 'group-1'),
+        );
+        expect(transaction.isEditable, isTrue);
+      },
+    );
   });
 }

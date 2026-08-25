@@ -300,6 +300,8 @@ class TransactionFormController extends Notifier<TransactionFormState> {
 }
 
 final transactionFormControllerProvider = NotifierProvider.autoDispose
-    .family<TransactionFormController, TransactionFormState, TransactionFormArg>(
-      TransactionFormController.new,
-    );
+    .family<
+      TransactionFormController,
+      TransactionFormState,
+      TransactionFormArg
+    >(TransactionFormController.new);

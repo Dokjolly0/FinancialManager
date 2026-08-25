@@ -47,9 +47,7 @@ class WalletRepositoryImpl implements WalletRepository {
         'voucher_expiry_month': params.voucherExpiryMonth,
         'voucher_expiry_day': params.voucherExpiryDay,
         'initial_voucher_quantity': params.initialVoucherQuantity,
-        'voucher_loaded_at': params.voucherLoadedAt
-            ?.toUtc()
-            .toIso8601String(),
+        'voucher_loaded_at': params.voucherLoadedAt?.toUtc().toIso8601String(),
       });
       return Wallet.fromJson(response);
     } on DioException catch (e) {

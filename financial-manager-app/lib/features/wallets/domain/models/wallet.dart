@@ -67,12 +67,10 @@ class Wallet {
           ? DateTime.parse(json['archived_at'] as String)
           : null,
       voucherUnitValueMinor: json['voucher_unit_value_minor'] as int?,
-      voucherExpiryCutoffMonth:
-          json['voucher_expiry_cutoff_month'] as int?,
+      voucherExpiryCutoffMonth: json['voucher_expiry_cutoff_month'] as int?,
       voucherExpiryMonth: json['voucher_expiry_month'] as int?,
       voucherExpiryDay: json['voucher_expiry_day'] as int?,
-      voucherExpiringSoonCount:
-          json['voucher_expiring_soon_count'] as int?,
+      voucherExpiringSoonCount: json['voucher_expiring_soon_count'] as int?,
     );
   }
 }

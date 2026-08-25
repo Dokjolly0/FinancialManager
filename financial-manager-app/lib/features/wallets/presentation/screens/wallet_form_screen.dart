@@ -455,10 +455,7 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
                             ),
                             items: [
                               for (var d = 1; d <= 31; d++)
-                                DropdownMenuItem(
-                                  value: d,
-                                  child: Text('$d'),
-                                ),
+                                DropdownMenuItem(value: d, child: Text('$d')),
                             ],
                             onChanged: (value) =>
                                 setState(() => _voucherExpiryDay = value!),
@@ -526,9 +523,8 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => VoucherLotsScreen(
-                            walletId: widget.editWalletId!,
-                          ),
+                          builder: (_) =>
+                              VoucherLotsScreen(walletId: widget.editWalletId!),
                         ),
                       ),
                     ),

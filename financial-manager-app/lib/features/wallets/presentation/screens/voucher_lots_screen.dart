@@ -74,7 +74,11 @@ class _VoucherLotsScreenState extends ConsumerState<VoucherLotsScreen> {
     if (changed && mounted) await _load();
   }
 
-  Widget _lotTile(BuildContext context, VoucherLot lot, {bool expired = false}) {
+  Widget _lotTile(
+    BuildContext context,
+    VoucherLot lot, {
+    bool expired = false,
+  }) {
     final l10n = AppLocalizations.of(context);
     final wallet = _wallet!;
     final quantity = expired ? lot.quantityExpired : lot.quantityRemaining;
@@ -87,9 +91,7 @@ class _VoucherLotsScreenState extends ConsumerState<VoucherLotsScreen> {
         expired ? Icons.event_busy_outlined : Icons.confirmation_num_outlined,
         color: expired ? Theme.of(context).colorScheme.error : null,
       ),
-      title: Text(
-        l10n.voucherLotQuantityLabel(quantity),
-      ),
+      title: Text(l10n.voucherLotQuantityLabel(quantity)),
       subtitle: Text(
         expired
             ? l10n.voucherLotExpiredOnLabel(
@@ -153,10 +155,9 @@ class _VoucherLotsScreenState extends ConsumerState<VoucherLotsScreen> {
                       ),
                       child: Text(
                         l10n.voucherExpiringSoonSectionTitle,
-                        style: Theme.of(context).textTheme.titleSmall
-                            ?.copyWith(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ),
                     for (final lot in expiringSoon) _lotTile(context, lot),
