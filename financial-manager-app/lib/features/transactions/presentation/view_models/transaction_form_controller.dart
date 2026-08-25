@@ -94,7 +94,7 @@ class TransactionFormController extends Notifier<TransactionFormState> {
   }
 
   /// Prefills "aggiungi pagamento collegato" from the source transaction it
-  /// will be linked to on submit — wallet/category/title/direction only.
+  /// will be linked to on submit — wallet/category/title/direction/image.
   /// The amount is left blank and the date defaults to now, since a saldo
   /// is rarely the same amount or day as its acconto; no version is set,
   /// since this creates a new transaction rather than editing [sourceId].
@@ -110,6 +110,8 @@ class TransactionFormController extends Notifier<TransactionFormState> {
         title: source.title,
         categoryId: source.categoryId,
         clearCategory: source.categoryId == null,
+        mediaId: source.mediaId,
+        clearMedia: source.mediaId == null,
         occurredAt: DateTime.now(),
         linkToTransactionId: sourceId,
       );
