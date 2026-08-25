@@ -35,6 +35,7 @@ class TransactionApi {
     int? amountMaxMinor,
     DateTime? occurredFrom,
     DateTime? occurredTo,
+    String? paymentGroupId,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/transactions',
@@ -52,7 +53,22 @@ class TransactionApi {
           'occurred_from': occurredFrom.toUtc().toIso8601String(),
         if (occurredTo != null)
           'occurred_to': occurredTo.toUtc().toIso8601String(),
+        'payment_group_id': ?paymentGroupId,
       },
+    );
+    return response.data!;
+  }
+
+  Future<Map<String, dynamic>> listPaymentGroups() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/transactions/payment-groups',
+    );
+    return response.data!;
+  }
+
+  Future<Map<String, dynamic>> unlinkPaymentGroup(String id) async {
+    final response = await _dio.delete<Map<String, dynamic>>(
+      '/transactions/$id/payment-group-link',
     );
     return response.data!;
   }

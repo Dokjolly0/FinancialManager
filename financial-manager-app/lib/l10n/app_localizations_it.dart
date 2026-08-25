@@ -229,6 +229,18 @@ class AppLocalizationsIt extends AppLocalizations {
       'Non consentito per questo tipo di portafoglio.';
 
   @override
+  String get errorCodeLinkTargetNotFound =>
+      'Transazione da collegare non trovata.';
+
+  @override
+  String get errorCodeLinkTargetNotLinkable =>
+      'Questa transazione non può essere collegata.';
+
+  @override
+  String get errorCodeNotInPaymentGroup =>
+      'Questa transazione non è collegata ad altre.';
+
+  @override
   String get errorCodeRequiredField => 'Campo obbligatorio.';
 
   @override
@@ -1081,6 +1093,24 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get saveOpeningBalanceAction => 'Salva saldo iniziale';
+
+  @override
+  String get addLinkedPaymentTooltip => 'Aggiungi pagamento collegato';
+
+  @override
+  String get linkedPaymentsSectionTitle => 'Pagamenti collegati';
+
+  @override
+  String get linkedPaymentsTotalLabel => 'Totale complessivo';
+
+  @override
+  String get linkedPaymentsEmptyStateMessage =>
+      'Nessun pagamento collegato ancora.';
+
+  @override
+  String linkedPaymentsMemberCountLabel(int count) {
+    return '$count pagamenti';
+  }
 
   @override
   String get mediaPickerRecentTab => 'Recenti';

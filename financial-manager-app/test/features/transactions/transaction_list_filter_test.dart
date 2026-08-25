@@ -21,6 +21,14 @@ void main() {
       );
       expect(filter.activeCount, 8);
     });
+
+    test('paymentGroupId is not a user-facing filter and never counts', () {
+      // paymentGroupId only exists for the transaction detail screen's
+      // "pagamenti collegati" section to fetch a group's members — it must
+      // never surface as an active filter in Cronologia's filter badge.
+      const filter = TransactionListFilter(paymentGroupId: 'group-1');
+      expect(filter.activeCount, 0);
+    });
   });
 
   group('TransactionListFilter.copyWith', () {

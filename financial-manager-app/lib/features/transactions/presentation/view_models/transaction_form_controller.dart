@@ -12,13 +12,25 @@ import '../../domain/models/transaction_direction.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../state/transaction_form_state.dart';
 
+/// Which existing transaction (if any) this form is bound to: an id being
+/// edited, or an id this new transaction will be linked to on submit
+/// ("pagamenti collegati") — never both. A record gives Riverpod's family
+/// the structural equality it needs for caching without a hand-rolled
+/// class; there's no equatable/freezed dependency in this project to
+/// otherwise model it on.
+typedef TransactionFormArg = ({
+  String? editTransactionId,
+  String? linkToTransactionId,
+});
+
 /// Backs both "new operation" and "edit operation" (plan.md section 7.6,
-/// 7.11 — same form). Keyed by the transaction id being edited, or null
-/// for a new one, via Riverpod's family so create/edit never share state.
+/// 7.11 — same form), plus "add a payment linked to an existing
+/// transaction". Keyed by [TransactionFormArg] via Riverpod's family so
+/// create/edit/linked-create never share state.
 class TransactionFormController extends Notifier<TransactionFormState> {
   TransactionFormController(this.arg);
 
-  final String? arg;
+  final TransactionFormArg arg;
 
   @override
   TransactionFormState build() {
@@ -27,6 +39,9 @@ class TransactionFormController extends Notifier<TransactionFormState> {
     // firing again, or a manual pick / loaded-existing value already
     // applied) — mirrors HomeController's "apply once" guard for the same
     // reason: a later unrelated refetch must never clobber a real choice.
+    // This also protects _loadExisting/_loadLinkSource's own async wallet
+    // prefill below, since both set state.walletId before this listener
+    // typically fires.
     ref.listen(walletsListProvider, (_, next) {
       final wallets = next.value;
       if (wallets == null || wallets.isEmpty || state.walletId != null) {
@@ -35,9 +50,14 @@ class TransactionFormController extends Notifier<TransactionFormState> {
       state = state.copyWith(walletId: wallets.first.id);
     });
 
-    final arg = this.arg;
-    if (arg != null) {
-      Future.microtask(() => _loadExisting(arg));
+    final editTransactionId = arg.editTransactionId;
+    if (editTransactionId != null) {
+      Future.microtask(() => _loadExisting(editTransactionId));
+      return const TransactionFormState(isLoadingExisting: true);
+    }
+    final linkToTransactionId = arg.linkToTransactionId;
+    if (linkToTransactionId != null) {
+      Future.microtask(() => _loadLinkSource(linkToTransactionId));
       return const TransactionFormState(isLoadingExisting: true);
     }
     final wallets = ref.read(walletsListProvider).value;
@@ -67,6 +87,31 @@ class TransactionFormController extends Notifier<TransactionFormState> {
         clearMedia: existing.mediaId == null,
         occurredAt: existing.occurredAt.toLocal(),
         expectedVersion: existing.version,
+      );
+    } on AppError catch (e) {
+      state = state.copyWith(isLoadingExisting: false, error: e);
+    }
+  }
+
+  /// Prefills "aggiungi pagamento collegato" from the source transaction it
+  /// will be linked to on submit — wallet/category/title/direction only.
+  /// The amount is left blank and the date defaults to now, since a saldo
+  /// is rarely the same amount or day as its acconto; no version is set,
+  /// since this creates a new transaction rather than editing [sourceId].
+  Future<void> _loadLinkSource(String sourceId) async {
+    try {
+      final source = await ref
+          .read(transactionRepositoryProvider)
+          .getTransaction(sourceId);
+      state = state.copyWith(
+        isLoadingExisting: false,
+        isCredit: source.direction.isCredit,
+        walletId: source.walletId,
+        title: source.title,
+        categoryId: source.categoryId,
+        clearCategory: source.categoryId == null,
+        occurredAt: DateTime.now(),
+        linkToTransactionId: sourceId,
       );
     } on AppError catch (e) {
       state = state.copyWith(isLoadingExisting: false, error: e);
@@ -166,7 +211,7 @@ class TransactionFormController extends Notifier<TransactionFormState> {
         await ref
             .read(transactionRepositoryProvider)
             .updateStandard(
-              arg!,
+              arg.editTransactionId!,
               UpdateTransactionParams(
                 walletId: walletId,
                 direction: direction,
@@ -195,6 +240,7 @@ class TransactionFormController extends Notifier<TransactionFormState> {
                 templateId: templateId,
                 mediaId: mediaId,
                 occurredAt: occurredAt,
+                linkToTransactionId: state.linkToTransactionId,
               ),
             );
       }
@@ -250,6 +296,6 @@ class TransactionFormController extends Notifier<TransactionFormState> {
 }
 
 final transactionFormControllerProvider = NotifierProvider.autoDispose
-    .family<TransactionFormController, TransactionFormState, String?>(
+    .family<TransactionFormController, TransactionFormState, TransactionFormArg>(
       TransactionFormController.new,
     );

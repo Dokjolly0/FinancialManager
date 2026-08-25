@@ -464,6 +464,24 @@ abstract class AppLocalizations {
   /// **'Non consentito per questo tipo di portafoglio.'**
   String get errorCodeNotAllowedForWalletType;
 
+  /// No description provided for @errorCodeLinkTargetNotFound.
+  ///
+  /// In it, this message translates to:
+  /// **'Transazione da collegare non trovata.'**
+  String get errorCodeLinkTargetNotFound;
+
+  /// No description provided for @errorCodeLinkTargetNotLinkable.
+  ///
+  /// In it, this message translates to:
+  /// **'Questa transazione non può essere collegata.'**
+  String get errorCodeLinkTargetNotLinkable;
+
+  /// No description provided for @errorCodeNotInPaymentGroup.
+  ///
+  /// In it, this message translates to:
+  /// **'Questa transazione non è collegata ad altre.'**
+  String get errorCodeNotInPaymentGroup;
+
   /// No description provided for @errorCodeRequiredField.
   ///
   /// In it, this message translates to:
@@ -2051,6 +2069,36 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Salva saldo iniziale'**
   String get saveOpeningBalanceAction;
+
+  /// No description provided for @addLinkedPaymentTooltip.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi pagamento collegato'**
+  String get addLinkedPaymentTooltip;
+
+  /// No description provided for @linkedPaymentsSectionTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Pagamenti collegati'**
+  String get linkedPaymentsSectionTitle;
+
+  /// No description provided for @linkedPaymentsTotalLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Totale complessivo'**
+  String get linkedPaymentsTotalLabel;
+
+  /// No description provided for @linkedPaymentsEmptyStateMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun pagamento collegato ancora.'**
+  String get linkedPaymentsEmptyStateMessage;
+
+  /// No description provided for @linkedPaymentsMemberCountLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'{count} pagamenti'**
+  String linkedPaymentsMemberCountLabel(int count);
 
   /// No description provided for @mediaPickerRecentTab.
   ///

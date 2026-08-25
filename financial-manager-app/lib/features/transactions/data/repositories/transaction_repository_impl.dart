@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../../core/errors/error_mapper.dart';
 import '../../../wallets/domain/models/wallet.dart';
 import '../../domain/models/ledger_transaction.dart';
+import '../../domain/models/payment_group_summary.dart';
 import '../../domain/models/transaction_page.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../services/transaction_api.dart';
@@ -38,6 +39,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
         'template_id': params.templateId,
         'media_id': params.mediaId,
         'occurred_at': params.occurredAt.toUtc().toIso8601String(),
+        'link_to_transaction_id': params.linkToTransactionId,
       });
       return _parseWithWallet(response);
     } on DioException catch (e) {
@@ -110,6 +112,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
         amountMaxMinor: filter.amountMaxMinor,
         occurredFrom: filter.occurredFrom,
         occurredTo: filter.occurredTo,
+        paymentGroupId: filter.paymentGroupId,
       );
       final rawTransactions = response['transactions'] as List<dynamic>? ?? [];
       return TransactionPage(
@@ -356,6 +359,33 @@ class TransactionRepositoryImpl implements TransactionRepository {
         'version': params.expectedVersion,
       });
       return _parseVoucherExpenseResult(response);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<List<PaymentGroupSummary>> listPaymentGroups() async {
+    try {
+      final response = await _api.listPaymentGroups();
+      final rawGroups = response['payment_groups'] as List<dynamic>? ?? [];
+      return rawGroups
+          .map(
+            (raw) =>
+                PaymentGroupSummary.fromJson(raw as Map<String, dynamic>),
+          )
+          .toList();
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<LedgerTransaction> unlinkPaymentGroup(String transactionId) async {
+    try {
+      return LedgerTransaction.fromJson(
+        await _api.unlinkPaymentGroup(transactionId),
+      );
     } on DioException catch (e) {
       throw ErrorMapper.fromException(e);
     }

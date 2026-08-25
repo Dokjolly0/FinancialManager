@@ -1,5 +1,6 @@
 import '../../../wallets/domain/models/wallet.dart';
 import '../models/ledger_transaction.dart';
+import '../models/payment_group_summary.dart';
 import '../models/transaction_direction.dart';
 import '../models/transaction_page.dart';
 
@@ -15,6 +16,7 @@ class CreateTransactionParams {
     this.templateId,
     this.mediaId,
     required this.occurredAt,
+    this.linkToTransactionId,
   });
 
   final String walletId;
@@ -27,6 +29,11 @@ class CreateTransactionParams {
   final String? templateId;
   final String? mediaId;
   final DateTime occurredAt;
+
+  /// When set, links the new transaction to an existing one as an
+  /// installment of the same logical expense ("pagamenti collegati") — see
+  /// [PaymentGroupSummary].
+  final String? linkToTransactionId;
 }
 
 class UpdateTransactionParams {
@@ -81,6 +88,7 @@ class TransactionListFilter {
     this.amountMaxMinor,
     this.occurredFrom,
     this.occurredTo,
+    this.paymentGroupId,
   });
 
   final TransactionTypeFilter type;
@@ -94,6 +102,12 @@ class TransactionListFilter {
   final int? amountMaxMinor;
   final DateTime? occurredFrom;
   final DateTime? occurredTo;
+
+  /// Restricts the list to one payment group's members — used by the
+  /// transaction detail screen's "pagamenti collegati" section, never by
+  /// the user-facing history filters (so it doesn't count toward
+  /// [activeCount]).
+  final String? paymentGroupId;
 
   int get activeCount {
     var count = 0;
@@ -249,6 +263,15 @@ abstract class TransactionRepository {
     String voucherTransactionId,
     UpdateVoucherExpenseParams params,
   );
+
+  /// Every group of 2+ linked transactions, most recently active first —
+  /// backs the "pagamenti collegati" list screen.
+  Future<List<PaymentGroupSummary>> listPaymentGroups();
+
+  /// Detaches [transactionId] from its payment group without deleting it.
+  /// If this leaves exactly one other member, that member reverts to
+  /// standalone too (the backend dissolves a group of one).
+  Future<LedgerTransaction> unlinkPaymentGroup(String transactionId);
 }
 
 class CreateVoucherCreditParams {

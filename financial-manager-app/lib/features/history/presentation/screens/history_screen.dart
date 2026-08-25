@@ -79,6 +79,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         title: const Text('Cronologia'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.link),
+            tooltip: l10n.linkedPaymentsSectionTitle,
+            onPressed: () => context.push(AppRoutes.paymentGroups),
+          ),
+          IconButton(
             icon: Badge(
               label: Text('${state.filter.activeCount}'),
               isLabelVisible: state.hasActiveFilters,

@@ -228,6 +228,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Not allowed for this wallet type.';
 
   @override
+  String get errorCodeLinkTargetNotFound =>
+      'The transaction to link to was not found.';
+
+  @override
+  String get errorCodeLinkTargetNotLinkable =>
+      'This transaction can\'t be linked.';
+
+  @override
+  String get errorCodeNotInPaymentGroup =>
+      'This transaction isn\'t linked to any other.';
+
+  @override
   String get errorCodeRequiredField => 'This field is required.';
 
   @override
@@ -1076,6 +1088,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get saveOpeningBalanceAction => 'Save initial balance';
+
+  @override
+  String get addLinkedPaymentTooltip => 'Add linked payment';
+
+  @override
+  String get linkedPaymentsSectionTitle => 'Linked payments';
+
+  @override
+  String get linkedPaymentsTotalLabel => 'Combined total';
+
+  @override
+  String get linkedPaymentsEmptyStateMessage => 'No linked payments yet.';
+
+  @override
+  String linkedPaymentsMemberCountLabel(int count) {
+    return '$count payments';
+  }
 
   @override
   String get mediaPickerRecentTab => 'Recent';

@@ -24,11 +24,18 @@ import '../../domain/models/transaction_direction.dart';
 import '../view_models/transaction_form_controller.dart';
 import '../widgets/title_autocomplete_field.dart';
 
-/// New / edit operation (plan.md section 7.6, 7.11 — the same form).
+/// New / edit operation (plan.md section 7.6, 7.11 — the same form), also
+/// used for "aggiungi pagamento collegato" when [linkToTransactionId] is
+/// set (mutually exclusive with [editTransactionId]).
 class NewTransactionScreen extends ConsumerStatefulWidget {
-  const NewTransactionScreen({super.key, this.editTransactionId});
+  const NewTransactionScreen({
+    super.key,
+    this.editTransactionId,
+    this.linkToTransactionId,
+  });
 
   final String? editTransactionId;
+  final String? linkToTransactionId;
 
   @override
   ConsumerState<NewTransactionScreen> createState() =>
@@ -40,6 +47,11 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   bool _controllersSynced = false;
+
+  TransactionFormArg get _formArg => (
+    editTransactionId: widget.editTransactionId,
+    linkToTransactionId: widget.linkToTransactionId,
+  );
 
   @override
   void dispose() {
@@ -70,7 +82,7 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
 
     ref
         .read(
-          transactionFormControllerProvider(widget.editTransactionId).notifier,
+          transactionFormControllerProvider(_formArg).notifier,
         )
         .setOccurredAt(
           DateTime(date.year, date.month, date.day, time.hour, time.minute),
@@ -79,7 +91,7 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
 
   Future<void> _pickWallet(BuildContext context) async {
     final controller = ref.read(
-      transactionFormControllerProvider(widget.editTransactionId).notifier,
+      transactionFormControllerProvider(_formArg).notifier,
     );
     final selected = await WalletPickerSheet.show(context);
     if (!mounted || selected == null) return;
@@ -91,7 +103,7 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
     TransactionDirection direction,
   ) async {
     final controller = ref.read(
-      transactionFormControllerProvider(widget.editTransactionId).notifier,
+      transactionFormControllerProvider(_formArg).notifier,
     );
     final selected = await CategoryPickerSheet.show(
       context,
@@ -103,7 +115,7 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
 
   Future<void> _pickImage(BuildContext context) async {
     final controller = ref.read(
-      transactionFormControllerProvider(widget.editTransactionId).notifier,
+      transactionFormControllerProvider(_formArg).notifier,
     );
     final selected = await ImagePickerSheet.show(
       context,
@@ -115,7 +127,7 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
 
   Future<void> _submit() async {
     final controller = ref.read(
-      transactionFormControllerProvider(widget.editTransactionId).notifier,
+      transactionFormControllerProvider(_formArg).notifier,
     );
     controller.setTitle(_titleController.text);
     controller.setDescription(_descriptionController.text);
@@ -129,10 +141,10 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(
-      transactionFormControllerProvider(widget.editTransactionId),
+      transactionFormControllerProvider(_formArg),
     );
     final controller = ref.read(
-      transactionFormControllerProvider(widget.editTransactionId).notifier,
+      transactionFormControllerProvider(_formArg).notifier,
     );
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final wallets = ref.watch(walletsListProvider).value ?? const [];
@@ -233,11 +245,7 @@ class _NewTransactionScreenState extends ConsumerState<NewTransactionScreen> {
                         matches.isEmpty ? null : matches.first,
                       );
                       _descriptionController.text = ref
-                          .read(
-                            transactionFormControllerProvider(
-                              widget.editTransactionId,
-                            ),
-                          )
+                          .read(transactionFormControllerProvider(_formArg))
                           .description;
                     },
                   ),

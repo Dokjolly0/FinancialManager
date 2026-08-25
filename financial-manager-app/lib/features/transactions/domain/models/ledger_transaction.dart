@@ -16,6 +16,7 @@ class LedgerTransaction {
     this.transferPairId,
     this.linkedTransactionId,
     this.systemGenerated = false,
+    this.paymentGroupId,
     required this.occurredAt,
     required this.createdAt,
     required this.updatedAt,
@@ -46,6 +47,16 @@ class LedgerTransaction {
   /// True only for the automatic "Buoni scaduti" voucher-expiry write-off —
   /// never created or editable by the user.
   final bool systemGenerated;
+
+  /// Groups two or more STANDARD transactions the user has explicitly
+  /// linked as installments of the same logical expense (e.g. an acconto
+  /// followed by a saldo) — "pagamenti collegati". Unlike
+  /// [linkedTransactionId], this isn't a pointer to one specific sibling:
+  /// every member of the group shares this same value, has no accounting
+  /// effect, and stays independently editable/deletable — it's purely a
+  /// display/navigation grouping (see [TransactionDetailController], which
+  /// fetches every transaction sharing this id).
+  final String? paymentGroupId;
   final DateTime occurredAt;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -91,6 +102,7 @@ class LedgerTransaction {
       transferPairId: json['transfer_pair_id'] as String?,
       linkedTransactionId: json['linked_transaction_id'] as String?,
       systemGenerated: json['system_generated'] as bool? ?? false,
+      paymentGroupId: json['payment_group_id'] as String?,
       occurredAt: DateTime.parse(json['occurred_at'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),

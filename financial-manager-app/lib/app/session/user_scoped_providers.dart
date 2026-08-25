@@ -7,6 +7,7 @@ import '../../features/categories/data/providers.dart';
 import '../../features/history/presentation/view_models/history_controller.dart';
 import '../../features/home/presentation/view_models/home_controller.dart';
 import '../../features/reports/presentation/view_models/report_controller.dart';
+import '../../features/transactions/presentation/view_models/payment_groups_controller.dart';
 import '../../features/wallets/data/providers.dart';
 
 /// Providers caching data scoped to the signed-in account, whose build()
@@ -48,5 +49,8 @@ void invalidateUserScopedProviders(Ref ref) {
   }
   if (ref.exists(securityControllerProvider)) {
     ref.invalidate(securityControllerProvider);
+  }
+  if (ref.exists(paymentGroupsControllerProvider)) {
+    ref.invalidate(paymentGroupsControllerProvider);
   }
 }

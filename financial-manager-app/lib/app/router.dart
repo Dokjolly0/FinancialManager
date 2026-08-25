@@ -16,6 +16,7 @@ import '../features/history/presentation/screens/history_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 import '../features/reports/presentation/screens/report_screen.dart';
 import '../features/transactions/presentation/screens/new_transaction_screen.dart';
+import '../features/transactions/presentation/screens/payment_groups_screen.dart';
 import '../features/transactions/presentation/screens/transaction_detail_screen.dart';
 import '../features/wallets/presentation/screens/wallet_form_screen.dart';
 import '../features/wallets/presentation/screens/wallets_screen.dart';
@@ -36,6 +37,7 @@ abstract final class AppRoutes {
 
   static const home = '/app/home';
   static const transactionsNew = '/app/transactions/new';
+  static const paymentGroups = '/app/transactions/payment-groups';
   static const history = '/app/history';
   static const reports = '/app/reports';
   static const account = '/app/account';
@@ -49,6 +51,12 @@ abstract final class AppRoutes {
 
   static String transactionDetail(String id) => '/app/transactions/$id';
   static String transactionEdit(String id) => '/app/transactions/$id/edit';
+
+  /// Opens the new-transaction form pre-linked to [sourceId] — "aggiungi
+  /// pagamento collegato" (plan.md linked-transactions feature).
+  static String transactionsNewLinkedTo(String sourceId) =>
+      '$transactionsNew?linkTo=$sourceId';
+
   static String walletEdit(String id) => '/app/account/wallets/$id/edit';
 }
 
@@ -110,7 +118,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.transactionsNew,
-        builder: (_, _) => const NewTransactionScreen(),
+        builder: (_, state) => NewTransactionScreen(
+          linkToTransactionId: state.uri.queryParameters['linkTo'],
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.paymentGroups,
+        builder: (_, _) => const PaymentGroupsScreen(),
       ),
       GoRoute(
         path: '/app/transactions/:id',

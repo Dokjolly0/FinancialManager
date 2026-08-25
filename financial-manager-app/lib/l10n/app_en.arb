@@ -88,6 +88,9 @@
   "errorCodeInvalidMonth": "Invalid month.",
   "errorCodeInvalidDay": "Invalid day.",
   "errorCodeNotAllowedForWalletType": "Not allowed for this wallet type.",
+  "errorCodeLinkTargetNotFound": "The transaction to link to was not found.",
+  "errorCodeLinkTargetNotLinkable": "This transaction can't be linked.",
+  "errorCodeNotInPaymentGroup": "This transaction isn't linked to any other.",
 
   "errorCodeRequiredField": "This field is required.",
   "errorCodeUsernameLengthInvalid": "Must be between 3 and 40 characters.",
@@ -412,6 +415,15 @@
   "editOpeningBalanceSheetTitle": "Edit initial balance",
   "editOpeningBalanceHint": "This is the wallet's starting point, not a correction entry — changing it also changes past reports and charts.",
   "saveOpeningBalanceAction": "Save initial balance",
+
+  "addLinkedPaymentTooltip": "Add linked payment",
+  "linkedPaymentsSectionTitle": "Linked payments",
+  "linkedPaymentsTotalLabel": "Combined total",
+  "linkedPaymentsEmptyStateMessage": "No linked payments yet.",
+  "linkedPaymentsMemberCountLabel": "{count} payments",
+  "@linkedPaymentsMemberCountLabel": {
+    "placeholders": { "count": { "type": "int" } }
+  },
 
   "mediaPickerRecentTab": "Recent",
   "mediaPickerLibraryTab": "Library",

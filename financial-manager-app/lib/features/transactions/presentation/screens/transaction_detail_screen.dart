@@ -7,6 +7,7 @@ import '../../../../app/router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/semantic_colors.dart';
 import '../../../../core/errors/error_presentation.dart';
+import '../../../../core/formatting/money.dart';
 import '../../../../core/widgets/confirmation_sheet.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -20,12 +21,19 @@ import '../../domain/models/ledger_transaction.dart';
 import '../../domain/models/transaction_direction.dart';
 import '../view_models/transaction_detail_controller.dart';
 import '../widgets/opening_balance_edit_sheet.dart';
+import '../widgets/transaction_tile.dart';
 import '../widgets/transfer_edit_sheet.dart';
 
 Wallet? _findWallet(List<Wallet> wallets, String id) {
   final matches = wallets.where((w) => w.id == id);
   return matches.isEmpty ? null : matches.first;
 }
+
+/// A transaction's contribution to a payment group's combined total —
+/// CREDIT adds, DEBIT subtracts, mirroring the backend's SignedDelta and
+/// the day-total sums already shown in Cronologia.
+Money _signedAmount(LedgerTransaction transaction) =>
+    transaction.direction.isCredit ? transaction.amount : -transaction.amount;
 
 /// Transaction detail (plan.md section 7.10): view, edit, delete. Edit and
 /// delete are only offered for STANDARD transactions. OPENING_BALANCE and
@@ -123,6 +131,16 @@ class TransactionDetailScreen extends ConsumerWidget {
             ),
           ] else if (state.transaction?.isEditable ?? false) ...[
             IconButton(
+              icon: const Icon(Icons.link),
+              tooltip: l10n.addLinkedPaymentTooltip,
+              onPressed: () async {
+                final saved = await context.push<bool>(
+                  AppRoutes.transactionsNewLinkedTo(transactionId),
+                );
+                if (saved == true) controller.load();
+              },
+            ),
+            IconButton(
               icon: const Icon(Icons.edit_outlined),
               tooltip: l10n.editTooltip,
               onPressed: () async {
@@ -210,9 +228,10 @@ class _Detail extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transaction = ref
-        .watch(transactionDetailControllerProvider(transactionId))
-        .transaction!;
+    final detailState = ref.watch(
+      transactionDetailControllerProvider(transactionId),
+    );
+    final transaction = detailState.transaction!;
     final semantic = context.semanticColors;
     final isCredit = transaction.direction.isCredit;
     final amountColor = isCredit ? semantic.credit : semantic.debit;
@@ -276,6 +295,29 @@ class _Detail extends ConsumerWidget {
           if (transaction.description != null &&
               transaction.description!.isNotEmpty)
             _Row(label: l10n.descriptionLabel, value: transaction.description!),
+          if (transaction.paymentGroupId != null) ...[
+            const Divider(height: AppSpacing.xl),
+            Text(l10n.linkedPaymentsSectionTitle, style: textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
+            _Row(
+              label: l10n.linkedPaymentsTotalLabel,
+              value: detailState.groupMembers
+                  .fold<Money>(
+                    Money.zeroEur,
+                    (total, member) => total + _signedAmount(member),
+                  )
+                  .format(),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            for (final member in detailState.groupMembers)
+              if (member.id != transaction.id)
+                TransactionTile(
+                  transaction: member,
+                  onTap: () => context.push(
+                    AppRoutes.transactionDetail(member.id),
+                  ),
+                ),
+          ],
           const Divider(height: AppSpacing.xl),
           _Row(
             label: l10n.createdLabel,

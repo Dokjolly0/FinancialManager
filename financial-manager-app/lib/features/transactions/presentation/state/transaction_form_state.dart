@@ -17,6 +17,7 @@ class TransactionFormState {
     this.isSubmitting = false,
     this.error,
     this.fieldErrors = const {},
+    this.linkToTransactionId,
   });
 
   final bool isLoadingExisting;
@@ -41,6 +42,13 @@ class TransactionFormState {
   final AppError? error;
   final Map<String, String> fieldErrors;
 
+  /// Set once, in [TransactionFormController.build], when this form was
+  /// opened to add a payment linked to an existing transaction
+  /// ("pagamenti collegati") — never cleared or user-editable afterward,
+  /// mirroring how [expectedVersion] is fixed for edit mode. Ignored unless
+  /// [isEditMode] is false (a link is a create-time-only relationship).
+  final String? linkToTransactionId;
+
   bool get isEditMode => expectedVersion != null;
 
   TransactionFormState copyWith({
@@ -62,6 +70,7 @@ class TransactionFormState {
     bool? isSubmitting,
     AppError? error,
     Map<String, String>? fieldErrors,
+    String? linkToTransactionId,
   }) {
     return TransactionFormState(
       isLoadingExisting: isLoadingExisting ?? this.isLoadingExisting,
@@ -81,6 +90,7 @@ class TransactionFormState {
       isSubmitting: isSubmitting ?? this.isSubmitting,
       error: error,
       fieldErrors: fieldErrors ?? this.fieldErrors,
+      linkToTransactionId: linkToTransactionId ?? this.linkToTransactionId,
     );
   }
 }

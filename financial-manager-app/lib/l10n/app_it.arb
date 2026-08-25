@@ -70,6 +70,9 @@
   "errorCodeInvalidMonth": "Mese non valido.",
   "errorCodeInvalidDay": "Giorno non valido.",
   "errorCodeNotAllowedForWalletType": "Non consentito per questo tipo di portafoglio.",
+  "errorCodeLinkTargetNotFound": "Transazione da collegare non trovata.",
+  "errorCodeLinkTargetNotLinkable": "Questa transazione non può essere collegata.",
+  "errorCodeNotInPaymentGroup": "Questa transazione non è collegata ad altre.",
 
   "errorCodeRequiredField": "Campo obbligatorio.",
   "errorCodeUsernameLengthInvalid": "Deve avere tra 3 e 40 caratteri.",
@@ -394,6 +397,15 @@
   "editOpeningBalanceSheetTitle": "Modifica saldo iniziale",
   "editOpeningBalanceHint": "È il punto di partenza del portafoglio, non una rettifica: modificarlo cambia anche report e grafici passati.",
   "saveOpeningBalanceAction": "Salva saldo iniziale",
+
+  "addLinkedPaymentTooltip": "Aggiungi pagamento collegato",
+  "linkedPaymentsSectionTitle": "Pagamenti collegati",
+  "linkedPaymentsTotalLabel": "Totale complessivo",
+  "linkedPaymentsEmptyStateMessage": "Nessun pagamento collegato ancora.",
+  "linkedPaymentsMemberCountLabel": "{count} pagamenti",
+  "@linkedPaymentsMemberCountLabel": {
+    "placeholders": { "count": { "type": "int" } }
+  },
 
   "mediaPickerRecentTab": "Recenti",
   "mediaPickerLibraryTab": "Libreria",
