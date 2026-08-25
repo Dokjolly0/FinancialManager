@@ -1101,7 +1101,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get linkedPaymentsSectionTitle => 'Pagamenti collegati';
 
   @override
-  String get linkedPaymentsTotalLabel => 'Totale complessivo';
+  String get linkedPaymentsTotalLabel => 'Totale speso';
 
   @override
   String get linkedPaymentsEmptyStateMessage =>

@@ -2085,7 +2085,7 @@ abstract class AppLocalizations {
   /// No description provided for @linkedPaymentsTotalLabel.
   ///
   /// In it, this message translates to:
-  /// **'Totale complessivo'**
+  /// **'Totale speso'**
   String get linkedPaymentsTotalLabel;
 
   /// No description provided for @linkedPaymentsEmptyStateMessage.

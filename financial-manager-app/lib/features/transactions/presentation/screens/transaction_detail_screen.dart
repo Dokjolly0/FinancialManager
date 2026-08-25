@@ -21,7 +21,6 @@ import '../../domain/models/ledger_transaction.dart';
 import '../../domain/models/transaction_direction.dart';
 import '../view_models/transaction_detail_controller.dart';
 import '../widgets/opening_balance_edit_sheet.dart';
-import '../widgets/transaction_tile.dart';
 import '../widgets/transfer_edit_sheet.dart';
 
 Wallet? _findWallet(List<Wallet> wallets, String id) {
@@ -232,10 +231,6 @@ class _Detail extends ConsumerWidget {
       transactionDetailControllerProvider(transactionId),
     );
     final transaction = detailState.transaction!;
-    final semantic = context.semanticColors;
-    final isCredit = transaction.direction.isCredit;
-    final amountColor = isCredit ? semantic.credit : semantic.debit;
-    final textTheme = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context);
     final dateFormat = DateFormat('d MMMM y, HH:mm', 'it_IT');
 
@@ -246,60 +241,56 @@ class _Detail extends ConsumerWidget {
       return matches.isEmpty ? null : matches.first.name;
     }
 
-    final categoryName = categoryNameFor(transaction.categoryId);
-
     final wallets = ref.watch(walletsListProvider).value ?? const [];
-    final walletName = _findWallet(wallets, transaction.walletId)?.name;
     final mediaRepo = ref.read(mediaRepositoryProvider);
+
+    Widget summaryFor(LedgerTransaction t, {required bool isPrimary}) {
+      return _TransactionSummary(
+        transaction: t,
+        isPrimary: isPrimary,
+        walletName: _findWallet(wallets, t.walletId)?.name,
+        categoryName: categoryNameFor(t.categoryId),
+        kindLabel: _kindLabel(l10n, t.kind),
+        imageUrl: t.mediaId == null ? null : mediaRepo.contentUrl(t.mediaId!),
+        imageHeaders: mediaRepo.authHeaders(),
+        dateFormat: dateFormat,
+        l10n: l10n,
+      );
+    }
+
+    // Every OTHER transaction sharing this one's payment group — the
+    // primary transaction above is rendered separately so it isn't listed
+    // twice (once at the top, once again as one of its own "linked"
+    // siblings).
+    final linkedMembers = detailState.groupMembers
+        .where((member) => member.id != transaction.id)
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (transaction.mediaId != null) ...[
-            Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-                child: Image(
-                  width: 160,
-                  height: 160,
-                  fit: BoxFit.cover,
-                  image: NetworkImage(
-                    mediaRepo.contentUrl(transaction.mediaId!),
-                    headers: mediaRepo.authHeaders(),
+          summaryFor(transaction, isPrimary: true),
+          if (linkedMembers.isNotEmpty) ...[
+            const Divider(height: AppSpacing.xl),
+            Text(
+              l10n.linkedPaymentsSectionTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            for (final member in linkedMembers) ...[
+              const Divider(height: AppSpacing.lg),
+              Padding(
+                padding: const EdgeInsets.only(left: AppSpacing.lg),
+                child: InkWell(
+                  onTap: () => context.push(
+                    AppRoutes.transactionDetail(member.id),
                   ),
+                  child: summaryFor(member, isPrimary: false),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-          ],
-          Center(
-            child: Text(
-              '${isCredit ? '+' : '−'} ${transaction.amount.format()}',
-              style: textTheme.displayLarge?.copyWith(color: amountColor),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _Row(label: l10n.titleFieldLabel, value: transaction.title),
-          _Row(label: l10n.walletLabel, value: walletName ?? '—'),
-          if (categoryName != null)
-            _Row(label: l10n.categoryLabel, value: categoryName),
-          _Row(
-            label: l10n.sourceLabel,
-            value: _kindLabel(l10n, transaction.kind),
-          ),
-          _Row(
-            label: l10n.dateAndTimeLabel,
-            value: dateFormat.format(transaction.occurredAt.toLocal()),
-          ),
-          if (transaction.description != null &&
-              transaction.description!.isNotEmpty)
-            _Row(label: l10n.descriptionLabel, value: transaction.description!),
-          if (transaction.paymentGroupId != null) ...[
-            const Divider(height: AppSpacing.xl),
-            Text(l10n.linkedPaymentsSectionTitle, style: textTheme.titleMedium),
-            const SizedBox(height: AppSpacing.sm),
+            ],
+            const Divider(height: AppSpacing.lg),
             _Row(
               label: l10n.linkedPaymentsTotalLabel,
               value: detailState.groupMembers
@@ -309,32 +300,95 @@ class _Detail extends ConsumerWidget {
                   )
                   .format(),
             ),
-            const SizedBox(height: AppSpacing.xs),
-            for (final member in detailState.groupMembers)
-              if (member.id != transaction.id)
-                TransactionTile(
-                  transaction: member,
-                  categoryName: categoryNameFor(member.categoryId),
-                  imageUrl: member.mediaId == null
-                      ? null
-                      : mediaRepo.contentUrl(member.mediaId!),
-                  imageHeaders: mediaRepo.authHeaders(),
-                  onTap: () => context.push(
-                    AppRoutes.transactionDetail(member.id),
-                  ),
-                ),
           ],
-          const Divider(height: AppSpacing.xl),
-          _Row(
-            label: l10n.createdLabel,
-            value: dateFormat.format(transaction.createdAt.toLocal()),
-          ),
-          _Row(
-            label: l10n.lastModifiedLabel,
-            value: dateFormat.format(transaction.updatedAt.toLocal()),
-          ),
         ],
       ),
+    );
+  }
+}
+
+/// One transaction's full field set — image, amount, and every [_Row] —
+/// used both for the primary transaction at the top of the screen and,
+/// smaller, for each of its linked siblings (plan.md linked-transactions
+/// feature: every linked payment shows the same data as if it were the
+/// one being viewed directly, not just a compact summary line).
+class _TransactionSummary extends StatelessWidget {
+  const _TransactionSummary({
+    required this.transaction,
+    required this.isPrimary,
+    required this.walletName,
+    required this.categoryName,
+    required this.kindLabel,
+    required this.imageUrl,
+    required this.imageHeaders,
+    required this.dateFormat,
+    required this.l10n,
+  });
+
+  final LedgerTransaction transaction;
+  final bool isPrimary;
+  final String? walletName;
+  final String? categoryName;
+  final String kindLabel;
+  final String? imageUrl;
+  final Map<String, String> imageHeaders;
+  final DateFormat dateFormat;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final semantic = context.semanticColors;
+    final isCredit = transaction.direction.isCredit;
+    final amountColor = isCredit ? semantic.credit : semantic.debit;
+    final textTheme = Theme.of(context).textTheme;
+    final imageSize = isPrimary ? 160.0 : 96.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (imageUrl != null) ...[
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+              child: Image(
+                width: imageSize,
+                height: imageSize,
+                fit: BoxFit.cover,
+                image: NetworkImage(imageUrl!, headers: imageHeaders),
+              ),
+            ),
+          ),
+          SizedBox(height: isPrimary ? AppSpacing.md : AppSpacing.sm),
+        ],
+        Center(
+          child: Text(
+            '${isCredit ? '+' : '−'} ${transaction.amount.format()}',
+            style: (isPrimary ? textTheme.displayLarge : textTheme.headlineSmall)
+                ?.copyWith(color: amountColor),
+          ),
+        ),
+        SizedBox(height: isPrimary ? AppSpacing.lg : AppSpacing.sm),
+        _Row(label: l10n.titleFieldLabel, value: transaction.title),
+        _Row(label: l10n.walletLabel, value: walletName ?? '—'),
+        if (categoryName != null)
+          _Row(label: l10n.categoryLabel, value: categoryName!),
+        _Row(label: l10n.sourceLabel, value: kindLabel),
+        _Row(
+          label: l10n.dateAndTimeLabel,
+          value: dateFormat.format(transaction.occurredAt.toLocal()),
+        ),
+        if (transaction.description != null &&
+            transaction.description!.isNotEmpty)
+          _Row(label: l10n.descriptionLabel, value: transaction.description!),
+        _Row(
+          label: l10n.createdLabel,
+          value: dateFormat.format(transaction.createdAt.toLocal()),
+        ),
+        _Row(
+          label: l10n.lastModifiedLabel,
+          value: dateFormat.format(transaction.updatedAt.toLocal()),
+        ),
+      ],
     );
   }
 }
