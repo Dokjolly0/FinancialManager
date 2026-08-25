@@ -239,15 +239,18 @@ class _Detail extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final dateFormat = DateFormat('d MMMM y, HH:mm', 'it_IT');
 
-    String? categoryName;
-    if (transaction.categoryId != null) {
-      final categories = ref.watch(categoriesProvider).value ?? const [];
-      final matches = categories.where((c) => c.id == transaction.categoryId);
-      categoryName = matches.isEmpty ? null : matches.first.name;
+    final categories = ref.watch(categoriesProvider).value ?? const [];
+    String? categoryNameFor(String? categoryId) {
+      if (categoryId == null) return null;
+      final matches = categories.where((c) => c.id == categoryId);
+      return matches.isEmpty ? null : matches.first.name;
     }
+
+    final categoryName = categoryNameFor(transaction.categoryId);
 
     final wallets = ref.watch(walletsListProvider).value ?? const [];
     final walletName = _findWallet(wallets, transaction.walletId)?.name;
+    final mediaRepo = ref.read(mediaRepositoryProvider);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -263,10 +266,8 @@ class _Detail extends ConsumerWidget {
                   height: 160,
                   fit: BoxFit.cover,
                   image: NetworkImage(
-                    ref
-                        .read(mediaRepositoryProvider)
-                        .contentUrl(transaction.mediaId!),
-                    headers: ref.read(mediaRepositoryProvider).authHeaders(),
+                    mediaRepo.contentUrl(transaction.mediaId!),
+                    headers: mediaRepo.authHeaders(),
                   ),
                 ),
               ),
@@ -313,6 +314,11 @@ class _Detail extends ConsumerWidget {
               if (member.id != transaction.id)
                 TransactionTile(
                   transaction: member,
+                  categoryName: categoryNameFor(member.categoryId),
+                  imageUrl: member.mediaId == null
+                      ? null
+                      : mediaRepo.contentUrl(member.mediaId!),
+                  imageHeaders: mediaRepo.authHeaders(),
                   onTap: () => context.push(
                     AppRoutes.transactionDetail(member.id),
                   ),
