@@ -21,6 +21,7 @@ import '../../domain/models/ledger_transaction.dart';
 import '../../domain/models/transaction_direction.dart';
 import '../view_models/transaction_detail_controller.dart';
 import '../widgets/opening_balance_edit_sheet.dart';
+import '../widgets/transaction_tile.dart';
 import '../widgets/transfer_edit_sheet.dart';
 
 Wallet? _findWallet(List<Wallet> wallets, String id) {
@@ -266,38 +267,46 @@ class _Detail extends ConsumerWidget {
         .where((member) => member.id != transaction.id)
         .toList();
 
+    final groupTotal = detailState.groupMembers.fold<Money>(
+      Money.zeroEur,
+      (total, member) => total + _signedAmount(member),
+    );
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          summaryFor(transaction, isPrimary: true),
           if (linkedMembers.isNotEmpty) ...[
-            const Divider(height: AppSpacing.xl),
-            Text(
-              l10n.linkedPaymentsSectionTitle,
-              style: Theme.of(context).textTheme.titleMedium,
+            _LinkedPaymentsCard(
+              memberCount: detailState.groupMembers.length,
+              total: groupTotal,
+              memberTiles: [
+                for (final member in linkedMembers)
+                  TransactionTile(
+                    transaction: member,
+                    categoryName: categoryNameFor(member.categoryId),
+                    imageUrl: member.mediaId == null
+                        ? null
+                        : mediaRepo.contentUrl(member.mediaId!),
+                    imageHeaders: mediaRepo.authHeaders(),
+                    onTap: () =>
+                        context.push(AppRoutes.transactionDetail(member.id)),
+                  ),
+              ],
             ),
-            for (final member in linkedMembers) ...[
-              const Divider(height: AppSpacing.lg),
-              Padding(
-                padding: const EdgeInsets.only(left: AppSpacing.lg),
-                child: InkWell(
-                  onTap: () =>
-                      context.push(AppRoutes.transactionDetail(member.id)),
-                  child: summaryFor(member, isPrimary: false),
-                ),
-              ),
-            ],
+            const SizedBox(height: AppSpacing.md),
+          ],
+          summaryFor(transaction, isPrimary: true),
+          for (final member in linkedMembers) ...[
             const Divider(height: AppSpacing.lg),
-            _Row(
-              label: l10n.linkedPaymentsTotalLabel,
-              value: detailState.groupMembers
-                  .fold<Money>(
-                    Money.zeroEur,
-                    (total, member) => total + _signedAmount(member),
-                  )
-                  .format(),
+            Padding(
+              padding: const EdgeInsets.only(left: AppSpacing.lg),
+              child: InkWell(
+                onTap: () =>
+                    context.push(AppRoutes.transactionDetail(member.id)),
+                child: summaryFor(member, isPrimary: false),
+              ),
             ),
           ],
         ],
@@ -389,6 +398,87 @@ class _TransactionSummary extends StatelessWidget {
           value: dateFormat.format(transaction.updatedAt.toLocal()),
         ),
       ],
+    );
+  }
+}
+
+/// Prominent summary of the payment group this transaction belongs to,
+/// shown at the top of the detail screen — above the transaction blocks —
+/// so it isn't a barely-visible label at the bottom: group title, member
+/// count, combined total, and a compact tappable row per linked payment
+/// for quick navigation. The full detail block of each linked payment
+/// still follows below.
+class _LinkedPaymentsCard extends StatelessWidget {
+  const _LinkedPaymentsCard({
+    required this.memberCount,
+    required this.total,
+    required this.memberTiles,
+  });
+
+  final int memberCount;
+  final Money total;
+  final List<Widget> memberTiles;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.linkedPaymentsSectionTitle,
+                        style: textTheme.titleMedium,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      l10n.linkedPaymentsMemberCountLabel(memberCount),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.linkedPaymentsTotalLabel,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(total.format(), style: textTheme.titleMedium),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: AppSpacing.lg),
+          ...memberTiles,
+          const SizedBox(height: AppSpacing.sm),
+        ],
+      ),
     );
   }
 }
