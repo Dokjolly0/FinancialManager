@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/wallets/data/providers.dart';
+import '../features/wallets/domain/models/wallet.dart';
+import '../features/wallets/presentation/widgets/transfer_sheet.dart';
+import '../features/wallets/presentation/widgets/voucher_expense_sheet.dart';
 import 'router.dart';
 
 /// The persistent bottom navigation (plan.md section 5.1): four
-/// destinations plus a prominent center "Aggiungi" button, which pushes
-/// the new-transaction screen rather than being a fifth tab.
-class AppShell extends StatelessWidget {
+/// destinations plus a prominent center "Aggiungi" button. Tapping it
+/// opens a short menu — a plain income/expense, a wallet-to-wallet
+/// transfer, or a meal-voucher expense — instead of being a fifth tab.
+/// The transfer and voucher entries were previously buried in the
+/// Account → Portafogli app bar; here they're one tap from every tab.
+class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: navigationShell,
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push(AppRoutes.transactionsNew),
+        onPressed: () => _showAddMenu(context, ref),
         tooltip: 'Aggiungi operazione',
         child: const Icon(Icons.add),
       ),
@@ -59,6 +67,62 @@ class AppShell extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+enum _AddAction { standard, transfer, voucher }
+
+/// Opens the "Aggiungi" menu. With only plain income/expense available
+/// (one wallet, no meal-voucher wallet) it skips the menu and goes
+/// straight to the new-operation form.
+Future<void> _showAddMenu(BuildContext context, WidgetRef ref) async {
+  final wallets = ref.read(walletsListProvider).value ?? const <Wallet>[];
+  final hasVoucherWallet = wallets.any((w) => w.isMealVoucher);
+  final hasMultipleWallets = wallets.length >= 2;
+
+  if (!hasVoucherWallet && !hasMultipleWallets) {
+    context.push(AppRoutes.transactionsNew);
+    return;
+  }
+
+  final action = await showModalBottomSheet<_AddAction>(
+    context: context,
+    useRootNavigator: true,
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.swap_vert),
+            title: const Text('Entrata / Uscita'),
+            onTap: () => Navigator.of(context).pop(_AddAction.standard),
+          ),
+          if (hasMultipleWallets)
+            ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: const Text('Trasferisci tra portafogli'),
+              onTap: () => Navigator.of(context).pop(_AddAction.transfer),
+            ),
+          if (hasVoucherWallet)
+            ListTile(
+              leading: const Icon(Icons.restaurant_outlined),
+              title: const Text('Spesa con buoni pasto'),
+              onTap: () => Navigator.of(context).pop(_AddAction.voucher),
+            ),
+        ],
+      ),
+    ),
+  );
+
+  if (action == null || !context.mounted) return;
+
+  switch (action) {
+    case _AddAction.standard:
+      context.push(AppRoutes.transactionsNew);
+    case _AddAction.transfer:
+      await TransferSheet.show(context);
+    case _AddAction.voucher:
+      await VoucherExpenseSheet.show(context);
   }
 }
 
