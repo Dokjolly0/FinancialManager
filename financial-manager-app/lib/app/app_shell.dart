@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../features/wallets/data/providers.dart';
 import '../features/wallets/domain/models/wallet.dart';
+import '../features/wallets/domain/models/wallet_type.dart';
 import '../features/wallets/presentation/widgets/transfer_sheet.dart';
+import '../features/wallets/presentation/widgets/voucher_credit_sheet.dart';
 import '../features/wallets/presentation/widgets/voucher_expense_sheet.dart';
+import '../features/wallets/presentation/widgets/wallet_picker_sheet.dart';
 import 'router.dart';
 
 /// The persistent bottom navigation (plan.md section 5.1): four
@@ -70,7 +73,7 @@ class AppShell extends ConsumerWidget {
   }
 }
 
-enum _AddAction { standard, transfer, voucher }
+enum _AddAction { standard, transfer, voucherCredit, voucherExpense }
 
 /// Opens the "Aggiungi" menu. With only plain income/expense available
 /// (one wallet, no meal-voucher wallet) it skips the menu and goes
@@ -103,12 +106,18 @@ Future<void> _showAddMenu(BuildContext context, WidgetRef ref) async {
               title: const Text('Trasferisci tra portafogli'),
               onTap: () => Navigator.of(context).pop(_AddAction.transfer),
             ),
-          if (hasVoucherWallet)
+          if (hasVoucherWallet) ...[
+            ListTile(
+              leading: const Icon(Icons.add_card),
+              title: const Text('Carica buoni pasto'),
+              onTap: () => Navigator.of(context).pop(_AddAction.voucherCredit),
+            ),
             ListTile(
               leading: const Icon(Icons.restaurant_outlined),
               title: const Text('Spesa con buoni pasto'),
-              onTap: () => Navigator.of(context).pop(_AddAction.voucher),
+              onTap: () => Navigator.of(context).pop(_AddAction.voucherExpense),
             ),
+          ],
         ],
       ),
     ),
@@ -121,9 +130,46 @@ Future<void> _showAddMenu(BuildContext context, WidgetRef ref) async {
       context.push(AppRoutes.transactionsNew);
     case _AddAction.transfer:
       await TransferSheet.show(context);
-    case _AddAction.voucher:
+    case _AddAction.voucherCredit:
+      await _openVoucherCredit(context, ref);
+    case _AddAction.voucherExpense:
       await VoucherExpenseSheet.show(context);
   }
+}
+
+/// Loads a new batch of meal vouchers into a MEAL_VOUCHER wallet — the
+/// employer top-up that the generic income form can't record (the backend
+/// rejects standard transactions on voucher wallets). Picks the wallet
+/// first when the user has more than one.
+Future<void> _openVoucherCredit(BuildContext context, WidgetRef ref) async {
+  final voucherWallets =
+      (ref.read(walletsListProvider).value ?? const <Wallet>[])
+          .where((w) => w.isMealVoucher)
+          .toList();
+  if (voucherWallets.isEmpty) return;
+
+  Wallet wallet;
+  if (voucherWallets.length == 1) {
+    wallet = voucherWallets.first;
+  } else {
+    final picked = await WalletPickerSheet.show(
+      context,
+      typeFilter: const {WalletType.mealVoucher},
+    );
+    if (picked == null || !context.mounted) return;
+    wallet = picked;
+  }
+
+  final unitValueMinor = wallet.voucherUnitValueMinor;
+  if (unitValueMinor == null || !context.mounted) return;
+
+  await VoucherCreditSheet.show(
+    context,
+    walletId: wallet.id,
+    isAddition: true,
+    unitValueMinor: unitValueMinor,
+    currency: wallet.balance.currency,
+  );
 }
 
 class _NavButton extends StatelessWidget {
