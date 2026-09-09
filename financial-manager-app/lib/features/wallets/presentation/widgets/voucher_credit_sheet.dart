@@ -134,7 +134,7 @@ class _VoucherCreditSheetState extends ConsumerState<VoucherCreditSheet> {
       minorUnits: _quantity * widget.unitValueMinor,
       currency: widget.currency,
     );
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.xs,

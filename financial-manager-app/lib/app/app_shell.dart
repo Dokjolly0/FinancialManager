@@ -92,33 +92,37 @@ Future<void> _showAddMenu(BuildContext context, WidgetRef ref) async {
     context: context,
     useRootNavigator: true,
     builder: (context) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.swap_vert),
-            title: const Text('Entrata / Uscita'),
-            onTap: () => Navigator.of(context).pop(_AddAction.standard),
-          ),
-          if (hasMultipleWallets)
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             ListTile(
-              leading: const Icon(Icons.swap_horiz),
-              title: const Text('Trasferisci tra portafogli'),
-              onTap: () => Navigator.of(context).pop(_AddAction.transfer),
+              leading: const Icon(Icons.swap_vert),
+              title: const Text('Entrata / Uscita'),
+              onTap: () => Navigator.of(context).pop(_AddAction.standard),
             ),
-          if (hasVoucherWallet) ...[
-            ListTile(
-              leading: const Icon(Icons.add_card),
-              title: const Text('Carica buoni pasto'),
-              onTap: () => Navigator.of(context).pop(_AddAction.voucherCredit),
-            ),
-            ListTile(
-              leading: const Icon(Icons.restaurant_outlined),
-              title: const Text('Spesa con buoni pasto'),
-              onTap: () => Navigator.of(context).pop(_AddAction.voucherExpense),
-            ),
+            if (hasMultipleWallets)
+              ListTile(
+                leading: const Icon(Icons.swap_horiz),
+                title: const Text('Trasferisci tra portafogli'),
+                onTap: () => Navigator.of(context).pop(_AddAction.transfer),
+              ),
+            if (hasVoucherWallet) ...[
+              ListTile(
+                leading: const Icon(Icons.add_card),
+                title: const Text('Carica buoni pasto'),
+                onTap: () =>
+                    Navigator.of(context).pop(_AddAction.voucherCredit),
+              ),
+              ListTile(
+                leading: const Icon(Icons.restaurant_outlined),
+                title: const Text('Spesa con buoni pasto'),
+                onTap: () =>
+                    Navigator.of(context).pop(_AddAction.voucherExpense),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     ),
   );
@@ -203,9 +207,8 @@ class _NavButton extends StatelessWidget {
             Icon(selected ? selectedIcon : icon, color: color),
             Text(
               label,
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(color: color),
+              style: Theme.of(context).textTheme.labelMedium
+                  ?.copyWith(color: color),
             ),
           ],
         ),

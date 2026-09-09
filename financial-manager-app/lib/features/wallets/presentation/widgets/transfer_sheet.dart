@@ -147,7 +147,7 @@ class _TransferSheetState extends ConsumerState<TransferSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.xs,

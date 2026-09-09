@@ -342,7 +342,7 @@ class _VoucherExpenseSheetState extends ConsumerState<VoucherExpenseSheet> {
               .ceil()
         : null;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.xs,

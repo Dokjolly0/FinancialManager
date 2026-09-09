@@ -128,7 +128,7 @@ class _TransferEditSheetState extends ConsumerState<TransferEditSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final dateFormat = DateFormat('d MMMM y, HH:mm', 'it_IT');
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.xs,
