@@ -333,10 +333,13 @@ func (r *Repository) List(ctx context.Context, filter ListFilter) (Page, error) 
 		conditions = append(conditions, "category_id = $"+strconv.Itoa(len(args)))
 	}
 	if filter.Title != "" {
-		needle := NormalizeTitle(filter.Title)
-		args = append(args, needle+"%", "%"+needle+"%")
-		conditions = append(conditions, "(title_normalized LIKE $"+strconv.Itoa(len(args)-1)+
-			" OR lower(description) LIKE $"+strconv.Itoa(len(args))+")")
+		// Substring match anywhere in the title or description, so "sim" (or
+		// just "si") finds "Canone sim". LIKE metacharacters typed by the user
+		// are escaped so they match literally.
+		args = append(args, "%"+escapeLike(NormalizeTitle(filter.Title))+"%")
+		placeholder := "$" + strconv.Itoa(len(args))
+		conditions = append(conditions, "(title_normalized LIKE "+placeholder+` ESCAPE '\'`+
+			" OR lower(description) LIKE "+placeholder+` ESCAPE '\')`)
 	}
 	if filter.AmountMinMinor > 0 {
 		args = append(args, filter.AmountMinMinor)
@@ -457,4 +460,10 @@ func (r *Repository) ListPaymentGroupSummaries(ctx context.Context, userID uuid.
 		out = append(out, s)
 	}
 	return out, rows.Err()
+}
+
+// escapeLike escapes the LIKE metacharacters (%, _ and the escape character
+// itself) so a user-typed search string matches literally.
+func escapeLike(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
