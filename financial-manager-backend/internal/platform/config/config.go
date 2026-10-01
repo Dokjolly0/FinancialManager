@@ -42,6 +42,24 @@ type Config struct {
 
 	MaxUploadBytes    int64
 	AllowedImageTypes []string
+
+	// Backup settings are only read by the worker. When BackupEnabled is
+	// false (the default outside production compose) the job never runs and
+	// none of the Google Drive credentials are required.
+	BackupEnabled          bool
+	BackupEncryptionKey    string
+	BackupInterval         time.Duration
+	BackupRetentionDays    int
+	BackupRetentionMonths  int
+	BackupIncludeMedia     bool
+	BackupGDriveFolderName string
+
+	// Google Drive OAuth client ("Desktop app" type) and the refresh token
+	// obtained once with cmd/gdrive-auth. A personal Gmail account cannot use
+	// a service account here: service accounts have no My Drive quota.
+	GDriveClientID     string
+	GDriveClientSecret string
+	GDriveRefreshToken string
 }
 
 const (
@@ -155,6 +173,18 @@ func Load() (Config, error) {
 
 		MaxUploadBytes:    optionalInt64("MAX_UPLOAD_BYTES", 10*1024*1024),
 		AllowedImageTypes: splitList("ALLOWED_IMAGE_TYPES"),
+
+		BackupEnabled:          optionalBool("BACKUP_ENABLED", false),
+		BackupEncryptionKey:    os.Getenv("BACKUP_ENCRYPTION_KEY"),
+		BackupInterval:         optionalDuration("BACKUP_INTERVAL", 24*time.Hour),
+		BackupRetentionDays:    int(optionalInt64("BACKUP_RETENTION_DAYS", 30)),
+		BackupRetentionMonths:  int(optionalInt64("BACKUP_RETENTION_MONTHS", 12)),
+		BackupIncludeMedia:     optionalBool("BACKUP_INCLUDE_MEDIA", true),
+		BackupGDriveFolderName: optionalString("BACKUP_GDRIVE_FOLDER_NAME", "FinancialManager Backups"),
+
+		GDriveClientID:     os.Getenv("GDRIVE_CLIENT_ID"),
+		GDriveClientSecret: os.Getenv("GDRIVE_CLIENT_SECRET"),
+		GDriveRefreshToken: os.Getenv("GDRIVE_REFRESH_TOKEN"),
 	}
 
 	if len(cfg.AllowedImageTypes) == 0 {
@@ -185,6 +215,26 @@ func Load() (Config, error) {
 
 	if cfg.MaxUploadBytes <= 0 {
 		errs = append(errs, "MAX_UPLOAD_BYTES must be greater than zero")
+	}
+
+	if cfg.BackupEnabled {
+		// Backups land on a third-party service, so they are never uploaded
+		// unencrypted, in any environment.
+		if cfg.BackupEncryptionKey == "" {
+			errs = append(errs, "BACKUP_ENCRYPTION_KEY is required when BACKUP_ENABLED=true")
+		}
+		if cfg.GDriveClientID == "" || cfg.GDriveClientSecret == "" || cfg.GDriveRefreshToken == "" {
+			errs = append(errs, "GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET and GDRIVE_REFRESH_TOKEN are required when BACKUP_ENABLED=true (see docs/backup-restore.md)")
+		}
+		if cfg.BackupInterval < time.Minute {
+			errs = append(errs, "BACKUP_INTERVAL must be at least 1m")
+		}
+		if cfg.BackupRetentionDays < 1 {
+			errs = append(errs, "BACKUP_RETENTION_DAYS must be at least 1")
+		}
+		if cfg.BackupRetentionMonths < 0 {
+			errs = append(errs, "BACKUP_RETENTION_MONTHS must not be negative")
+		}
 	}
 
 	if len(errs) > 0 {
