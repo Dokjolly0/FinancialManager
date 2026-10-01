@@ -1,6 +1,7 @@
 // Command worker runs asynchronous background jobs: balance reconciliation
-// (plan.md section 13.6, 22.3), orphan media cleanup (section 16.6), and
-// deferred account-deletion purge (section 20.3). Exports run synchronously
+// (plan.md section 13.6, 22.3), orphan media cleanup (section 16.6),
+// deferred account-deletion purge (section 20.3), and the off-site Google
+// Drive backup (section 20.4, when BACKUP_ENABLED). Exports run synchronously
 // inside the API for now (see internal/export's doc comments) and email
 // sending (section 10.8) is added alongside the feature that needs it.
 package main
@@ -13,11 +14,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/google/uuid"
 
+	"financial-manager-backend/internal/backup"
 	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/media"
 	"financial-manager-backend/internal/platform/clock"
@@ -36,6 +39,14 @@ const reconciliationInterval = time.Hour
 const mediaCleanupInterval = time.Hour
 const accountPurgeInterval = time.Hour
 const voucherExpiryInterval = time.Hour
+
+// backupCheckInterval is how often the worker asks whether a backup is
+// due; the actual cadence is BACKUP_INTERVAL (backup.Service.RunIfDue).
+const backupCheckInterval = time.Hour
+
+// backupTimeout bounds a single backup run so a hung upload can't stall
+// the worker's other jobs, which share its select loop.
+const backupTimeout = 30 * time.Minute
 
 // mediaOrphanGraceHours is how long an unreferenced asset survives before
 // cleanup (plan.md section 16.6: "Pulire asset orfani dopo un periodo di
@@ -128,12 +139,18 @@ func run() error {
 		mediaRepo: mediaRepo, mediaService: mediaService, clock: clock.System{},
 	}
 
-	logger.Info("worker_started")
+	backupJob := newBackupJob(ctx, cfg, objectStore)
+
+	logger.Info("worker_started",
+		slog.Bool("backup_enabled", cfg.BackupEnabled),
+		slog.Bool("backup_configured", backupJob.configErr == nil),
+	)
 
 	runReconciliation(ctx, logger, transactionsService)
 	runMediaCleanup(ctx, logger, mediaService)
 	runAccountPurge(ctx, logger, purger)
 	runVoucherExpiry(ctx, logger, transactionsService)
+	runBackup(ctx, logger, backupJob)
 
 	reconciliationTicker := time.NewTicker(reconciliationInterval)
 	defer reconciliationTicker.Stop()
@@ -143,6 +160,8 @@ func run() error {
 	defer accountPurgeTicker.Stop()
 	voucherExpiryTicker := time.NewTicker(voucherExpiryInterval)
 	defer voucherExpiryTicker.Stop()
+	backupTicker := time.NewTicker(backupCheckInterval)
+	defer backupTicker.Stop()
 
 	for {
 		select {
@@ -157,8 +176,98 @@ func run() error {
 			runAccountPurge(ctx, logger, purger)
 		case <-voucherExpiryTicker.C:
 			runVoucherExpiry(ctx, logger, transactionsService)
+		case <-backupTicker.C:
+			runBackup(ctx, logger, backupJob)
 		}
 	}
+}
+
+// backupJob is the Google Drive backup as the worker sees it: a ready
+// service, a configuration problem to report, or (both nil) disabled.
+type backupJob struct {
+	svc       *backup.Service
+	configErr error
+}
+
+// newBackupJob builds the backup service. A broken backup configuration is
+// never fatal: it is kept in configErr and reported on every check by
+// runBackup, so the worker's other jobs keep running and the failure stays
+// visible in logs and metrics until it's fixed.
+func newBackupJob(ctx context.Context, cfg config.Config, objectStore *storage.MinIOStore) backupJob {
+	if len(cfg.BackupProblems) > 0 {
+		return backupJob{configErr: errors.New(strings.Join(cfg.BackupProblems, "; "))}
+	}
+	if !cfg.BackupEnabled {
+		return backupJob{}
+	}
+	dest, err := backup.NewDriveDestination(ctx, backup.DriveConfig{
+		ClientID:     cfg.GDriveClientID,
+		ClientSecret: cfg.GDriveClientSecret,
+		RefreshToken: cfg.GDriveRefreshToken,
+		FolderName:   cfg.BackupGDriveFolderName,
+	})
+	if err != nil {
+		return backupJob{configErr: fmt.Errorf("google drive backup destination: %w", err)}
+	}
+	return backupJob{svc: backup.NewService(backup.Deps{
+		Config: backup.Config{
+			DatabaseURL:     cfg.DatabaseURL,
+			EncryptionKey:   cfg.BackupEncryptionKey,
+			Interval:        cfg.BackupInterval,
+			RetentionDays:   cfg.BackupRetentionDays,
+			RetentionMonths: cfg.BackupRetentionMonths,
+			IncludeMedia:    cfg.BackupIncludeMedia,
+		},
+		Dest:  dest,
+		Media: objectStore,
+		Clock: clock.System{},
+	})}
+}
+
+// runBackup uploads an encrypted database dump (and media archive) to
+// Google Drive when one is due. A misconfigured job counts as a failed run
+// on every check — the backup_last_success gauge then never advances, so
+// the "no backup for >26h" alert fires too.
+func runBackup(ctx context.Context, logger *slog.Logger, job backupJob) {
+	if job.configErr != nil {
+		metrics.JobRunsTotal.WithLabelValues("backup", "failed").Inc()
+		logger.Error("backup_not_configured",
+			slog.String("error", job.configErr.Error()),
+			slog.String("hint", "see docs/backup-restore.md, or set BACKUP_ENABLED=false"),
+		)
+		return
+	}
+	if job.svc == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, backupTimeout)
+	defer cancel()
+
+	res, err := job.svc.RunIfDue(ctx)
+	if !res.LastBackupAt.IsZero() {
+		metrics.BackupLastSuccess.Set(float64(res.LastBackupAt.Unix()))
+	}
+	if err != nil {
+		metrics.JobRunsTotal.WithLabelValues("backup", "failed").Inc()
+		logger.Error("backup_failed",
+			slog.String("error", err.Error()),
+			slog.String("db_dump", res.DBDump.Name),
+		)
+		return
+	}
+	if !res.Ran {
+		logger.Info("backup_skipped_not_due", slog.Time("last_backup_at", res.LastBackupAt))
+		return
+	}
+	metrics.JobRunsTotal.WithLabelValues("backup", "ok").Inc()
+	logger.Info("backup_ok",
+		slog.String("db_dump", res.DBDump.Name),
+		slog.Int64("db_dump_bytes", res.DBDump.SizeBytes),
+		slog.Int("media_objects", res.MediaStats.Objects),
+		slog.Int64("media_archive_bytes", res.MediaArchive.SizeBytes),
+		slog.Int("pruned", res.Pruned),
+		slog.Duration("duration", res.Duration),
+	)
 }
 
 // runVoucherExpiry sweeps every meal-voucher wallet for lots that expired

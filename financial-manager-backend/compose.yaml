@@ -99,7 +99,21 @@ services:
       args:
         TARGET: worker
     networks: [backend_internal]
-    environment: *backend-env
+    # Google Drive backup settings are merged into the worker's environment
+    # only: the API never needs (and shouldn't see) the Drive credentials or
+    # the backup encryption key. See docs/backup-restore.md.
+    environment:
+      <<: *backend-env
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-false}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-24h}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_RETENTION_MONTHS: ${BACKUP_RETENTION_MONTHS:-12}
+      BACKUP_INCLUDE_MEDIA: ${BACKUP_INCLUDE_MEDIA:-true}
+      BACKUP_GDRIVE_FOLDER_NAME: ${BACKUP_GDRIVE_FOLDER_NAME:-FinancialManager Backups}
+      GDRIVE_CLIENT_ID: ${GDRIVE_CLIENT_ID:-}
+      GDRIVE_CLIENT_SECRET: ${GDRIVE_CLIENT_SECRET:-}
+      GDRIVE_REFRESH_TOKEN: ${GDRIVE_REFRESH_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy

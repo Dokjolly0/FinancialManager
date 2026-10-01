@@ -1,7 +1,9 @@
 package config
 
 import (
+	"strings"
 	"testing"
+	"time"
 )
 
 func clearEnv(t *testing.T) {
@@ -12,6 +14,9 @@ func clearEnv(t *testing.T) {
 		"OBJECT_STORAGE_SECRET_KEY", "OBJECT_STORAGE_USE_SSL", "GOOGLE_CLIENT_IDS",
 		"JWT_SIGNING_KEY", "ACCESS_TOKEN_TTL", "REFRESH_TOKEN_TTL",
 		"IMAGE_SEARCH_PROVIDER", "IMAGE_SEARCH_API_KEY", "MAX_UPLOAD_BYTES", "ALLOWED_IMAGE_TYPES",
+		"BACKUP_ENABLED", "BACKUP_ENCRYPTION_KEY", "BACKUP_INTERVAL", "BACKUP_RETENTION_DAYS",
+		"BACKUP_RETENTION_MONTHS", "BACKUP_INCLUDE_MEDIA", "BACKUP_GDRIVE_FOLDER_NAME",
+		"GDRIVE_CLIENT_ID", "GDRIVE_CLIENT_SECRET", "GDRIVE_REFRESH_TOKEN",
 	} {
 		t.Setenv(name, "")
 	}
@@ -79,5 +84,95 @@ func TestLoad_InvalidAppEnvRejected(t *testing.T) {
 	_, err := Load()
 	if err == nil {
 		t.Fatal("expected error for invalid APP_ENV")
+	}
+}
+
+func TestLoad_BackupDisabledByDefault(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("DATABASE_URL", "postgres://localhost/test")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.BackupEnabled {
+		t.Error("expected backups to be disabled by default")
+	}
+	if cfg.BackupInterval != 24*time.Hour || cfg.BackupRetentionDays != 30 || cfg.BackupRetentionMonths != 12 {
+		t.Errorf("unexpected backup defaults: interval=%v days=%d months=%d",
+			cfg.BackupInterval, cfg.BackupRetentionDays, cfg.BackupRetentionMonths)
+	}
+	if !cfg.BackupIncludeMedia {
+		t.Error("expected media to be included by default")
+	}
+}
+
+// A broken backup configuration must not stop the process: it's reported
+// in BackupProblems so the worker can log it and keep its other jobs going.
+func TestLoad_BackupMissingCredentialsIsNotFatal(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("DATABASE_URL", "postgres://localhost/test")
+	t.Setenv("APP_ENV", EnvProduction)
+	t.Setenv("JWT_SIGNING_KEY", "k")
+	t.Setenv("OBJECT_STORAGE_ACCESS_KEY", "a")
+	t.Setenv("OBJECT_STORAGE_SECRET_KEY", "s")
+	t.Setenv("BACKUP_ENABLED", "true")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	problems := strings.Join(cfg.BackupProblems, "\n")
+	for _, want := range []string{"BACKUP_ENCRYPTION_KEY", "GDRIVE_REFRESH_TOKEN"} {
+		if !strings.Contains(problems, want) {
+			t.Errorf("BackupProblems %q does not mention %s", problems, want)
+		}
+	}
+}
+
+func TestLoad_MalformedBackupSettingIsNotFatal(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("DATABASE_URL", "postgres://localhost/test")
+	t.Setenv("BACKUP_INTERVAL", "every day")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.BackupProblems) != 1 || !strings.Contains(cfg.BackupProblems[0], "BACKUP_INTERVAL") {
+		t.Errorf("BackupProblems = %q", cfg.BackupProblems)
+	}
+}
+
+// Swapping errs while parsing backup settings must not drop the errors
+// collected before it.
+func TestLoad_MainErrorsSurviveBackupParsing(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("DATABASE_URL", "postgres://localhost/test")
+	t.Setenv("ACCESS_TOKEN_TTL", "soon")
+	t.Setenv("BACKUP_ENABLED", "true")
+
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "ACCESS_TOKEN_TTL") {
+		t.Fatalf("expected ACCESS_TOKEN_TTL error, got %v", err)
+	}
+}
+
+func TestLoad_BackupEnabledWithCredentials(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("DATABASE_URL", "postgres://localhost/test")
+	t.Setenv("BACKUP_ENABLED", "true")
+	t.Setenv("BACKUP_ENCRYPTION_KEY", "secret")
+	t.Setenv("GDRIVE_CLIENT_ID", "id")
+	t.Setenv("GDRIVE_CLIENT_SECRET", "client-secret")
+	t.Setenv("GDRIVE_REFRESH_TOKEN", "refresh")
+	t.Setenv("BACKUP_INTERVAL", "12h")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !cfg.BackupEnabled || cfg.BackupInterval != 12*time.Hour || len(cfg.BackupProblems) != 0 {
+		t.Errorf("BackupEnabled=%v BackupInterval=%v BackupProblems=%q",
+			cfg.BackupEnabled, cfg.BackupInterval, cfg.BackupProblems)
 	}
 }

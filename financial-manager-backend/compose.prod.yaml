@@ -12,6 +12,11 @@ services:
   worker:
     environment:
       APP_ENV: production
+      # Off-site backups are on by default in production. If the Drive
+      # credentials or encryption key are missing, the worker still runs its
+      # other jobs and logs backup_not_configured on every hourly check. Set
+      # BACKUP_ENABLED=false in .env to opt out explicitly.
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-true}
     restart: unless-stopped
 
   postgres:
