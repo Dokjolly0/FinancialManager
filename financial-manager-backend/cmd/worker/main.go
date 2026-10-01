@@ -1,6 +1,7 @@
 // Command worker runs asynchronous background jobs: balance reconciliation
-// (plan.md section 13.6, 22.3), orphan media cleanup (section 16.6), and
-// deferred account-deletion purge (section 20.3). Exports run synchronously
+// (plan.md section 13.6, 22.3), orphan media cleanup (section 16.6),
+// deferred account-deletion purge (section 20.3), and the off-site Google
+// Drive backup (section 20.4, when BACKUP_ENABLED). Exports run synchronously
 // inside the API for now (see internal/export's doc comments) and email
 // sending (section 10.8) is added alongside the feature that needs it.
 package main
@@ -18,6 +19,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"financial-manager-backend/internal/backup"
 	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/media"
 	"financial-manager-backend/internal/platform/clock"
@@ -36,6 +38,14 @@ const reconciliationInterval = time.Hour
 const mediaCleanupInterval = time.Hour
 const accountPurgeInterval = time.Hour
 const voucherExpiryInterval = time.Hour
+
+// backupCheckInterval is how often the worker asks whether a backup is
+// due; the actual cadence is BACKUP_INTERVAL (backup.Service.RunIfDue).
+const backupCheckInterval = time.Hour
+
+// backupTimeout bounds a single backup run so a hung upload can't stall
+// the worker's other jobs, which share its select loop.
+const backupTimeout = 30 * time.Minute
 
 // mediaOrphanGraceHours is how long an unreferenced asset survives before
 // cleanup (plan.md section 16.6: "Pulire asset orfani dopo un periodo di
@@ -128,12 +138,39 @@ func run() error {
 		mediaRepo: mediaRepo, mediaService: mediaService, clock: clock.System{},
 	}
 
-	logger.Info("worker_started")
+	var backupService *backup.Service
+	if cfg.BackupEnabled {
+		dest, err := backup.NewDriveDestination(ctx, backup.DriveConfig{
+			ClientID:     cfg.GDriveClientID,
+			ClientSecret: cfg.GDriveClientSecret,
+			RefreshToken: cfg.GDriveRefreshToken,
+			FolderName:   cfg.BackupGDriveFolderName,
+		})
+		if err != nil {
+			return fmt.Errorf("google drive backup destination: %w", err)
+		}
+		backupService = backup.NewService(backup.Deps{
+			Config: backup.Config{
+				DatabaseURL:     cfg.DatabaseURL,
+				EncryptionKey:   cfg.BackupEncryptionKey,
+				Interval:        cfg.BackupInterval,
+				RetentionDays:   cfg.BackupRetentionDays,
+				RetentionMonths: cfg.BackupRetentionMonths,
+				IncludeMedia:    cfg.BackupIncludeMedia,
+			},
+			Dest:  dest,
+			Media: objectStore,
+			Clock: clock.System{},
+		})
+	}
+
+	logger.Info("worker_started", slog.Bool("backup_enabled", cfg.BackupEnabled))
 
 	runReconciliation(ctx, logger, transactionsService)
 	runMediaCleanup(ctx, logger, mediaService)
 	runAccountPurge(ctx, logger, purger)
 	runVoucherExpiry(ctx, logger, transactionsService)
+	runBackup(ctx, logger, backupService)
 
 	reconciliationTicker := time.NewTicker(reconciliationInterval)
 	defer reconciliationTicker.Stop()
@@ -143,6 +180,8 @@ func run() error {
 	defer accountPurgeTicker.Stop()
 	voucherExpiryTicker := time.NewTicker(voucherExpiryInterval)
 	defer voucherExpiryTicker.Stop()
+	backupTicker := time.NewTicker(backupCheckInterval)
+	defer backupTicker.Stop()
 
 	for {
 		select {
@@ -157,8 +196,46 @@ func run() error {
 			runAccountPurge(ctx, logger, purger)
 		case <-voucherExpiryTicker.C:
 			runVoucherExpiry(ctx, logger, transactionsService)
+		case <-backupTicker.C:
+			runBackup(ctx, logger, backupService)
 		}
 	}
+}
+
+// runBackup uploads an encrypted database dump (and media archive) to
+// Google Drive when one is due. svc is nil when BACKUP_ENABLED is false.
+func runBackup(ctx context.Context, logger *slog.Logger, svc *backup.Service) {
+	if svc == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, backupTimeout)
+	defer cancel()
+
+	res, err := svc.RunIfDue(ctx)
+	if !res.LastBackupAt.IsZero() {
+		metrics.BackupLastSuccess.Set(float64(res.LastBackupAt.Unix()))
+	}
+	if err != nil {
+		metrics.JobRunsTotal.WithLabelValues("backup", "failed").Inc()
+		logger.Error("backup_failed",
+			slog.String("error", err.Error()),
+			slog.String("db_dump", res.DBDump.Name),
+		)
+		return
+	}
+	if !res.Ran {
+		logger.Info("backup_skipped_not_due", slog.Time("last_backup_at", res.LastBackupAt))
+		return
+	}
+	metrics.JobRunsTotal.WithLabelValues("backup", "ok").Inc()
+	logger.Info("backup_ok",
+		slog.String("db_dump", res.DBDump.Name),
+		slog.Int64("db_dump_bytes", res.DBDump.SizeBytes),
+		slog.Int("media_objects", res.MediaStats.Objects),
+		slog.Int64("media_archive_bytes", res.MediaArchive.SizeBytes),
+		slog.Int("pruned", res.Pruned),
+		slog.Duration("duration", res.Duration),
+	)
 }
 
 // runVoucherExpiry sweeps every meal-voucher wallet for lots that expired

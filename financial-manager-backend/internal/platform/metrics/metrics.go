@@ -61,7 +61,7 @@ var (
 	})
 
 	// JobRunsTotal covers "job falliti" for the worker's periodic jobs
-	// (reconciliation, media cleanup, account purge), labeled by job name
+	// (reconciliation, media cleanup, account purge, backup), labeled by job name
 	// and outcome so both rates and failures are visible.
 	JobRunsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "financialmanager_job_runs_total",
@@ -73,6 +73,14 @@ var (
 	ReconciliationMismatches = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "financialmanager_reconciliation_mismatches_total",
 		Help: "Wallets found with a stored balance disagreeing with their ledger, across all reconciliation runs.",
+	})
+
+	// BackupLastSuccess is the Unix time of the newest backup known to be
+	// on Google Drive. Unlike job_runs_total it also catches a job that
+	// silently stops running: alert when time() minus this exceeds ~26h.
+	BackupLastSuccess = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "financialmanager_backup_last_success_timestamp_seconds",
+		Help: "Unix timestamp of the newest off-site database backup.",
 	})
 )
 
