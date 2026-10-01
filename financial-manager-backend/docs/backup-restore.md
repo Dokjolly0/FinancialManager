@@ -66,7 +66,12 @@ What is uploaded, and how long it is kept:
 - Monitoring: `financialmanager_job_runs_total{job="backup"}` and
   `financialmanager_backup_last_success_timestamp_seconds` on the worker's
   `:9101/metrics`; alert when `time() - last_success > 26h`. Logs:
-  `backup_ok`, `backup_skipped_not_due`, `backup_failed`.
+  `backup_ok`, `backup_skipped_not_due`, `backup_failed`,
+  `backup_not_configured`.
+- A missing or invalid backup setting (credentials, encryption key,
+  malformed `BACKUP_*` value) never stops the worker: its other jobs keep
+  running, and every hourly check logs `backup_not_configured` with the
+  list of problems and counts a failed `backup` run until it's fixed.
 
 ### One-time Google setup
 

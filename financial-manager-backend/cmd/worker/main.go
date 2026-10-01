@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -138,39 +139,18 @@ func run() error {
 		mediaRepo: mediaRepo, mediaService: mediaService, clock: clock.System{},
 	}
 
-	var backupService *backup.Service
-	if cfg.BackupEnabled {
-		dest, err := backup.NewDriveDestination(ctx, backup.DriveConfig{
-			ClientID:     cfg.GDriveClientID,
-			ClientSecret: cfg.GDriveClientSecret,
-			RefreshToken: cfg.GDriveRefreshToken,
-			FolderName:   cfg.BackupGDriveFolderName,
-		})
-		if err != nil {
-			return fmt.Errorf("google drive backup destination: %w", err)
-		}
-		backupService = backup.NewService(backup.Deps{
-			Config: backup.Config{
-				DatabaseURL:     cfg.DatabaseURL,
-				EncryptionKey:   cfg.BackupEncryptionKey,
-				Interval:        cfg.BackupInterval,
-				RetentionDays:   cfg.BackupRetentionDays,
-				RetentionMonths: cfg.BackupRetentionMonths,
-				IncludeMedia:    cfg.BackupIncludeMedia,
-			},
-			Dest:  dest,
-			Media: objectStore,
-			Clock: clock.System{},
-		})
-	}
+	backupJob := newBackupJob(ctx, cfg, objectStore)
 
-	logger.Info("worker_started", slog.Bool("backup_enabled", cfg.BackupEnabled))
+	logger.Info("worker_started",
+		slog.Bool("backup_enabled", cfg.BackupEnabled),
+		slog.Bool("backup_configured", backupJob.configErr == nil),
+	)
 
 	runReconciliation(ctx, logger, transactionsService)
 	runMediaCleanup(ctx, logger, mediaService)
 	runAccountPurge(ctx, logger, purger)
 	runVoucherExpiry(ctx, logger, transactionsService)
-	runBackup(ctx, logger, backupService)
+	runBackup(ctx, logger, backupJob)
 
 	reconciliationTicker := time.NewTicker(reconciliationInterval)
 	defer reconciliationTicker.Stop()
@@ -197,21 +177,73 @@ func run() error {
 		case <-voucherExpiryTicker.C:
 			runVoucherExpiry(ctx, logger, transactionsService)
 		case <-backupTicker.C:
-			runBackup(ctx, logger, backupService)
+			runBackup(ctx, logger, backupJob)
 		}
 	}
 }
 
+// backupJob is the Google Drive backup as the worker sees it: a ready
+// service, a configuration problem to report, or (both nil) disabled.
+type backupJob struct {
+	svc       *backup.Service
+	configErr error
+}
+
+// newBackupJob builds the backup service. A broken backup configuration is
+// never fatal: it is kept in configErr and reported on every check by
+// runBackup, so the worker's other jobs keep running and the failure stays
+// visible in logs and metrics until it's fixed.
+func newBackupJob(ctx context.Context, cfg config.Config, objectStore *storage.MinIOStore) backupJob {
+	if len(cfg.BackupProblems) > 0 {
+		return backupJob{configErr: errors.New(strings.Join(cfg.BackupProblems, "; "))}
+	}
+	if !cfg.BackupEnabled {
+		return backupJob{}
+	}
+	dest, err := backup.NewDriveDestination(ctx, backup.DriveConfig{
+		ClientID:     cfg.GDriveClientID,
+		ClientSecret: cfg.GDriveClientSecret,
+		RefreshToken: cfg.GDriveRefreshToken,
+		FolderName:   cfg.BackupGDriveFolderName,
+	})
+	if err != nil {
+		return backupJob{configErr: fmt.Errorf("google drive backup destination: %w", err)}
+	}
+	return backupJob{svc: backup.NewService(backup.Deps{
+		Config: backup.Config{
+			DatabaseURL:     cfg.DatabaseURL,
+			EncryptionKey:   cfg.BackupEncryptionKey,
+			Interval:        cfg.BackupInterval,
+			RetentionDays:   cfg.BackupRetentionDays,
+			RetentionMonths: cfg.BackupRetentionMonths,
+			IncludeMedia:    cfg.BackupIncludeMedia,
+		},
+		Dest:  dest,
+		Media: objectStore,
+		Clock: clock.System{},
+	})}
+}
+
 // runBackup uploads an encrypted database dump (and media archive) to
-// Google Drive when one is due. svc is nil when BACKUP_ENABLED is false.
-func runBackup(ctx context.Context, logger *slog.Logger, svc *backup.Service) {
-	if svc == nil {
+// Google Drive when one is due. A misconfigured job counts as a failed run
+// on every check — the backup_last_success gauge then never advances, so
+// the "no backup for >26h" alert fires too.
+func runBackup(ctx context.Context, logger *slog.Logger, job backupJob) {
+	if job.configErr != nil {
+		metrics.JobRunsTotal.WithLabelValues("backup", "failed").Inc()
+		logger.Error("backup_not_configured",
+			slog.String("error", job.configErr.Error()),
+			slog.String("hint", "see docs/backup-restore.md, or set BACKUP_ENABLED=false"),
+		)
+		return
+	}
+	if job.svc == nil {
 		return
 	}
 	ctx, cancel := context.WithTimeout(ctx, backupTimeout)
 	defer cancel()
 
-	res, err := svc.RunIfDue(ctx)
+	res, err := job.svc.RunIfDue(ctx)
 	if !res.LastBackupAt.IsZero() {
 		metrics.BackupLastSuccess.Set(float64(res.LastBackupAt.Unix()))
 	}

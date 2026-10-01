@@ -73,7 +73,7 @@ openssl rand -base64 48
 
 In produzione `JWT_SIGNING_KEY`, `OBJECT_STORAGE_ACCESS_KEY` e `OBJECT_STORAGE_SECRET_KEY` sono obbligatori.
 
-In produzione il backup automatico su Google Drive e' attivo di default: senza `BACKUP_ENCRYPTION_KEY` e le tre variabili `GDRIVE_*` il `worker` non parte. Come ottenerle e' spiegato in `financial-manager-backend/docs/backup-restore.md` (sezione "Off-site backups to Google Drive"). Per disattivarlo esplicitamente: `BACKUP_ENABLED=false`. Conservare una copia di `BACKUP_ENCRYPTION_KEY` fuori dalla VPS (es. password manager): senza, i backup su Drive non si possono decifrare.
+In produzione il backup automatico su Google Drive e' attivo di default: senza `BACKUP_ENCRYPTION_KEY` e le tre variabili `GDRIVE_*` il backup non viene eseguito e il `worker` registra `backup_not_configured` nei log a ogni controllo orario, mentre gli altri job continuano a funzionare normalmente. Come ottenerle e' spiegato in `financial-manager-backend/docs/backup-restore.md` (sezione "Off-site backups to Google Drive"). Per disattivarlo esplicitamente: `BACKUP_ENABLED=false`. Conservare una copia di `BACKUP_ENCRYPTION_KEY` fuori dalla VPS (es. password manager): senza, i backup su Drive non si possono decifrare.
 
 ### 3. Avviare lo stack production
 
