@@ -106,6 +106,30 @@ Backups") itself. Don't create it by hand: with the `drive.file` scope the
 app only sees files and folders it created. For the same reason, files you
 upload into that folder by hand are invisible to it and never pruned.
 
+#### Keeping the backups in a subfolder
+
+`BACKUP_GDRIVE_FOLDER_NAME` is the name of a single folder, not a path:
+`Backup/Databases/FinancialManager` would create one folder at the Drive
+root with slashes in its name. To keep the backups in, for example,
+`Backup/Databases/FinancialManager`:
+
+1. Set `BACKUP_GDRIVE_FOLDER_NAME=FinancialManager`.
+2. Let the first backup create `FinancialManager` at the Drive root.
+3. In the Drive web UI, move that folder into `Backup/Databases/`.
+
+The worker looks the folder up by name among the files it created,
+wherever they are. The `drive.file` access stays attached to the folder
+when it's moved, so later backups keep landing there.
+
+The app doesn't create the whole path itself because it can't see folders
+you created: if `Backup/Databases` already exists, it would create a
+second `Backup` folder at the root.
+
+- Don't rename the folder in Drive, or update `BACKUP_GDRIVE_FOLDER_NAME`
+  to match. Otherwise the worker no longer finds it and creates a new one
+  at the root.
+- If the folder is deleted, the next backup recreates it at the root.
+
 ### Restoring from Drive
 
 Database: download the dump you want from Drive into the backend folder,
