@@ -58,15 +58,22 @@ IMAGE_SEARCH_API_KEY=
 
 API_HOST_BIND=0.0.0.0
 API_HOST_PORT=10003
+
+BACKUP_ENCRYPTION_KEY=CAMBIA_CON_CHIAVE_RANDOM_LUNGA
+GDRIVE_CLIENT_ID=xxxxxxxx.apps.googleusercontent.com
+GDRIVE_CLIENT_SECRET=CAMBIA
+GDRIVE_REFRESH_TOKEN=CAMBIA
 ```
 
-Generare `JWT_SIGNING_KEY` con:
+Generare `JWT_SIGNING_KEY` e `BACKUP_ENCRYPTION_KEY` (due valori diversi) con:
 
 ```bash
 openssl rand -base64 48
 ```
 
 In produzione `JWT_SIGNING_KEY`, `OBJECT_STORAGE_ACCESS_KEY` e `OBJECT_STORAGE_SECRET_KEY` sono obbligatori.
+
+In produzione il backup automatico su Google Drive e' attivo di default: senza `BACKUP_ENCRYPTION_KEY` e le tre variabili `GDRIVE_*` il `worker` non parte. Come ottenerle e' spiegato in `financial-manager-backend/docs/backup-restore.md` (sezione "Off-site backups to Google Drive"). Per disattivarlo esplicitamente: `BACKUP_ENABLED=false`. Conservare una copia di `BACKUP_ENCRYPTION_KEY` fuori dalla VPS (es. password manager): senza, i backup su Drive non si possono decifrare.
 
 ### 3. Avviare lo stack production
 
@@ -99,6 +106,12 @@ Controllare i log:
 
 ```bash
 docker compose -f compose.yaml -f compose.prod.yaml logs -f api
+```
+
+Controllare che il backup su Google Drive sia partito (`backup_ok` al primo avvio, poi `backup_skipped_not_due` finche' non passano 24h):
+
+```bash
+docker compose -f compose.yaml -f compose.prod.yaml logs worker | grep backup
 ```
 
 Verificare l'health check:
@@ -170,7 +183,7 @@ Documentazione specifica:
 financial-manager-backend/docs/backup-restore.md
 ```
 
-In produzione i backup devono andare su storage esterno alla VPS o almeno fuori dai volumi Docker. Redis non viene incluso perche' contiene cache/rate limit/idempotency temporanea, non dati finanziari sorgente.
+Il `worker` carica ogni giorno su Google Drive un dump cifrato del database (storico: 30 giornalieri + 12 mensili) e un archivio cifrato delle immagini (rotazione `latest`/`previous`). Gli script in `scripts/` restano utili per una copia locale aggiuntiva e per il restore. Redis non viene incluso perche' contiene cache/rate limit/idempotency temporanea, non dati finanziari sorgente.
 
 ## Build Flutter
 
