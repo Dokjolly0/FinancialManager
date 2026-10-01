@@ -1,6 +1,3 @@
-// Package backup implements the worker's off-site backup job (plan.md
-// section 20.4/21.10): a PostgreSQL dump plus an archive of the media
-// bucket, encrypted with a passphrase and uploaded to Google Drive.
 package backup
 
 import (
