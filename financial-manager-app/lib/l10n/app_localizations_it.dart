@@ -936,6 +936,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get createCategoryError => 'Impossibile creare la categoria. Riprova.';
 
   @override
+  String get categorySearchHint => 'Cerca categoria';
+
+  @override
+  String get categorySearchNoResults => 'Nessuna categoria trovata.';
+
+  @override
   String get descriptionOptionalLabel => 'Descrizione (facoltativa)';
 
   @override

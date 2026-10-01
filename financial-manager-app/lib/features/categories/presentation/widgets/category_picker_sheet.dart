@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -47,12 +49,15 @@ class CategoryPickerSheet extends ConsumerStatefulWidget {
 class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
   bool _showCreateForm = false;
   final _nameController = TextEditingController();
+  final _searchController = TextEditingController();
+  String _query = '';
   bool _isCreating = false;
   String? _error;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -88,108 +93,164 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
     final categoriesAsync = ref.watch(categoriesProvider);
     final l10n = AppLocalizations.of(context);
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-              child: Text(
-                l10n.categoryPickerTitle,
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-            ),
-            Flexible(
-              child: categoriesAsync.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(AppSpacing.lg),
-                  child: Center(child: CircularProgressIndicator()),
+    // Fixed height (instead of sizing to the content) so filtering doesn't
+    // shrink the sheet down behind the keyboard: the search field stays at
+    // the top and the results fill the space down to the keyboard.
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardHeight = mediaQuery.viewInsets.bottom;
+    final sheetHeight = math.min(
+      mediaQuery.size.height * 0.8,
+      mediaQuery.size.height - keyboardHeight - mediaQuery.padding.top,
+    );
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboardHeight),
+      child: SafeArea(
+        child: SizedBox(
+          height: sheetHeight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                  child: Text(
+                    l10n.categoryPickerTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                error: (_, _) => Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Text(l10n.categoriesLoadError),
-                ),
-                data: (categories) {
-                  final direction = widget.direction;
-                  final visible =
-                      categories
-                          .where(
-                            (c) => direction == null || c.matches(direction),
-                          )
-                          .toList()
-                        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-                  return ListView(
-                    shrinkWrap: true,
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.block_outlined),
-                        title: Text(l10n.noCategoryLabel),
-                        onTap: () => Navigator.of(context).pop(null),
-                      ),
-                      for (final category in visible)
-                        ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: _colorFor(context, category),
-                            child: Text(
-                              category.name.isEmpty
-                                  ? '?'
-                                  : category.name[0].toUpperCase(),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: l10n.categorySearchHint,
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _query.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _query = '');
+                              },
                             ),
-                          ),
-                          title: Text(category.name),
-                          onTap: () => Navigator.of(context).pop(category),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            const Divider(height: AppSpacing.md),
-            if (!widget.allowCreate)
-              const SizedBox(height: AppSpacing.md)
-            else if (_showCreateForm)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: _nameController,
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        labelText: l10n.newCategoryNameLabel,
-                        errorText: _error,
-                      ),
-                      onSubmitted: (_) => _createCategory(),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    FilledButton(
-                      onPressed: _isCreating ? null : _createCategory,
-                      child: _isCreating
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                    onChanged: (value) =>
+                        setState(() => _query = value.trim().toLowerCase()),
+                  ),
+                ),
+                Expanded(
+                  child: categoriesAsync.when(
+                    loading: () => const Padding(
+                      padding: EdgeInsets.all(AppSpacing.lg),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (_, _) => Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Text(l10n.categoriesLoadError),
+                    ),
+                    data: (categories) {
+                      final direction = widget.direction;
+                      final visible =
+                          categories
+                              .where(
+                                (c) =>
+                                    (direction == null ||
+                                        c.matches(direction)) &&
+                                    c.name.toLowerCase().contains(_query),
+                              )
+                              .toList()
+                            ..sort(
+                              (a, b) => a.sortOrder.compareTo(b.sortOrder),
+                            );
+                      return ListView(
+                        children: [
+                          if (_query.isEmpty)
+                            ListTile(
+                              leading: const Icon(Icons.block_outlined),
+                              title: Text(l10n.noCategoryLabel),
+                              onTap: () => Navigator.of(context).pop(null),
                             )
-                          : Text(l10n.createAndSelectAction),
+                          else if (visible.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(AppSpacing.lg),
+                              child: Text(
+                                l10n.categorySearchNoResults,
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          for (final category in visible)
+                            ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: _colorFor(context, category),
+                                child: Text(
+                                  category.name.isEmpty
+                                      ? '?'
+                                      : category.name[0].toUpperCase(),
+                                ),
+                              ),
+                              title: Text(category.name),
+                              onTap: () => Navigator.of(context).pop(category),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                const Divider(height: AppSpacing.md),
+                if (!widget.allowCreate)
+                  const SizedBox(height: AppSpacing.md)
+                else if (_showCreateForm)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextField(
+                          controller: _nameController,
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            labelText: l10n.newCategoryNameLabel,
+                            errorText: _error,
+                          ),
+                          onSubmitted: (_) => _createCategory(),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        FilledButton(
+                          onPressed: _isCreating ? null : _createCategory,
+                          child: _isCreating
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(l10n.createAndSelectAction),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                child: OutlinedButton.icon(
-                  onPressed: () => setState(() => _showCreateForm = true),
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.newCategoryAction),
-                ),
-              ),
-          ],
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                    child: OutlinedButton.icon(
+                      // Prefill with the search text, so searching for a missing
+                      // category and then creating it doesn't mean retyping it.
+                      onPressed: () => setState(() {
+                        _nameController.text = _searchController.text.trim();
+                        _showCreateForm = true;
+                      }),
+                      icon: const Icon(Icons.add),
+                      label: Text(l10n.newCategoryAction),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

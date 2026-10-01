@@ -1777,6 +1777,18 @@ abstract class AppLocalizations {
   /// **'Impossibile creare la categoria. Riprova.'**
   String get createCategoryError;
 
+  /// No description provided for @categorySearchHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca categoria'**
+  String get categorySearchHint;
+
+  /// No description provided for @categorySearchNoResults.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna categoria trovata.'**
+  String get categorySearchNoResults;
+
   /// No description provided for @descriptionOptionalLabel.
   ///
   /// In it, this message translates to:

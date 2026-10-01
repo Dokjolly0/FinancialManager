@@ -358,6 +358,8 @@
   "newCategoryAction": "New category",
   "newCategoryNameLabel": "New category name",
   "createCategoryError": "Couldn't create the category. Try again.",
+  "categorySearchHint": "Search categories",
+  "categorySearchNoResults": "No categories found.",
 
   "descriptionOptionalLabel": "Description (optional)",
 

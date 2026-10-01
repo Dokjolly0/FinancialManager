@@ -340,6 +340,8 @@
   "newCategoryAction": "Nuova categoria",
   "newCategoryNameLabel": "Nome nuova categoria",
   "createCategoryError": "Impossibile creare la categoria. Riprova.",
+  "categorySearchHint": "Cerca categoria",
+  "categorySearchNoResults": "Nessuna categoria trovata.",
 
   "descriptionOptionalLabel": "Descrizione (facoltativa)",
 
