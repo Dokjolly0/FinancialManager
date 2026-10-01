@@ -84,6 +84,25 @@ func (s *MinIOStore) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+// List calls fn for every object in the bucket, stopping at the first error
+// fn returns. It is deliberately not part of Store: only the backup job
+// needs to enumerate the whole bucket, and request-serving code should
+// never walk every user's media.
+func (s *MinIOStore) List(ctx context.Context, fn func(ObjectInfo) error) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel() // stops the listing goroutine if fn bails out early
+
+	for obj := range s.client.ListObjects(ctx, s.bucket, minio.ListObjectsOptions{Recursive: true}) {
+		if obj.Err != nil {
+			return obj.Err
+		}
+		if err := fn(ObjectInfo{Key: obj.Key, SizeBytes: obj.Size, ContentType: obj.ContentType}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *MinIOStore) PresignedGetURL(ctx context.Context, key string, expiry time.Duration) (string, error) {
 	u, err := s.client.PresignedGetObject(ctx, s.bucket, key, expiry, nil)
 	if err != nil {
