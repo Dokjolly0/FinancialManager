@@ -114,7 +114,7 @@ func (d *DriveDestination) List(ctx context.Context) ([]RemoteFile, error) {
 	q := fmt.Sprintf("%s in parents and trashed = false", quoteQuery(folderID))
 	var out []RemoteFile
 	err = d.svc.Files.List().Q(q).Spaces("drive").PageSize(1000).
-		Fields(googleapi.Field("nextPageToken, files(" + fileFields + ")")).
+		Fields(googleapi.Field("nextPageToken, files("+fileFields+")")).
 		Pages(ctx, func(page *drive.FileList) error {
 			for _, f := range page.Files {
 				out = append(out, toRemoteFile(f))
