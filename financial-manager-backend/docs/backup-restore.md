@@ -157,6 +157,46 @@ Restoring an older database dump next to the latest media archive is
 safe for balances and transactions. At worst a few images are missing,
 for assets the orphan cleanup had already removed.
 
+### Inspecting a backup on your own machine
+
+`cmd/restore-backup` turns an encrypted backup into a running database
+you can browse with DataGrip, psql or any PostgreSQL client. It also
+proves the backup is complete and the key is right. It needs only Docker
+(Docker Desktop on Windows/macOS): no openssl, pg_restore or Git Bash
+path workarounds. From `financial-manager-backend`, in PowerShell or any
+shell:
+
+```bash
+go run ./cmd/restore-backup -dump C:\path\to\fm-20261001T154350Z-postgres.dump.enc
+# optionally also the images:
+go run ./cmd/restore-backup -dump <dump.enc> -media <fm-media-latest.tar.gz.enc> -media-dir media-restore
+```
+
+It asks for `BACKUP_ENCRYPTION_KEY` without echoing it, or reads it from
+the environment. Then it:
+
+1. decrypts the dump into a temporary folder, removed at the end. A wrong
+   key is reported as `bad decrypt`;
+2. starts a `postgres:16-alpine` container named `fm-restore`, published
+   on `127.0.0.1:15432` only;
+3. restores the dump into the `financial_manager` database. It uses
+   `--no-owner --no-privileges` because the server's roles don't exist
+   locally;
+4. prints the row count of every table, plus the connection details
+   (user `postgres`, password `restore`).
+
+With `-media` it also decrypts the media archive and extracts it into
+`-media-dir`, one file per object key.
+
+Flags: `-name`, `-port`, `-db` and `-password` change the container
+settings. `-replace` discards an existing container with the same name;
+without it the command refuses to overwrite one. An unencrypted `.dump`
+is accepted as is.
+
+When done, `docker rm -f fm-restore` deletes the container together with
+the restored data. Delete the extracted media folder too: both hold your
+financial data in clear.
+
 ## Scheduling
 
 The Drive backup above needs no external scheduler. The local scripts,

@@ -90,3 +90,53 @@ func TestArchiveMedia_EmptyBucket(t *testing.T) {
 		t.Fatalf("stats=%+v err=%v", stats, err)
 	}
 }
+
+func TestExtractMedia_RoundTrip(t *testing.T) {
+	src := fakeObjects{
+		"users/a/1.jpg": []byte("first image"),
+		"users/b/2.png": bytes.Repeat([]byte{7}, 5000),
+	}
+	archive := filepath.Join(t.TempDir(), "media.tar.gz")
+	if _, err := ArchiveMedia(context.Background(), src, archive); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	stats, err := ExtractMedia(archive, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.Objects != 2 {
+		t.Fatalf("stats = %+v", stats)
+	}
+	for key, want := range src {
+		got, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(key)))
+		if err != nil || !bytes.Equal(got, want) {
+			t.Errorf("%s: content mismatch (err=%v)", key, err)
+		}
+	}
+}
+
+func TestExtractMedia_RejectsPathTraversal(t *testing.T) {
+	archive := filepath.Join(t.TempDir(), "evil.tar.gz")
+	f, err := os.Create(archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gz := gzip.NewWriter(f)
+	tw := tar.NewWriter(gz)
+	_ = tw.WriteHeader(&tar.Header{Name: "../escaped.txt", Mode: 0o644, Size: 1, Typeflag: tar.TypeReg})
+	_, _ = tw.Write([]byte("x"))
+	_ = tw.Close()
+	_ = gz.Close()
+	_ = f.Close()
+
+	parent := t.TempDir()
+	dir := filepath.Join(parent, "out")
+	if _, err := ExtractMedia(archive, dir); err == nil {
+		t.Fatal("expected an error for an entry escaping the target directory")
+	}
+	if _, err := os.Stat(filepath.Join(parent, "escaped.txt")); !os.IsNotExist(err) {
+		t.Fatal("entry was written outside the target directory")
+	}
+}
