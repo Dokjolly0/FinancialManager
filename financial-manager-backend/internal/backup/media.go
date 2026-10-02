@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"financial-manager-backend/internal/platform/storage"
@@ -73,4 +74,56 @@ func ArchiveMedia(ctx context.Context, src objectSource, path string) (ArchiveSt
 		}
 	}
 	return stats, nil
+}
+
+// ExtractMedia unpacks an archive written by ArchiveMedia into dir, one file
+// per object key, so it can be inspected or mirrored back into a bucket
+// (`mc mirror dir dst/bucket`). Entries whose name would land outside dir
+// ("../x", absolute paths) are rejected rather than skipped: a well-formed
+// backup never contains them.
+func ExtractMedia(archivePath, dir string) (ArchiveStats, error) {
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return ArchiveStats{}, err
+	}
+	defer f.Close()
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		return ArchiveStats{}, fmt.Errorf("extract media: %w", err)
+	}
+	tr := tar.NewReader(gz)
+
+	var stats ArchiveStats
+	for {
+		h, err := tr.Next()
+		if err == io.EOF {
+			return stats, nil
+		}
+		if err != nil {
+			return stats, fmt.Errorf("extract media: %w", err)
+		}
+		if h.Typeflag != tar.TypeReg {
+			continue
+		}
+		if !filepath.IsLocal(h.Name) {
+			return stats, fmt.Errorf("extract media: unsafe entry name %q", h.Name)
+		}
+		dst := filepath.Join(dir, filepath.FromSlash(h.Name))
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return stats, err
+		}
+		out, err := os.Create(dst)
+		if err != nil {
+			return stats, err
+		}
+		n, err := io.Copy(out, tr)
+		if closeErr := out.Close(); err == nil {
+			err = closeErr
+		}
+		if err != nil {
+			return stats, fmt.Errorf("extract %s: %w", h.Name, err)
+		}
+		stats.Objects++
+		stats.Bytes += n
+	}
 }
