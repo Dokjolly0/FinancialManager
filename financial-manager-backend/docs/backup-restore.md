@@ -197,6 +197,40 @@ When done, `docker rm -f fm-restore` deletes the container together with
 the restored data. Delete the extracted media folder too: both hold your
 financial data in clear.
 
+#### Into a PostgreSQL server installed on your machine (no Docker)
+
+The container above disappears with Docker. To keep a restored copy you
+can open any time, restore into a PostgreSQL server installed natively
+instead. On Windows, the PostgreSQL 16+ installer from postgresql.org or
+`winget install PostgreSQL.PostgreSQL.18` both work, since a newer
+pg_restore reads the server's version 16 dumps. Then pass `-target`:
+
+```bash
+go run ./cmd/restore-backup -dump <dump.enc> -target postgres://postgres@localhost:5432
+```
+
+- It uses the installation's own `pg_restore` and `psql`. It looks in
+  PATH, then in `C:\Program Files\PostgreSQL\<version>\bin` (newest
+  first, since the installer doesn't add it to PATH), then in pgAdmin's
+  bundled tools. `-pg-bin <folder>` overrides the search.
+- The server password is taken from the URL, from `PGPASSWORD`, or
+  prompted without echo. It reaches the tools through `PGPASSWORD`, never
+  on their command line.
+- The database is `financial_manager`, or the name in the URL path (for
+  example `.../financial_manager_20261001`, to keep several backups side
+  by side). An existing database with that name is only dropped and
+  recreated with `-replace`. The `postgres` and `template*` system
+  databases are refused.
+- DataGrip connects with the installation's host, port, user and
+  password. The database stays there until you drop it
+  (`DROP DATABASE financial_manager WITH (FORCE)`; the command prints a
+  ready-made line).
+
+The Windows service starts with the machine by default. To run it only
+when needed, set it to manual from an elevated PowerShell:
+`Set-Service postgresql-x64-18 -StartupType Manual`, then
+`Start-Service postgresql-x64-18` / `Stop-Service postgresql-x64-18`.
+
 ## Scheduling
 
 The Drive backup above needs no external scheduler. The local scripts,
