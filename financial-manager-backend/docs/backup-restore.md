@@ -231,6 +231,49 @@ when needed, set it to manual from an elevated PowerShell:
 `Set-Service postgresql-x64-18 -StartupType Manual`, then
 `Start-Service postgresql-x64-18` / `Stop-Service postgresql-x64-18`.
 
+##### Refreshing the local copy with a newer backup
+
+To bring the local database up to date, for example a month later:
+
+1. Download the newest `fm-<YYYYMMDDTHHMMSSZ>-postgres.dump.enc` from the
+   Drive folder.
+2. Run the same command with `-replace`:
+
+   ```powershell
+   go run ./cmd/restore-backup `
+     -dump C:\Users\<you>\Downloads\fm-20261102T030000Z-postgres.dump.enc `
+     -target postgres://postgres@localhost:5432 `
+     -replace
+   ```
+
+3. In DataGrip, **Refresh** the data source (`Ctrl+F5`). The connection
+   itself doesn't change and doesn't need to be recreated.
+
+`-replace` drops `financial_manager` and restores it from scratch. It is
+not an incremental update, so anything changed in the local copy is lost.
+`DROP ... WITH (FORCE)` also closes open sessions, including DataGrip's;
+DataGrip reconnects on the next query. Without `-replace` the command
+stops instead of overwriting the copy.
+
+To keep the previous copy too, for example to compare two months, give
+the new one its own name instead of using `-replace`:
+`-target postgres://postgres@localhost:5432/financial_manager_202611`.
+In DataGrip, tick the new database in the data source's **Schemas** tab.
+
+##### DataGrip shows an empty `public` schema
+
+If the data source connects fine but `public` is empty, and
+`SELECT current_database();` in its console returns `postgres`, DataGrip is
+using the `postgres` system database even though the URL ends in
+`/financial_manager`. This happens when the **Schemas** tab or the
+console's context selector points at `postgres`, or when the console
+belongs to another `localhost:5432` data source. The reliable fix is to
+delete every data source for `localhost:5432` and create one with
+**+ → Data Source from URL** (`jdbc:postgresql://localhost:5432/financial_manager`),
+ticking `financial_manager → public` in the **Schemas** tab before
+pressing OK. `SELECT current_database(), count(*) FROM transactions;`
+should then return `financial_manager` and a row count.
+
 ## Scheduling
 
 The Drive backup above needs no external scheduler. The local scripts,
