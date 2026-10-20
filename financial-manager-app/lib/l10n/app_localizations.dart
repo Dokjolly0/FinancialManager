@@ -464,6 +464,12 @@ abstract class AppLocalizations {
   /// **'Non consentito per questo tipo di portafoglio.'**
   String get errorCodeNotAllowedForWalletType;
 
+  /// No description provided for @errorCodePurposeLengthInvalid.
+  ///
+  /// In it, this message translates to:
+  /// **'Lo scopo può contenere al massimo 280 caratteri.'**
+  String get errorCodePurposeLengthInvalid;
+
   /// No description provided for @errorCodeLinkTargetNotFound.
   ///
   /// In it, this message translates to:
@@ -805,6 +811,24 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Nome'**
   String get walletNameLabel;
+
+  /// No description provided for @walletPurposeLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Scopo (facoltativo)'**
+  String get walletPurposeLabel;
+
+  /// No description provided for @walletPurposeHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Es. spese quotidiane, fondo emergenze, risparmi per le vacanze'**
+  String get walletPurposeHint;
+
+  /// No description provided for @walletPurposeHelper.
+  ///
+  /// In it, this message translates to:
+  /// **'Aiuta l\'Analisi AI a capire a cosa serve questo portafoglio.'**
+  String get walletPurposeHelper;
 
   /// No description provided for @walletTypeLabel.
   ///

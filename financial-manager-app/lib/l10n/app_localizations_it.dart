@@ -229,6 +229,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Non consentito per questo tipo di portafoglio.';
 
   @override
+  String get errorCodePurposeLengthInvalid =>
+      'Lo scopo può contenere al massimo 280 caratteri.';
+
+  @override
   String get errorCodeLinkTargetNotFound =>
       'Transazione da collegare non trovata.';
 
@@ -412,6 +416,17 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get walletNameLabel => 'Nome';
+
+  @override
+  String get walletPurposeLabel => 'Scopo (facoltativo)';
+
+  @override
+  String get walletPurposeHint =>
+      'Es. spese quotidiane, fondo emergenze, risparmi per le vacanze';
+
+  @override
+  String get walletPurposeHelper =>
+      'Aiuta l\'Analisi AI a capire a cosa serve questo portafoglio.';
 
   @override
   String get walletTypeLabel => 'Tipo';

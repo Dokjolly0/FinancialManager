@@ -228,6 +228,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Not allowed for this wallet type.';
 
   @override
+  String get errorCodePurposeLengthInvalid =>
+      'The purpose can be at most 280 characters.';
+
+  @override
   String get errorCodeLinkTargetNotFound =>
       'The transaction to link to was not found.';
 
@@ -409,6 +413,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletNameLabel => 'Name';
+
+  @override
+  String get walletPurposeLabel => 'Purpose (optional)';
+
+  @override
+  String get walletPurposeHint =>
+      'E.g. daily expenses, emergency fund, holiday savings';
+
+  @override
+  String get walletPurposeHelper =>
+      'Helps AI analysis understand what this wallet is for.';
 
   @override
   String get walletTypeLabel => 'Type';

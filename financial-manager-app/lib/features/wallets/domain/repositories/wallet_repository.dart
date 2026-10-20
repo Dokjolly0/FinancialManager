@@ -10,6 +10,7 @@ class CreateWalletParams {
     required this.icon,
     required this.color,
     this.openingBalanceMinor = 0,
+    this.purpose,
     this.voucherUnitValueMinor,
     this.voucherExpiryCutoffMonth,
     this.voucherExpiryMonth,
@@ -23,6 +24,7 @@ class CreateWalletParams {
   final String icon;
   final String color;
   final int openingBalanceMinor;
+  final String? purpose;
 
   /// Only sent when [type] is [WalletType.mealVoucher].
   final int? voucherUnitValueMinor;
@@ -40,6 +42,7 @@ class UpdateWalletParams {
     required this.icon,
     required this.color,
     required this.expectedVersion,
+    this.purpose,
     this.voucherExpiryCutoffMonth,
     this.voucherExpiryMonth,
     this.voucherExpiryDay,
@@ -50,6 +53,10 @@ class UpdateWalletParams {
   final String icon;
   final String color;
   final int expectedVersion;
+
+  /// Replaced on every update like the other fields: null or blank clears
+  /// it, so callers must pass the current purpose to keep it.
+  final String? purpose;
 
   /// Only meaningful when [type] is [WalletType.mealVoucher] — the face
   /// value stays fixed after creation and is never part of an update.

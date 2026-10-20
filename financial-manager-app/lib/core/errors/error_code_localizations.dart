@@ -55,6 +55,7 @@ String localizeErrorCode(AppLocalizations l10n, String code) {
     'INVALID_MONTH' => l10n.errorCodeInvalidMonth,
     'INVALID_DAY' => l10n.errorCodeInvalidDay,
     'NOT_ALLOWED_FOR_WALLET_TYPE' => l10n.errorCodeNotAllowedForWalletType,
+    'PURPOSE_LENGTH_INVALID' => l10n.errorCodePurposeLengthInvalid,
     'LINK_TARGET_NOT_FOUND' => l10n.errorCodeLinkTargetNotFound,
     'LINK_TARGET_NOT_LINKABLE' => l10n.errorCodeLinkTargetNotLinkable,
     'NOT_IN_PAYMENT_GROUP' => l10n.errorCodeNotInPaymentGroup,
