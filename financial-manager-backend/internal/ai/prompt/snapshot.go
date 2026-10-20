@@ -30,6 +30,20 @@ type Snapshot struct {
 
 	// Context is the personal context; nil when not included.
 	Context *Context
+
+	// Filters, when set, restrict every figure to matching transactions
+	// (an analysis started from Cronologia). Balances and transfers are
+	// then left out: a partial view of the ledger can't compute them.
+	Filters *Filters
+}
+
+// Filters describes the transactions an analysis is restricted to.
+type Filters struct {
+	Direction      string // DEBIT, CREDIT or ""
+	Category       string // category name, "" for any
+	Title          string // text searched in title and description
+	AmountMinMinor int64  // 0: no bound
+	AmountMaxMinor int64  // 0: no bound
 }
 
 type Wallet struct {

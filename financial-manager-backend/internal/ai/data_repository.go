@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"financial-manager-backend/internal/reports"
 )
 
 // Queries the reports module doesn't have, used only to build the AI data
@@ -24,7 +26,8 @@ type TransactionRow struct {
 
 // ListTransactions returns the newest transactions of the given kinds,
 // at most limit rows.
-func (r *Repository) ListTransactions(ctx context.Context, walletIDs []uuid.UUID, kinds []string, from *time.Time, to time.Time, limit int) ([]TransactionRow, error) {
+func (r *Repository) ListTransactions(ctx context.Context, walletIDs []uuid.UUID, kinds []string, from *time.Time, to time.Time, limit int, filter reports.Filter) ([]TransactionRow, error) {
+	cond, extra := filter.SQL("t.", 6)
 	rows, err := r.db.Query(ctx, `
 		SELECT t.occurred_at, w.name, t.direction, t.amount_minor, t.title, c.name
 		FROM transactions t
@@ -32,10 +35,10 @@ func (r *Repository) ListTransactions(ctx context.Context, walletIDs []uuid.UUID
 		LEFT JOIN categories c ON c.id = t.category_id
 		WHERE t.wallet_id = ANY($1::uuid[]) AND t.deleted_at IS NULL AND t.kind = ANY($2::text[])
 			AND ($3::timestamptz IS NULL OR t.occurred_at >= $3)
-			AND t.occurred_at < $4
+			AND t.occurred_at < $4`+cond+`
 		ORDER BY t.occurred_at DESC, t.id
 		LIMIT $5
-	`, walletIDs, kinds, from, to, limit)
+	`, append([]any{walletIDs, kinds, from, to, limit}, extra...)...)
 	if err != nil {
 		return nil, fmt.Errorf("list ai transactions: %w", err)
 	}
@@ -104,7 +107,8 @@ type MonthlyTitleRow struct {
 // MonthlyDebitsByTitle groups expenses by item (template, else normalized
 // title, as reports.BreakdownByTitle does) and local month; the input of
 // the recurring-payment detection.
-func (r *Repository) MonthlyDebitsByTitle(ctx context.Context, walletIDs []uuid.UUID, kinds []string, from *time.Time, to time.Time, tzName string) ([]MonthlyTitleRow, error) {
+func (r *Repository) MonthlyDebitsByTitle(ctx context.Context, walletIDs []uuid.UUID, kinds []string, from *time.Time, to time.Time, tzName string, filter reports.Filter) ([]MonthlyTitleRow, error) {
+	cond, extra := filter.SQL("t.", 6)
 	rows, err := r.db.Query(ctx, `
 		SELECT
 			COALESCE(t.template_id::text, 'title:' || t.title_normalized) AS group_key,
@@ -117,10 +121,10 @@ func (r *Repository) MonthlyDebitsByTitle(ctx context.Context, walletIDs []uuid.
 		WHERE t.wallet_id = ANY($2::uuid[]) AND t.deleted_at IS NULL AND t.direction = 'DEBIT'
 			AND t.kind = ANY($3::text[])
 			AND ($4::timestamptz IS NULL OR t.occurred_at >= $4)
-			AND t.occurred_at < $5
+			AND t.occurred_at < $5`+cond+`
 		GROUP BY group_key, month
 		ORDER BY group_key, month
-	`, tzName, walletIDs, kinds, from, to)
+	`, append([]any{tzName, walletIDs, kinds, from, to}, extra...)...)
 	if err != nil {
 		return nil, fmt.Errorf("query monthly debits by title: %w", err)
 	}

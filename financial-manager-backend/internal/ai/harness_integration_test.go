@@ -17,6 +17,7 @@ import (
 
 	"financial-manager-backend/internal/ai"
 	"financial-manager-backend/internal/ai/provider"
+	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/database"
 	"financial-manager-backend/internal/platform/httpserver"
@@ -103,8 +104,9 @@ func newHarness(t *testing.T, opts ...harnessOptions) *harness {
 	}
 	h.service = ai.NewService(ai.Deps{
 		DB: dbPool, Repo: h.repo, Wallets: walletsRepo, Users: usersRepo, Reports: reports.NewRepository(dbPool),
-		Limits: ai.Limits{MaxPromptTokens: opt.maxPromptTokens},
-		Box:    h.box, Providers: h.factory,
+		Categories: categories.NewRepository(dbPool),
+		Limits:     ai.Limits{MaxPromptTokens: opt.maxPromptTokens},
+		Box:        h.box, Providers: h.factory,
 		Policy: provider.BaseURLPolicy{}, Clock: clock.Frozen{At: h.now},
 	})
 

@@ -275,12 +275,13 @@ func newAIHandler(cfg config.Config, dbPool *database.Pool, redisClient *redis.C
 	}
 	policy := provider.BaseURLPolicy{AllowPrivate: cfg.AIAllowPrivateBaseURLs, AllowedHosts: cfg.AIAllowedBaseURLHosts}
 	service := ai.NewService(ai.Deps{
-		DB:      dbPool,
-		Locker:  ai.RedisLocker{Client: redisClient},
-		Repo:    ai.NewRepository(dbPool),
-		Wallets: walletsRepo,
-		Users:   usersRepo,
-		Reports: reports.NewRepository(dbPool),
+		DB:         dbPool,
+		Locker:     ai.RedisLocker{Client: redisClient},
+		Repo:       ai.NewRepository(dbPool),
+		Wallets:    walletsRepo,
+		Users:      usersRepo,
+		Reports:    reports.NewRepository(dbPool),
+		Categories: categories.NewRepository(dbPool),
 		Limits: ai.Limits{
 			MaxPromptTokens:   cfg.AIMaxPromptTokens,
 			RunsPerHour:       cfg.AIRunsPerHour,

@@ -11,8 +11,10 @@ import (
 	"github.com/google/uuid"
 
 	"financial-manager-backend/internal/ai/prompt"
+	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/platform/apierror"
 	"financial-manager-backend/internal/reports"
+	"financial-manager-backend/internal/transactions"
 	"financial-manager-backend/internal/wallets"
 )
 
@@ -28,12 +30,26 @@ var (
 
 // AnalysisOptions chooses what data leaves the server.
 type AnalysisOptions struct {
-	Sections            []string `json:"sections"`
-	IncludeTransactions bool     `json:"include_transactions"`
-	MaxTransactions     int      `json:"max_transactions"`
-	AnonymizeTitles     bool     `json:"anonymize_titles"`
-	IncludeAdjustments  bool     `json:"include_adjustments"`
+	Sections            []string         `json:"sections"`
+	IncludeTransactions bool             `json:"include_transactions"`
+	MaxTransactions     int              `json:"max_transactions"`
+	AnonymizeTitles     bool             `json:"anonymize_titles"`
+	IncludeAdjustments  bool             `json:"include_adjustments"`
+	Filters             *AnalysisFilters `json:"filters,omitempty"`
 }
+
+// AnalysisFilters restricts an analysis to part of the ledger, with the
+// same meaning as the Cronologia filters (an analysis started from there).
+type AnalysisFilters struct {
+	Direction      string `json:"direction,omitempty"` // DEBIT, CREDIT
+	CategoryID     string `json:"category_id,omitempty"`
+	Title          string `json:"title,omitempty"`
+	AmountMinMinor int64  `json:"amount_min_minor,omitempty"`
+	AmountMaxMinor int64  `json:"amount_max_minor,omitempty"`
+}
+
+// MaxFilterTitleLength bounds the title search, like transaction titles.
+const MaxFilterTitleLength = 120
 
 // AnalysisPeriod reuses the reports presets; From/To are calendar dates
 // (YYYY-MM-DD, or RFC3339) for the custom preset.
@@ -56,6 +72,7 @@ type AnalysisRequest struct {
 // builtPrompt is a validated request turned into the exact prompt.
 type builtPrompt struct {
 	prompt       prompt.Prompt
+	filter       reports.Filter
 	instructions string
 	preset       string
 	lang         prompt.Lang
@@ -124,6 +141,10 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 		to, okTo := parseDate(req.Period.To, loc)
 		if !okFrom || !okTo {
 			fieldErrors["period"] = apierror.FieldInvalidRFC3339Date
+		} else if periodPreset == reports.PresetCustom && (from == nil) != (to == nil) {
+			// Open-ended range ("from date X" or "up to date Y"), as the
+			// Cronologia date filters allow.
+			period = openEndedPeriod(from, to, loc, s.clock.Now())
 		} else if period, err = reports.ResolvePeriod(periodPreset, from, to, loc, s.clock.Now()); err != nil {
 			fieldErrors["period"] = apierror.FieldCustomRangeRequired
 		} else if period.From != nil && !period.From.Before(period.To) {
@@ -149,6 +170,14 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 	}
 	if opts.MaxTransactions < 1 || opts.MaxTransactions > MaxMaxTransactions {
 		fieldErrors["options.max_transactions"] = FieldOutOfRange
+	}
+
+	filter, filterInfo, filterErrors, err := s.resolveFilters(ctx, userID, opts.Filters)
+	if err != nil {
+		return builtPrompt{}, err
+	}
+	for k, v := range filterErrors {
+		fieldErrors[k] = v
 	}
 
 	instructions := ""
@@ -181,7 +210,7 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 	}
 	snapshot, err := s.collect(ctx, collectInput{
 		userID: userID, wallets: selected, period: period, loc: loc, lang: lang,
-		sections: seen, options: opts, userContext: uc,
+		sections: seen, options: opts, userContext: uc, filter: filter, filterInfo: filterInfo,
 	})
 	if err != nil {
 		return builtPrompt{}, err
@@ -200,7 +229,7 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 		ids[i] = w.ID
 	}
 	bp := builtPrompt{
-		prompt: built, instructions: instructions, preset: req.Preset, lang: lang, period: period, loc: loc,
+		prompt: built, filter: filter, instructions: instructions, preset: req.Preset, lang: lang, period: period, loc: loc,
 		walletIDs: ids, options: opts, snapshot: snapshot, sections: sections,
 	}
 	bp.estimated = prompt.EstimateTokens(built.System, bp.userMessage())
@@ -208,6 +237,67 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 		return builtPrompt{}, ErrPromptTooLarge
 	}
 	return bp, nil
+}
+
+// openEndedPeriod is a custom period with only one bound: "from X to
+// today" or "the whole history up to Y" (Y inclusive).
+func openEndedPeriod(from, to *time.Time, loc *time.Location, now time.Time) reports.Period {
+	if from != nil {
+		f := from.In(loc)
+		start := time.Date(f.Year(), f.Month(), f.Day(), 0, 0, 0, 0, loc).UTC()
+		return reports.Period{From: &start, To: now}
+	}
+	t := to.In(loc)
+	end := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, 1).UTC()
+	if end.After(now) {
+		end = now
+	}
+	return reports.Period{From: nil, To: end}
+}
+
+// resolveFilters validates the Cronologia filters and returns them as a
+// reports.Filter plus the description shown in the data block (nil when
+// no filter is active).
+func (s *Service) resolveFilters(ctx context.Context, userID uuid.UUID, f *AnalysisFilters) (reports.Filter, *prompt.Filters, map[string]string, error) {
+	if f == nil {
+		return reports.Filter{}, nil, nil, nil
+	}
+	fieldErrors := map[string]string{}
+	filter := reports.Filter{
+		Direction: f.Direction, Title: strings.TrimSpace(f.Title),
+		AmountMinMinor: f.AmountMinMinor, AmountMaxMinor: f.AmountMaxMinor,
+	}
+	info := &prompt.Filters{
+		Direction: f.Direction, Title: filter.Title, AmountMinMinor: f.AmountMinMinor, AmountMaxMinor: f.AmountMaxMinor,
+	}
+	if f.Direction != "" && f.Direction != transactions.DirectionDebit && f.Direction != transactions.DirectionCredit {
+		fieldErrors["options.filters.direction"] = FieldInvalidValue
+	}
+	if utf8.RuneCountInString(filter.Title) > MaxFilterTitleLength {
+		fieldErrors["options.filters.title"] = FieldTextTooLong
+	}
+	if f.AmountMinMinor < 0 || f.AmountMaxMinor < 0 {
+		fieldErrors["options.filters.amount_min_minor"] = apierror.FieldNegativeNotAllowed
+	} else if f.AmountMaxMinor > 0 && f.AmountMinMinor > f.AmountMaxMinor {
+		fieldErrors["options.filters.amount_max_minor"] = FieldOutOfRange
+	}
+	if f.CategoryID != "" {
+		id, err := uuid.Parse(f.CategoryID)
+		if err != nil {
+			fieldErrors["options.filters.category_id"] = "CATEGORY_NOT_FOUND"
+		} else if c, err := s.categories.GetByIDAndVisibility(ctx, id, userID); errors.Is(err, categories.ErrNotFound) {
+			fieldErrors["options.filters.category_id"] = "CATEGORY_NOT_FOUND"
+		} else if err != nil {
+			return reports.Filter{}, nil, nil, err
+		} else {
+			filter.CategoryID = &id
+			info.Category = c.Name
+		}
+	}
+	if filter.IsZero() {
+		return reports.Filter{}, nil, fieldErrors, nil
+	}
+	return filter, info, fieldErrors, nil
 }
 
 // selectWallets resolves wallet_ids; empty means every wallet the user ever

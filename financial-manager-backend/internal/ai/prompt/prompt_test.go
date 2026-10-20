@@ -205,3 +205,33 @@ func TestFormatting(t *testing.T) {
 		t.Errorf("EstimateTokens = %d", EstimateTokens("1234567"))
 	}
 }
+
+func TestBuild_FilteredSnapshot(t *testing.T) {
+	s := fixtureSnapshot()
+	s.Filters = &Filters{Direction: "DEBIT", Category: "Svago", Title: "netflix", AmountMinMinor: 500}
+	p, err := Build(BuildInput{Lang: LangIT, Preset: PresetCustom, Sections: AllSections, Snapshot: s})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"## Filtri applicati",
+		"- Solo uscite",
+		"- Categoria: Svago",
+		`- Titolo o descrizione contiene: "netflix"`,
+		"- Importo minimo: 5.00",
+		"Saldi non disponibili",
+		"Non inclusi: con i filtri attivi",
+	} {
+		if !strings.Contains(p.DataBlock, want) {
+			t.Errorf("filtered block lacks %q", want)
+		}
+	}
+	if strings.Contains(p.DataBlock, "saldo a inizio periodo") || strings.Contains(p.DataBlock, "Conto corrente | Contanti | 600.00") {
+		t.Error("balances and transfer flows must be left out when filtered")
+	}
+
+	unfiltered, _ := Build(BuildInput{Lang: LangIT, Preset: PresetCustom, Sections: AllSections, Snapshot: fixtureSnapshot()})
+	if unfiltered.Fingerprint == p.Fingerprint {
+		t.Error("filters must change the fingerprint")
+	}
+}

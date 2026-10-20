@@ -927,8 +927,8 @@ components:
               type: string
               enum: [last_30_days, last_12_months, all_time, current_month, current_year, custom]
               default: last_12_months
-            from: { type: string, description: "custom only: YYYY-MM-DD (or RFC3339)." }
-            to: { type: string, description: "custom only, inclusive." }
+            from: { type: string, description: "custom only: YYYY-MM-DD (or RFC3339). Alone: from that day to today." }
+            to: { type: string, description: "custom only, inclusive. Alone: the whole history up to that day." }
         timezone: { type: string, description: "IANA name; defaults to the user's." }
         wallet_ids:
           type: array
@@ -944,6 +944,18 @@ components:
             max_transactions: { type: integer, minimum: 1, maximum: 500, default: 200 }
             anonymize_titles: { type: boolean, default: false }
             include_adjustments: { type: boolean, default: false }
+            filters:
+              type: object
+              description: >
+                Restricts every figure to matching transactions, with the
+                Cronologia filter semantics. Balances and transfer flows
+                are then left out of the data block.
+              properties:
+                direction: { type: string, enum: [DEBIT, CREDIT] }
+                category_id: { type: string, format: uuid, description: "Own or system category; otherwise CATEGORY_NOT_FOUND." }
+                title: { type: string, maxLength: 120, description: "Substring of the title or description." }
+                amount_min_minor: { type: integer, format: int64, minimum: 0 }
+                amount_max_minor: { type: integer, format: int64, minimum: 0 }
         instructions:
           type: [string, "null"]
           maxLength: 4000

@@ -24,6 +24,9 @@ type labels struct {
 
 	noData string
 
+	filtersHeading, filtersNote, filterDebit, filterCredit, filterCategory, filterTitle string
+	filterAmountFrom, filterAmountTo, filteredBalances, filteredTransfers               string
+
 	contextHousehold, contextIncome, contextAboutMe, contextGoals, contextIgnore string
 	incomeTypes                                                                  map[string]string
 }
@@ -75,6 +78,17 @@ var italian = labels{
 	uncategorized:       "-",
 
 	noData: "Nessun dato.",
+
+	filtersHeading:    "## Filtri applicati",
+	filtersNote:       "Tutti i dati qui sotto riguardano solo i movimenti che rispettano questi filtri.",
+	filterDebit:       "Solo uscite",
+	filterCredit:      "Solo entrate",
+	filterCategory:    "Categoria: %s",
+	filterTitle:       "Titolo o descrizione contiene: %q",
+	filterAmountFrom:  "Importo minimo: %s",
+	filterAmountTo:    "Importo massimo: %s",
+	filteredBalances:  "Saldi non disponibili: l'analisi riguarda solo una parte dei movimenti.",
+	filteredTransfers: "Non inclusi: con i filtri attivi l'analisi riguarda solo entrate e uscite.",
 
 	contextHousehold: "Persone nel nucleo familiare: %d",
 	contextIncome:    "Tipo di reddito: %s",
@@ -134,6 +148,17 @@ var english = labels{
 	uncategorized:       "-",
 
 	noData: "No data.",
+
+	filtersHeading:    "## Applied filters",
+	filtersNote:       "Every figure below only covers the transactions matching these filters.",
+	filterDebit:       "Expenses only",
+	filterCredit:      "Income only",
+	filterCategory:    "Category: %s",
+	filterTitle:       "Title or description contains: %q",
+	filterAmountFrom:  "Minimum amount: %s",
+	filterAmountTo:    "Maximum amount: %s",
+	filteredBalances:  "Balances not available: the analysis only covers part of the transactions.",
+	filteredTransfers: "Not included: with filters on, the analysis only covers income and expenses.",
 
 	contextHousehold: "People in the household: %d",
 	contextIncome:    "Income type: %s",

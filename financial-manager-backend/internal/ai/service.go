@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"financial-manager-backend/internal/ai/provider"
+	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/platform/apierror"
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/database"
@@ -43,12 +44,13 @@ type Limits struct {
 }
 
 type Deps struct {
-	DB      *database.Pool
-	Repo    *Repository
-	Wallets *wallets.Repository
-	Users   *users.Repository
-	Reports *reports.Repository
-	Limits  Limits
+	DB         *database.Pool
+	Repo       *Repository
+	Wallets    *wallets.Repository
+	Users      *users.Repository
+	Reports    *reports.Repository
+	Categories *categories.Repository
+	Limits     Limits
 	// Box encrypts the API keys; nil means the feature is disabled
 	// (AI_KEY_ENCRYPTION_KEY unset).
 	Box         *secretbox.Box
@@ -69,6 +71,7 @@ type Service struct {
 	wallets     *wallets.Repository
 	users       *users.Repository
 	reports     *reports.Repository
+	categories  *categories.Repository
 	limits      Limits
 	box         *secretbox.Box
 	providers   provider.Factory
@@ -103,7 +106,7 @@ func NewService(d Deps) *Service {
 	}
 	return &Service{
 		db: d.DB, locker: locker,
-		repo: d.Repo, wallets: d.Wallets, users: d.Users, reports: d.Reports, limits: limits,
+		repo: d.Repo, wallets: d.Wallets, users: d.Users, reports: d.Reports, categories: d.Categories, limits: limits,
 		box: d.Box, providers: d.Providers, policy: d.Policy,
 		rateLimiter: d.RateLimiter, clock: c, logger: logger,
 	}

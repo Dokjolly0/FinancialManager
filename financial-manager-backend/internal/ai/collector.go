@@ -36,6 +36,8 @@ type collectInput struct {
 	sections    map[string]bool
 	options     AnalysisOptions
 	userContext UserContext
+	filter      reports.Filter
+	filterInfo  *prompt.Filters
 }
 
 // collect queries everything the data block needs. Like the reports
@@ -69,26 +71,33 @@ func (s *Service) collect(ctx context.Context, in collectInput) (prompt.Snapshot
 		snap.Wallets = append(snap.Wallets, pw)
 	}
 
-	totals, err := s.reports.Totals(ctx, walletIDs, kinds, from, to)
+	// Every aggregate below honours the Cronologia filters, if any.
+	rep := s.reports.WithFilter(in.filter)
+	filtered := in.filterInfo != nil
+	snap.Filters = in.filterInfo
+
+	totals, err := rep.Totals(ctx, walletIDs, kinds, from, to)
 	if err != nil {
 		return prompt.Snapshot{}, err
 	}
 	snap.Totals = prompt.Totals{CreditsMinor: totals.CreditsMinor, DebitsMinor: totals.DebitsMinor, Count: totals.Count}
-	var opening int64
-	if from != nil {
-		if opening, err = s.reports.SignedImpact(ctx, walletIDs, nil, from); err != nil {
+	if !filtered {
+		var opening int64
+		if from != nil {
+			if opening, err = s.reports.SignedImpact(ctx, walletIDs, nil, from); err != nil {
+				return prompt.Snapshot{}, err
+			}
+			snap.Totals.OpeningMinor = &opening
+		}
+		impact, err := s.reports.SignedImpact(ctx, walletIDs, from, &to)
+		if err != nil {
 			return prompt.Snapshot{}, err
 		}
-		snap.Totals.OpeningMinor = &opening
+		snap.Totals.ClosingMinor = opening + impact
 	}
-	impact, err := s.reports.SignedImpact(ctx, walletIDs, from, &to)
-	if err != nil {
-		return prompt.Snapshot{}, err
-	}
-	snap.Totals.ClosingMinor = opening + impact
 
 	if in.sections[prompt.SectionMonthly] {
-		buckets, err := s.reports.Buckets(ctx, walletIDs, kinds, from, to, reports.GranularityMonthly, in.loc.String())
+		buckets, err := rep.Buckets(ctx, walletIDs, kinds, from, to, reports.GranularityMonthly, in.loc.String())
 		if err != nil {
 			return prompt.Snapshot{}, err
 		}
@@ -96,23 +105,23 @@ func (s *Service) collect(ctx context.Context, in collectInput) (prompt.Snapshot
 	}
 
 	if in.sections[prompt.SectionCategories] {
-		if snap.DebitCategories, err = s.groups(ctx, true, walletIDs, transactions.DirectionDebit, kinds, from, to, in.lang); err != nil {
+		if snap.DebitCategories, err = s.groups(ctx, rep, true, walletIDs, transactions.DirectionDebit, kinds, from, to, in.lang); err != nil {
 			return prompt.Snapshot{}, err
 		}
-		if snap.CreditCategories, err = s.groups(ctx, true, walletIDs, transactions.DirectionCredit, kinds, from, to, in.lang); err != nil {
+		if snap.CreditCategories, err = s.groups(ctx, rep, true, walletIDs, transactions.DirectionCredit, kinds, from, to, in.lang); err != nil {
 			return prompt.Snapshot{}, err
 		}
 	}
 	if in.sections[prompt.SectionTitles] {
-		if snap.DebitTitles, err = s.groups(ctx, false, walletIDs, transactions.DirectionDebit, kinds, from, to, in.lang); err != nil {
+		if snap.DebitTitles, err = s.groups(ctx, rep, false, walletIDs, transactions.DirectionDebit, kinds, from, to, in.lang); err != nil {
 			return prompt.Snapshot{}, err
 		}
-		if snap.CreditTitles, err = s.groups(ctx, false, walletIDs, transactions.DirectionCredit, kinds, from, to, in.lang); err != nil {
+		if snap.CreditTitles, err = s.groups(ctx, rep, false, walletIDs, transactions.DirectionCredit, kinds, from, to, in.lang); err != nil {
 			return prompt.Snapshot{}, err
 		}
 	}
 
-	if in.sections[prompt.SectionTransfers] {
+	if in.sections[prompt.SectionTransfers] && !filtered {
 		flows, err := s.repo.TransferFlows(ctx, walletIDs, from, to)
 		if err != nil {
 			return prompt.Snapshot{}, err
@@ -126,7 +135,7 @@ func (s *Service) collect(ctx context.Context, in collectInput) (prompt.Snapshot
 	}
 
 	if in.sections[prompt.SectionRecurring] {
-		monthly, err := s.repo.MonthlyDebitsByTitle(ctx, walletIDs, kinds, from, to, in.loc.String())
+		monthly, err := s.repo.MonthlyDebitsByTitle(ctx, walletIDs, kinds, from, to, in.loc.String(), in.filter)
 		if err != nil {
 			return prompt.Snapshot{}, err
 		}
@@ -134,7 +143,7 @@ func (s *Service) collect(ctx context.Context, in collectInput) (prompt.Snapshot
 	}
 
 	if in.options.IncludeTransactions {
-		rows, err := s.repo.ListTransactions(ctx, walletIDs, kinds, from, to, in.options.MaxTransactions)
+		rows, err := s.repo.ListTransactions(ctx, walletIDs, kinds, from, to, in.options.MaxTransactions, in.filter)
 		if err != nil {
 			return prompt.Snapshot{}, err
 		}
@@ -169,14 +178,14 @@ func (s *Service) collect(ctx context.Context, in collectInput) (prompt.Snapshot
 
 // groups returns a category or title breakdown capped at maxGroupsPerList,
 // folding the rest into one "other" row so shares still add up.
-func (s *Service) groups(ctx context.Context, byCategory bool, walletIDs []uuid.UUID, direction string, kinds []string,
+func (s *Service) groups(ctx context.Context, rep *reports.Repository, byCategory bool, walletIDs []uuid.UUID, direction string, kinds []string,
 	from *time.Time, to time.Time, lang prompt.Lang) ([]prompt.Group, error) {
 	var list []reports.BreakdownGroup
 	var err error
 	if byCategory {
-		list, err = s.reports.BreakdownByCategory(ctx, walletIDs, direction, kinds, from, to)
+		list, err = rep.BreakdownByCategory(ctx, walletIDs, direction, kinds, from, to)
 	} else {
-		list, err = s.reports.BreakdownByTitle(ctx, walletIDs, direction, kinds, from, to)
+		list, err = rep.BreakdownByTitle(ctx, walletIDs, direction, kinds, from, to)
 	}
 	if err != nil {
 		return nil, err

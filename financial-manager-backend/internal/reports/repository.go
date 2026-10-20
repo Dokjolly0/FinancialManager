@@ -11,7 +11,8 @@ import (
 )
 
 type Repository struct {
-	db database.Querier
+	db     database.Querier
+	filter Filter // zero for the reports endpoints; see WithFilter
 }
 
 func NewRepository(db database.Querier) *Repository {
@@ -51,6 +52,7 @@ type Totals struct {
 // total_credits/total_debits.
 func (r *Repository) Totals(ctx context.Context, walletIDs []uuid.UUID, kinds []string, from *time.Time, to time.Time) (Totals, error) {
 	var t Totals
+	cond, extra := r.filter.SQL("", 5)
 	err := r.db.QueryRow(ctx, `
 		SELECT
 			COALESCE(SUM(CASE WHEN direction = 'CREDIT' THEN amount_minor ELSE 0 END), 0),
@@ -59,8 +61,8 @@ func (r *Repository) Totals(ctx context.Context, walletIDs []uuid.UUID, kinds []
 		FROM transactions
 		WHERE wallet_id = ANY($1::uuid[]) AND deleted_at IS NULL AND kind = ANY($2::text[])
 			AND ($3::timestamptz IS NULL OR occurred_at >= $3)
-			AND occurred_at < $4
-	`, walletIDs, kinds, from, to).Scan(&t.CreditsMinor, &t.DebitsMinor, &t.Count)
+			AND occurred_at < $4`+cond+`
+	`, append([]any{walletIDs, kinds, from, to}, extra...)...).Scan(&t.CreditsMinor, &t.DebitsMinor, &t.Count)
 	if err != nil {
 		return Totals{}, fmt.Errorf("sum totals: %w", err)
 	}
@@ -89,6 +91,7 @@ func (r *Repository) Buckets(ctx context.Context, walletIDs []uuid.UUID, kinds [
 	// bucket boundary as a naive timestamp; shifting it back through the
 	// same timezone reinterprets that naive value as an instant, which is
 	// the standard Postgres idiom for timezone-aware date_trunc.
+	cond, extra := r.filter.SQL("", 6)
 	query := `
 		SELECT
 			(date_trunc('` + trunc + `', occurred_at AT TIME ZONE $1) AT TIME ZONE $1) AS bucket,
@@ -97,11 +100,11 @@ func (r *Repository) Buckets(ctx context.Context, walletIDs []uuid.UUID, kinds [
 		FROM transactions
 		WHERE wallet_id = ANY($2::uuid[]) AND deleted_at IS NULL AND kind = ANY($3::text[])
 			AND ($4::timestamptz IS NULL OR occurred_at >= $4)
-			AND occurred_at < $5
+			AND occurred_at < $5` + cond + `
 		GROUP BY bucket
 		ORDER BY bucket
 	`
-	rows, err := r.db.Query(ctx, query, tzName, walletIDs, kinds, from, to)
+	rows, err := r.db.Query(ctx, query, append([]any{tzName, walletIDs, kinds, from, to}, extra...)...)
 	if err != nil {
 		return nil, fmt.Errorf("query buckets: %w", err)
 	}
@@ -129,6 +132,7 @@ type BreakdownGroup struct {
 // template_id when present (label = the template's canonical title),
 // otherwise by title_normalized (label = the most recent raw title used).
 func (r *Repository) BreakdownByTitle(ctx context.Context, walletIDs []uuid.UUID, direction string, kinds []string, from *time.Time, to time.Time) ([]BreakdownGroup, error) {
+	cond, extra := r.filter.SQL("t.", 6)
 	rows, err := r.db.Query(ctx, `
 		SELECT
 			COALESCE(t.template_id::text, 'title:' || t.title_normalized) AS group_key,
@@ -139,10 +143,10 @@ func (r *Repository) BreakdownByTitle(ctx context.Context, walletIDs []uuid.UUID
 		LEFT JOIN transaction_templates tt ON tt.id = t.template_id
 		WHERE t.wallet_id = ANY($1::uuid[]) AND t.deleted_at IS NULL AND t.direction = $2 AND t.kind = ANY($3::text[])
 			AND ($4::timestamptz IS NULL OR t.occurred_at >= $4)
-			AND t.occurred_at < $5
+			AND t.occurred_at < $5`+cond+`
 		GROUP BY group_key
 		ORDER BY amount_minor DESC
-	`, walletIDs, direction, kinds, from, to)
+	`, append([]any{walletIDs, direction, kinds, from, to}, extra...)...)
 	if err != nil {
 		return nil, fmt.Errorf("query title breakdown: %w", err)
 	}
@@ -152,6 +156,7 @@ func (r *Repository) BreakdownByTitle(ctx context.Context, walletIDs []uuid.UUID
 // BreakdownByCategory implements plan.md section 18.5: group by category,
 // with uncategorized transactions bucketed under "Altro".
 func (r *Repository) BreakdownByCategory(ctx context.Context, walletIDs []uuid.UUID, direction string, kinds []string, from *time.Time, to time.Time) ([]BreakdownGroup, error) {
+	cond, extra := r.filter.SQL("t.", 6)
 	rows, err := r.db.Query(ctx, `
 		SELECT
 			COALESCE(t.category_id::text, 'none') AS group_key,
@@ -162,10 +167,10 @@ func (r *Repository) BreakdownByCategory(ctx context.Context, walletIDs []uuid.U
 		LEFT JOIN categories c ON c.id = t.category_id
 		WHERE t.wallet_id = ANY($1::uuid[]) AND t.deleted_at IS NULL AND t.direction = $2 AND t.kind = ANY($3::text[])
 			AND ($4::timestamptz IS NULL OR t.occurred_at >= $4)
-			AND t.occurred_at < $5
+			AND t.occurred_at < $5`+cond+`
 		GROUP BY group_key
 		ORDER BY amount_minor DESC
-	`, walletIDs, direction, kinds, from, to)
+	`, append([]any{walletIDs, direction, kinds, from, to}, extra...)...)
 	if err != nil {
 		return nil, fmt.Errorf("query category breakdown: %w", err)
 	}

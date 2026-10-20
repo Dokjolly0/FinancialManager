@@ -281,6 +281,30 @@ func renderData(l labels, s Snapshot, sections map[string]bool) string {
 	}
 	linef(l.periodNote, s.Timezone, s.Currency)
 
+	if f := s.Filters; f != nil {
+		text("")
+		text(l.filtersHeading)
+		text(l.filtersNote)
+		switch f.Direction {
+		case "DEBIT":
+			text("- " + l.filterDebit)
+		case "CREDIT":
+			text("- " + l.filterCredit)
+		}
+		if f.Category != "" {
+			linef("- "+l.filterCategory, clean(f.Category))
+		}
+		if f.Title != "" {
+			linef("- "+l.filterTitle, clean(f.Title))
+		}
+		if f.AmountMinMinor > 0 {
+			linef("- "+l.filterAmountFrom, money(f.AmountMinMinor))
+		}
+		if f.AmountMaxMinor > 0 {
+			linef("- "+l.filterAmountTo, money(f.AmountMaxMinor))
+		}
+	}
+
 	text("")
 	text(l.walletsHeading)
 	if len(s.Wallets) == 0 {
@@ -313,12 +337,16 @@ func renderData(l labels, s Snapshot, sections map[string]bool) string {
 	}
 	row(money(s.Totals.CreditsMinor), money(s.Totals.DebitsMinor), money(s.Totals.CreditsMinor-s.Totals.DebitsMinor),
 		fmt.Sprint(s.Totals.Count), savings)
-	text(l.balancesColumns)
-	opening := l.savingsRateNA
-	if s.Totals.OpeningMinor != nil {
-		opening = money(*s.Totals.OpeningMinor)
+	if s.Filters != nil {
+		text(l.filteredBalances)
+	} else {
+		text(l.balancesColumns)
+		opening := l.savingsRateNA
+		if s.Totals.OpeningMinor != nil {
+			opening = money(*s.Totals.OpeningMinor)
+		}
+		row(opening, money(s.Totals.ClosingMinor))
 	}
-	row(opening, money(s.Totals.ClosingMinor))
 
 	if sections[SectionMonthly] {
 		text("")
@@ -358,7 +386,9 @@ func renderData(l labels, s Snapshot, sections map[string]bool) string {
 		text("")
 		text(l.transfersHeading)
 		text(l.transfersNote)
-		if len(s.Transfers) == 0 {
+		if s.Filters != nil {
+			text(l.filteredTransfers)
+		} else if len(s.Transfers) == 0 {
 			text(l.noData)
 		} else {
 			text(l.transfersColumns)
