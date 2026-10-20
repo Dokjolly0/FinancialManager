@@ -127,8 +127,14 @@ var loaded = map[Lang]langTemplates{}
 func init() {
 	for _, lang := range []Lang{LangIT, LangEN} {
 		dir := "templates/" + Version + "/" + string(lang) + "/"
-		system := template.Must(template.New("system").Funcs(template.FuncMap{"join": strings.Join}).
-			ParseFS(templatesFS, dir+"system.tmpl"))
+		// A Windows checkout (core.autocrlf) gives the embedded files CRLF
+		// line endings; prompts must not depend on where the binary was built.
+		systemRaw, err := templatesFS.ReadFile(dir + "system.tmpl")
+		if err != nil {
+			panic(err)
+		}
+		system := template.Must(template.New("system.tmpl").Funcs(template.FuncMap{"join": strings.Join}).
+			Parse(strings.ReplaceAll(string(systemRaw), "\r\n", "\n")))
 		raw, err := templatesFS.ReadFile(dir + "presets.json")
 		if err != nil {
 			panic(err)
@@ -142,7 +148,7 @@ func init() {
 				panic(fmt.Sprintf("prompt: %s presets.json lacks %s", lang, id))
 			}
 		}
-		loaded[lang] = langTemplates{system: system.Lookup("system.tmpl"), presets: presets}
+		loaded[lang] = langTemplates{system: system, presets: presets}
 	}
 }
 
