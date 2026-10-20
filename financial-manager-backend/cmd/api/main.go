@@ -15,6 +15,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 
+	"financial-manager-backend/internal/ai"
+	"financial-manager-backend/internal/ai/provider"
 	"financial-manager-backend/internal/auth"
 	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/email"
@@ -30,6 +32,7 @@ import (
 	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/redisclient"
 	"financial-manager-backend/internal/platform/reportcache"
+	"financial-manager-backend/internal/platform/secretbox"
 	"financial-manager-backend/internal/platform/storage"
 	"financial-manager-backend/internal/reports"
 	"financial-manager-backend/internal/templates"
@@ -87,7 +90,9 @@ func run() error {
 	}
 
 	router := httpserver.New(logger, checks, cfg.HTTPRequestTimeout)
-	mountRoutes(router, dbPool, redisClient, objectStore, cfg, logger)
+	if err := mountRoutes(router, dbPool, redisClient, objectStore, cfg, logger); err != nil {
+		return err
+	}
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
@@ -125,7 +130,7 @@ func run() error {
 // handlers onto the router. Kept as one function (rather than spread
 // across the module packages) so the dependency graph between modules is
 // visible in one place.
-func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Client, objectStore storage.Store, cfg config.Config, logger *slog.Logger) {
+func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Client, objectStore storage.Store, cfg config.Config, logger *slog.Logger) error {
 	usersRepo := users.NewRepository(dbPool)
 	walletsRepo := wallets.NewRepository(dbPool)
 	transactionsRepo := transactions.NewRepository(dbPool)
@@ -215,6 +220,11 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	})
 	exportHandler := export.NewHandler(exportService)
 
+	aiHandler, err := newAIHandler(cfg, dbPool, walletsRepo, rateLimiter, logger)
+	if err != nil {
+		return err
+	}
+
 	router.Group(func(r chi.Router) {
 		r.Use(httpserver.Timeout(cfg.HTTPRequestTimeout))
 		r.Use(auth.Middleware(cfg.JWTSigningKey))
@@ -228,5 +238,44 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		templatesHandler.Mount(r)
 		mediaHandler.Mount(r)
 		reportsHandler.Mount(r)
+		aiHandler.Mount(r)
 	})
+	return nil
+}
+
+// newAIHandler wires the AI analysis (plan.md section 32). Without
+// AI_KEY_ENCRYPTION_KEY the service has no secretbox and every AI route
+// except GET /v1/ai/settings answers AI_DISABLED.
+func newAIHandler(cfg config.Config, dbPool *database.Pool, walletsRepo *wallets.Repository,
+	rateLimiter *ratelimit.Limiter, logger *slog.Logger) (*ai.Handler, error) {
+	var box *secretbox.Box
+	if cfg.AIEnabled() {
+		current, err := secretbox.ParseKey(cfg.AIKeyEncryptionKey)
+		if err != nil {
+			return nil, fmt.Errorf("AI_KEY_ENCRYPTION_KEY: %w", err)
+		}
+		var previous [][]byte
+		if cfg.AIKeyEncryptionKeyPrevious != "" {
+			old, err := secretbox.ParseKey(cfg.AIKeyEncryptionKeyPrevious)
+			if err != nil {
+				return nil, fmt.Errorf("AI_KEY_ENCRYPTION_KEY_PREVIOUS: %w", err)
+			}
+			previous = append(previous, old)
+		}
+		if box, err = secretbox.New(current, previous...); err != nil {
+			return nil, err
+		}
+	}
+	policy := provider.BaseURLPolicy{AllowPrivate: cfg.AIAllowPrivateBaseURLs, AllowedHosts: cfg.AIAllowedBaseURLHosts}
+	service := ai.NewService(ai.Deps{
+		Repo:        ai.NewRepository(dbPool),
+		Wallets:     walletsRepo,
+		Box:         box,
+		Providers:   provider.NewHTTPFactory(policy, cfg.AIStreamIdleTimeout),
+		Policy:      policy,
+		RateLimiter: rateLimiter,
+		Clock:       clock.System{},
+		Logger:      logger,
+	})
+	return ai.NewHandler(service), nil
 }

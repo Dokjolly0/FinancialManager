@@ -13,6 +13,11 @@ info:
 servers:
   - url: /v1
 
+# Every route requires the access token except the health probes, which
+# opt out with an empty security list.
+security:
+  - bearerAuth: []
+
 paths:
   /wallets/{id}/voucher-lots:
     get:
@@ -166,11 +171,227 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/VoucherExpenseResult" }
 
+  /ai/settings:
+    get:
+      summary: AI analysis settings, stored providers (keys masked), consent and setup checklist.
+      description: >
+        Available on every server. When AI_KEY_ENCRYPTION_KEY is not set the
+        response has available=false and every other /ai route answers 503
+        AI_DISABLED (plan.md section 32.5).
+      operationId: getAiSettings
+      tags: [ai]
+      responses:
+        "200":
+          description: Current settings. API keys are never returned, only key_hint.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiSettings" }
+    put:
+      summary: Save the provider, model and analysis defaults, and make that provider active.
+      description: >
+        Upserts the stored credential for (provider, base_url). api_key
+        omitted or null keeps the stored key, "" removes it, any other value
+        replaces it. A provider other than openai_compatible must end up
+        with a key.
+      operationId: saveAiSettings
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiSettingsRequest" }
+      responses:
+        "200":
+          description: The saved settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiSettings" }
+        "409":
+          description: version is stale (CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: >
+            Validation error. Field codes include AI_PROVIDER_INVALID,
+            AI_BASE_URL_INVALID (not https, credentials, query or fragment),
+            AI_BASE_URL_NOT_ALLOWED (private or reserved address, or not in
+            AI_ALLOWED_BASE_URL_HOSTS), REQUIRED_FIELD (model, api_key),
+            AI_TEXT_TOO_LONG and VALUE_OUT_OF_RANGE (max_output_tokens).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: AI_DISABLED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/settings/test:
+    post:
+      summary: Check a provider configuration with the cheapest possible call.
+      description: >
+        With an empty body the active configuration is tested. Otherwise
+        missing fields fall back to the stored credential for that provider
+        and base URL, so a form can be tested before saving. With a model a
+        16-token completion is sent, otherwise the model list is fetched.
+        Provider failures are reported in the body. Rate limited to 10 probes
+        per 10 minutes, shared with /ai/models.
+      operationId: testAiConnection
+      tags: [ai]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiProbeRequest" }
+      responses:
+        "200":
+          description: Result of the probe.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  latency_ms: { type: integer }
+                  model: { type: [string, "null"] }
+                  error_code: { type: [string, "null"], description: "An AI_PROVIDER_* code." }
+                  error_message: { type: [string, "null"], description: "The provider's explanation, truncated and redacted." }
+        "409":
+          description: AI_NOT_CONFIGURED (empty body and no active provider).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: RATE_LIMITED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/models:
+    post:
+      summary: List the provider's chat models.
+      description: POST because the body may carry an API key. Same resolution and rate limit as /ai/settings/test.
+      operationId: listAiModels
+      tags: [ai]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiProbeRequest" }
+      responses:
+        "200":
+          description: At most 500 models.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        display_name: { type: string }
+        "502":
+          description: An AI_PROVIDER_* error (429 for AI_PROVIDER_RATE_LIMITED, 504 for AI_PROVIDER_TIMEOUT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/credentials/{id}:
+    delete:
+      summary: Forget a stored provider and its key. If it was active, no provider is active afterwards.
+      operationId: deleteAiCredential
+      tags: [ai]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Deleted.
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/consent:
+    put:
+      summary: Accept the AI analysis disclosure.
+      operationId: acceptAiConsent
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [consent_version]
+              properties:
+                consent_version:
+                  type: integer
+                  description: Must equal consent.current_version from GET /ai/settings.
+      responses:
+        "204":
+          description: Accepted.
+        "422":
+          description: AI_CONSENT_VERSION_INVALID.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      summary: Revoke consent. Analyses are refused until it is accepted again.
+      operationId: revokeAiConsent
+      tags: [ai]
+      responses:
+        "204":
+          description: Revoked.
+
+  /ai/context:
+    get:
+      summary: The personal context sent to the model (version 0 when never saved).
+      operationId: getAiContext
+      tags: [ai]
+      responses:
+        "200":
+          description: The context.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiUserContext" }
+    put:
+      summary: Replace the personal context. Blank text is stored as null.
+      operationId: saveAiContext
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiUserContext" }
+      responses:
+        "200":
+          description: The saved context.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiUserContext" }
+        "409":
+          description: version is stale (CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: VALUE_OUT_OF_RANGE, INVALID_VALUE or AI_TEXT_TOO_LONG.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /health/live:
     get:
       summary: Liveness probe. Never depends on external services.
       operationId: getHealthLive
       tags: [health]
+      security: []
       responses:
         "200":
           description: Process is running.
@@ -187,6 +408,7 @@ paths:
       summary: Readiness probe. Checks PostgreSQL and Redis connectivity.
       operationId: getHealthReady
       tags: [health]
+      security: []
       responses:
         "200":
           description: Ready to serve traffic.
@@ -194,6 +416,13 @@ paths:
           description: One or more dependencies are unavailable.
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token from the auth endpoints (plan.md section 15).
+
   schemas:
     # Only the fields the voucher endpoints' payloads need — not a full
     # retroactive spec of the wallet/transaction resources (see the top-level
@@ -312,6 +541,103 @@ components:
           description: Present only when the vouchers didn't cover the full expense.
         voucher_wallet: { $ref: "#/components/schemas/Wallet" }
         other_wallet: { $ref: "#/components/schemas/Wallet" }
+
+    AiProvider:
+      type: string
+      enum: [anthropic, openai, gemini, openai_compatible]
+
+    AiCredential:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        provider: { $ref: "#/components/schemas/AiProvider" }
+        base_url: { type: [string, "null"], description: "Only for openai_compatible." }
+        model: { type: [string, "null"] }
+        has_key: { type: boolean }
+        key_hint: { type: [string, "null"], description: "Masked key, e.g. sk-…a1b2." }
+        last_tested_at: { type: [string, "null"], format: date-time }
+        last_test_ok: { type: [boolean, "null"] }
+
+    AiSettings:
+      type: object
+      properties:
+        available: { type: boolean }
+        active:
+          oneOf:
+            - { $ref: "#/components/schemas/AiCredential" }
+            - { type: "null" }
+        credentials:
+          type: array
+          items: { $ref: "#/components/schemas/AiCredential" }
+        max_output_tokens: { type: integer, minimum: 256, maximum: 32000 }
+        input_price_per_mtok: { type: [number, "null"], description: "User-entered price per million input tokens." }
+        output_price_per_mtok: { type: [number, "null"] }
+        defaults:
+          type: object
+          properties:
+            include_transactions: { type: boolean }
+            anonymize_titles: { type: boolean }
+        consent:
+          type: object
+          properties:
+            accepted_version: { type: [integer, "null"] }
+            current_version: { type: integer }
+            accepted_at: { type: [string, "null"], format: date-time }
+            required: { type: boolean }
+        setup:
+          type: object
+          description: Drives the app's setup checklist.
+          properties:
+            has_provider: { type: boolean }
+            has_model: { type: boolean }
+            has_context: { type: boolean }
+            wallets_total: { type: integer }
+            wallets_with_purpose: { type: integer }
+            analyses_count: { type: integer }
+        version: { type: integer, format: int64 }
+
+    AiSettingsRequest:
+      type: object
+      required: [provider, model, max_output_tokens]
+      properties:
+        provider: { $ref: "#/components/schemas/AiProvider" }
+        base_url: { type: string, description: "Required for openai_compatible, e.g. https://api.mistral.ai/v1." }
+        model: { type: string, maxLength: 200 }
+        api_key:
+          type: [string, "null"]
+          maxLength: 512
+          description: Omitted or null keeps the stored key; "" removes it.
+        max_output_tokens: { type: integer, minimum: 256, maximum: 32000 }
+        input_price_per_mtok: { type: [number, "null"], minimum: 0 }
+        output_price_per_mtok: { type: [number, "null"], minimum: 0 }
+        defaults:
+          type: object
+          properties:
+            include_transactions: { type: boolean }
+            anonymize_titles: { type: boolean }
+        version: { type: integer, format: int64, description: "0 on the first save." }
+
+    AiProbeRequest:
+      type: object
+      properties:
+        provider: { $ref: "#/components/schemas/AiProvider" }
+        base_url: { type: string }
+        api_key: { type: string }
+        model: { type: string }
+
+    AiUserContext:
+      type: object
+      properties:
+        household_size: { type: [integer, "null"], minimum: 1, maximum: 20 }
+        income_type:
+          type: [string, "null"]
+          enum: [EMPLOYEE, SELF_EMPLOYED, STUDENT, RETIRED, UNEMPLOYED, MIXED, OTHER, null]
+        about_me: { type: [string, "null"], maxLength: 2000 }
+        goals: { type: [string, "null"], maxLength: 2000 }
+        ignore_notes: { type: [string, "null"], maxLength: 2000 }
+        response_style: { type: [string, "null"], enum: [CONCISE, DETAILED, null] }
+        version: { type: integer, format: int64, description: "0 when never saved; send it back on PUT." }
+        updated_at: { type: [string, "null"], format: date-time, readOnly: true }
 
     Error:
       type: object
