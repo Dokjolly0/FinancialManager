@@ -87,6 +87,43 @@ void main() {
       expect(mapped.retryAfter, const Duration(seconds: 30));
     });
 
+    test('maps a 429 with a specific code to DomainError', () {
+      final error = DioException(
+        requestOptions: _requestOptions(),
+        type: DioExceptionType.badResponse,
+        response: Response(
+          requestOptions: _requestOptions(),
+          statusCode: 429,
+          data: {
+            'error': {
+              'code': 'AI_PROVIDER_RATE_LIMITED',
+              'message': 'Rate limit reached for requests',
+            },
+          },
+        ),
+      );
+
+      final mapped = ErrorMapper.fromException(error) as DomainError;
+      expect(mapped.code, 'AI_PROVIDER_RATE_LIMITED');
+      expect(mapped.message, 'Rate limit reached for requests');
+    });
+
+    test('maps the platform RATE_LIMITED envelope to RateLimitedError', () {
+      final error = DioException(
+        requestOptions: _requestOptions(),
+        type: DioExceptionType.badResponse,
+        response: Response(
+          requestOptions: _requestOptions(),
+          statusCode: 429,
+          data: {
+            'error': {'code': 'RATE_LIMITED', 'message': 'Too many attempts.'},
+          },
+        ),
+      );
+
+      expect(ErrorMapper.fromException(error), isA<RateLimitedError>());
+    });
+
     test('maps a 422 error envelope to DomainError with field errors', () {
       final error = DioException(
         requestOptions: _requestOptions(),

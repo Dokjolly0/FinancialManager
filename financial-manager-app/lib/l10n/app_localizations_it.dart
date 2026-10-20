@@ -53,6 +53,121 @@ class AppLocalizationsIt extends AppLocalizations {
       'Si è verificato un errore imprevisto. Riprova.';
 
   @override
+  String get errorCodeWalletNotFound => 'Portafoglio non trovato.';
+
+  @override
+  String get errorCodeAiDisabled =>
+      'L\'Analisi AI non è attiva su questo server.';
+
+  @override
+  String get errorCodeAiNotConfigured =>
+      'Configura prima fornitore, chiave API e modello.';
+
+  @override
+  String get errorCodeAiConsentRequired =>
+      'Per continuare accetta l\'informativa sull\'Analisi AI.';
+
+  @override
+  String get errorCodeAiDataChanged =>
+      'I tuoi dati sono cambiati dopo l\'anteprima: controllala di nuovo.';
+
+  @override
+  String get errorCodeAiStreamInProgress =>
+      'C\'è già un\'analisi in corso: attendi che finisca o interrompila.';
+
+  @override
+  String get errorCodeAiPromptTooLarge =>
+      'Troppi dati per una sola analisi: scegli un periodo più breve, meno portafogli o meno movimenti.';
+
+  @override
+  String get errorCodeAiFollowupLimit =>
+      'Hai raggiunto il numero massimo di domande per questa analisi: avviane una nuova.';
+
+  @override
+  String get errorCodeAiAnalysisExists =>
+      'Questa analisi è già stata avviata: la trovi nella cronologia.';
+
+  @override
+  String get errorCodeAiAnalysisNotReady =>
+      'Le domande di approfondimento richiedono un report completato.';
+
+  @override
+  String get errorCodeAiKeyUnreadable =>
+      'La chiave API salvata non è più leggibile: inseriscila di nuovo.';
+
+  @override
+  String get errorCodeAiStreamInterrupted =>
+      'L\'analisi si è interrotta prima di terminare.';
+
+  @override
+  String get errorCodeAiAnswerTooLong =>
+      'La risposta era troppo lunga ed è stata troncata.';
+
+  @override
+  String get errorCodeAiProviderError =>
+      'Il fornitore AI ha restituito un errore.';
+
+  @override
+  String get errorCodeAiProviderInvalidKey =>
+      'La chiave API non è valida o non ha i permessi necessari.';
+
+  @override
+  String get errorCodeAiProviderRateLimited =>
+      'Il fornitore AI sta limitando le richieste: riprova tra poco.';
+
+  @override
+  String get errorCodeAiProviderQuotaExceeded =>
+      'Credito o quota del fornitore AI esauriti: controlla il tuo account presso il fornitore.';
+
+  @override
+  String get errorCodeAiProviderContextTooLong =>
+      'Il modello non riesce a leggere così tanti dati: riduci il periodo o i movimenti inclusi.';
+
+  @override
+  String get errorCodeAiProviderModelNotFound =>
+      'Il modello scelto non esiste o non è disponibile per la tua chiave.';
+
+  @override
+  String get errorCodeAiProviderContentBlocked =>
+      'Il fornitore AI ha bloccato la risposta per i suoi filtri di sicurezza.';
+
+  @override
+  String get errorCodeAiProviderUnavailable =>
+      'Il fornitore AI è momentaneamente sovraccarico o non disponibile.';
+
+  @override
+  String get errorCodeAiProviderTimeout =>
+      'Il fornitore AI ha impiegato troppo tempo e l\'analisi è stata interrotta.';
+
+  @override
+  String get errorCodeAiProviderUnreachable =>
+      'Impossibile raggiungere il fornitore AI.';
+
+  @override
+  String get errorCodeAiProviderInvalid => 'Fornitore non supportato.';
+
+  @override
+  String get errorCodeAiBaseUrlInvalid =>
+      'Inserisci un indirizzo https valido, senza credenziali né parametri.';
+
+  @override
+  String get errorCodeAiBaseUrlNotAllowed =>
+      'Questo server non può collegarsi a indirizzi privati o locali.';
+
+  @override
+  String get errorCodeAiTextTooLong => 'Il testo è troppo lungo.';
+
+  @override
+  String get errorCodeValueOutOfRange => 'Valore fuori dai limiti consentiti.';
+
+  @override
+  String get errorCodeInvalidValue => 'Valore non valido.';
+
+  @override
+  String get errorCodeAiConsentVersionInvalid =>
+      'L\'informativa è stata aggiornata: rileggila e accettala di nuovo.';
+
+  @override
   String get errorCodeValidationError => 'Controlla i campi evidenziati.';
 
   @override

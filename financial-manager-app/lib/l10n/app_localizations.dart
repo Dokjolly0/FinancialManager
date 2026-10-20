@@ -176,6 +176,186 @@ abstract class AppLocalizations {
   /// **'Si è verificato un errore imprevisto. Riprova.'**
   String get errorCodeUnknownError;
 
+  /// No description provided for @errorCodeWalletNotFound.
+  ///
+  /// In it, this message translates to:
+  /// **'Portafoglio non trovato.'**
+  String get errorCodeWalletNotFound;
+
+  /// No description provided for @errorCodeAiDisabled.
+  ///
+  /// In it, this message translates to:
+  /// **'L\'Analisi AI non è attiva su questo server.'**
+  String get errorCodeAiDisabled;
+
+  /// No description provided for @errorCodeAiNotConfigured.
+  ///
+  /// In it, this message translates to:
+  /// **'Configura prima fornitore, chiave API e modello.'**
+  String get errorCodeAiNotConfigured;
+
+  /// No description provided for @errorCodeAiConsentRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Per continuare accetta l\'informativa sull\'Analisi AI.'**
+  String get errorCodeAiConsentRequired;
+
+  /// No description provided for @errorCodeAiDataChanged.
+  ///
+  /// In it, this message translates to:
+  /// **'I tuoi dati sono cambiati dopo l\'anteprima: controllala di nuovo.'**
+  String get errorCodeAiDataChanged;
+
+  /// No description provided for @errorCodeAiStreamInProgress.
+  ///
+  /// In it, this message translates to:
+  /// **'C\'è già un\'analisi in corso: attendi che finisca o interrompila.'**
+  String get errorCodeAiStreamInProgress;
+
+  /// No description provided for @errorCodeAiPromptTooLarge.
+  ///
+  /// In it, this message translates to:
+  /// **'Troppi dati per una sola analisi: scegli un periodo più breve, meno portafogli o meno movimenti.'**
+  String get errorCodeAiPromptTooLarge;
+
+  /// No description provided for @errorCodeAiFollowupLimit.
+  ///
+  /// In it, this message translates to:
+  /// **'Hai raggiunto il numero massimo di domande per questa analisi: avviane una nuova.'**
+  String get errorCodeAiFollowupLimit;
+
+  /// No description provided for @errorCodeAiAnalysisExists.
+  ///
+  /// In it, this message translates to:
+  /// **'Questa analisi è già stata avviata: la trovi nella cronologia.'**
+  String get errorCodeAiAnalysisExists;
+
+  /// No description provided for @errorCodeAiAnalysisNotReady.
+  ///
+  /// In it, this message translates to:
+  /// **'Le domande di approfondimento richiedono un report completato.'**
+  String get errorCodeAiAnalysisNotReady;
+
+  /// No description provided for @errorCodeAiKeyUnreadable.
+  ///
+  /// In it, this message translates to:
+  /// **'La chiave API salvata non è più leggibile: inseriscila di nuovo.'**
+  String get errorCodeAiKeyUnreadable;
+
+  /// No description provided for @errorCodeAiStreamInterrupted.
+  ///
+  /// In it, this message translates to:
+  /// **'L\'analisi si è interrotta prima di terminare.'**
+  String get errorCodeAiStreamInterrupted;
+
+  /// No description provided for @errorCodeAiAnswerTooLong.
+  ///
+  /// In it, this message translates to:
+  /// **'La risposta era troppo lunga ed è stata troncata.'**
+  String get errorCodeAiAnswerTooLong;
+
+  /// No description provided for @errorCodeAiProviderError.
+  ///
+  /// In it, this message translates to:
+  /// **'Il fornitore AI ha restituito un errore.'**
+  String get errorCodeAiProviderError;
+
+  /// No description provided for @errorCodeAiProviderInvalidKey.
+  ///
+  /// In it, this message translates to:
+  /// **'La chiave API non è valida o non ha i permessi necessari.'**
+  String get errorCodeAiProviderInvalidKey;
+
+  /// No description provided for @errorCodeAiProviderRateLimited.
+  ///
+  /// In it, this message translates to:
+  /// **'Il fornitore AI sta limitando le richieste: riprova tra poco.'**
+  String get errorCodeAiProviderRateLimited;
+
+  /// No description provided for @errorCodeAiProviderQuotaExceeded.
+  ///
+  /// In it, this message translates to:
+  /// **'Credito o quota del fornitore AI esauriti: controlla il tuo account presso il fornitore.'**
+  String get errorCodeAiProviderQuotaExceeded;
+
+  /// No description provided for @errorCodeAiProviderContextTooLong.
+  ///
+  /// In it, this message translates to:
+  /// **'Il modello non riesce a leggere così tanti dati: riduci il periodo o i movimenti inclusi.'**
+  String get errorCodeAiProviderContextTooLong;
+
+  /// No description provided for @errorCodeAiProviderModelNotFound.
+  ///
+  /// In it, this message translates to:
+  /// **'Il modello scelto non esiste o non è disponibile per la tua chiave.'**
+  String get errorCodeAiProviderModelNotFound;
+
+  /// No description provided for @errorCodeAiProviderContentBlocked.
+  ///
+  /// In it, this message translates to:
+  /// **'Il fornitore AI ha bloccato la risposta per i suoi filtri di sicurezza.'**
+  String get errorCodeAiProviderContentBlocked;
+
+  /// No description provided for @errorCodeAiProviderUnavailable.
+  ///
+  /// In it, this message translates to:
+  /// **'Il fornitore AI è momentaneamente sovraccarico o non disponibile.'**
+  String get errorCodeAiProviderUnavailable;
+
+  /// No description provided for @errorCodeAiProviderTimeout.
+  ///
+  /// In it, this message translates to:
+  /// **'Il fornitore AI ha impiegato troppo tempo e l\'analisi è stata interrotta.'**
+  String get errorCodeAiProviderTimeout;
+
+  /// No description provided for @errorCodeAiProviderUnreachable.
+  ///
+  /// In it, this message translates to:
+  /// **'Impossibile raggiungere il fornitore AI.'**
+  String get errorCodeAiProviderUnreachable;
+
+  /// No description provided for @errorCodeAiProviderInvalid.
+  ///
+  /// In it, this message translates to:
+  /// **'Fornitore non supportato.'**
+  String get errorCodeAiProviderInvalid;
+
+  /// No description provided for @errorCodeAiBaseUrlInvalid.
+  ///
+  /// In it, this message translates to:
+  /// **'Inserisci un indirizzo https valido, senza credenziali né parametri.'**
+  String get errorCodeAiBaseUrlInvalid;
+
+  /// No description provided for @errorCodeAiBaseUrlNotAllowed.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo server non può collegarsi a indirizzi privati o locali.'**
+  String get errorCodeAiBaseUrlNotAllowed;
+
+  /// No description provided for @errorCodeAiTextTooLong.
+  ///
+  /// In it, this message translates to:
+  /// **'Il testo è troppo lungo.'**
+  String get errorCodeAiTextTooLong;
+
+  /// No description provided for @errorCodeValueOutOfRange.
+  ///
+  /// In it, this message translates to:
+  /// **'Valore fuori dai limiti consentiti.'**
+  String get errorCodeValueOutOfRange;
+
+  /// No description provided for @errorCodeInvalidValue.
+  ///
+  /// In it, this message translates to:
+  /// **'Valore non valido.'**
+  String get errorCodeInvalidValue;
+
+  /// No description provided for @errorCodeAiConsentVersionInvalid.
+  ///
+  /// In it, this message translates to:
+  /// **'L\'informativa è stata aggiornata: rileggila e accettala di nuovo.'**
+  String get errorCodeAiConsentVersionInvalid;
+
   /// No description provided for @errorCodeValidationError.
   ///
   /// In it, this message translates to:

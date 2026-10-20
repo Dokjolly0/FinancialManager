@@ -53,6 +53,120 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorCodeUnknownError => 'Something went wrong. Please try again.';
 
   @override
+  String get errorCodeWalletNotFound => 'Wallet not found.';
+
+  @override
+  String get errorCodeAiDisabled =>
+      'AI analysis is not enabled on this server.';
+
+  @override
+  String get errorCodeAiNotConfigured =>
+      'Set up a provider, an API key and a model first.';
+
+  @override
+  String get errorCodeAiConsentRequired =>
+      'Accept the AI analysis notice to continue.';
+
+  @override
+  String get errorCodeAiDataChanged =>
+      'Your data changed after the preview: check it again.';
+
+  @override
+  String get errorCodeAiStreamInProgress =>
+      'Another analysis is in progress: wait for it or stop it.';
+
+  @override
+  String get errorCodeAiPromptTooLarge =>
+      'Too much data for one analysis: choose a shorter period, fewer wallets or fewer transactions.';
+
+  @override
+  String get errorCodeAiFollowupLimit =>
+      'You reached the maximum number of questions for this analysis: start a new one.';
+
+  @override
+  String get errorCodeAiAnalysisExists =>
+      'This analysis was already started: find it in the history.';
+
+  @override
+  String get errorCodeAiAnalysisNotReady =>
+      'Follow-up questions need a completed report.';
+
+  @override
+  String get errorCodeAiKeyUnreadable =>
+      'The saved API key can no longer be read: enter it again.';
+
+  @override
+  String get errorCodeAiStreamInterrupted =>
+      'The analysis stopped before finishing.';
+
+  @override
+  String get errorCodeAiAnswerTooLong =>
+      'The answer was too long and was cut short.';
+
+  @override
+  String get errorCodeAiProviderError => 'The AI provider returned an error.';
+
+  @override
+  String get errorCodeAiProviderInvalidKey =>
+      'The API key is invalid or lacks the required permissions.';
+
+  @override
+  String get errorCodeAiProviderRateLimited =>
+      'The AI provider is limiting requests: try again shortly.';
+
+  @override
+  String get errorCodeAiProviderQuotaExceeded =>
+      'Your AI provider credit or quota is used up: check your account with the provider.';
+
+  @override
+  String get errorCodeAiProviderContextTooLong =>
+      'The model cannot read this much data: shorten the period or include fewer transactions.';
+
+  @override
+  String get errorCodeAiProviderModelNotFound =>
+      'The chosen model does not exist or is not available to your key.';
+
+  @override
+  String get errorCodeAiProviderContentBlocked =>
+      'The AI provider blocked the answer with its safety filters.';
+
+  @override
+  String get errorCodeAiProviderUnavailable =>
+      'The AI provider is temporarily overloaded or unavailable.';
+
+  @override
+  String get errorCodeAiProviderTimeout =>
+      'The AI provider took too long and the analysis was stopped.';
+
+  @override
+  String get errorCodeAiProviderUnreachable =>
+      'The AI provider could not be reached.';
+
+  @override
+  String get errorCodeAiProviderInvalid => 'Unsupported provider.';
+
+  @override
+  String get errorCodeAiBaseUrlInvalid =>
+      'Enter a valid https address, without credentials or parameters.';
+
+  @override
+  String get errorCodeAiBaseUrlNotAllowed =>
+      'This server cannot connect to private or local addresses.';
+
+  @override
+  String get errorCodeAiTextTooLong => 'The text is too long.';
+
+  @override
+  String get errorCodeValueOutOfRange => 'Value out of the allowed range.';
+
+  @override
+  String get errorCodeInvalidValue => 'Invalid value.';
+
+  @override
+  String get errorCodeAiConsentVersionInvalid =>
+      'The notice was updated: read and accept it again.';
+
+  @override
   String get errorCodeValidationError => 'Check the highlighted fields.';
 
   @override
