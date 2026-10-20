@@ -63,6 +63,9 @@ BACKUP_ENCRYPTION_KEY=CAMBIA_CON_CHIAVE_RANDOM_LUNGA
 GDRIVE_CLIENT_ID=xxxxxxxx.apps.googleusercontent.com
 GDRIVE_CLIENT_SECRET=CAMBIA
 GDRIVE_REFRESH_TOKEN=CAMBIA
+
+# Facoltativo: abilita l'Analisi AI (vedi sezione 8)
+AI_KEY_ENCRYPTION_KEY=CAMBIA_CON_OPENSSL_RAND_BASE64_32
 ```
 
 Generare `JWT_SIGNING_KEY` e `BACKUP_ENCRYPTION_KEY` (due valori diversi) con:
@@ -184,6 +187,46 @@ financial-manager-backend/docs/backup-restore.md
 ```
 
 Il `worker` carica ogni giorno su Google Drive un dump cifrato del database (storico: 30 giornalieri + 12 mensili) e un archivio cifrato delle immagini (rotazione `latest`/`previous`). Gli script in `scripts/` restano utili per una copia locale aggiuntiva e per il restore. Redis non viene incluso perche' contiene cache/rate limit/idempotency temporanea, non dati finanziari sorgente.
+
+### 8. Analisi AI
+
+L'Analisi AI usa le chiavi API che ogni utente inserisce nell'app; il server non ha una chiave propria. Per abilitarla serve solo `AI_KEY_ENCRYPTION_KEY`, la chiave con cui il server cifra le chiavi API degli utenti. Deve essere di esattamente 32 byte in base64:
+
+```bash
+openssl rand -base64 32
+```
+
+Senza questa variabile il backend parte normalmente e l'app mostra la funzione come non disponibile. Un valore malformato invece blocca l'avvio. Conservarne una copia fuori dalla VPS: se va persa, ogni utente deve reinserire la propria chiave API.
+
+Per cambiarla senza far reinserire le chiavi:
+
+1. spostare il valore attuale in `AI_KEY_ENCRYPTION_KEY_PREVIOUS`;
+2. mettere il nuovo valore in `AI_KEY_ENCRYPTION_KEY`;
+3. riavviare. Ogni chiave viene ricifrata con la nuova al primo utilizzo.
+
+Il container `api` deve poter raggiungere Internet in uscita (HTTPS verso i fornitori).
+
+**Reverse proxy.** Le analisi arrivano all'app in streaming (Server-Sent Events) e possono durare alcuni minuti. Il proxy non deve bufferizzare la risposta e non deve chiudere la connessione prima di `AI_STREAM_MAX_DURATION` (5 minuti di default):
+
+- Caddy: `reverse_proxy 127.0.0.1:10003 { flush_interval -1 }`. Caddy non ha un timeout di lettura di default.
+- Nginx, per `location /v1/ai/`:
+  ```nginx
+  proxy_buffering off;
+  proxy_read_timeout 360s;
+  proxy_http_version 1.1;
+  ```
+  Il backend invia comunque `X-Accel-Buffering: no` e un ping ogni 15 secondi.
+- Traefik: nessuna configurazione particolare per lo streaming. Se è impostato `respondingTimeouts.readTimeout`, alzarlo sopra i 5 minuti.
+
+**Modelli locali (Ollama, LM Studio).** Per sicurezza il server rifiuta i base URL "compatibili OpenAI" che puntano a indirizzi privati o locali, oppure in `http`. Questo impedisce che un utente usi il server per raggiungere servizi interni. Su un server personale, per usare un modello nella propria rete:
+
+```env
+AI_ALLOW_PRIVATE_BASE_URLS=true
+```
+
+In alternativa, `AI_ALLOWED_BASE_URL_HOSTS` accetta solo gli host indicati (per esempio `api.mistral.ai,openrouter.ai`).
+
+Altri limiti configurabili sono descritti in `.env.example`: `AI_STREAM_MAX_DURATION`, `AI_STREAM_IDLE_TIMEOUT`, `AI_MAX_PROMPT_TOKENS` e `AI_RUNS_PER_HOUR`.
 
 ## Build Flutter
 

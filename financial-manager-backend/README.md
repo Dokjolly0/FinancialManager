@@ -40,6 +40,10 @@ go vet ./...
 go test ./...
 ```
 
+## AI analysis
+
+Optional, off until `AI_KEY_ENCRYPTION_KEY` is set (32 bytes, base64: `openssl rand -base64 32`). Users bring their own provider key (Anthropic, OpenAI, Gemini or any OpenAI-compatible server). Keys are stored encrypted (`internal/platform/secretbox`), and the server streams the report back over Server-Sent Events. Code lives in `internal/ai` (settings, data collection, conversation), `internal/ai/prompt` (versioned, embedded templates with golden tests: `go test ./internal/ai/prompt -update` rewrites them) and `internal/ai/provider` (one streaming adapter per provider, SSRF-safe HTTP client). Spec: `/plan.md` section 32. Deployment notes, including reverse-proxy settings for streaming: `/docs/build-deploy.md`.
+
 ## Layout
 
 ```text
