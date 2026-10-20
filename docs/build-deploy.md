@@ -273,7 +273,6 @@ flutter build ipa --release \
 
 Prima di pubblicare su store o distribuire a utenti reali:
 
-- Cambiare `applicationId` Android da `com.example.financialmanager` a un package reale.
 - Configurare una firma release Android con keystore, non la firma debug.
 - Registrare package Android, SHA-1/SHA-256 e bundle ID iOS in Google Cloud Console se usi Google Sign-In.
 - Usare HTTPS in produzione.
