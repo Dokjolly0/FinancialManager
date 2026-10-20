@@ -22,7 +22,7 @@ type labels struct {
 	transactionsHeading, transactionsColumns, transactionsOmitted string
 	credit, debit, uncategorized                                  string
 
-	noData string
+	noData, omittedForBrevity string
 
 	filtersHeading, filtersNote, filterDebit, filterCredit, filterCategory, filterTitle string
 	filterAmountFrom, filterAmountTo, filteredBalances, filteredTransfers               string
@@ -77,7 +77,8 @@ var italian = labels{
 	debit:               "uscita",
 	uncategorized:       "-",
 
-	noData: "Nessun dato.",
+	noData:            "Nessun dato.",
+	omittedForBrevity: "Omesso per brevità.",
 
 	filtersHeading:    "## Filtri applicati",
 	filtersNote:       "Tutti i dati qui sotto riguardano solo i movimenti che rispettano questi filtri.",
@@ -147,7 +148,8 @@ var english = labels{
 	debit:               "expense",
 	uncategorized:       "-",
 
-	noData: "No data.",
+	noData:            "No data.",
+	omittedForBrevity: "Left out for brevity.",
 
 	filtersHeading:    "## Applied filters",
 	filtersNote:       "Every figure below only covers the transactions matching these filters.",

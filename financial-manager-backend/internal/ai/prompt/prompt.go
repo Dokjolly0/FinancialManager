@@ -119,7 +119,20 @@ type presetText struct {
 
 type langTemplates struct {
 	system  *template.Template
+	compact *template.Template // shorter rules for the compact profile
 	presets map[string]presetText
+}
+
+// parseTemplate reads an embedded template, normalizing line endings: a
+// Windows checkout (core.autocrlf) gives the files CRLF, and prompts must
+// not depend on where the binary was built.
+func parseTemplate(path string) *template.Template {
+	raw, err := templatesFS.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+	return template.Must(template.New(path).Funcs(template.FuncMap{"join": strings.Join}).
+		Parse(strings.ReplaceAll(string(raw), "\r\n", "\n")))
 }
 
 var loaded = map[Lang]langTemplates{}
@@ -127,14 +140,6 @@ var loaded = map[Lang]langTemplates{}
 func init() {
 	for _, lang := range []Lang{LangIT, LangEN} {
 		dir := "templates/" + Version + "/" + string(lang) + "/"
-		// A Windows checkout (core.autocrlf) gives the embedded files CRLF
-		// line endings; prompts must not depend on where the binary was built.
-		systemRaw, err := templatesFS.ReadFile(dir + "system.tmpl")
-		if err != nil {
-			panic(err)
-		}
-		system := template.Must(template.New("system.tmpl").Funcs(template.FuncMap{"join": strings.Join}).
-			Parse(strings.ReplaceAll(string(systemRaw), "\r\n", "\n")))
 		raw, err := templatesFS.ReadFile(dir + "presets.json")
 		if err != nil {
 			panic(err)
@@ -148,7 +153,9 @@ func init() {
 				panic(fmt.Sprintf("prompt: %s presets.json lacks %s", lang, id))
 			}
 		}
-		loaded[lang] = langTemplates{system: system, presets: presets}
+		loaded[lang] = langTemplates{
+			system: parseTemplate(dir + "system.tmpl"), compact: parseTemplate(dir + "system_compact.tmpl"), presets: presets,
+		}
 	}
 }
 
@@ -196,6 +203,10 @@ type BuildInput struct {
 	Style    string // CONCISE, DETAILED or "" for the model's default
 	Sections []string
 	Snapshot Snapshot
+	// Profile selects the system prompt: standard, or the shorter compact
+	// rules for small on-device models. The data limits of a profile are
+	// applied by Trim before Build.
+	Profile string
 }
 
 // Prompt is the built prompt. Instructions are not part of it: the user
@@ -217,8 +228,12 @@ func Build(in BuildInput) (Prompt, error) {
 		return Prompt{}, fmt.Errorf("prompt: unknown preset %q", in.Preset)
 	}
 
+	tmpl := loaded[lang].system
+	if in.Profile == ProfileCompact {
+		tmpl = loaded[lang].compact
+	}
 	var system strings.Builder
-	err := loaded[lang].system.Execute(&system, struct {
+	err := tmpl.Execute(&system, struct {
 		Style    string
 		Headings []string
 	}{Style: in.Style, Headings: preset.Headings})
@@ -379,7 +394,13 @@ func renderData(l labels, s Snapshot, sections map[string]bool) string {
 	}
 	if sections[SectionTitles] {
 		groups(l.debitTitlesHeading, l.groupColumnsTitle, s.DebitTitles, s.Totals.DebitsMinor)
-		groups(l.creditTitlesHeading, l.groupColumnsTitle, s.CreditTitles, s.Totals.CreditsMinor)
+		if s.CreditTitlesOmitted {
+			text("")
+			text(l.creditTitlesHeading)
+			text(l.omittedForBrevity)
+		} else {
+			groups(l.creditTitlesHeading, l.groupColumnsTitle, s.CreditTitles, s.Totals.CreditsMinor)
+		}
 	}
 
 	if sections[SectionTransfers] {
@@ -388,6 +409,8 @@ func renderData(l labels, s Snapshot, sections map[string]bool) string {
 		text(l.transfersNote)
 		if s.Filters != nil {
 			text(l.filteredTransfers)
+		} else if s.TransfersOmitted {
+			text(l.omittedForBrevity)
 		} else if len(s.Transfers) == 0 {
 			text(l.noData)
 		} else {

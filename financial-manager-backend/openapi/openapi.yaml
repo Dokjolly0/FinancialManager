@@ -944,6 +944,22 @@ components:
             max_transactions: { type: integer, minimum: 1, maximum: 500, default: 200 }
             anonymize_titles: { type: boolean, default: false }
             include_adjustments: { type: boolean, default: false }
+            profile:
+              type: string
+              enum: [standard, compact]
+              default: standard
+              description: >
+                compact caps every list, keeps the last 12 months and sends
+                shorter rules, for small on-device models (plan.md section 33).
+                Its default transaction list is 60.
+            budget_tokens:
+              type: integer
+              minimum: 1000
+              maximum: 32000
+              description: >
+                When set, detail is given up in a fixed order until the
+                estimated prompt fits (see disclosure.compaction_steps);
+                AI_PROMPT_TOO_LARGE if it never does.
             filters:
               type: object
               description: >
@@ -992,6 +1008,12 @@ components:
             transactions_omitted: { type: integer }
             anonymized: { type: boolean }
             includes_personal_context: { type: boolean }
+            profile: { type: string, enum: [standard, compact] }
+            compaction_steps:
+              type: array
+              items:
+                type: string
+                enum: [transactions_30, transactions_0, credit_titles, groups_5, months_6, transfers, recurring_4, context_150]
 
     AiStatus:
       type: string

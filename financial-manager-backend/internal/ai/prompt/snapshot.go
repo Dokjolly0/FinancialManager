@@ -21,8 +21,12 @@ type Snapshot struct {
 	CreditCategories []Group
 	DebitTitles      []Group
 	CreditTitles     []Group
-	Transfers        []TransferFlow
-	Recurring        []Recurring
+	// CreditTitlesOmitted / TransfersOmitted: the section existed but was
+	// dropped to fit a token budget (see Trim).
+	CreditTitlesOmitted bool
+	TransfersOmitted    bool
+	Transfers           []TransferFlow
+	Recurring           []Recurring
 
 	// Transactions is the optional raw list, newest first.
 	Transactions        []Transaction

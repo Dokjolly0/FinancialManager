@@ -36,7 +36,22 @@ type AnalysisOptions struct {
 	AnonymizeTitles     bool             `json:"anonymize_titles"`
 	IncludeAdjustments  bool             `json:"include_adjustments"`
 	Filters             *AnalysisFilters `json:"filters,omitempty"`
+	// Profile is "standard" (default) or "compact" (plan.md section 33):
+	// tighter data limits and shorter rules for small on-device models.
+	Profile string `json:"profile,omitempty"`
+	// BudgetTokens, when set, drops detail step by step (prompt.BudgetSteps)
+	// until the estimated prompt fits.
+	BudgetTokens int `json:"budget_tokens,omitempty"`
 }
+
+// Token budget bounds.
+const (
+	MinBudgetTokens = 1000
+	MaxBudgetTokens = 32000
+	// compactDefaultTransactions is the transaction list size of the
+	// compact profile when the request doesn't set one.
+	compactDefaultTransactions = 60
+)
 
 // AnalysisFilters restricts an analysis to part of the ledger, with the
 // same meaning as the Cronologia filters (an analysis started from there).
@@ -83,6 +98,8 @@ type builtPrompt struct {
 	snapshot     prompt.Snapshot
 	sections     []string
 	estimated    int
+	// compactionSteps are the budget steps that were needed, in order.
+	compactionSteps []string
 }
 
 // userMessage is the first message sent to the model.
@@ -165,8 +182,20 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 			sections = append(sections, sec)
 		}
 	}
+	if !prompt.IsValidProfile(opts.Profile) {
+		fieldErrors["options.profile"] = FieldInvalidValue
+	}
+	if opts.Profile == "" {
+		opts.Profile = prompt.ProfileStandard
+	}
+	if opts.BudgetTokens != 0 && (opts.BudgetTokens < MinBudgetTokens || opts.BudgetTokens > MaxBudgetTokens) {
+		fieldErrors["options.budget_tokens"] = FieldOutOfRange
+	}
 	if opts.MaxTransactions == 0 {
 		opts.MaxTransactions = DefaultMaxTransactions
+		if opts.Profile == prompt.ProfileCompact {
+			opts.MaxTransactions = compactDefaultTransactions
+		}
 	}
 	if opts.MaxTransactions < 1 || opts.MaxTransactions > MaxMaxTransactions {
 		fieldErrors["options.max_transactions"] = FieldOutOfRange
@@ -219,20 +248,49 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 	if uc.ResponseStyle != nil {
 		style = *uc.ResponseStyle
 	}
-	built, err := prompt.Build(prompt.BuildInput{Lang: lang, Preset: req.Preset, Style: style, Sections: sections, Snapshot: snapshot})
-	if err != nil {
-		return builtPrompt{}, err
-	}
-
 	ids := make([]uuid.UUID, len(selected))
 	for i, w := range selected {
 		ids[i] = w.ID
 	}
 	bp := builtPrompt{
-		prompt: built, filter: filter, instructions: instructions, preset: req.Preset, lang: lang, period: period, loc: loc,
-		walletIDs: ids, options: opts, snapshot: snapshot, sections: sections,
+		filter: filter, instructions: instructions, preset: req.Preset, lang: lang, period: period, loc: loc,
+		walletIDs: ids, options: opts, sections: sections,
 	}
-	bp.estimated = prompt.EstimateTokens(built.System, bp.userMessage())
+
+	// Render with the profile's limits, then give up detail one budget
+	// step at a time until the prompt fits. Deterministic, so a run
+	// rebuilds exactly what its preview showed.
+	limits := prompt.LimitsFor(opts.Profile)
+	render := func() error {
+		bp.snapshot = prompt.Trim(snapshot, limits, lang)
+		built, err := prompt.Build(prompt.BuildInput{
+			Lang: lang, Preset: req.Preset, Style: style, Sections: sections, Snapshot: bp.snapshot, Profile: opts.Profile,
+		})
+		if err != nil {
+			return err
+		}
+		bp.prompt = built
+		bp.estimated = prompt.EstimateTokens(built.System, bp.userMessage())
+		return nil
+	}
+	if err := render(); err != nil {
+		return builtPrompt{}, err
+	}
+	if opts.BudgetTokens > 0 {
+		for _, step := range prompt.BudgetSteps {
+			if bp.estimated <= opts.BudgetTokens {
+				break
+			}
+			step.Apply(&limits)
+			bp.compactionSteps = append(bp.compactionSteps, step.Name)
+			if err := render(); err != nil {
+				return builtPrompt{}, err
+			}
+		}
+		if bp.estimated > opts.BudgetTokens {
+			return builtPrompt{}, ErrPromptTooLarge
+		}
+	}
 	if bp.estimated > s.limits.MaxPromptTokens {
 		return builtPrompt{}, ErrPromptTooLarge
 	}
@@ -402,6 +460,9 @@ type disclosureResponse struct {
 	TransactionsOmitted     int      `json:"transactions_omitted"`
 	Anonymized              bool     `json:"anonymized"`
 	IncludesPersonalContext bool     `json:"includes_personal_context"`
+	Profile                 string   `json:"profile"`
+	// CompactionSteps lists the detail given up to fit budget_tokens.
+	CompactionSteps []string `json:"compaction_steps"`
 }
 
 type previewResponse struct {
@@ -455,6 +516,7 @@ func (s *Service) Preview(ctx context.Context, userID uuid.UUID, req AnalysisReq
 			Sections: bp.sections, WalletCount: len(bp.walletIDs), TransactionCount: len(bp.snapshot.Transactions),
 			TransactionsOmitted: bp.snapshot.TransactionsOmitted, Anonymized: bp.options.AnonymizeTitles,
 			IncludesPersonalContext: bp.snapshot.Context != nil,
+			Profile:                 bp.options.Profile, CompactionSteps: append([]string{}, bp.compactionSteps...),
 		},
 	}
 	if bp.period.From != nil {
