@@ -11,9 +11,12 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../core/widgets/skeleton_list.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../ai/data/providers.dart';
+import '../../../ai/presentation/view_models/ai_period.dart';
 import '../../../categories/data/providers.dart';
 import '../../../categories/domain/models/category.dart';
 import '../../../media/data/providers.dart';
+import '../../../transactions/domain/repositories/transaction_repository.dart';
 import '../../../transactions/presentation/widgets/transaction_tile.dart';
 import '../../domain/day_group.dart';
 import '../view_models/history_controller.dart';
@@ -65,6 +68,27 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     }
   }
 
+  /// Opens the AI analysis restricted to what the filters show (plan.md
+  /// section 32.6).
+  void _analyzeWithAi(TransactionListFilter filter) {
+    final l10n = AppLocalizations.of(context);
+    final result = aiPrefillFromHistory(filter);
+    if (result.problem != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.problem == AiHistoryPrefillProblem.adjustmentsOnly
+                ? l10n.aiHistoryAnalyzeAdjustments
+                : l10n.aiHistoryAnalyzeTransfers,
+          ),
+        ),
+      );
+      return;
+    }
+    ref.read(aiSetupPrefillProvider.notifier).set(result.prefill!);
+    context.push(AppRoutes.aiNew);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(historyControllerProvider);
@@ -78,6 +102,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       appBar: AppBar(
         title: const Text('Cronologia'),
         actions: [
+          if (ref.watch(aiSettingsProvider).value?.available == true)
+            IconButton(
+              icon: const Icon(Icons.auto_awesome_outlined),
+              tooltip: l10n.aiHistoryAnalyzeAction,
+              onPressed: () => _analyzeWithAi(state.filter),
+            ),
           IconButton(
             icon: const Icon(Icons.link),
             tooltip: l10n.linkedPaymentsSectionTitle,

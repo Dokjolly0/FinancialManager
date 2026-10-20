@@ -826,5 +826,52 @@
   "aiReportsCardTitle": "Analisi AI",
   "aiReportsCardBody": "Fatti spiegare i tuoi numeri: un report personalizzato e domande di approfondimento.",
   "aiReportsCardSetupBody": "Collega il tuo fornitore AI preferito per ottenere report personalizzati sulle tue finanze.",
-  "aiReportsCardStart": "Analizza"
+  "aiReportsCardStart": "Analizza",
+  "aiHistoryAnalyzeAction": "Analizza con AI i movimenti filtrati",
+  "aiHistoryAnalyzeAdjustments": "L'Analisi AI considera entrate e uscite: togli il filtro «rettifiche» per analizzare questi movimenti.",
+  "aiHistoryAnalyzeTransfers": "I trasferimenti spostano denaro tra i tuoi portafogli e non vengono analizzati: togli il filtro «trasferimenti».",
+  "aiPeriodLastMonth": "Mese scorso",
+  "aiPeriodLastQuarter": "Trimestre scorso",
+  "aiDateFrom": "Da",
+  "aiDateTo": "A",
+  "aiDateFromEmpty": "Dall'inizio",
+  "aiDateToEmpty": "Oggi",
+  "aiDateClear": "Rimuovi data",
+  "aiFiltersTitle": "Filtri",
+  "aiFiltersFromHistoryTitle": "Filtri dalla Cronologia",
+  "aiFiltersHint": "L'analisi considera solo i movimenti che rispettano questi filtri. Saldi e trasferimenti non vengono inclusi.",
+  "aiFilterExpenses": "Solo uscite",
+  "aiFilterIncome": "Solo entrate",
+  "aiFilterCategory": "Categoria: {name}",
+  "@aiFilterCategory": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiFilterTitle": "Contiene «{text}»",
+  "@aiFilterTitle": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "aiFilterAmountMin": "Da {amount}",
+  "@aiFilterAmountMin": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "aiFilterAmountMax": "Fino a {amount}",
+  "@aiFilterAmountMax": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -2041,4 +2041,72 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get aiReportsCardStart => 'Analizza';
+
+  @override
+  String get aiHistoryAnalyzeAction => 'Analizza con AI i movimenti filtrati';
+
+  @override
+  String get aiHistoryAnalyzeAdjustments =>
+      'L\'Analisi AI considera entrate e uscite: togli il filtro «rettifiche» per analizzare questi movimenti.';
+
+  @override
+  String get aiHistoryAnalyzeTransfers =>
+      'I trasferimenti spostano denaro tra i tuoi portafogli e non vengono analizzati: togli il filtro «trasferimenti».';
+
+  @override
+  String get aiPeriodLastMonth => 'Mese scorso';
+
+  @override
+  String get aiPeriodLastQuarter => 'Trimestre scorso';
+
+  @override
+  String get aiDateFrom => 'Da';
+
+  @override
+  String get aiDateTo => 'A';
+
+  @override
+  String get aiDateFromEmpty => 'Dall\'inizio';
+
+  @override
+  String get aiDateToEmpty => 'Oggi';
+
+  @override
+  String get aiDateClear => 'Rimuovi data';
+
+  @override
+  String get aiFiltersTitle => 'Filtri';
+
+  @override
+  String get aiFiltersFromHistoryTitle => 'Filtri dalla Cronologia';
+
+  @override
+  String get aiFiltersHint =>
+      'L\'analisi considera solo i movimenti che rispettano questi filtri. Saldi e trasferimenti non vengono inclusi.';
+
+  @override
+  String get aiFilterExpenses => 'Solo uscite';
+
+  @override
+  String get aiFilterIncome => 'Solo entrate';
+
+  @override
+  String aiFilterCategory(String name) {
+    return 'Categoria: $name';
+  }
+
+  @override
+  String aiFilterTitle(String text) {
+    return 'Contiene «$text»';
+  }
+
+  @override
+  String aiFilterAmountMin(String amount) {
+    return 'Da $amount';
+  }
+
+  @override
+  String aiFilterAmountMax(String amount) {
+    return 'Fino a $amount';
+  }
 }

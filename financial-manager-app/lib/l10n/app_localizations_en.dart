@@ -2030,4 +2030,73 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiReportsCardStart => 'Analyze';
+
+  @override
+  String get aiHistoryAnalyzeAction =>
+      'Analyze the filtered transactions with AI';
+
+  @override
+  String get aiHistoryAnalyzeAdjustments =>
+      'AI analysis looks at income and expenses: remove the \"adjustments\" filter to analyze these transactions.';
+
+  @override
+  String get aiHistoryAnalyzeTransfers =>
+      'Transfers move money between your wallets and are not analyzed: remove the \"transfers\" filter.';
+
+  @override
+  String get aiPeriodLastMonth => 'Last month';
+
+  @override
+  String get aiPeriodLastQuarter => 'Last quarter';
+
+  @override
+  String get aiDateFrom => 'From';
+
+  @override
+  String get aiDateTo => 'To';
+
+  @override
+  String get aiDateFromEmpty => 'The beginning';
+
+  @override
+  String get aiDateToEmpty => 'Today';
+
+  @override
+  String get aiDateClear => 'Clear date';
+
+  @override
+  String get aiFiltersTitle => 'Filters';
+
+  @override
+  String get aiFiltersFromHistoryTitle => 'Filters from History';
+
+  @override
+  String get aiFiltersHint =>
+      'The analysis only covers transactions matching these filters. Balances and transfers are left out.';
+
+  @override
+  String get aiFilterExpenses => 'Expenses only';
+
+  @override
+  String get aiFilterIncome => 'Income only';
+
+  @override
+  String aiFilterCategory(String name) {
+    return 'Category: $name';
+  }
+
+  @override
+  String aiFilterTitle(String text) {
+    return 'Contains “$text”';
+  }
+
+  @override
+  String aiFilterAmountMin(String amount) {
+    return 'From $amount';
+  }
+
+  @override
+  String aiFilterAmountMax(String amount) {
+    return 'Up to $amount';
+  }
 }

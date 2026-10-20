@@ -63,6 +63,55 @@ class AiPreset {
   );
 }
 
+/// Restricts an analysis to part of the ledger, with the same meaning as
+/// the Cronologia filters (plan.md section 32.6).
+class AiAnalysisFilters {
+  const AiAnalysisFilters({
+    this.direction,
+    this.categoryId,
+    this.title,
+    this.amountMinMinor,
+    this.amountMaxMinor,
+  });
+
+  /// 'DEBIT', 'CREDIT' or null for both.
+  final String? direction;
+  final String? categoryId;
+  final String? title;
+  final int? amountMinMinor;
+  final int? amountMaxMinor;
+
+  bool get isEmpty =>
+      direction == null &&
+      categoryId == null &&
+      (title == null || title!.trim().isEmpty) &&
+      amountMinMinor == null &&
+      amountMaxMinor == null;
+
+  /// A copy with the given fields removed.
+  AiAnalysisFilters without({
+    bool direction = false,
+    bool categoryId = false,
+    bool title = false,
+    bool amountMin = false,
+    bool amountMax = false,
+  }) => AiAnalysisFilters(
+    direction: direction ? null : this.direction,
+    categoryId: categoryId ? null : this.categoryId,
+    title: title ? null : this.title,
+    amountMinMinor: amountMin ? null : amountMinMinor,
+    amountMaxMinor: amountMax ? null : amountMaxMinor,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'direction': ?direction,
+    'category_id': ?categoryId,
+    if (title != null && title!.trim().isNotEmpty) 'title': title!.trim(),
+    'amount_min_minor': ?amountMinMinor,
+    'amount_max_minor': ?amountMaxMinor,
+  };
+}
+
 /// The body shared by preview and run.
 class AiAnalysisRequest {
   const AiAnalysisRequest({
@@ -76,6 +125,7 @@ class AiAnalysisRequest {
     this.maxTransactions = aiDefaultMaxTransactions,
     this.anonymizeTitles = false,
     this.includeAdjustments = false,
+    this.filters,
     this.instructions,
   });
 
@@ -92,6 +142,9 @@ class AiAnalysisRequest {
   final bool anonymizeTitles;
   final bool includeAdjustments;
 
+  /// Null or empty: no restriction beyond period and wallets.
+  final AiAnalysisFilters? filters;
+
   /// Null uses the preset's default instructions.
   final String? instructions;
 
@@ -106,6 +159,7 @@ class AiAnalysisRequest {
     maxTransactions: maxTransactions,
     anonymizeTitles: anonymizeTitles,
     includeAdjustments: includeAdjustments,
+    filters: filters,
     instructions: instructions ?? this.instructions,
   );
 
@@ -130,6 +184,7 @@ class AiAnalysisRequest {
       'max_transactions': maxTransactions,
       'anonymize_titles': anonymizeTitles,
       'include_adjustments': includeAdjustments,
+      if (filters != null && !filters!.isEmpty) 'filters': filters!.toJson(),
     },
     'instructions': instructions,
   };

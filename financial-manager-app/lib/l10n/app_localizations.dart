@@ -3695,6 +3695,120 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Analizza'**
   String get aiReportsCardStart;
+
+  /// No description provided for @aiHistoryAnalyzeAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Analizza con AI i movimenti filtrati'**
+  String get aiHistoryAnalyzeAction;
+
+  /// No description provided for @aiHistoryAnalyzeAdjustments.
+  ///
+  /// In it, this message translates to:
+  /// **'L\'Analisi AI considera entrate e uscite: togli il filtro «rettifiche» per analizzare questi movimenti.'**
+  String get aiHistoryAnalyzeAdjustments;
+
+  /// No description provided for @aiHistoryAnalyzeTransfers.
+  ///
+  /// In it, this message translates to:
+  /// **'I trasferimenti spostano denaro tra i tuoi portafogli e non vengono analizzati: togli il filtro «trasferimenti».'**
+  String get aiHistoryAnalyzeTransfers;
+
+  /// No description provided for @aiPeriodLastMonth.
+  ///
+  /// In it, this message translates to:
+  /// **'Mese scorso'**
+  String get aiPeriodLastMonth;
+
+  /// No description provided for @aiPeriodLastQuarter.
+  ///
+  /// In it, this message translates to:
+  /// **'Trimestre scorso'**
+  String get aiPeriodLastQuarter;
+
+  /// No description provided for @aiDateFrom.
+  ///
+  /// In it, this message translates to:
+  /// **'Da'**
+  String get aiDateFrom;
+
+  /// No description provided for @aiDateTo.
+  ///
+  /// In it, this message translates to:
+  /// **'A'**
+  String get aiDateTo;
+
+  /// No description provided for @aiDateFromEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Dall\'inizio'**
+  String get aiDateFromEmpty;
+
+  /// No description provided for @aiDateToEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Oggi'**
+  String get aiDateToEmpty;
+
+  /// No description provided for @aiDateClear.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovi data'**
+  String get aiDateClear;
+
+  /// No description provided for @aiFiltersTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Filtri'**
+  String get aiFiltersTitle;
+
+  /// No description provided for @aiFiltersFromHistoryTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Filtri dalla Cronologia'**
+  String get aiFiltersFromHistoryTitle;
+
+  /// No description provided for @aiFiltersHint.
+  ///
+  /// In it, this message translates to:
+  /// **'L\'analisi considera solo i movimenti che rispettano questi filtri. Saldi e trasferimenti non vengono inclusi.'**
+  String get aiFiltersHint;
+
+  /// No description provided for @aiFilterExpenses.
+  ///
+  /// In it, this message translates to:
+  /// **'Solo uscite'**
+  String get aiFilterExpenses;
+
+  /// No description provided for @aiFilterIncome.
+  ///
+  /// In it, this message translates to:
+  /// **'Solo entrate'**
+  String get aiFilterIncome;
+
+  /// No description provided for @aiFilterCategory.
+  ///
+  /// In it, this message translates to:
+  /// **'Categoria: {name}'**
+  String aiFilterCategory(String name);
+
+  /// No description provided for @aiFilterTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Contiene «{text}»'**
+  String aiFilterTitle(String text);
+
+  /// No description provided for @aiFilterAmountMin.
+  ///
+  /// In it, this message translates to:
+  /// **'Da {amount}'**
+  String aiFilterAmountMin(String amount);
+
+  /// No description provided for @aiFilterAmountMax.
+  ///
+  /// In it, this message translates to:
+  /// **'Fino a {amount}'**
+  String aiFilterAmountMax(String amount);
 }
 
 class _AppLocalizationsDelegate

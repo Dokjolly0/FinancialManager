@@ -9,13 +9,15 @@ import '../../../../core/errors/app_error.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../reports/domain/models/report_period.dart';
+import '../../../../core/formatting/money.dart';
+import '../../../categories/data/providers.dart';
 import '../../../reports/presentation/view_models/report_controller.dart';
 import '../../../wallets/data/providers.dart';
 import '../../data/providers.dart';
 import '../../domain/models/ai_analysis_request.dart';
 import '../../domain/models/ai_settings.dart';
 import '../view_models/ai_draft_controller.dart';
+import '../view_models/ai_period.dart';
 import '../widgets/ai_consent_sheet.dart';
 
 String aiSectionLabel(AppLocalizations l10n, AiDataSection s) => switch (s) {
@@ -27,14 +29,16 @@ String aiSectionLabel(AppLocalizations l10n, AiDataSection s) => switch (s) {
   AiDataSection.personalContext => l10n.aiSectionPersonalContext,
 };
 
-String aiPeriodLabel(AppLocalizations l10n, ReportPreset p) => switch (p) {
-  ReportPreset.last30Days => l10n.aiPeriodLast30Days,
-  ReportPreset.last12Months => l10n.aiPeriodLast12Months,
-  ReportPreset.currentMonth => l10n.aiPeriodCurrentMonth,
-  ReportPreset.currentYear => l10n.aiPeriodCurrentYear,
-  ReportPreset.allTime => l10n.aiPeriodAllTime,
-  ReportPreset.custom => l10n.aiPeriodCustom,
-};
+String aiQuickPeriodLabel(AppLocalizations l10n, AiQuickPeriod p) =>
+    switch (p) {
+      AiQuickPeriod.last30Days => l10n.aiPeriodLast30Days,
+      AiQuickPeriod.currentMonth => l10n.aiPeriodCurrentMonth,
+      AiQuickPeriod.lastMonth => l10n.aiPeriodLastMonth,
+      AiQuickPeriod.lastQuarter => l10n.aiPeriodLastQuarter,
+      AiQuickPeriod.currentYear => l10n.aiPeriodCurrentYear,
+      AiQuickPeriod.last12Months => l10n.aiPeriodLast12Months,
+      AiQuickPeriod.allTime => l10n.aiPeriodAllTime,
+    };
 
 /// Reports → Analisi AI (plan.md section 32.7): choose what to analyze and
 /// what data to send, then open the preview.
@@ -48,9 +52,15 @@ class AiAnalysisSetupScreen extends ConsumerStatefulWidget {
 
 class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
   AiPreset? _preset;
-  late ReportPreset _period;
-  DateTimeRange? _customRange;
+
+  /// Inclusive local dates; a null bound is open, both null is the whole
+  /// history.
+  late AiDateRange _range;
   final Set<String> _walletIds = {};
+
+  /// Filters carried over from Cronologia; each can be removed.
+  AiAnalysisFilters? _filters;
+  bool _fromHistory = false;
   Set<AiDataSection> _sections = {};
   bool _includeTransactions = false;
   double _maxTransactions = aiDefaultMaxTransactions.toDouble();
@@ -63,17 +73,22 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
   @override
   void initState() {
     super.initState();
-    // Start from what the Reports screen is showing.
-    final report = ref.read(reportControllerProvider);
-    _period = report.period.preset;
-    if (_period == ReportPreset.custom &&
-        report.period.customFrom != null &&
-        report.period.customTo != null) {
-      _customRange = DateTimeRange(
-        start: report.period.customFrom!,
-        end: report.period.customTo!,
+    // Start from what Cronologia asked for, else from what Reports shows.
+    final prefill = ref.read(aiSetupPrefillProvider);
+    if (prefill != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => ref.read(aiSetupPrefillProvider.notifier).clear(),
       );
+      _range = prefill.range;
+      _walletIds.addAll(prefill.walletIds);
+      _filters = prefill.filters == null || prefill.filters!.isEmpty
+          ? null
+          : prefill.filters;
+      _fromHistory = prefill.fromHistory;
+      return;
     }
+    final report = ref.read(reportControllerProvider);
+    _range = aiRangeFromReport(report.period, DateTime.now());
     if (report.walletId != null) _walletIds.add(report.walletId!);
   }
 
@@ -94,20 +109,31 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
     });
   }
 
-  Future<void> _pickRange() async {
+  /// Picks one bound; a "from" after "to" (or the reverse) moves the
+  /// other bound along so the range stays valid.
+  Future<void> _pickDate({required bool isFrom}) async {
     final now = DateTime.now();
-    final picked = await showDateRangePicker(
+    final today = DateTime(now.year, now.month, now.day);
+    final current = isFrom ? _range.from : _range.to;
+    final picked = await showDatePicker(
       context: context,
-      firstDate: DateTime(now.year - 20),
-      lastDate: now,
-      initialDateRange: _customRange,
+      firstDate: DateTime(2000),
+      lastDate: today,
+      initialDate: current ?? (isFrom ? _range.to : null) ?? today,
     );
-    if (picked != null) {
-      setState(() {
-        _customRange = picked;
-        _period = ReportPreset.custom;
-      });
-    }
+    if (picked == null) return;
+    setState(() {
+      var from = isFrom ? picked : _range.from;
+      var to = isFrom ? _range.to : picked;
+      if (from != null && to != null && from.isAfter(to)) {
+        if (isFrom) {
+          to = from;
+        } else {
+          from = to;
+        }
+      }
+      _range = (from: from, to: to);
+    });
   }
 
   Future<void> _preview(AiSettings settings) async {
@@ -117,10 +143,6 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
     if (preset.isCustom && _question.text.trim().isEmpty) {
       setState(() => _questionError = l10n.errorCodeRequiredField);
       return;
-    }
-    if (_period == ReportPreset.custom && _customRange == null) {
-      await _pickRange();
-      if (_customRange == null) return;
     }
     if (settings.consent.required) {
       if (!mounted) return;
@@ -133,10 +155,11 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
 
     final request = AiAnalysisRequest(
       preset: preset.id,
-      periodPreset: _period.toApi(),
-      customFrom: _customRange?.start,
-      customTo: _customRange?.end,
+      periodPreset: aiPeriodFields(_range).preset,
+      customFrom: _range.from,
+      customTo: _range.to,
       walletIds: _walletIds.toList(),
+      filters: _filters,
       sections: _sections,
       includeTransactions: _includeTransactions,
       maxTransactions: _maxTransactions.round(),
@@ -263,24 +286,55 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
             ),
           ),
         ],
+        if (_filters != null) ...[
+          const SizedBox(height: AppSpacing.lg),
+          _FiltersCard(
+            filters: _filters!,
+            fromHistory: _fromHistory,
+            onChanged: (f) => setState(() => _filters = f.isEmpty ? null : f),
+          ),
+        ],
         const SizedBox(height: AppSpacing.lg),
         Text(l10n.aiPeriodLabel, style: theme.textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _DateField(
+                label: l10n.aiDateFrom,
+                emptyText: l10n.aiDateFromEmpty,
+                value: _range.from,
+                format: dateFormat,
+                onTap: () => _pickDate(isFrom: true),
+                onClear: () =>
+                    setState(() => _range = (from: null, to: _range.to)),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _DateField(
+                label: l10n.aiDateTo,
+                emptyText: l10n.aiDateToEmpty,
+                value: _range.to,
+                format: dateFormat,
+                onTap: () => _pickDate(isFrom: false),
+                onClear: () =>
+                    setState(() => _range = (from: _range.from, to: null)),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: AppSpacing.xs,
           runSpacing: AppSpacing.xs,
           children: [
-            for (final p in ReportPreset.values)
+            for (final p in AiQuickPeriod.values)
               ChoiceChip(
-                label: Text(
-                  p == ReportPreset.custom && _customRange != null
-                      ? '${dateFormat.format(_customRange!.start)} – ${dateFormat.format(_customRange!.end)}'
-                      : aiPeriodLabel(l10n, p),
-                ),
-                selected: _period == p,
-                onSelected: (_) => p == ReportPreset.custom
-                    ? _pickRange()
-                    : setState(() => _period = p),
+                label: Text(aiQuickPeriodLabel(l10n, p)),
+                selected: aiMatchQuick(_range, DateTime.now()) == p,
+                onSelected: (_) =>
+                    setState(() => _range = aiQuickRange(p, DateTime.now())),
               ),
           ],
         ),
@@ -391,5 +445,144 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
     final p = presentError(e, l10n);
     if (p.fieldErrors.isEmpty) return p.message;
     return [p.message, ...p.fieldErrors.values].join('\n');
+  }
+}
+
+/// One bound of the period: tap to pick, × to leave it open.
+class _DateField extends StatelessWidget {
+  const _DateField({
+    required this.label,
+    required this.emptyText,
+    required this.value,
+    required this.format,
+    required this.onTap,
+    required this.onClear,
+  });
+
+  final String label;
+  final String emptyText;
+  final DateTime? value;
+  final DateFormat format;
+  final VoidCallback onTap;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          isDense: true,
+          suffixIcon: value == null
+              ? const Icon(Icons.calendar_today_outlined, size: 18)
+              : IconButton(
+                  tooltip: l10n.aiDateClear,
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: onClear,
+                ),
+        ),
+        child: Text(
+          value == null ? emptyText : format.format(value!),
+          style: value == null
+              ? TextStyle(color: Theme.of(context).colorScheme.outline)
+              : null,
+        ),
+      ),
+    );
+  }
+}
+
+/// The Cronologia filters the analysis is restricted to, each removable.
+class _FiltersCard extends ConsumerWidget {
+  const _FiltersCard({
+    required this.filters,
+    required this.fromHistory,
+    required this.onChanged,
+  });
+
+  final AiAnalysisFilters filters;
+  final bool fromHistory;
+  final ValueChanged<AiAnalysisFilters> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final categories = ref.watch(categoriesProvider).value ?? const [];
+    String? categoryName;
+    for (final c in categories) {
+      if (c.id == filters.categoryId) categoryName = c.name;
+    }
+    String money(int minor) =>
+        Money(minorUnits: minor, currency: 'EUR').format();
+
+    final chips = <Widget>[
+      if (filters.direction != null)
+        InputChip(
+          label: Text(
+            filters.direction == 'DEBIT'
+                ? l10n.aiFilterExpenses
+                : l10n.aiFilterIncome,
+          ),
+          onDeleted: () => onChanged(filters.without(direction: true)),
+        ),
+      if (filters.categoryId != null)
+        InputChip(
+          label: Text(l10n.aiFilterCategory(categoryName ?? '…')),
+          onDeleted: () => onChanged(filters.without(categoryId: true)),
+        ),
+      if (filters.title != null && filters.title!.isNotEmpty)
+        InputChip(
+          label: Text(l10n.aiFilterTitle(filters.title!)),
+          onDeleted: () => onChanged(filters.without(title: true)),
+        ),
+      if (filters.amountMinMinor != null)
+        InputChip(
+          label: Text(l10n.aiFilterAmountMin(money(filters.amountMinMinor!))),
+          onDeleted: () => onChanged(filters.without(amountMin: true)),
+        ),
+      if (filters.amountMaxMinor != null)
+        InputChip(
+          label: Text(l10n.aiFilterAmountMax(money(filters.amountMaxMinor!))),
+          onDeleted: () => onChanged(filters.without(amountMax: true)),
+        ),
+    ];
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.filter_list, size: 20),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    fromHistory
+                        ? l10n.aiFiltersFromHistoryTitle
+                        : l10n.aiFiltersTitle,
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(l10n.aiFiltersHint, style: theme.textTheme.bodySmall),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: chips,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
