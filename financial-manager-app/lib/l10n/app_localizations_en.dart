@@ -1105,6 +1105,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get linkedPaymentsTotalLabel => 'Combined total';
 
   @override
+  String get linkedPaymentsCurrentLabel => 'Viewing';
+
+  @override
   String get linkedPaymentsEmptyStateMessage => 'No linked payments yet.';
 
   @override

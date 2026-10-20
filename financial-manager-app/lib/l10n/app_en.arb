@@ -421,6 +421,7 @@
   "addLinkedPaymentTooltip": "Add linked payment",
   "linkedPaymentsSectionTitle": "Linked payments",
   "linkedPaymentsTotalLabel": "Combined total",
+  "linkedPaymentsCurrentLabel": "Viewing",
   "linkedPaymentsEmptyStateMessage": "No linked payments yet.",
   "linkedPaymentsMemberCountLabel": "{count} payments",
   "@linkedPaymentsMemberCountLabel": {

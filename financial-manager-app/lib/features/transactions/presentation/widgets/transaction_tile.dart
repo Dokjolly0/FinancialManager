@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/semantic_colors.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/ledger_transaction.dart';
@@ -17,6 +18,9 @@ class TransactionTile extends StatelessWidget {
     this.categoryName,
     this.imageUrl,
     this.imageHeaders = const {},
+    this.showDate = false,
+    this.wrapTitle = false,
+    this.currentLabel,
   });
 
   final LedgerTransaction transaction;
@@ -34,6 +38,20 @@ class TransactionTile extends StatelessWidget {
   final String? imageUrl;
   final Map<String, String> imageHeaders;
 
+  /// Shows the full date next to the time instead of the time alone. The
+  /// history and home lists group rows under a day header, so the time is
+  /// enough there; lists that mix days (e.g. a payment group) need it.
+  final bool showDate;
+
+  /// Lets a long title wrap onto several lines instead of being cut with
+  /// an ellipsis.
+  final bool wrapTitle;
+
+  /// When set, marks this row as the transaction currently being viewed:
+  /// the row is highlighted, shows this text as a badge, and isn't
+  /// tappable (there's nowhere to navigate to).
+  final String? currentLabel;
+
   @override
   Widget build(BuildContext context) {
     final semantic = context.semanticColors;
@@ -45,13 +63,24 @@ class TransactionTile extends StatelessWidget {
     final sign = isCredit ? '+' : '−';
 
     final l10n = AppLocalizations.of(context);
-    final time = DateFormat.Hm().format(transaction.occurredAt.toLocal());
+    final occurredAt = transaction.occurredAt.toLocal();
+    final time = showDate
+        ? DateFormat('d MMM y, HH:mm', 'it_IT').format(occurredAt)
+        : DateFormat.Hm().format(occurredAt);
     final subtitle = isSpecial
-        ? _kindLabel(l10n, transaction.kind)
+        ? (showDate
+              ? '${_kindLabel(l10n, transaction.kind)} · $time'
+              : _kindLabel(l10n, transaction.kind))
         : (categoryName != null ? '$categoryName · $time' : time);
+    final isCurrent = currentLabel != null;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return ListTile(
-      onTap: onTap,
+      onTap: isCurrent ? null : onTap,
+      selected: isCurrent,
+      selectedTileColor: colorScheme.primaryContainer.withValues(alpha: 0.4),
+      selectedColor: colorScheme.onSurface,
+      minVerticalPadding: wrapTitle ? AppSpacing.sm : null,
       leading: imageUrl != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(20),
@@ -73,10 +102,34 @@ class TransactionTile extends StatelessWidget {
             ),
       title: Text(
         transaction.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+        maxLines: wrapTitle ? null : 1,
+        overflow: wrapTitle ? null : TextOverflow.ellipsis,
       ),
-      subtitle: Text(subtitle, style: textTheme.bodySmall),
+      subtitle: isCurrent
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(subtitle, style: textTheme.bodySmall),
+                const SizedBox(height: AppSpacing.grid),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary,
+                    borderRadius: BorderRadius.circular(AppSpacing.xs),
+                  ),
+                  child: Text(
+                    currentLabel!,
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : Text(subtitle, style: textTheme.bodySmall),
       trailing: Text(
         '$sign ${transaction.amount.format()}',
         style: textTheme.bodyLarge?.copyWith(

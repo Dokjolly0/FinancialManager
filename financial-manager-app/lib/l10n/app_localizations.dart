@@ -2100,6 +2100,12 @@ abstract class AppLocalizations {
   /// **'Totale speso'**
   String get linkedPaymentsTotalLabel;
 
+  /// No description provided for @linkedPaymentsCurrentLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Stai visualizzando'**
+  String get linkedPaymentsCurrentLabel;
+
   /// No description provided for @linkedPaymentsEmptyStateMessage.
   ///
   /// In it, this message translates to:

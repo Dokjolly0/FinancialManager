@@ -281,8 +281,11 @@ class _Detail extends ConsumerWidget {
             _LinkedPaymentsCard(
               memberCount: detailState.groupMembers.length,
               total: groupTotal,
+              // Every member, the viewed one included and badged, so the
+              // list reads as the whole group rather than "everything but
+              // this one".
               memberTiles: [
-                for (final member in linkedMembers)
+                for (final member in detailState.groupMembers)
                   TransactionTile(
                     transaction: member,
                     categoryName: categoryNameFor(member.categoryId),
@@ -290,6 +293,11 @@ class _Detail extends ConsumerWidget {
                         ? null
                         : mediaRepo.contentUrl(member.mediaId!),
                     imageHeaders: mediaRepo.authHeaders(),
+                    showDate: true,
+                    wrapTitle: true,
+                    currentLabel: member.id == transaction.id
+                        ? l10n.linkedPaymentsCurrentLabel
+                        : null,
                     onTap: () =>
                         context.push(AppRoutes.transactionDetail(member.id)),
                   ),
@@ -475,7 +483,10 @@ class _LinkedPaymentsCard extends StatelessWidget {
             ),
           ),
           const Divider(height: AppSpacing.lg),
-          ...memberTiles,
+          for (var i = 0; i < memberTiles.length; i++) ...[
+            if (i > 0) const Divider(height: 1),
+            memberTiles[i],
+          ],
           const SizedBox(height: AppSpacing.sm),
         ],
       ),

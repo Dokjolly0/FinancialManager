@@ -403,6 +403,7 @@
   "addLinkedPaymentTooltip": "Aggiungi pagamento collegato",
   "linkedPaymentsSectionTitle": "Pagamenti collegati",
   "linkedPaymentsTotalLabel": "Totale speso",
+  "linkedPaymentsCurrentLabel": "Stai visualizzando",
   "linkedPaymentsEmptyStateMessage": "Nessun pagamento collegato ancora.",
   "linkedPaymentsMemberCountLabel": "{count} pagamenti",
   "@linkedPaymentsMemberCountLabel": {

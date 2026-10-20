@@ -1110,6 +1110,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get linkedPaymentsTotalLabel => 'Totale speso';
 
   @override
+  String get linkedPaymentsCurrentLabel => 'Stai visualizzando';
+
+  @override
   String get linkedPaymentsEmptyStateMessage =>
       'Nessun pagamento collegato ancora.';
 
