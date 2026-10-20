@@ -107,6 +107,9 @@ type walletRequest struct {
 	Type  string `json:"type"`
 	Icon  string `json:"icon"`
 	Color string `json:"color"`
+	// Purpose is replaced on every update like the other fields: omitted,
+	// null or blank all clear it.
+	Purpose *string `json:"purpose"`
 }
 
 type updateWalletRequest struct {
@@ -137,6 +140,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := h.service.Update(r.Context(), UpdateServiceInput{
 		UserID: userID, WalletID: id, Name: req.Name, Type: req.Type, Icon: req.Icon, Color: req.Color,
+		Purpose:                  req.Purpose,
 		ExpectedVersion:          req.ExpectedVersion,
 		VoucherExpiryCutoffMonth: req.VoucherExpiryCutoffMonth,
 		VoucherExpiryMonth:       req.VoucherExpiryMonth,

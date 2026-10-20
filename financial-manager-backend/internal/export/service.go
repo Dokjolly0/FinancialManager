@@ -225,6 +225,7 @@ func buildJSON(user users.User, userWallets []wallets.Wallet, cats []categories.
 		Type                string  `json:"type"`
 		Currency            string  `json:"currency"`
 		CurrentBalanceMinor int64   `json:"current_balance_minor"`
+		Purpose             *string `json:"scopo,omitempty"`
 		ArchivedAt          *string `json:"archived_at,omitempty"`
 	}
 	type categoryJSON struct {
@@ -305,7 +306,8 @@ func buildJSON(user users.User, userWallets []wallets.Wallet, cats []categories.
 		}
 		walletList = append(walletList, walletJSON{
 			ID: w.ID.String(), Name: w.Name, Type: w.Type,
-			Currency: w.Currency, CurrentBalanceMinor: w.CurrentBalanceMinor, ArchivedAt: archivedAt,
+			Currency: w.Currency, CurrentBalanceMinor: w.CurrentBalanceMinor, Purpose: w.Purpose,
+			ArchivedAt: archivedAt,
 		})
 	}
 

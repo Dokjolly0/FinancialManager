@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 
@@ -34,6 +35,7 @@ type walletResponse struct {
 	Version                  int64   `json:"version"`
 	UpdatedAt                string  `json:"updated_at"`
 	ArchivedAt               *string `json:"archived_at,omitempty"`
+	Purpose                  *string `json:"purpose"`
 	VoucherUnitValueMinor    *int64  `json:"voucher_unit_value_minor,omitempty"`
 	VoucherExpiryCutoffMonth *int    `json:"voucher_expiry_cutoff_month,omitempty"`
 	VoucherExpiryMonth       *int    `json:"voucher_expiry_month,omitempty"`
@@ -71,6 +73,7 @@ func toWalletResponse(w Wallet) walletResponse {
 		Version:                  w.Version,
 		UpdatedAt:                w.UpdatedAt.Format(timeLayout),
 		ArchivedAt:               archivedAt,
+		Purpose:                  w.Purpose,
 		VoucherUnitValueMinor:    w.VoucherUnitValueMinor,
 		VoucherExpiryCutoffMonth: w.VoucherExpiryCutoffMonth,
 		VoucherExpiryMonth:       w.VoucherExpiryMonth,
@@ -96,6 +99,27 @@ func ValidateFields(name, walletType, icon, color string) map[string]string {
 		fieldErrors["color"] = apierror.FieldInvalidColorFormat
 	}
 	return fieldErrors
+}
+
+// MaxPurposeLength is the wallets.purpose limit in characters (migration
+// 0030).
+const MaxPurposeLength = 280
+
+// NormalizePurpose trims the wallet purpose and maps blank input to nil, so
+// "no purpose" has a single representation. Shared by Update and by
+// transactions.Service.CreateWallet.
+func NormalizePurpose(purpose *string) (*string, map[string]string) {
+	if purpose == nil {
+		return nil, nil
+	}
+	trimmed := strings.TrimSpace(*purpose)
+	if trimmed == "" {
+		return nil, nil
+	}
+	if utf8.RuneCountInString(trimmed) > MaxPurposeLength {
+		return nil, map[string]string{"purpose": apierror.FieldPurposeLength}
+	}
+	return &trimmed, nil
 }
 
 // ValidateVoucherUnitValue enforces that a MEAL_VOUCHER wallet has a
@@ -214,6 +238,7 @@ type UpdateServiceInput struct {
 	Type            string
 	Icon            string
 	Color           string
+	Purpose         *string
 	ExpectedVersion int64
 
 	// Only meaningful when Type == TypeMealVoucher — see
@@ -227,6 +252,10 @@ type UpdateServiceInput struct {
 func (s *Service) Update(ctx context.Context, in UpdateServiceInput) (walletResponse, error) {
 	fieldErrors := ValidateFields(in.Name, in.Type, in.Icon, in.Color)
 	for k, v := range ValidateVoucherExpiryFields(in.Type, in.VoucherExpiryCutoffMonth, in.VoucherExpiryMonth, in.VoucherExpiryDay) {
+		fieldErrors[k] = v
+	}
+	purpose, purposeErrors := NormalizePurpose(in.Purpose)
+	for k, v := range purposeErrors {
 		fieldErrors[k] = v
 	}
 	if len(fieldErrors) > 0 {
@@ -253,6 +282,7 @@ func (s *Service) Update(ctx context.Context, in UpdateServiceInput) (walletResp
 		VoucherExpiryCutoffMonth: in.VoucherExpiryCutoffMonth,
 		VoucherExpiryMonth:       in.VoucherExpiryMonth,
 		VoucherExpiryDay:         in.VoucherExpiryDay,
+		Purpose:                  purpose,
 	}, in.ExpectedVersion)
 	if errors.Is(err, ErrNotFound) {
 		// Row exists but version didn't match vs. genuinely gone/not owned.
@@ -344,14 +374,14 @@ func (s *Service) requireMealVoucherWallet(ctx context.Context, userID, walletID
 }
 
 type voucherLotResponse struct {
-	ID                 string `json:"id"`
-	QuantityTotal      int    `json:"quantity_total"`
-	QuantityRemaining  int    `json:"quantity_remaining"`
-	QuantityExpired    int    `json:"quantity_expired"`
-	ExpiresAt          string `json:"expires_at"`
-	CreatedByTxID      string `json:"created_by_transaction_id"`
-	ExpiredByTxID      *string `json:"expired_by_transaction_id,omitempty"`
-	CreatedAt          string `json:"created_at"`
+	ID                string  `json:"id"`
+	QuantityTotal     int     `json:"quantity_total"`
+	QuantityRemaining int     `json:"quantity_remaining"`
+	QuantityExpired   int     `json:"quantity_expired"`
+	ExpiresAt         string  `json:"expires_at"`
+	CreatedByTxID     string  `json:"created_by_transaction_id"`
+	ExpiredByTxID     *string `json:"expired_by_transaction_id,omitempty"`
+	CreatedAt         string  `json:"created_at"`
 }
 
 const dateLayout = "2006-01-02"

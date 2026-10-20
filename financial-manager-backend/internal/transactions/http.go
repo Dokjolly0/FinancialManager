@@ -618,11 +618,12 @@ func (h *Handler) createBalanceAdjustment(w http.ResponseWriter, r *http.Request
 }
 
 type createWalletRequest struct {
-	Name                string `json:"name"`
-	Type                string `json:"type"`
-	Icon                string `json:"icon"`
-	Color               string `json:"color"`
-	OpeningBalanceMinor int64  `json:"opening_balance_minor"`
+	Name                string  `json:"name"`
+	Type                string  `json:"type"`
+	Icon                string  `json:"icon"`
+	Color               string  `json:"color"`
+	OpeningBalanceMinor int64   `json:"opening_balance_minor"`
+	Purpose             *string `json:"purpose,omitempty"`
 
 	// Only meaningful when Type == "MEAL_VOUCHER".
 	VoucherUnitValueMinor    *int64 `json:"voucher_unit_value_minor,omitempty"`
@@ -676,6 +677,7 @@ func (h *Handler) createWallet(w http.ResponseWriter, r *http.Request) {
 		Icon:                req.Icon,
 		Color:               req.Color,
 		OpeningBalanceMinor: req.OpeningBalanceMinor,
+		Purpose:             req.Purpose,
 		SessionID:           &sessionID,
 		IdempotencyKey:      idempotencyKey,
 		RequestBody:         body,

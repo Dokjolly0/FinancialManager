@@ -233,6 +233,7 @@ type walletSnapshot struct {
 	Version                  int64   `json:"version"`
 	UpdatedAt                string  `json:"updated_at"`
 	ArchivedAt               *string `json:"archived_at,omitempty"`
+	Purpose                  *string `json:"purpose"`
 	VoucherUnitValueMinor    *int64  `json:"voucher_unit_value_minor,omitempty"`
 	VoucherExpiryCutoffMonth *int    `json:"voucher_expiry_cutoff_month,omitempty"`
 	VoucherExpiryMonth       *int    `json:"voucher_expiry_month,omitempty"`
@@ -256,6 +257,7 @@ func toWalletSnapshot(w wallets.Wallet) walletSnapshot {
 		Version:                  w.Version,
 		UpdatedAt:                w.UpdatedAt.Format(timeLayout),
 		ArchivedAt:               archivedAt,
+		Purpose:                  w.Purpose,
 		VoucherUnitValueMinor:    w.VoucherUnitValueMinor,
 		VoucherExpiryCutoffMonth: w.VoucherExpiryCutoffMonth,
 		VoucherExpiryMonth:       w.VoucherExpiryMonth,
@@ -1169,6 +1171,7 @@ type CreateWalletInput struct {
 	Icon                string
 	Color               string
 	OpeningBalanceMinor int64
+	Purpose             *string
 	SessionID           *uuid.UUID
 	IdempotencyKey      uuid.UUID
 	RequestBody         []byte
@@ -1191,6 +1194,10 @@ type CreateWalletInput struct {
 func (s *Service) CreateWallet(ctx context.Context, in CreateWalletInput) ([]byte, int, error) {
 	fieldErrors := wallets.ValidateFields(in.Name, in.Type, in.Icon, in.Color)
 	for k, v := range wallets.ValidateVoucherUnitValue(in.Type, in.VoucherUnitValueMinor) {
+		fieldErrors[k] = v
+	}
+	purpose, purposeErrors := wallets.NormalizePurpose(in.Purpose)
+	for k, v := range purposeErrors {
 		fieldErrors[k] = v
 	}
 
@@ -1263,6 +1270,7 @@ func (s *Service) CreateWallet(ctx context.Context, in CreateWalletInput) ([]byt
 			OpeningBalanceMinor:      in.OpeningBalanceMinor,
 			VoucherUnitValueMinor:    in.VoucherUnitValueMinor,
 			VoucherExpiryCutoffMonth: cutoffMonth, VoucherExpiryMonth: expiryMonth, VoucherExpiryDay: expiryDay,
+			Purpose: purpose,
 		})
 		if err != nil {
 			return fmt.Errorf("create wallet: %w", err)

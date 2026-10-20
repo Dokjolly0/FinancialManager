@@ -68,6 +68,11 @@ type Wallet struct {
 	Version             int64
 	ArchivedAt          *time.Time
 
+	// Purpose is the user's free-text note on what the wallet is for
+	// (migration 0030), read by the AI analysis (plan.md section 32). nil
+	// when unset; never an empty string (see NormalizePurpose).
+	Purpose *string
+
 	// Voucher_* fields are set iff Type == TypeMealVoucher (DB-enforced,
 	// migration 0024). VoucherUnitValueMinor is immutable once the wallet
 	// is created (internal/wallets Service never includes it in Update) —
