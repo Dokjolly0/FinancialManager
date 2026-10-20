@@ -33,6 +33,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Post("/v1/ai/settings/test", h.testConnection)
 	r.Post("/v1/ai/models", h.listModels)
 	r.Delete("/v1/ai/credentials/{id}", h.deleteCredential)
+	r.Put("/v1/ai/mode", h.setMode)
 	r.Put("/v1/ai/consent", h.acceptConsent)
 	r.Delete("/v1/ai/consent", h.revokeConsent)
 	r.Get("/v1/ai/context", h.getUserContext)
@@ -44,6 +45,12 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Get("/v1/ai/analyses/{id}", h.getAnalysis)
 	r.Patch("/v1/ai/analyses/{id}", h.renameAnalysis)
 	r.Delete("/v1/ai/analyses/{id}", h.deleteAnalysis)
+
+	// On-device analyses (plan.md section 33): the phone generates, these
+	// only store and replay, so they keep the normal request timeout.
+	r.Post("/v1/ai/local/analyses", h.prepareLocalAnalysis)
+	r.Post("/v1/ai/local/analyses/{id}/messages", h.prepareLocalFollowUp)
+	r.Put("/v1/ai/analyses/{id}/messages/{messageId}/result", h.submitLocalResult)
 }
 
 // MountStreaming registers the two Server-Sent Events routes. r must be
@@ -62,7 +69,14 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 
 // decodeJSON reads a bounded JSON body into dst.
 func decodeJSON(r *http.Request, dst any) error {
-	if err := json.NewDecoder(io.LimitReader(r.Body, maxJSONBody)).Decode(dst); err != nil {
+	return decodeJSONLimit(r, dst, maxJSONBody)
+}
+
+// maxResultBody fits a 200 KB answer plus JSON escaping.
+const maxResultBody = 512 << 10
+
+func decodeJSONLimit(r *http.Request, dst any, limit int64) error {
+	if err := json.NewDecoder(io.LimitReader(r.Body, limit)).Decode(dst); err != nil {
 		return apierror.ErrBadRequest
 	}
 	return nil
@@ -198,13 +212,14 @@ func (h *Handler) acceptConsent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		ConsentVersion int `json:"consent_version"`
+		ConsentVersion int    `json:"consent_version"`
+		Scope          string `json:"scope"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		apierror.Write(w, r, err)
 		return
 	}
-	if err := h.service.AcceptConsent(r.Context(), userID, req.ConsentVersion); err != nil {
+	if err := h.service.AcceptConsent(r.Context(), userID, req.Scope, req.ConsentVersion); err != nil {
 		apierror.Write(w, r, err)
 		return
 	}
@@ -216,7 +231,7 @@ func (h *Handler) revokeConsent(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if err := h.service.RevokeConsent(r.Context(), userID); err != nil {
+	if err := h.service.RevokeConsent(r.Context(), userID, r.URL.Query().Get("scope")); err != nil {
 		apierror.Write(w, r, err)
 		return
 	}
@@ -422,4 +437,91 @@ func (h *Handler) deleteAllAnalyses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) setMode(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userFrom(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		Mode       string  `json:"mode"`
+		LocalModel *string `json:"local_model"`
+		Version    int64   `json:"version"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	resp, err := h.service.SetMode(r.Context(), userID, req.Mode, req.LocalModel, req.Version)
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) prepareLocalAnalysis(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userFrom(w, r)
+	if !ok {
+		return
+	}
+	var req LocalRunRequest
+	if err := decodeJSON(r, &req); err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	resp, created, err := h.service.PrepareLocalAnalysis(r.Context(), userID, req)
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	writeJSON(w, status, resp)
+}
+
+func (h *Handler) prepareLocalFollowUp(w http.ResponseWriter, r *http.Request) {
+	userID, id, ok := h.analysisID(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		Content string `json:"content"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	resp, err := h.service.PrepareLocalFollowUp(r.Context(), userID, id, req.Content)
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, resp)
+}
+
+func (h *Handler) submitLocalResult(w http.ResponseWriter, r *http.Request) {
+	userID, id, ok := h.analysisID(w, r)
+	if !ok {
+		return
+	}
+	messageID, err := uuid.Parse(chi.URLParam(r, "messageId"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+	var req LocalResult
+	if err := decodeJSONLimit(r, &req, maxResultBody); err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	resp, err := h.service.SubmitLocalResult(r.Context(), userID, id, messageID, req)
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
 }

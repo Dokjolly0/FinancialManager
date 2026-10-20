@@ -74,8 +74,19 @@ type AnalysisPeriod struct {
 	To     string `json:"to,omitempty"`
 }
 
+// DeviceParams describe the phone's model for an on-device preview, so it
+// can say whether the prompt fits.
+type DeviceParams struct {
+	ContextTokens   int `json:"context_tokens"`
+	MaxOutputTokens int `json:"max_output_tokens"`
+}
+
 // AnalysisRequest is the body shared by preview and run.
 type AnalysisRequest struct {
+	// Target is "cloud" or "on_device"; empty uses the saved mode.
+	Target string        `json:"target,omitempty"`
+	Device *DeviceParams `json:"device,omitempty"`
+
 	Preset       string          `json:"preset"`
 	Period       AnalysisPeriod  `json:"period"`
 	Timezone     string          `json:"timezone,omitempty"`
@@ -427,7 +438,7 @@ type presetResponse struct {
 }
 
 func (s *Service) Presets(ctx context.Context, userID uuid.UUID) ([]presetResponse, error) {
-	if err := s.requireAvailable(); err != nil {
+	if err := s.requireFeature(); err != nil {
 		return nil, err
 	}
 	user, err := s.users.GetByID(ctx, userID)
@@ -479,6 +490,17 @@ type previewResponse struct {
 	PeriodFrom           *string            `json:"period_from"`
 	PeriodTo             string             `json:"period_to"`
 	Disclosure           disclosureResponse `json:"disclosure"`
+	Target               string             `json:"target"`
+	ContextFit           *contextFit        `json:"context_fit"`
+}
+
+// contextFit says whether an on-device prompt and its answer fit the
+// model's context.
+type contextFit struct {
+	ContextTokens        int  `json:"context_tokens"`
+	InputTokens          int  `json:"input_tokens"`
+	ReservedOutputTokens int  `json:"reserved_output_tokens"`
+	Fits                 bool `json:"fits"`
 }
 
 func estimateCost(settings Settings, inputTokens, maxOutputTokens int) *costEstimate {
@@ -495,7 +517,32 @@ func estimateCost(settings Settings, inputTokens, maxOutputTokens int) *costEsti
 	return &c
 }
 
+// previewTarget resolves the request's target against the saved mode.
+func (s *Service) previewTarget(ctx context.Context, userID uuid.UUID, target string) (string, error) {
+	if err := s.requireFeature(); err != nil {
+		return "", err
+	}
+	switch target {
+	case ModeCloud, ModeOnDevice:
+		return target, nil
+	case "":
+		settings, err := s.repo.GetSettings(ctx, userID)
+		if err != nil {
+			return "", err
+		}
+		return settings.Mode, nil
+	}
+	return "", apierror.NewValidation(map[string]string{"target": FieldInvalidValue})
+}
+
 func (s *Service) Preview(ctx context.Context, userID uuid.UUID, req AnalysisRequest) (previewResponse, error) {
+	target, err := s.previewTarget(ctx, userID, req.Target)
+	if err != nil {
+		return previewResponse{}, err
+	}
+	if target == ModeOnDevice {
+		return s.previewOnDevice(ctx, userID, req)
+	}
 	cred, settings, err := s.requireReady(ctx, userID)
 	if err != nil {
 		return previewResponse{}, err
@@ -505,13 +552,52 @@ func (s *Service) Preview(ctx context.Context, userID uuid.UUID, req AnalysisReq
 		return previewResponse{}, err
 	}
 
+	resp := s.previewFrom(bp)
+	resp.Target = ModeCloud
+	resp.Provider, resp.Model = string(cred.Provider), *cred.Model
+	resp.MaxOutputTokens = settings.MaxOutputTokens
+	resp.EstimatedCost = estimateCost(settings, bp.estimated, settings.MaxOutputTokens)
+	return resp, nil
+}
+
+// previewOnDevice previews a run on the phone: no provider, no cost, and
+// a context fit when the app says which context its model has.
+func (s *Service) previewOnDevice(ctx context.Context, userID uuid.UUID, req AnalysisRequest) (previewResponse, error) {
+	settings, err := s.requireLocalReady(ctx, userID)
+	if err != nil {
+		return previewResponse{}, err
+	}
+	if d := req.Device; d != nil && (d.ContextTokens < MinLocalContextTokens || d.ContextTokens > MaxLocalContextTokens ||
+		d.MaxOutputTokens < 0 || d.MaxOutputTokens >= d.ContextTokens) {
+		return previewResponse{}, apierror.NewValidation(map[string]string{"device": FieldOutOfRange})
+	}
+	bp, err := s.buildPrompt(ctx, userID, req)
+	if err != nil {
+		return previewResponse{}, err
+	}
+	resp := s.previewFrom(bp)
+	resp.Target = ModeOnDevice
+	resp.Provider = ProviderOnDevice
+	if settings.LocalModel != nil {
+		resp.Model = *settings.LocalModel
+	}
+	if d := req.Device; d != nil {
+		resp.MaxOutputTokens = d.MaxOutputTokens
+		resp.ContextFit = &contextFit{
+			ContextTokens: d.ContextTokens, InputTokens: bp.estimated, ReservedOutputTokens: d.MaxOutputTokens,
+			Fits: bp.estimated+d.MaxOutputTokens <= d.ContextTokens,
+		}
+	}
+	return resp, nil
+}
+
+// previewFrom fills the parts of a preview that don't depend on the target.
+func (s *Service) previewFrom(bp builtPrompt) previewResponse {
 	resp := previewResponse{
-		Provider: string(cred.Provider), Model: *cred.Model, PromptVersion: bp.prompt.Version,
-		SystemPrompt: bp.prompt.System, Instructions: bp.instructions, DataBlock: bp.prompt.DataBlock,
+		PromptVersion: bp.prompt.Version,
+		SystemPrompt:  bp.prompt.System, Instructions: bp.instructions, DataBlock: bp.prompt.DataBlock,
 		DataFingerprint: bp.prompt.Fingerprint, EstimatedInputTokens: bp.estimated,
-		MaxOutputTokens: settings.MaxOutputTokens,
-		EstimatedCost:   estimateCost(settings, bp.estimated, settings.MaxOutputTokens),
-		PeriodTo:        bp.period.To.In(bp.loc).Add(-time.Nanosecond).Format("2006-01-02"),
+		PeriodTo: bp.period.To.In(bp.loc).Add(-time.Nanosecond).Format("2006-01-02"),
 		Disclosure: disclosureResponse{
 			Sections: bp.sections, WalletCount: len(bp.walletIDs), TransactionCount: len(bp.snapshot.Transactions),
 			TransactionsOmitted: bp.snapshot.TransactionsOmitted, Anonymized: bp.options.AnonymizeTitles,
@@ -523,5 +609,5 @@ func (s *Service) Preview(ctx context.Context, userID uuid.UUID, req AnalysisReq
 		f := bp.period.From.In(bp.loc).Format("2006-01-02")
 		resp.PeriodFrom = &f
 	}
-	return resp, nil
+	return resp
 }

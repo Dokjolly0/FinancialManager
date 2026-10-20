@@ -48,6 +48,8 @@ type Analysis struct {
 	ClientRequestID   uuid.UUID
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+	// Runtime describes how an on-device analysis ran; nil for cloud.
+	Runtime *LocalRuntime
 }
 
 type Message struct {
@@ -65,19 +67,20 @@ type Message struct {
 	Truncated    bool
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	DurationMs   *int
 }
 
 const analysisColumns = `
 	id, user_id, title, preset, period_from, period_to, timezone, wallet_ids, options, provider, model,
 	prompt_version, system_prompt, data_fingerprint, status, error_code, input_tokens_total,
-	output_tokens_total, client_request_id, created_at, updated_at
+	output_tokens_total, client_request_id, created_at, updated_at, runtime
 `
 
 func scanAnalysis(row pgx.Row) (Analysis, error) {
 	var a Analysis
 	err := row.Scan(&a.ID, &a.UserID, &a.Title, &a.Preset, &a.PeriodFrom, &a.PeriodTo, &a.Timezone, &a.WalletIDs,
 		&a.Options, &a.Provider, &a.Model, &a.PromptVersion, &a.SystemPrompt, &a.DataFingerprint, &a.Status,
-		&a.ErrorCode, &a.InputTokensTotal, &a.OutputTokensTotal, &a.ClientRequestID, &a.CreatedAt, &a.UpdatedAt)
+		&a.ErrorCode, &a.InputTokensTotal, &a.OutputTokensTotal, &a.ClientRequestID, &a.CreatedAt, &a.UpdatedAt, &a.Runtime)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Analysis{}, ErrNotFound
 	}
@@ -89,13 +92,13 @@ func scanAnalysis(row pgx.Row) (Analysis, error) {
 
 const messageColumns = `
 	id, analysis_id, seq, role, kind, content, status, error_code, model, input_tokens, output_tokens,
-	truncated, created_at, updated_at
+	truncated, created_at, updated_at, duration_ms
 `
 
 func scanMessage(row pgx.Row) (Message, error) {
 	var m Message
 	err := row.Scan(&m.ID, &m.AnalysisID, &m.Seq, &m.Role, &m.Kind, &m.Content, &m.Status, &m.ErrorCode, &m.Model,
-		&m.InputTokens, &m.OutputTokens, &m.Truncated, &m.CreatedAt, &m.UpdatedAt)
+		&m.InputTokens, &m.OutputTokens, &m.Truncated, &m.CreatedAt, &m.UpdatedAt, &m.DurationMs)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Message{}, ErrNotFound
 	}
@@ -114,11 +117,11 @@ var ErrDuplicateRequest = errors.New("ai: duplicate client request id")
 func (r *Repository) CreateAnalysis(ctx context.Context, a Analysis, userMessage string) (Analysis, Message, error) {
 	created, err := scanAnalysis(r.db.QueryRow(ctx, `
 		INSERT INTO ai_analyses (user_id, title, preset, period_from, period_to, timezone, wallet_ids, options,
-			provider, model, prompt_version, system_prompt, data_fingerprint, status, client_request_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+			provider, model, prompt_version, system_prompt, data_fingerprint, status, client_request_id, runtime)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING `+analysisColumns,
 		a.UserID, a.Title, a.Preset, a.PeriodFrom, a.PeriodTo, a.Timezone, a.WalletIDs, a.Options,
-		a.Provider, a.Model, a.PromptVersion, a.SystemPrompt, a.DataFingerprint, StatusStreaming, a.ClientRequestID))
+		a.Provider, a.Model, a.PromptVersion, a.SystemPrompt, a.DataFingerprint, StatusStreaming, a.ClientRequestID, a.Runtime))
 	if isUniqueViolation(err) {
 		return Analysis{}, Message{}, ErrDuplicateRequest
 	}
@@ -172,6 +175,7 @@ type FinishInput struct {
 	InputTokens  int
 	OutputTokens int
 	Truncated    bool
+	DurationMs   *int // on-device only
 }
 
 // FinishMessage stores a stream's outcome on its message and adds its
@@ -183,8 +187,8 @@ func (r *Repository) FinishMessage(ctx context.Context, m Message, in FinishInpu
 	}
 	if _, err := r.db.Exec(ctx, `
 		UPDATE ai_messages SET content = $2, status = $3, error_code = $4, input_tokens = $5, output_tokens = $6,
-			truncated = $7, updated_at = now()
-		WHERE id = $1`, m.ID, in.Content, in.Status, in.ErrorCode, inTok, outTok, in.Truncated); err != nil {
+			truncated = $7, duration_ms = $8, updated_at = now()
+		WHERE id = $1`, m.ID, in.Content, in.Status, in.ErrorCode, inTok, outTok, in.Truncated, in.DurationMs); err != nil {
 		return fmt.Errorf("finish ai message: %w", err)
 	}
 	if m.Kind == KindReport {
@@ -209,6 +213,17 @@ func (r *Repository) FinishMessage(ctx context.Context, m Message, in FinishInpu
 
 func (r *Repository) GetAnalysis(ctx context.Context, userID, id uuid.UUID) (Analysis, error) {
 	return scanAnalysis(r.db.QueryRow(ctx, `SELECT `+analysisColumns+` FROM ai_analyses WHERE id = $1 AND user_id = $2`, id, userID))
+}
+
+// FindAnalysisByRequestID finds the analysis a client_request_id created.
+func (r *Repository) FindAnalysisByRequestID(ctx context.Context, userID, requestID uuid.UUID) (Analysis, error) {
+	return scanAnalysis(r.db.QueryRow(ctx, `SELECT `+analysisColumns+` FROM ai_analyses
+		WHERE user_id = $1 AND client_request_id = $2`, userID, requestID))
+}
+
+func (r *Repository) GetMessage(ctx context.Context, analysisID, messageID uuid.UUID) (Message, error) {
+	return scanMessage(r.db.QueryRow(ctx, `SELECT `+messageColumns+` FROM ai_messages
+		WHERE id = $1 AND analysis_id = $2`, messageID, analysisID))
 }
 
 func (r *Repository) ListMessages(ctx context.Context, analysisID uuid.UUID) ([]Message, error) {

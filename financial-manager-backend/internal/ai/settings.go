@@ -17,6 +17,20 @@ import (
 // user accepts the new version.
 const ConsentVersion = 1
 
+// LocalConsentVersion is the version of the on-device disclosure (plan.md
+// section 33): no third party is involved, so it is separate and lighter
+// than the cloud one.
+const LocalConsentVersion = 1
+
+// Modes: which path the app offers for new analyses.
+const (
+	ModeCloud    = "cloud"
+	ModeOnDevice = "on_device"
+)
+
+// ProviderOnDevice marks analyses whose text was written on the phone.
+const ProviderOnDevice = "on_device"
+
 // Limits shared by validation and the database CHECKs (migrations 0031 and
 // 0032).
 const (
@@ -59,10 +73,21 @@ type Settings struct {
 	DefaultIncludeTransactions bool
 	DefaultAnonymizeTitles     bool
 	Version                    int64
+
+	Mode                   string
+	LocalModel             *string
+	LocalConsentVersion    *int
+	LocalConsentAcceptedAt *time.Time
 }
 
 func defaultSettings(userID uuid.UUID) Settings {
-	return Settings{UserID: userID, MaxOutputTokens: DefaultMaxOutputTokens}
+	return Settings{UserID: userID, MaxOutputTokens: DefaultMaxOutputTokens, Mode: ModeCloud}
+}
+
+// HasCurrentLocalConsent reports whether the user accepted the current
+// on-device disclosure.
+func (s Settings) HasCurrentLocalConsent() bool {
+	return s.LocalConsentVersion != nil && *s.LocalConsentVersion >= LocalConsentVersion
 }
 
 // HasCurrentConsent reports whether the user accepted the current

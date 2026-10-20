@@ -194,11 +194,16 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 	if err != nil {
 		return Turn{}, err
 	}
+	if analysis.Provider == ProviderOnDevice {
+		// Continuing on a cloud provider would send the data to a third
+		// party the user chose not to involve.
+		return Turn{}, ErrAnalysisOnDevice
+	}
 	messages, err := s.repo.ListMessages(ctx, analysisID)
 	if err != nil {
 		return Turn{}, err
 	}
-	history, questions, err := s.replayHistory(messages)
+	history, questions, err := s.replayHistory(messages, analysis.Provider)
 	if err != nil {
 		return Turn{}, err
 	}
@@ -240,14 +245,14 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 // replayHistory rebuilds the conversation from stored messages, keeping
 // user/assistant alternation (Anthropic requires it): a question whose
 // answer failed or is empty is left out together with that answer.
-func (s *Service) replayHistory(messages []Message) ([]provider.Message, int, error) {
+func (s *Service) replayHistory(messages []Message, analysisProvider string) ([]provider.Message, int, error) {
 	now := s.clock.Now()
 	var history []provider.Message
 	questions := 0
 	var reportOK bool
 	for i := 0; i < len(messages); i++ {
 		m := messages[i]
-		status := s.effectiveStatus(m.Status, m.UpdatedAt, now)
+		status := s.effectiveStatus(m.Status, m.UpdatedAt, now, analysisProvider)
 		switch m.Kind {
 		case KindContext:
 			history = append(history, provider.Message{Role: provider.RoleUser, Content: m.Content})
@@ -266,7 +271,7 @@ func (s *Service) replayHistory(messages []Message) ([]provider.Message, int, er
 				continue
 			}
 			answer := messages[i+1]
-			answerStatus := s.effectiveStatus(answer.Status, answer.UpdatedAt, now)
+			answerStatus := s.effectiveStatus(answer.Status, answer.UpdatedAt, now, analysisProvider)
 			if answerStatus == StatusStreaming {
 				return nil, 0, ErrStreamInProgress
 			}
@@ -286,8 +291,14 @@ func (s *Service) replayHistory(messages []Message) ([]provider.Message, int, er
 
 // effectiveStatus reports a STREAMING row whose stream cannot still be
 // running (the process died mid-stream) as FAILED.
-func (s *Service) effectiveStatus(status string, updatedAt, now time.Time) string {
-	if status == StatusStreaming && now.Sub(updatedAt) > s.limits.StreamMaxDuration+staleStreamGrace {
+// A phone may take much longer than a cloud stream, so on-device rows get
+// their own window (AI_LOCAL_MAX_DURATION).
+func (s *Service) effectiveStatus(status string, updatedAt, now time.Time, analysisProvider string) string {
+	window := s.limits.StreamMaxDuration
+	if analysisProvider == ProviderOnDevice {
+		window = s.limits.LocalMaxDuration
+	}
+	if status == StatusStreaming && now.Sub(updatedAt) > window+staleStreamGrace {
 		return StatusFailed
 	}
 	return status
@@ -385,8 +396,10 @@ type analysisSummary struct {
 	InputTokens  int      `json:"input_tokens"`
 	OutputTokens int      `json:"output_tokens"`
 	Cost         *float64 `json:"cost"`
-	CreatedAt    string   `json:"created_at"`
-	UpdatedAt    string   `json:"updated_at"`
+	// Runtime is set for on-device analyses: engine, model, quantization.
+	Runtime   *LocalRuntime `json:"runtime"`
+	CreatedAt string        `json:"created_at"`
+	UpdatedAt string        `json:"updated_at"`
 }
 
 type messageResponse struct {
@@ -402,6 +415,7 @@ type messageResponse struct {
 	OutputTokens *int    `json:"output_tokens"`
 	Truncated    bool    `json:"truncated"`
 	CreatedAt    string  `json:"created_at"`
+	DurationMs   *int    `json:"duration_ms"`
 }
 
 type analysisDetail struct {
@@ -416,8 +430,8 @@ type analysisDetail struct {
 	Messages        []messageResponse `json:"messages"`
 }
 
-func actualCost(settings Settings, in, out int) *float64 {
-	if settings.InputPricePerMTok == nil && settings.OutputPricePerMTok == nil {
+func actualCost(settings Settings, analysisProvider string, in, out int) *float64 {
+	if analysisProvider == ProviderOnDevice || (settings.InputPricePerMTok == nil && settings.OutputPricePerMTok == nil) {
 		return nil
 	}
 	var c float64
@@ -434,7 +448,8 @@ func (s *Service) toSummary(a Analysis, settings Settings) analysisSummary {
 	sum := analysisSummary{
 		ID: a.ID.String(), Title: a.Title, Preset: a.Preset, Status: a.Status, ErrorCode: a.ErrorCode,
 		Provider: a.Provider, Model: a.Model, InputTokens: a.InputTokensTotal, OutputTokens: a.OutputTokensTotal,
-		Cost:      actualCost(settings, a.InputTokensTotal, a.OutputTokensTotal),
+		Cost:      actualCost(settings, a.Provider, a.InputTokensTotal, a.OutputTokensTotal),
+		Runtime:   a.Runtime,
 		CreatedAt: a.CreatedAt.UTC().Format(timeLayout), UpdatedAt: a.UpdatedAt.UTC().Format(timeLayout),
 	}
 	loc, err := time.LoadLocation(a.Timezone)
@@ -446,7 +461,7 @@ func (s *Service) toSummary(a Analysis, settings Settings) analysisSummary {
 		sum.PeriodFrom = &f
 	}
 	sum.PeriodTo = a.PeriodTo.In(loc).Add(-time.Nanosecond).Format("2006-01-02")
-	if effective := s.effectiveStatus(a.Status, a.UpdatedAt, s.clock.Now()); effective != a.Status {
+	if effective := s.effectiveStatus(a.Status, a.UpdatedAt, s.clock.Now(), a.Provider); effective != a.Status {
 		sum.Status = effective
 		code := errorCodeInterrupted
 		sum.ErrorCode = &code
@@ -487,7 +502,7 @@ func decodeCursor(raw string) (*AnalysisCursor, error) {
 }
 
 func (s *Service) ListAnalyses(ctx context.Context, userID uuid.UUID, cursor string, limit int) (historyPage, error) {
-	if err := s.requireAvailable(); err != nil {
+	if err := s.requireFeature(); err != nil {
 		return historyPage{}, err
 	}
 	after, err := decodeCursor(cursor)
@@ -519,7 +534,7 @@ func (s *Service) ListAnalyses(ctx context.Context, userID uuid.UUID, cursor str
 }
 
 func (s *Service) GetAnalysis(ctx context.Context, userID, id uuid.UUID) (analysisDetail, error) {
-	if err := s.requireAvailable(); err != nil {
+	if err := s.requireFeature(); err != nil {
 		return analysisDetail{}, err
 	}
 	a, err := s.repo.GetAnalysis(ctx, userID, id)
@@ -551,16 +566,16 @@ func (s *Service) GetAnalysis(ctx context.Context, userID, id uuid.UUID) (analys
 		mr := messageResponse{
 			ID: m.ID.String(), Seq: m.Seq, Role: m.Role, Kind: m.Kind, Content: m.Content, Status: m.Status,
 			ErrorCode: m.ErrorCode, Model: m.Model, InputTokens: m.InputTokens, OutputTokens: m.OutputTokens,
-			Truncated: m.Truncated, CreatedAt: m.CreatedAt.UTC().Format(timeLayout),
+			Truncated: m.Truncated, CreatedAt: m.CreatedAt.UTC().Format(timeLayout), DurationMs: m.DurationMs,
 		}
-		if effective := s.effectiveStatus(m.Status, m.UpdatedAt, now); effective != m.Status {
+		if effective := s.effectiveStatus(m.Status, m.UpdatedAt, now, a.Provider); effective != m.Status {
 			mr.Status = effective
 			code := errorCodeInterrupted
 			mr.ErrorCode = &code
 		}
 		detail.Messages = append(detail.Messages, mr)
 	}
-	if _, questions, err := s.replayHistory(messages); err == nil {
+	if _, questions, err := s.replayHistory(messages, a.Provider); err == nil {
 		detail.FollowUpsLeft = max(MaxFollowUps-questions, 0)
 		detail.CanAskFollowUps = detail.FollowUpsLeft > 0
 	}
@@ -568,7 +583,7 @@ func (s *Service) GetAnalysis(ctx context.Context, userID, id uuid.UUID) (analys
 }
 
 func (s *Service) RenameAnalysis(ctx context.Context, userID, id uuid.UUID, title string) (analysisDetail, error) {
-	if err := s.requireAvailable(); err != nil {
+	if err := s.requireFeature(); err != nil {
 		return analysisDetail{}, err
 	}
 	title = strings.TrimSpace(title)
@@ -587,7 +602,7 @@ func (s *Service) RenameAnalysis(ctx context.Context, userID, id uuid.UUID, titl
 }
 
 func (s *Service) DeleteAnalysis(ctx context.Context, userID, id uuid.UUID) error {
-	if err := s.requireAvailable(); err != nil {
+	if err := s.requireFeature(); err != nil {
 		return err
 	}
 	if err := s.repo.DeleteAnalysis(ctx, userID, id); errors.Is(err, ErrNotFound) {
@@ -599,7 +614,7 @@ func (s *Service) DeleteAnalysis(ctx context.Context, userID, id uuid.UUID) erro
 }
 
 func (s *Service) DeleteAllAnalyses(ctx context.Context, userID uuid.UUID) error {
-	if err := s.requireAvailable(); err != nil {
+	if err := s.requireFeature(); err != nil {
 		return err
 	}
 	return s.repo.DeleteAllAnalyses(ctx, userID)

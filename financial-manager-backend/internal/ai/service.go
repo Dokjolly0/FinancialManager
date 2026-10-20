@@ -41,6 +41,11 @@ type Limits struct {
 	MaxPromptTokens   int
 	RunsPerHour       int
 	StreamMaxDuration time.Duration
+
+	// On-device analysis (plan.md section 33).
+	OnDeviceEnabled  bool
+	LocalRunsPerHour int
+	LocalMaxDuration time.Duration
 }
 
 type Deps struct {
@@ -100,6 +105,12 @@ func NewService(d Deps) *Service {
 	if limits.StreamMaxDuration == 0 {
 		limits.StreamMaxDuration = 5 * time.Minute
 	}
+	if limits.LocalRunsPerHour == 0 {
+		limits.LocalRunsPerHour = 30
+	}
+	if limits.LocalMaxDuration == 0 {
+		limits.LocalMaxDuration = 30 * time.Minute
+	}
 	var locker StreamLocker = newMemoryLocker()
 	if d.Locker != nil {
 		locker = d.Locker
@@ -115,8 +126,23 @@ func NewService(d Deps) *Service {
 // Available reports whether the server can run the feature at all.
 func (s *Service) Available() bool { return s.box != nil }
 
+// requireAvailable guards what needs the cloud path: provider keys,
+// probes, cloud runs.
 func (s *Service) requireAvailable() error {
 	if !s.Available() {
+		return ErrDisabled
+	}
+	return nil
+}
+
+// OnDeviceAvailable reports whether analyses can run on the phone. They
+// need no encryption key: no provider key is stored.
+func (s *Service) OnDeviceAvailable() bool { return s.limits.OnDeviceEnabled }
+
+// requireFeature guards what both paths share: history, personal context,
+// presets, consent and the preview.
+func (s *Service) requireFeature() error {
+	if !s.Available() && !s.OnDeviceAvailable() {
 		return ErrDisabled
 	}
 	return nil
@@ -173,6 +199,17 @@ type consentResponse struct {
 	CurrentVersion  int     `json:"current_version"`
 	AcceptedAt      *string `json:"accepted_at"`
 	Required        bool    `json:"required"`
+	// OnDevice is the separate on-device disclosure.
+	OnDevice *consentResponse `json:"on_device,omitempty"`
+}
+
+func newConsentResponse(version *int, at *time.Time, current int) consentResponse {
+	c := consentResponse{AcceptedVersion: version, CurrentVersion: current, Required: version == nil || *version < current}
+	if at != nil {
+		t := at.UTC().Format(timeLayout)
+		c.AcceptedAt = &t
+	}
+	return c
 }
 
 // setupResponse drives the app's setup checklist.
@@ -186,7 +223,11 @@ type setupResponse struct {
 }
 
 type settingsResponse struct {
+	// Available is the cloud path; OnDeviceAvailable the phone path.
 	Available          bool                 `json:"available"`
+	OnDeviceAvailable  bool                 `json:"on_device_available"`
+	Mode               string               `json:"mode"`
+	LocalModel         *string              `json:"local_model"`
 	Active             *credentialResponse  `json:"active"`
 	Credentials        []credentialResponse `json:"credentials"`
 	MaxOutputTokens    int                  `json:"max_output_tokens"`
@@ -201,8 +242,8 @@ type settingsResponse struct {
 // --- Settings ----------------------------------------------------------------
 
 func (s *Service) GetSettings(ctx context.Context, userID uuid.UUID) (settingsResponse, error) {
-	if !s.Available() {
-		return settingsResponse{Available: false, Credentials: []credentialResponse{},
+	if !s.Available() && !s.OnDeviceAvailable() {
+		return settingsResponse{Available: false, Credentials: []credentialResponse{}, Mode: ModeCloud,
 			MaxOutputTokens: DefaultMaxOutputTokens, Consent: consentResponse{CurrentVersion: ConsentVersion, Required: true}}, nil
 	}
 	settings, err := s.repo.GetSettings(ctx, userID)
@@ -215,7 +256,10 @@ func (s *Service) GetSettings(ctx context.Context, userID uuid.UUID) (settingsRe
 	}
 
 	resp := settingsResponse{
-		Available:          true,
+		Available:          s.Available(),
+		OnDeviceAvailable:  s.OnDeviceAvailable(),
+		Mode:               settings.Mode,
+		LocalModel:         settings.LocalModel,
 		Credentials:        make([]credentialResponse, 0, len(creds)),
 		MaxOutputTokens:    settings.MaxOutputTokens,
 		InputPricePerMTok:  settings.InputPricePerMTok,
@@ -224,16 +268,11 @@ func (s *Service) GetSettings(ctx context.Context, userID uuid.UUID) (settingsRe
 			IncludeTransactions: settings.DefaultIncludeTransactions,
 			AnonymizeTitles:     settings.DefaultAnonymizeTitles,
 		},
-		Consent: consentResponse{
-			AcceptedVersion: settings.ConsentVersion, CurrentVersion: ConsentVersion,
-			Required: !settings.HasCurrentConsent(),
-		},
+		Consent: newConsentResponse(settings.ConsentVersion, settings.ConsentAcceptedAt, ConsentVersion),
 		Version: settings.Version,
 	}
-	if settings.ConsentAcceptedAt != nil {
-		t := settings.ConsentAcceptedAt.UTC().Format(timeLayout)
-		resp.Consent.AcceptedAt = &t
-	}
+	local := newConsentResponse(settings.LocalConsentVersion, settings.LocalConsentAcceptedAt, LocalConsentVersion)
+	resp.Consent.OnDevice = &local
 	for _, c := range creds {
 		cr := toCredentialResponse(c)
 		resp.Credentials = append(resp.Credentials, cr)
@@ -399,21 +438,78 @@ func (s *Service) DeleteCredential(ctx context.Context, userID, id uuid.UUID) er
 
 // --- Consent -----------------------------------------------------------------
 
-func (s *Service) AcceptConsent(ctx context.Context, userID uuid.UUID, version int) error {
-	if err := s.requireAvailable(); err != nil {
-		return err
+// requireScope checks that the consent scope exists and its path is on.
+func (s *Service) requireScope(scope string) error {
+	switch scope {
+	case ModeCloud:
+		return s.requireAvailable()
+	case ModeOnDevice:
+		if !s.OnDeviceAvailable() {
+			return ErrOnDeviceDisabled
+		}
+		return nil
 	}
-	if version != ConsentVersion {
-		return apierror.NewValidation(map[string]string{"consent_version": FieldConsentVersionInvalid})
-	}
-	return s.repo.SetConsent(ctx, userID, &version)
+	return apierror.NewValidation(map[string]string{"scope": FieldInvalidValue})
 }
 
-func (s *Service) RevokeConsent(ctx context.Context, userID uuid.UUID) error {
-	if err := s.requireAvailable(); err != nil {
+// AcceptConsent records the disclosure of one scope: "cloud" (default) or
+// "on_device".
+func (s *Service) AcceptConsent(ctx context.Context, userID uuid.UUID, scope string, version int) error {
+	if scope == "" {
+		scope = ModeCloud
+	}
+	if err := s.requireScope(scope); err != nil {
 		return err
 	}
-	return s.repo.SetConsent(ctx, userID, nil)
+	current := ConsentVersion
+	if scope == ModeOnDevice {
+		current = LocalConsentVersion
+	}
+	if version != current {
+		return apierror.NewValidation(map[string]string{"consent_version": FieldConsentVersionInvalid})
+	}
+	return s.repo.SetConsent(ctx, userID, scope, &version)
+}
+
+func (s *Service) RevokeConsent(ctx context.Context, userID uuid.UUID, scope string) error {
+	if scope == "" {
+		scope = ModeCloud
+	}
+	if err := s.requireScope(scope); err != nil {
+		return err
+	}
+	return s.repo.SetConsent(ctx, userID, scope, nil)
+}
+
+// SetMode switches between cloud and on-device analyses. localModel is
+// the label of the model chosen on the phone (informational: what is
+// installed is only known to the device).
+func (s *Service) SetMode(ctx context.Context, userID uuid.UUID, mode string, localModel *string, expectedVersion int64) (settingsResponse, error) {
+	if err := s.requireFeature(); err != nil {
+		return settingsResponse{}, err
+	}
+	switch mode {
+	case ModeCloud:
+		if !s.Available() {
+			return settingsResponse{}, ErrDisabled
+		}
+	case ModeOnDevice:
+		if !s.OnDeviceAvailable() {
+			return settingsResponse{}, ErrOnDeviceDisabled
+		}
+	default:
+		return settingsResponse{}, apierror.NewValidation(map[string]string{"mode": FieldInvalidValue})
+	}
+	model := normalizeText(localModel)
+	if model != nil && utf8.RuneCountInString(*model) > MaxModelLength {
+		return settingsResponse{}, apierror.NewValidation(map[string]string{"local_model": FieldTextTooLong})
+	}
+	if _, err := s.repo.SaveMode(ctx, userID, mode, model, expectedVersion); errors.Is(err, ErrVersionMismatch) {
+		return settingsResponse{}, apierror.ErrConflict
+	} else if err != nil {
+		return settingsResponse{}, err
+	}
+	return s.GetSettings(ctx, userID)
 }
 
 // --- Personal context ----------------------------------------------------------
@@ -442,7 +538,7 @@ func toUserContextResponse(c UserContext) userContextResponse {
 }
 
 func (s *Service) GetUserContext(ctx context.Context, userID uuid.UUID) (userContextResponse, error) {
-	if err := s.requireAvailable(); err != nil {
+	if err := s.requireFeature(); err != nil {
 		return userContextResponse{}, err
 	}
 	c, err := s.repo.GetUserContext(ctx, userID)
@@ -465,7 +561,7 @@ type SaveUserContextInput struct {
 }
 
 func (s *Service) SaveUserContext(ctx context.Context, in SaveUserContextInput) (userContextResponse, error) {
-	if err := s.requireAvailable(); err != nil {
+	if err := s.requireFeature(); err != nil {
 		return userContextResponse{}, err
 	}
 	fieldErrors := map[string]string{}

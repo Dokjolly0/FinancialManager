@@ -89,6 +89,12 @@ type Config struct {
 	AIStreamIdleTimeout   time.Duration
 	AIMaxPromptTokens     int
 	AIRunsPerHour         int
+
+	// On-device analysis (plan.md section 33): the model runs on the
+	// phone, so no encryption key or provider is needed on the server.
+	AIOnDeviceEnabled  bool
+	AILocalRunsPerHour int
+	AILocalMaxDuration time.Duration
 }
 
 const (
@@ -213,6 +219,9 @@ func Load() (Config, error) {
 		AIStreamIdleTimeout:        optionalDuration("AI_STREAM_IDLE_TIMEOUT", 90*time.Second),
 		AIMaxPromptTokens:          int(optionalInt64("AI_MAX_PROMPT_TOKENS", 60000)),
 		AIRunsPerHour:              int(optionalInt64("AI_RUNS_PER_HOUR", 20)),
+		AIOnDeviceEnabled:          optionalBool("AI_ON_DEVICE_ENABLED", true),
+		AILocalRunsPerHour:         int(optionalInt64("AI_LOCAL_RUNS_PER_HOUR", 30)),
+		AILocalMaxDuration:         optionalDuration("AI_LOCAL_MAX_DURATION", 30*time.Minute),
 	}
 
 	// Backup settings are parsed with errs swapped out, so their parse
@@ -312,6 +321,12 @@ func Load() (Config, error) {
 	}
 	if cfg.AIRunsPerHour < 1 {
 		errs = append(errs, "AI_RUNS_PER_HOUR must be at least 1")
+	}
+	if cfg.AILocalRunsPerHour < 1 {
+		errs = append(errs, "AI_LOCAL_RUNS_PER_HOUR must be at least 1")
+	}
+	if cfg.AILocalMaxDuration < time.Minute {
+		errs = append(errs, "AI_LOCAL_MAX_DURATION must be at least 1m")
 	}
 
 	if len(errs) > 0 {

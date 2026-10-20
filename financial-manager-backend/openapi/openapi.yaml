@@ -332,7 +332,8 @@ paths:
               properties:
                 consent_version:
                   type: integer
-                  description: Must equal consent.current_version from GET /ai/settings.
+                  description: Must equal the scope's current_version from GET /ai/settings.
+                scope: { type: string, enum: [cloud, on_device], default: cloud }
       responses:
         "204":
           description: Accepted.
@@ -345,6 +346,10 @@ paths:
       summary: Revoke consent. Analyses are refused until it is accepted again.
       operationId: revokeAiConsent
       tags: [ai]
+      parameters:
+        - name: scope
+          in: query
+          schema: { type: string, enum: [cloud, on_device], default: cloud }
       responses:
         "204":
           description: Revoked.
@@ -644,6 +649,175 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /ai/mode:
+    put:
+      summary: Choose whether new analyses run on a cloud provider or on the phone.
+      operationId: setAiMode
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mode, version]
+              properties:
+                mode: { type: string, enum: [cloud, on_device] }
+                local_model: { type: [string, "null"], maxLength: 200, description: "Label of the model chosen on the phone (informational)." }
+                version: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: The settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiSettings" }
+        "409":
+          description: version is stale (CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: AI_DISABLED (cloud) or AI_ON_DEVICE_DISABLED for the chosen mode.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/local/analyses:
+    post:
+      summary: Start an on-device analysis (plan.md section 33).
+      description: >
+        Same body as a cloud run plus the runtime the phone will use. Stores
+        the analysis (provider on_device) and returns what the phone must
+        feed its model. Needs the on-device consent but no cloud provider or
+        encryption key. Retrying with the same client_request_id while the
+        report is pending returns the same turn (200) so a phone can resume.
+      operationId: prepareLocalAiAnalysis
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: "#/components/schemas/AiAnalysisRequest" }
+                - type: object
+                  required: [data_fingerprint, client_request_id, runtime]
+                  properties:
+                    data_fingerprint: { type: string }
+                    client_request_id: { type: string, format: uuid }
+                    runtime: { $ref: "#/components/schemas/AiLocalRuntime" }
+      responses:
+        "201":
+          description: The turn to generate.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiLocalTurn" }
+        "200":
+          description: The same pending turn, for a retried request.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiLocalTurn" }
+        "403":
+          description: AI_LOCAL_CONSENT_REQUIRED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: AI_DATA_CHANGED or AI_ANALYSIS_EXISTS.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: Validation, AI_LOCAL_CONTEXT_TOO_LONG (prompt plus max output exceed the context) or AI_PROMPT_TOO_LARGE.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/local/analyses/{id}/messages:
+    post:
+      summary: Ask a follow-up question on an on-device analysis; returns the stored conversation to replay on the phone.
+      operationId: prepareLocalAiFollowUp
+      tags: [ai]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, maxLength: 2000 }
+      responses:
+        "201":
+          description: The turn to generate.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiLocalTurn" }
+        "409":
+          description: AI_ANALYSIS_NOT_ON_DEVICE, AI_ANALYSIS_NOT_READY, AI_FOLLOWUP_LIMIT or AI_STREAM_IN_PROGRESS.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/analyses/{id}/messages/{messageId}/result:
+    put:
+      summary: Save what the phone generated for one report or answer.
+      description: >
+        Idempotent: the same result sent again is accepted (the app retries
+        from an outbox); a different one for a saved message is
+        AI_MESSAGE_FINISHED. Body up to 512 KB, content up to 200 KB.
+        error_code outside the AI_LOCAL_* list is stored as
+        AI_LOCAL_ENGINE_ERROR.
+      operationId: submitLocalAiResult
+      tags: [ai]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, status]
+              properties:
+                content: { type: string }
+                status: { type: string, enum: [COMPLETED, FAILED, CANCELLED] }
+                error_code:
+                  type: [string, "null"]
+                  enum: [AI_LOCAL_ENGINE_ERROR, AI_LOCAL_OUT_OF_MEMORY, AI_LOCAL_CONTEXT_TOO_LONG, AI_LOCAL_TIMEOUT, AI_LOCAL_MODEL_MISSING, AI_LOCAL_INTERRUPTED, null]
+                input_tokens: { type: integer, minimum: 0 }
+                output_tokens: { type: integer, minimum: 0 }
+                truncated: { type: boolean }
+                duration_ms: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: The saved message.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiMessage" }
+        "409":
+          description: AI_MESSAGE_FINISHED or AI_ANALYSIS_NOT_ON_DEVICE.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: Validation or AI_ANSWER_TOO_LONG.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /health/live:
     get:
       summary: Liveness probe. Never depends on external services.
@@ -819,7 +993,10 @@ components:
     AiSettings:
       type: object
       properties:
-        available: { type: boolean }
+        available: { type: boolean, description: "The cloud path (AI_KEY_ENCRYPTION_KEY set)." }
+        on_device_available: { type: boolean }
+        mode: { type: string, enum: [cloud, on_device] }
+        local_model: { type: [string, "null"] }
         active:
           oneOf:
             - { $ref: "#/components/schemas/AiCredential" }
@@ -842,6 +1019,14 @@ components:
             current_version: { type: integer }
             accepted_at: { type: [string, "null"], format: date-time }
             required: { type: boolean }
+            on_device:
+              type: object
+              description: The separate on-device disclosure.
+              properties:
+                accepted_version: { type: [integer, "null"] }
+                current_version: { type: integer }
+                accepted_at: { type: [string, "null"], format: date-time }
+                required: { type: boolean }
         setup:
           type: object
           description: Drives the app's setup checklist.
@@ -920,6 +1105,16 @@ components:
       required: [preset]
       properties:
         preset: { type: string }
+        target:
+          type: string
+          enum: [cloud, on_device]
+          description: Defaults to the saved mode. on_device needs the on-device consent instead of a cloud provider.
+        device:
+          type: object
+          description: On-device preview only; adds context_fit.
+          properties:
+            context_tokens: { type: integer, minimum: 512, maximum: 131072 }
+            max_output_tokens: { type: integer, minimum: 0 }
         period:
           type: object
           properties:
@@ -997,6 +1192,14 @@ components:
             max_output_cost: { type: number }
         period_from: { type: [string, "null"], format: date }
         period_to: { type: string, format: date }
+        target: { type: string, enum: [cloud, on_device] }
+        context_fit:
+          type: [object, "null"]
+          properties:
+            context_tokens: { type: integer }
+            input_tokens: { type: integer }
+            reserved_output_tokens: { type: integer }
+            fits: { type: boolean }
         disclosure:
           type: object
           properties:
@@ -1033,11 +1236,17 @@ components:
         period_to: { type: string, format: date }
         status: { $ref: "#/components/schemas/AiStatus" }
         error_code: { type: [string, "null"] }
-        provider: { $ref: "#/components/schemas/AiProvider" }
+        provider:
+          type: string
+          enum: [anthropic, openai, gemini, openai_compatible, on_device]
         model: { type: string }
         input_tokens: { type: integer }
         output_tokens: { type: integer }
-        cost: { type: [number, "null"], description: "From the user's prices, when set." }
+        cost: { type: [number, "null"], description: "From the user's prices, when set; null on device." }
+        runtime:
+          oneOf:
+            - { $ref: "#/components/schemas/AiLocalRuntime" }
+            - { type: "null" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
@@ -1058,6 +1267,7 @@ components:
         input_tokens: { type: [integer, "null"] }
         output_tokens: { type: [integer, "null"] }
         truncated: { type: boolean, description: "Stopped at the output token limit." }
+        duration_ms: { type: [integer, "null"], description: "On-device only." }
         created_at: { type: string, format: date-time }
 
     AiAnalysisDetail:
@@ -1077,6 +1287,37 @@ components:
             messages:
               type: array
               items: { $ref: "#/components/schemas/AiMessage" }
+
+    AiLocalRuntime:
+      type: object
+      required: [engine, model_id, display_name, quantization, backend, context_tokens, max_output_tokens]
+      properties:
+        engine: { type: string, enum: [litert_lm, llama_cpp] }
+        model_id: { type: string, maxLength: 200 }
+        display_name: { type: string, maxLength: 100 }
+        quantization: { type: string, maxLength: 32, description: "e.g. int4, Q4_K_M." }
+        backend: { type: string, enum: [cpu, gpu, npu] }
+        context_tokens: { type: integer, minimum: 512, maximum: 131072 }
+        max_output_tokens: { type: integer, minimum: 64, description: "Below context_tokens." }
+        app_version: { type: string, maxLength: 32 }
+
+    AiLocalTurn:
+      type: object
+      properties:
+        analysis_id: { type: string, format: uuid }
+        question_id: { type: string, format: uuid, description: "Follow-ups only." }
+        message_id: { type: string, format: uuid, description: "The assistant message to submit the result for." }
+        kind: { type: string, enum: [REPORT, ANSWER] }
+        system_prompt: { type: string }
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              role: { type: string, enum: [user, assistant] }
+              content: { type: string }
+        max_output_tokens: { type: integer }
+        deadline_at: { type: string, format: date-time, description: "After this the analysis shows as interrupted (AI_LOCAL_MAX_DURATION)." }
 
     Error:
       type: object

@@ -58,7 +58,18 @@ type harnessOptions struct {
 	// requestTimeout, when set, wraps the JSON routes in the platform
 	// timeout as cmd/api does, leaving the streaming routes outside it.
 	requestTimeout time.Duration
+	// onDevice enables on-device analyses.
+	onDevice bool
+	// clockOffset, when set, makes the service clock the real time plus
+	// *clockOffset (database timestamps are real time), so tests can move
+	// time forward.
+	clockOffset *time.Duration
 }
+
+// offsetClock is the real time shifted by a mutable offset.
+type offsetClock struct{ offset *time.Duration }
+
+func (c offsetClock) Now() time.Time { return time.Now().Add(*c.offset) }
 
 func newHarness(t *testing.T, opts ...harnessOptions) *harness {
 	t.Helper()
@@ -102,12 +113,16 @@ func newHarness(t *testing.T, opts ...harnessOptions) *harness {
 		_, _ = rand.Read(key)
 		h.box, _ = secretbox.New(key)
 	}
+	var serviceClock clock.Clock = clock.Frozen{At: h.now}
+	if opt.clockOffset != nil {
+		serviceClock = offsetClock{offset: opt.clockOffset}
+	}
 	h.service = ai.NewService(ai.Deps{
 		DB: dbPool, Repo: h.repo, Wallets: walletsRepo, Users: usersRepo, Reports: reports.NewRepository(dbPool),
 		Categories: categories.NewRepository(dbPool),
-		Limits:     ai.Limits{MaxPromptTokens: opt.maxPromptTokens},
+		Limits:     ai.Limits{MaxPromptTokens: opt.maxPromptTokens, OnDeviceEnabled: opt.onDevice},
 		Box:        h.box, Providers: h.factory,
-		Policy: provider.BaseURLPolicy{}, Clock: clock.Frozen{At: h.now},
+		Policy: provider.BaseURLPolicy{}, Clock: serviceClock,
 	})
 
 	router := chi.NewRouter()

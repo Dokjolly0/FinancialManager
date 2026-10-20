@@ -1,0 +1,9 @@
+ALTER TABLE ai_messages DROP COLUMN duration_ms;
+ALTER TABLE ai_analyses DROP CONSTRAINT ai_analyses_provider_check;
+ALTER TABLE ai_analyses DROP COLUMN runtime;
+ALTER TABLE ai_settings DROP CONSTRAINT ai_settings_local_consent_check;
+ALTER TABLE ai_settings DROP CONSTRAINT ai_settings_mode_check;
+ALTER TABLE ai_settings DROP COLUMN local_consent_accepted_at;
+ALTER TABLE ai_settings DROP COLUMN local_consent_version;
+ALTER TABLE ai_settings DROP COLUMN local_model;
+ALTER TABLE ai_settings DROP COLUMN mode;

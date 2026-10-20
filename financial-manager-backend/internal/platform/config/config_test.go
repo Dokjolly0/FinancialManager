@@ -20,6 +20,7 @@ func clearEnv(t *testing.T) {
 		"HTTP_REQUEST_TIMEOUT", "AI_KEY_ENCRYPTION_KEY", "AI_KEY_ENCRYPTION_KEY_PREVIOUS",
 		"AI_ALLOW_PRIVATE_BASE_URLS", "AI_ALLOWED_BASE_URL_HOSTS", "AI_STREAM_MAX_DURATION",
 		"AI_STREAM_IDLE_TIMEOUT", "AI_MAX_PROMPT_TOKENS", "AI_RUNS_PER_HOUR",
+		"AI_ON_DEVICE_ENABLED", "AI_LOCAL_RUNS_PER_HOUR", "AI_LOCAL_MAX_DURATION",
 	} {
 		t.Setenv(name, "")
 	}
@@ -198,6 +199,9 @@ func TestLoad_AIDisabledByDefault(t *testing.T) {
 	if cfg.AIAllowPrivateBaseURLs {
 		t.Error("AIAllowPrivateBaseURLs must default to false")
 	}
+	if !cfg.AIOnDeviceEnabled || cfg.AILocalRunsPerHour != 30 || cfg.AILocalMaxDuration != 30*time.Minute {
+		t.Errorf("on-device defaults: %v %d %v", cfg.AIOnDeviceEnabled, cfg.AILocalRunsPerHour, cfg.AILocalMaxDuration)
+	}
 }
 
 func TestLoad_AIEnabledWithValidKey(t *testing.T) {
@@ -226,6 +230,8 @@ func TestLoad_AIInvalidSettings(t *testing.T) {
 		"idle above max":       {"AI_STREAM_MAX_DURATION": "1m", "AI_STREAM_IDLE_TIMEOUT": "2m"},
 		"zero runs per hour":   {"AI_RUNS_PER_HOUR": "0"},
 		"zero request timeout": {"HTTP_REQUEST_TIMEOUT": "0s"},
+		"zero local runs":      {"AI_LOCAL_RUNS_PER_HOUR": "0"},
+		"short local duration": {"AI_LOCAL_MAX_DURATION": "10s"},
 	}
 	for name, env := range cases {
 		t.Run(name, func(t *testing.T) {

@@ -143,7 +143,8 @@ func (r *Repository) DeleteCredential(ctx context.Context, userID, id uuid.UUID)
 const settingsColumns = `
 	user_id, active_credential_id, consent_version, consent_accepted_at, max_output_tokens,
 	input_price_per_mtok::float8, output_price_per_mtok::float8,
-	default_include_transactions, default_anonymize_titles, version
+	default_include_transactions, default_anonymize_titles, version,
+	mode, local_model, local_consent_version, local_consent_accepted_at
 `
 
 // GetSettings returns the user's settings, or the defaults (Version 0)
@@ -152,7 +153,8 @@ func (r *Repository) GetSettings(ctx context.Context, userID uuid.UUID) (Setting
 	var s Settings
 	err := r.db.QueryRow(ctx, `SELECT `+settingsColumns+` FROM ai_settings WHERE user_id = $1`, userID).Scan(
 		&s.UserID, &s.ActiveCredentialID, &s.ConsentVersion, &s.ConsentAcceptedAt, &s.MaxOutputTokens,
-		&s.InputPricePerMTok, &s.OutputPricePerMTok, &s.DefaultIncludeTransactions, &s.DefaultAnonymizeTitles, &s.Version)
+		&s.InputPricePerMTok, &s.OutputPricePerMTok, &s.DefaultIncludeTransactions, &s.DefaultAnonymizeTitles, &s.Version,
+		&s.Mode, &s.LocalModel, &s.LocalConsentVersion, &s.LocalConsentAcceptedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return defaultSettings(userID), nil
 	}
@@ -206,21 +208,51 @@ func (r *Repository) SaveSettings(ctx context.Context, in SaveSettingsRepoInput,
 	return version, nil
 }
 
-// SetConsent records (version non-nil) or clears consent, creating the
-// settings row when needed. It does not bump the settings version: consent
-// is not part of the optimistic-locked form.
-func (r *Repository) SetConsent(ctx context.Context, userID uuid.UUID, version *int) error {
+// SetConsent records (version non-nil) or clears the consent of one scope
+// (cloud or on-device), creating the settings row when needed. It does not
+// bump the settings version: consent is not part of the optimistic-locked
+// form.
+func (r *Repository) SetConsent(ctx context.Context, userID uuid.UUID, scope string, version *int) error {
+	versionCol, atCol := "consent_version", "consent_accepted_at"
+	if scope == ModeOnDevice {
+		versionCol, atCol = "local_consent_version", "local_consent_accepted_at"
+	}
 	_, err := r.db.Exec(ctx, `
-		INSERT INTO ai_settings (user_id, consent_version, consent_accepted_at)
+		INSERT INTO ai_settings (user_id, `+versionCol+`, `+atCol+`)
 		VALUES ($1, $2::int, CASE WHEN $2::int IS NULL THEN NULL ELSE now() END)
 		ON CONFLICT (user_id) DO UPDATE SET
-			consent_version = EXCLUDED.consent_version,
-			consent_accepted_at = EXCLUDED.consent_accepted_at,
+			`+versionCol+` = EXCLUDED.`+versionCol+`,
+			`+atCol+` = EXCLUDED.`+atCol+`,
 			updated_at = now()`, userID, version)
 	if err != nil {
 		return fmt.Errorf("set ai consent: %w", err)
 	}
 	return nil
+}
+
+// SaveMode switches between cloud and on-device analyses under the
+// settings' optimistic lock (expectedVersion 0 creates the row).
+func (r *Repository) SaveMode(ctx context.Context, userID uuid.UUID, mode string, localModel *string, expectedVersion int64) (int64, error) {
+	var version int64
+	var err error
+	if expectedVersion == 0 {
+		err = r.db.QueryRow(ctx, `
+			INSERT INTO ai_settings (user_id, mode, local_model) VALUES ($1, $2, $3)
+			ON CONFLICT (user_id) DO NOTHING
+			RETURNING version`, userID, mode, localModel).Scan(&version)
+	} else {
+		err = r.db.QueryRow(ctx, `
+			UPDATE ai_settings SET mode = $2, local_model = $3, version = version + 1, updated_at = now()
+			WHERE user_id = $1 AND version = $4
+			RETURNING version`, userID, mode, localModel, expectedVersion).Scan(&version)
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, ErrVersionMismatch
+	}
+	if err != nil {
+		return 0, fmt.Errorf("save ai mode: %w", err)
+	}
+	return version, nil
 }
 
 // --- Personal context --------------------------------------------------------
