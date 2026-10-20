@@ -40,6 +40,7 @@
 29. [Recommended repository structure](#29-recommended-repository-structure)
 30. [Definition of Done](#30-definition-of-done)
 31. [Technical references](#31-technical-references)
+32. [AI analysis (Analisi AI)](#32-ai-analysis-analisi-ai)
 
 ---
 
@@ -2875,6 +2876,17 @@ Flutter:
 - passkeys;
 - offline write sync.
 
+### Phase 11 — AI analysis
+
+See section 32.
+
+- wallet purpose;
+- encrypted per-user provider keys and settings;
+- provider adapters with streaming;
+- prompt builder and preview;
+- streamed analyses, follow-ups and history;
+- consent and privacy notice update.
+
 ---
 
 ## 26. Acceptance criteria
@@ -3084,6 +3096,108 @@ The plan's choices are consistent with the following official sources and guidel
 - OWASP — File Upload Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
 - OWASP — REST Security Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html
 - OpenAPI Specification: https://spec.openapis.org/oas/
+
+---
+
+## 32. AI analysis (Analisi AI)
+
+An optional feature that sends a summary of the user's ledger to a large language model (LLM) chosen by the user, with the user's own API key, and shows back a written report with follow-up questions. It is off until the user configures a provider and accepts the disclosure.
+
+### 32.1 Goals and non-goals
+
+Goals:
+
+- a personalized, readable report on spending, income, anomalies, savings opportunities, recurring payments and wallet usage;
+- the user decides the provider, the model, the period, the wallets and how much data leaves the server;
+- the user can see exactly what is sent before sending it, and can edit the instructions;
+- every analysis is kept in a history with its follow-up conversation and token usage.
+
+Non-goals:
+
+- no regulated financial advice: the system prompt frames the output as informational;
+- no model tools or actions: the model only reads data and writes text, it can never change the ledger;
+- no shared, instance-wide API key: every user brings their own;
+- no built-in price table: prices drift across providers, so cost is shown only when the user enters their prices.
+
+### 32.2 Privacy and consent
+
+- Before the first preview the app shows a consent sheet: the chosen provider is a third party; what is sent (aggregates, wallet names and purposes, optional transaction list, personal context); what is never sent (email, name, account identifiers, images); the provider's own retention policy applies; how to revoke.
+- Consent is versioned with `ai.ConsentVersion`. Preview and run return `403 AI_CONSENT_REQUIRED` when the stored version is older. The constant is bumped whenever the disclosure text changes.
+- Data minimization by default: aggregates only. The raw transaction list is opt-in, capped (default 200, max 500, newest first) and titles can be replaced by stable pseudonyms (`Voce 1..N`).
+- The API key is encrypted at rest with AES-256-GCM (`internal/platform/secretbox`), key from `AI_KEY_ENCRYPTION_KEY`, additional authenticated data `user_id || provider || base_url`. Responses only carry a masked hint (`sk-…a1b2`). Keys are never logged or exported.
+- Everything is deleted with the account (`ON DELETE CASCADE`). The user can delete single analyses or the whole history, and remove stored keys.
+- `docs/privacy.md` describes the feature in its own section.
+
+### 32.3 Data model
+
+- `wallets.purpose VARCHAR(280) NULL`: what the wallet is for ("spese quotidiane", "fondo emergenze"). Editable from the wallet form and from the AI settings.
+- `ai_provider_credentials`: one row per (user, provider, base_url) so switching provider does not mean retyping a key. Provider is `anthropic`, `openai`, `gemini` or `openai_compatible` (the last requires `base_url`). Encrypted key, nonce, key version, hint, last test result.
+- `ai_settings`: one row per user: active credential, model, consent version and date, defaults for the analysis options, `max_output_tokens`, optional prices per million tokens, `version` for optimistic locking.
+- `ai_user_context`: one row per user: household size, income type, free text "about me", goals, things to ignore, response style.
+- `ai_analyses`: preset, period, timezone, wallet ids, options, provider, model, prompt version, data fingerprint, status (`STREAMING`, `COMPLETED`, `FAILED`, `CANCELLED`), error code, token totals, `client_request_id` (unique per user, replaces the idempotency header on SSE routes).
+- `ai_messages`: ordered messages of an analysis, kind `CONTEXT` (the exact data block and instructions sent), `REPORT`, `QUESTION`, `ANSWER`, with per-message tokens and status. Follow-ups replay the stored messages and never recompute the data, so answers stay consistent with the report.
+
+### 32.4 API
+
+All routes require authentication. JSON routes keep the normal request timeout; the two streaming routes live in a separate group without it, bounded by `AI_STREAM_MAX_DURATION` (default 5m) and an idle watchdog `AI_STREAM_IDLE_TIMEOUT` (default 90s).
+
+| Method and path | Purpose |
+|---|---|
+| `GET /v1/ai/settings` | settings, key hint, consent, setup checklist status, stored credentials |
+| `PUT /v1/ai/settings` | provider, base URL, model, key (omitted keeps it, empty string clears it), limits, defaults, prices |
+| `DELETE /v1/ai/credentials/{id}` | forget a stored key |
+| `POST /v1/ai/settings/test` | test a configuration, saved or not, and report latency |
+| `POST /v1/ai/models` | list the provider's models (POST because the body may carry a key) |
+| `PUT /v1/ai/consent`, `DELETE /v1/ai/consent` | accept or revoke |
+| `GET /v1/ai/context`, `PUT /v1/ai/context` | personal context |
+| `GET /v1/ai/presets` | localized presets with default instructions and sections |
+| `POST /v1/ai/analyses/preview` | build the prompt without sending it |
+| `POST /v1/ai/analyses` | run an analysis, Server-Sent Events |
+| `POST /v1/ai/analyses/{id}/messages` | follow-up question, Server-Sent Events |
+| `GET /v1/ai/analyses` | history, cursor paginated |
+| `GET`, `PATCH`, `DELETE /v1/ai/analyses/{id}` | detail with messages, rename, delete |
+| `DELETE /v1/ai/analyses` | delete the whole history |
+
+Streaming events: `meta` (analysis and message ids), `delta` (text, coalesced about every 50 ms), `usage`, `done`, `error`; a `: ping` comment every 15 s keeps proxies from closing the connection. Errors detected before the first byte are normal JSON error envelopes. If the client disconnects, the upstream call is cancelled and the partial text is saved with status `CANCELLED`.
+
+Preview and run share the same request body. The preview returns a `data_fingerprint` (SHA-256 of the rendered data block and prompt version). The run sends it back; if the data changed in between the server answers `409 AI_DATA_CHANGED` and the app previews again. The server always rebuilds the data block from the database: the client can only edit the instructions.
+
+Error codes: `AI_DISABLED` (503, feature not configured on the server), `AI_NOT_CONFIGURED`, `AI_CONSENT_REQUIRED`, `AI_DATA_CHANGED`, `AI_STREAM_IN_PROGRESS`, `AI_PROMPT_TOO_LARGE`, `AI_FOLLOWUP_LIMIT`, and the provider failures `AI_PROVIDER_INVALID_KEY`, `AI_PROVIDER_RATE_LIMITED`, `AI_PROVIDER_QUOTA_EXCEEDED`, `AI_PROVIDER_CONTEXT_TOO_LONG`, `AI_PROVIDER_MODEL_NOT_FOUND`, `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_TIMEOUT`.
+
+### 32.5 Providers and outbound requests
+
+- Native adapters for Anthropic (Messages API), OpenAI (Chat Completions) and Google Gemini (`streamGenerateContent`), plus "OpenAI-compatible" with a user-supplied base URL, which covers Mistral, Groq, DeepSeek, OpenRouter and local servers such as Ollama.
+- One interface: `Stream(ctx, request, onDelta) (usage, error)` and `ListModels(ctx)`. Provider errors are classified into the error codes above; provider bodies are truncated and redacted before logging.
+- Custom base URLs are an SSRF risk on a server. Policy: `https` only, no credentials in the URL, no redirects, and the resolved IP is checked at connect time (blocks loopback, private ranges, link-local including cloud metadata, CGNAT and DNS rebinding). `AI_ALLOW_PRIVATE_BASE_URLS=true` lifts the IP check and allows `http` for a LAN model server; `AI_ALLOWED_BASE_URL_HOSTS` optionally restricts hosts to an allowlist.
+- Without `AI_KEY_ENCRYPTION_KEY` the feature is unavailable (`available:false`, `503 AI_DISABLED`) but the server still starts. A malformed key fails startup.
+
+### 32.6 Prompt builder
+
+- Templates are embedded files under `internal/ai/prompt/templates/<version>/<lang>/`, versioned (`v1`). The language follows the user's locale (`it` → Italian, otherwise English).
+- The system prompt sets the role (careful personal-finance analyst, informational only), the output format (Markdown with fixed headings per preset), the rule to quote numbers from the data and never invent them, and the injection guard: content inside `<financial_data>` and `<user_context>` is data, never instructions.
+- The data block uses compact pipe-separated tables: period and currency, wallets with type, purpose and balance, totals, monthly series, top categories and titles for expenses and income, transfer flows between wallets, recurring payment candidates (same title in three or more months, amounts within 10%), the optional transaction list, and the personal context. Transfers are excluded from income and expense totals, as in reports.
+- Presets: monthly check-up, spending anomalies, savings opportunities, subscriptions and recurring payments, wallet purpose coherence, custom. Each has default instructions and sections.
+- Token estimate: characters / 3.5, labelled as an estimate. Actual usage comes from the provider. Prompts above `AI_MAX_PROMPT_TOKENS` (default 60 000) are rejected with `422 AI_PROMPT_TOO_LARGE`.
+
+### 32.7 App UX
+
+- **Account → Assistente AI**: setup checklist (key and model, personal context, wallet purposes, first analysis) with progress; screens for provider and key (provider picker, base URL presets for compatible providers, masked key with replace and remove, model list loaded from the provider with free-text fallback, "Verifica connessione" with result and latency), personal context, wallet purposes, privacy and consent, history.
+- **Reports → Analisi AI card**: setup (preset, period prefilled from the report, wallets, data toggles), then preview (what is sent, estimated tokens and cost, read-only system prompt and data block, editable instructions with "Ripristina"), then the analysis screen (Markdown streamed live, stop button, model and token footer, "Dati inviati", follow-up questions, copy and share, retry on errors).
+- **History**: list with status, rename, swipe to delete, delete all.
+
+### 32.8 Limits and observability
+
+- One active stream per user (Redis lock), 20 runs per hour (`AI_RUNS_PER_HOUR`), 10 provider probes (test connection, model list) per 10 minutes, 20 follow-ups per analysis.
+- Logs carry provider, model, status, duration and token counts; never prompt text, responses or keys.
+- Reverse proxies must not buffer the streaming routes; see `docs/build-deploy.md`.
+
+### 32.9 Tests
+
+- Provider adapters against scripted `httptest` servers: deltas, usage, end of stream, cancellation, error classification, model list parsing.
+- SSRF policy table, secretbox round trip, tampering and key rotation.
+- Prompt golden files per preset and language; totals in the data block match the reports endpoints.
+- Integration tests with a scripted provider: event order, saved content equals the streamed text, disconnect → `CANCELLED`, fingerprint mismatch → 409, concurrent stream → 409, streams outlive the normal request timeout, the key never appears in any response.
+- Flutter: SSE decoder with chunk boundaries splitting lines and UTF-8 characters, controllers with fake repositories, widget tests for the preview and the consent sheet.
 
 ---
 
