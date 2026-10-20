@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"financial-manager-backend/internal/ai"
 	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/platform/apierror"
 	"financial-manager-backend/internal/platform/storage"
@@ -31,6 +32,7 @@ type Service struct {
 	categories   *categories.Repository
 	templates    *templates.Repository
 	transactions *transactions.Repository
+	ai           *ai.Repository
 }
 
 type Deps struct {
@@ -41,12 +43,15 @@ type Deps struct {
 	Categories   *categories.Repository
 	Templates    *templates.Repository
 	Transactions *transactions.Repository
+	// AI, when set, adds the AI analysis personal context (plan.md section
+	// 32.3) to the JSON export. API keys and analyses are never exported.
+	AI *ai.Repository
 }
 
 func NewService(d Deps) *Service {
 	return &Service{
 		repo: d.Repo, store: d.Store, users: d.Users, wallets: d.Wallets,
-		categories: d.Categories, templates: d.Templates, transactions: d.Transactions,
+		categories: d.Categories, templates: d.Templates, transactions: d.Transactions, ai: d.AI,
 	}
 }
 
@@ -153,7 +158,18 @@ func (s *Service) buildContent(ctx context.Context, userID uuid.UUID, format str
 		return nil, "", fmt.Errorf("list templates: %w", err)
 	}
 
-	content, err := buildJSON(user, userWallets, cats, tmpls, txs)
+	var aiContext *ai.UserContext
+	if s.ai != nil {
+		uc, err := s.ai.GetUserContext(ctx, userID)
+		if err != nil {
+			return nil, "", fmt.Errorf("get ai context: %w", err)
+		}
+		if !uc.IsEmpty() {
+			aiContext = &uc
+		}
+	}
+
+	content, err := buildJSON(user, userWallets, cats, tmpls, txs, aiContext)
 	return content, "application/json", err
 }
 
@@ -208,7 +224,7 @@ func formatAmount(amountMinor int64) string {
 // Image bytes are never embedded — media_id on each transaction/category is
 // already a reference into the separate object-storage archive (section
 // 20.2: "riferimenti immagini o archivio separato").
-func buildJSON(user users.User, userWallets []wallets.Wallet, cats []categories.Category, tmpls []templates.Template, txs []transactions.Transaction) ([]byte, error) {
+func buildJSON(user users.User, userWallets []wallets.Wallet, cats []categories.Category, tmpls []templates.Template, txs []transactions.Transaction, aiContext *ai.UserContext) ([]byte, error) {
 	type profileJSON struct {
 		ID        string `json:"id"`
 		FirstName string `json:"first_name"`
@@ -317,6 +333,7 @@ func buildJSON(user users.User, userWallets []wallets.Wallet, cats []categories.
 		CustomCategories []categoryJSON    `json:"categorie_personalizzate"`
 		Templates        []templateJSON    `json:"modelli"`
 		Transactions     []transactionJSON `json:"transazioni"`
+		AIContext        *aiContextJSON    `json:"contesto_analisi_ai,omitempty"`
 		MediaNote        string            `json:"nota_immagini"`
 	}{
 		Profile: profileJSON{
@@ -328,6 +345,26 @@ func buildJSON(user users.User, userWallets []wallets.Wallet, cats []categories.
 		CustomCategories: customCategories,
 		Templates:        templateList,
 		Transactions:     transactionList,
+		AIContext:        toAIContextJSON(aiContext),
 		MediaNote:        "Le immagini non sono incluse in questo export; ogni transazione con un'immagine riporta il relativo media_id.",
 	}, "", "  ")
+}
+
+type aiContextJSON struct {
+	HouseholdSize *int    `json:"persone_nucleo_familiare,omitempty"`
+	IncomeType    *string `json:"tipo_reddito,omitempty"`
+	AboutMe       *string `json:"su_di_me,omitempty"`
+	Goals         *string `json:"obiettivi,omitempty"`
+	IgnoreNotes   *string `json:"da_ignorare,omitempty"`
+	ResponseStyle *string `json:"stile_risposte,omitempty"`
+}
+
+func toAIContextJSON(c *ai.UserContext) *aiContextJSON {
+	if c == nil {
+		return nil
+	}
+	return &aiContextJSON{
+		HouseholdSize: c.HouseholdSize, IncomeType: c.IncomeType, AboutMe: c.AboutMe,
+		Goals: c.Goals, IgnoreNotes: c.IgnoreNotes, ResponseStyle: c.ResponseStyle,
+	}
 }

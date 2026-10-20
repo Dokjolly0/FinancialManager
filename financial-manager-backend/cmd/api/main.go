@@ -217,10 +217,11 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	exportService := export.NewService(export.Deps{
 		Repo: export.NewRepository(dbPool), Store: objectStore, Users: usersRepo, Wallets: walletsRepo,
 		Categories: categoriesRepo, Templates: templatesRepo, Transactions: transactionsRepo,
+		AI: ai.NewRepository(dbPool),
 	})
 	exportHandler := export.NewHandler(exportService)
 
-	aiHandler, err := newAIHandler(cfg, dbPool, walletsRepo, rateLimiter, logger)
+	aiHandler, err := newAIHandler(cfg, dbPool, walletsRepo, usersRepo, rateLimiter, logger)
 	if err != nil {
 		return err
 	}
@@ -246,7 +247,7 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 // newAIHandler wires the AI analysis (plan.md section 32). Without
 // AI_KEY_ENCRYPTION_KEY the service has no secretbox and every AI route
 // except GET /v1/ai/settings answers AI_DISABLED.
-func newAIHandler(cfg config.Config, dbPool *database.Pool, walletsRepo *wallets.Repository,
+func newAIHandler(cfg config.Config, dbPool *database.Pool, walletsRepo *wallets.Repository, usersRepo *users.Repository,
 	rateLimiter *ratelimit.Limiter, logger *slog.Logger) (*ai.Handler, error) {
 	var box *secretbox.Box
 	if cfg.AIEnabled() {
@@ -268,8 +269,15 @@ func newAIHandler(cfg config.Config, dbPool *database.Pool, walletsRepo *wallets
 	}
 	policy := provider.BaseURLPolicy{AllowPrivate: cfg.AIAllowPrivateBaseURLs, AllowedHosts: cfg.AIAllowedBaseURLHosts}
 	service := ai.NewService(ai.Deps{
-		Repo:        ai.NewRepository(dbPool),
-		Wallets:     walletsRepo,
+		Repo:    ai.NewRepository(dbPool),
+		Wallets: walletsRepo,
+		Users:   usersRepo,
+		Reports: reports.NewRepository(dbPool),
+		Limits: ai.Limits{
+			MaxPromptTokens:   cfg.AIMaxPromptTokens,
+			RunsPerHour:       cfg.AIRunsPerHour,
+			StreamMaxDuration: cfg.AIStreamMaxDuration,
+		},
 		Box:         box,
 		Providers:   provider.NewHTTPFactory(policy, cfg.AIStreamIdleTimeout),
 		Policy:      policy,

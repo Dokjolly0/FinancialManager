@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"financial-manager-backend/internal/ai"
 	"financial-manager-backend/internal/categories"
 	"financial-manager-backend/internal/export"
 	"financial-manager-backend/internal/platform/database"
@@ -69,6 +70,7 @@ func newHarness(t *testing.T) harness {
 	templatesRepo := templates.NewRepository(dbPool)
 
 	suffix := uuid.NewString()[:8]
+	walletPurpose := "Spese quotidiane"
 	user, err := usersRepo.Create(context.Background(), users.CreateInput{
 		FirstName: "Export", LastName: "Test", Username: "exporttest" + suffix,
 		Email:                 "exporttest" + suffix + "@example.com",
@@ -81,6 +83,7 @@ func newHarness(t *testing.T) harness {
 	wallet, err := walletsRepo.Create(context.Background(), wallets.CreateRowInput{
 		UserID: user.ID, Name: wallets.DefaultName, Currency: "EUR", Type: wallets.TypeOther,
 		Icon: wallets.DefaultIcon, Color: wallets.DefaultColor, OpeningBalanceMinor: 10000,
+		Purpose: &walletPurpose,
 	})
 	if err != nil {
 		t.Fatalf("create test wallet: %v", err)
@@ -99,9 +102,15 @@ func newHarness(t *testing.T) harness {
 		t.Fatalf("create test transaction: %v", err)
 	}
 
+	aiRepo := ai.NewRepository(dbPool)
+	goals := "Risparmiare per la casa"
+	if _, err := aiRepo.SaveUserContext(context.Background(), ai.UserContext{UserID: user.ID, Goals: &goals}, 0); err != nil {
+		t.Fatalf("save ai context: %v", err)
+	}
+
 	service := export.NewService(export.Deps{
 		Repo: export.NewRepository(dbPool), Store: store, Users: usersRepo, Wallets: walletsRepo,
-		Categories: categoriesRepo, Templates: templatesRepo, Transactions: transactionsRepo,
+		Categories: categoriesRepo, Templates: templatesRepo, Transactions: transactionsRepo, AI: aiRepo,
 	})
 	return harness{service: service, userID: user.ID}
 }
@@ -183,10 +192,14 @@ func TestRequestExport_JSON_ContainsProfileWalletAndTransactions(t *testing.T) {
 		} `json:"profilo"`
 		Wallets []struct {
 			Currency string `json:"currency"`
+			Purpose  string `json:"scopo"`
 		} `json:"portafogli"`
 		Transactions []struct {
 			Title string `json:"title"`
 		} `json:"transazioni"`
+		AIContext struct {
+			Goals string `json:"obiettivi"`
+		} `json:"contesto_analisi_ai"`
 	}
 	if err := json.Unmarshal(body, &decoded); err != nil {
 		t.Fatalf("parse JSON export: %v", err)
@@ -196,6 +209,15 @@ func TestRequestExport_JSON_ContainsProfileWalletAndTransactions(t *testing.T) {
 	}
 	if len(decoded.Wallets) == 0 || decoded.Wallets[0].Currency != "EUR" {
 		t.Errorf("portafogli = %+v, want at least one wallet with currency EUR", decoded.Wallets)
+	}
+	if len(decoded.Wallets) > 0 && decoded.Wallets[0].Purpose != "Spese quotidiane" {
+		t.Errorf("portafogli[0].scopo = %q", decoded.Wallets[0].Purpose)
+	}
+	if decoded.AIContext.Goals != "Risparmiare per la casa" {
+		t.Errorf("contesto_analisi_ai.obiettivi = %q", decoded.AIContext.Goals)
+	}
+	if strings.Contains(string(body), "api_key") {
+		t.Error("the export must never contain AI provider keys")
 	}
 	found := false
 	for _, tx := range decoded.Transactions {

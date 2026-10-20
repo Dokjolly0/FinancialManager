@@ -21,6 +21,7 @@ import (
 	"financial-manager-backend/internal/platform/database"
 	"financial-manager-backend/internal/platform/reqctx"
 	"financial-manager-backend/internal/platform/secretbox"
+	"financial-manager-backend/internal/reports"
 	"financial-manager-backend/internal/users"
 	"financial-manager-backend/internal/wallets"
 )
@@ -50,7 +51,8 @@ type harness struct {
 }
 
 type harnessOptions struct {
-	disabled bool
+	disabled        bool
+	maxPromptTokens int
 }
 
 func newHarness(t *testing.T, opts ...harnessOptions) *harness {
@@ -96,7 +98,9 @@ func newHarness(t *testing.T, opts ...harnessOptions) *harness {
 		h.box, _ = secretbox.New(key)
 	}
 	h.service = ai.NewService(ai.Deps{
-		Repo: h.repo, Wallets: walletsRepo, Box: h.box, Providers: h.factory,
+		Repo: h.repo, Wallets: walletsRepo, Users: usersRepo, Reports: reports.NewRepository(dbPool),
+		Limits: ai.Limits{MaxPromptTokens: opt.maxPromptTokens},
+		Box:    h.box, Providers: h.factory,
 		Policy: provider.BaseURLPolicy{}, Clock: clock.Frozen{At: h.now},
 	})
 

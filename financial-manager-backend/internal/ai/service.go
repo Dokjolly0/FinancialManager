@@ -18,6 +18,8 @@ import (
 	"financial-manager-backend/internal/platform/metrics"
 	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/secretbox"
+	"financial-manager-backend/internal/reports"
+	"financial-manager-backend/internal/users"
 	"financial-manager-backend/internal/wallets"
 )
 
@@ -32,9 +34,19 @@ const (
 	maxModelsInReply = 500
 )
 
+// Limits are the configurable bounds of an analysis (config AI_*).
+type Limits struct {
+	MaxPromptTokens   int
+	RunsPerHour       int
+	StreamMaxDuration time.Duration
+}
+
 type Deps struct {
 	Repo    *Repository
 	Wallets *wallets.Repository
+	Users   *users.Repository
+	Reports *reports.Repository
+	Limits  Limits
 	// Box encrypts the API keys; nil means the feature is disabled
 	// (AI_KEY_ENCRYPTION_KEY unset).
 	Box         *secretbox.Box
@@ -48,6 +60,9 @@ type Deps struct {
 type Service struct {
 	repo        *Repository
 	wallets     *wallets.Repository
+	users       *users.Repository
+	reports     *reports.Repository
+	limits      Limits
 	box         *secretbox.Box
 	providers   provider.Factory
 	policy      provider.BaseURLPolicy
@@ -65,8 +80,19 @@ func NewService(d Deps) *Service {
 	if c == nil {
 		c = clock.System{}
 	}
+	limits := d.Limits
+	if limits.MaxPromptTokens == 0 {
+		limits.MaxPromptTokens = 60000
+	}
+	if limits.RunsPerHour == 0 {
+		limits.RunsPerHour = 20
+	}
+	if limits.StreamMaxDuration == 0 {
+		limits.StreamMaxDuration = 5 * time.Minute
+	}
 	return &Service{
-		repo: d.Repo, wallets: d.Wallets, box: d.Box, providers: d.Providers, policy: d.Policy,
+		repo: d.Repo, wallets: d.Wallets, users: d.Users, reports: d.Reports, limits: limits,
+		box: d.Box, providers: d.Providers, policy: d.Policy,
 		rateLimiter: d.RateLimiter, clock: c, logger: logger,
 	}
 }
@@ -508,24 +534,34 @@ func (s *Service) openKey(ctx context.Context, c Credential) (string, error) {
 	return string(plain), nil
 }
 
+// activeCredential returns the active credential when it is complete
+// (model, and a key when the provider needs one), else ErrNotConfigured.
+func (s *Service) activeCredential(ctx context.Context, userID uuid.UUID, settings Settings) (Credential, error) {
+	if settings.ActiveCredentialID == nil {
+		return Credential{}, ErrNotConfigured
+	}
+	cred, err := s.repo.GetCredential(ctx, userID, *settings.ActiveCredentialID)
+	if errors.Is(err, ErrNotFound) {
+		return Credential{}, ErrNotConfigured
+	}
+	if err != nil {
+		return Credential{}, err
+	}
+	if cred.Model == nil || *cred.Model == "" || (cred.Provider.RequiresAPIKey() && !cred.HasKey()) {
+		return Credential{}, ErrNotConfigured
+	}
+	return cred, nil
+}
+
 // activeProvider resolves the user's saved configuration for an analysis.
 func (s *Service) activeProvider(ctx context.Context, userID uuid.UUID) (resolvedProvider, Settings, error) {
 	settings, err := s.repo.GetSettings(ctx, userID)
 	if err != nil {
 		return resolvedProvider{}, Settings{}, err
 	}
-	if settings.ActiveCredentialID == nil {
-		return resolvedProvider{}, settings, ErrNotConfigured
-	}
-	cred, err := s.repo.GetCredential(ctx, userID, *settings.ActiveCredentialID)
-	if errors.Is(err, ErrNotFound) {
-		return resolvedProvider{}, settings, ErrNotConfigured
-	}
+	cred, err := s.activeCredential(ctx, userID, settings)
 	if err != nil {
 		return resolvedProvider{}, settings, err
-	}
-	if cred.Model == nil || *cred.Model == "" || (cred.Provider.RequiresAPIKey() && !cred.HasKey()) {
-		return resolvedProvider{}, settings, ErrNotConfigured
 	}
 	key, err := s.openKey(ctx, cred)
 	if err != nil {

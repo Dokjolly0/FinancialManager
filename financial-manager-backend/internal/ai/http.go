@@ -36,6 +36,8 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Delete("/v1/ai/consent", h.revokeConsent)
 	r.Get("/v1/ai/context", h.getUserContext)
 	r.Put("/v1/ai/context", h.saveUserContext)
+	r.Get("/v1/ai/presets", h.presets)
+	r.Post("/v1/ai/analyses/preview", h.preview)
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {
@@ -244,6 +246,37 @@ func (h *Handler) saveUserContext(w http.ResponseWriter, r *http.Request) {
 		UserID: userID, HouseholdSize: req.HouseholdSize, IncomeType: req.IncomeType, AboutMe: req.AboutMe,
 		Goals: req.Goals, IgnoreNotes: req.IgnoreNotes, ResponseStyle: req.ResponseStyle, ExpectedVersion: req.Version,
 	})
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) presets(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userFrom(w, r)
+	if !ok {
+		return
+	}
+	list, err := h.service.Presets(r.Context(), userID)
+	if err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"presets": list})
+}
+
+func (h *Handler) preview(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userFrom(w, r)
+	if !ok {
+		return
+	}
+	var req AnalysisRequest
+	if err := decodeJSON(r, &req); err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	resp, err := h.service.Preview(r.Context(), userID, req)
 	if err != nil {
 		apierror.Write(w, r, err)
 		return

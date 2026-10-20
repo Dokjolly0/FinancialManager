@@ -1,0 +1,38 @@
+{
+  "MONTHLY_CHECKUP": {
+    "title": "Check-up del periodo",
+    "description": "Un quadro generale: come sono andate entrate e uscite e cosa tenere d'occhio.",
+    "headings": ["Sintesi", "Dove vanno i soldi", "Punti di attenzione", "Suggerimenti", "Domande per te"],
+    "instructions": "Fammi un check-up delle mie finanze nel periodo indicato. Riassumi come sono andate entrate, uscite e risparmio, indica le categorie e le voci che pesano di più e confronta i mesi tra loro. Segnala cosa merita attenzione e proponi al massimo 5 azioni concrete, in ordine di impatto."
+  },
+  "ANOMALIES": {
+    "title": "Spese insolite",
+    "description": "Picchi, mesi anomali e spese fuori dal solito.",
+    "headings": ["Sintesi", "Anomalie individuate", "Possibili spiegazioni", "Cosa verificare"],
+    "instructions": "Cerca le anomalie nei miei movimenti: mesi con uscite molto diverse dagli altri, spese singole molto più alte del solito, categorie che crescono rapidamente, voci che compaiono all'improvviso. Per ciascuna indica i dati che la mostrano e una possibile spiegazione, distinguendo ciò che è certo da ciò che è un'ipotesi."
+  },
+  "SAVINGS": {
+    "title": "Dove risparmiare",
+    "description": "Opportunità concrete per spendere meno, con una stima del risparmio.",
+    "headings": ["Sintesi", "Opportunità di risparmio", "Stima del risparmio", "Piano d'azione"],
+    "instructions": "Individua dove potrei risparmiare. Concentrati sulle spese discrezionali e ripetute, stima per ciascuna opportunità quanto potrei risparmiare al mese e in un anno, e ordina le opportunità dalla più facile alla più difficile da mettere in pratica. Tieni conto dei miei obiettivi, se li ho indicati."
+  },
+  "RECURRING": {
+    "title": "Abbonamenti e spese fisse",
+    "description": "Pagamenti che si ripetono ogni mese e quanto pesano.",
+    "headings": ["Sintesi", "Spese ricorrenti", "Variazioni di prezzo", "Cosa valutare"],
+    "instructions": "Analizza le mie spese ricorrenti (abbonamenti, bollette, rate, spese fisse). Elencale con l'importo mensile e annuale, segnala quelle il cui importo è cambiato nel tempo e quelle che potrebbero essere duplicate o non più utili. Calcola quanto pesano in totale rispetto alle entrate."
+  },
+  "WALLET_PURPOSE": {
+    "title": "Uso dei portafogli",
+    "description": "Ogni portafoglio viene usato per lo scopo che gli hai dato?",
+    "headings": ["Sintesi", "Portafoglio per portafoglio", "Incoerenze", "Suggerimenti"],
+    "instructions": "Verifica se uso ogni portafoglio in modo coerente con lo scopo che gli ho assegnato. Per ciascun portafoglio descrivi come viene usato davvero (spese, entrate, trasferimenti), segnala gli usi che non corrispondono allo scopo e suggerisci come organizzare meglio i movimenti tra portafogli. Se un portafoglio non ha uno scopo, proponine uno in base all'uso."
+  },
+  "CUSTOM": {
+    "title": "Domanda libera",
+    "description": "Scrivi tu cosa vuoi sapere sui tuoi dati.",
+    "headings": ["Risposta", "Dati su cui si basa"],
+    "instructions": ""
+  }
+}
