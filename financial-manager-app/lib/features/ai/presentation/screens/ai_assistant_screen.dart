@@ -149,6 +149,16 @@ class _AssistantBody extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Card(
+          child: ListTile(
+            leading: const Icon(Icons.history),
+            title: Text(l10n.aiHistoryTitle),
+            subtitle: Text(l10n.aiHistoryMenuSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRoutes.aiHistory),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Card(
           child: settings.consent.required
               ? ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
@@ -255,7 +265,7 @@ class _SetupChecklist extends StatelessWidget {
               setup.hasAnalyses,
               l10n.aiSetupStepFirstAnalysis,
               l10n.aiSetupStepFirstAnalysisHint,
-              () => context.go(AppRoutes.reports),
+              () => context.push(AppRoutes.aiNew),
             ),
           ],
         ),

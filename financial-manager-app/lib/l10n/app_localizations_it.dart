@@ -1744,4 +1744,301 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get aiSavePurpose => 'Salva scopo';
+
+  @override
+  String get aiNewAnalysisTitle => 'Nuova analisi AI';
+
+  @override
+  String get aiHistoryTitle => 'Cronologia analisi';
+
+  @override
+  String get aiHistoryMenuSubtitle => 'Rileggi, rinomina o elimina le analisi';
+
+  @override
+  String get aiNotReadyTitle => 'Configura prima l\'Analisi AI';
+
+  @override
+  String get aiNotReadyBody =>
+      'Scegli un fornitore, inserisci la chiave API e un modello.';
+
+  @override
+  String get aiGoToSetup => 'Configura';
+
+  @override
+  String get aiWhatToAnalyze => 'Cosa vuoi analizzare';
+
+  @override
+  String get aiCustomQuestionLabel => 'La tua domanda';
+
+  @override
+  String get aiCustomQuestionHint =>
+      'Es. quanto ho speso per mangiare fuori e come è cambiato nei mesi?';
+
+  @override
+  String get aiPeriodLabel => 'Periodo';
+
+  @override
+  String get aiPeriodLast30Days => 'Ultimi 30 giorni';
+
+  @override
+  String get aiPeriodLast12Months => 'Ultimi 12 mesi';
+
+  @override
+  String get aiPeriodCurrentMonth => 'Mese corrente';
+
+  @override
+  String get aiPeriodCurrentYear => 'Anno corrente';
+
+  @override
+  String get aiPeriodAllTime => 'Tutta la cronologia';
+
+  @override
+  String get aiPeriodCustom => 'Personalizzato';
+
+  @override
+  String aiPeriodUntil(String date) {
+    return 'Fino al $date';
+  }
+
+  @override
+  String get aiWalletsLabel => 'Portafogli';
+
+  @override
+  String get aiAllWallets => 'Tutti';
+
+  @override
+  String get aiDataToSend => 'Dati da inviare';
+
+  @override
+  String get aiDataToSendHint =>
+      'Periodo, portafogli e totali vengono sempre inviati. Più dati scegli, più l\'analisi è ricca e più token consuma.';
+
+  @override
+  String get aiSectionMonthly => 'Andamento mensile';
+
+  @override
+  String get aiSectionCategories => 'Categorie';
+
+  @override
+  String get aiSectionTitles => 'Voci principali';
+
+  @override
+  String get aiSectionTransfers => 'Trasferimenti';
+
+  @override
+  String get aiSectionRecurring => 'Spese ricorrenti';
+
+  @override
+  String get aiSectionPersonalContext => 'Contesto personale';
+
+  @override
+  String get aiIncludeTransactions => 'Includi i singoli movimenti';
+
+  @override
+  String get aiIncludeTransactionsHint =>
+      'Utile per le anomalie; invia data, importo, titolo e categoria dei movimenti più recenti.';
+
+  @override
+  String aiMaxTransactionsValue(int count) {
+    return 'max $count';
+  }
+
+  @override
+  String get aiIncludeAdjustments => 'Includi le rettifiche di saldo';
+
+  @override
+  String get aiIncludeAdjustmentsHint =>
+      'Di solito correggono errori di registrazione: meglio lasciarle fuori.';
+
+  @override
+  String get aiPreviewAction => 'Anteprima';
+
+  @override
+  String get aiPreviewTitle => 'Anteprima';
+
+  @override
+  String get aiPreviewMissing =>
+      'Nessuna anteprima: torna indietro e preparane una.';
+
+  @override
+  String aiPreviewSentTo(String provider, String model) {
+    return 'Sarà inviato a $provider · $model';
+  }
+
+  @override
+  String aiPreviewWallets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count portafogli',
+      one: '1 portafoglio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get aiPreviewOnlyTotals => 'Solo periodo, portafogli e totali';
+
+  @override
+  String aiPreviewSections(String sections) {
+    return 'Sezioni: $sections';
+  }
+
+  @override
+  String get aiPreviewNoTransactions => 'Nessun movimento singolo';
+
+  @override
+  String aiPreviewTransactions(int count, int omitted) {
+    return '$count movimenti singoli ($omitted meno recenti esclusi)';
+  }
+
+  @override
+  String get aiPreviewAnonymized => 'Titoli dei movimenti anonimizzati';
+
+  @override
+  String get aiPreviewWithContext => 'Contesto personale incluso';
+
+  @override
+  String aiPreviewTokens(String tokens) {
+    return '~$tokens token in input';
+  }
+
+  @override
+  String aiPreviewCost(String cost) {
+    return 'costo max ~$cost';
+  }
+
+  @override
+  String get aiInstructionsLabel => 'Istruzioni';
+
+  @override
+  String get aiInstructionsHint =>
+      'Puoi modificarle: è l\'unica parte del testo che decidi tu.';
+
+  @override
+  String get aiInstructionsRequired => 'Scrivi le istruzioni prima di inviare.';
+
+  @override
+  String get aiRestoreInstructions => 'Ripristina';
+
+  @override
+  String get aiSystemPromptLabel => 'Regole per il modello';
+
+  @override
+  String get aiSystemPromptHint =>
+      'Fisse: formato del report, uso corretto dei dati, protezioni';
+
+  @override
+  String get aiDataBlockLabel => 'Dati inviati';
+
+  @override
+  String get aiDataBlockHint =>
+      'Generati dal server dai tuoi movimenti, non modificabili';
+
+  @override
+  String get aiSendAction => 'Invia e analizza';
+
+  @override
+  String get aiAnalysisTitle => 'Analisi AI';
+
+  @override
+  String get aiDataSentTitle => 'Cosa è stato inviato';
+
+  @override
+  String get aiDataSentHint => 'Istruzioni e dati esattamente come inviati';
+
+  @override
+  String get aiCopyAction => 'Copia testo';
+
+  @override
+  String get aiShareAction => 'Condividi';
+
+  @override
+  String get aiCopied => 'Testo copiato';
+
+  @override
+  String get aiRefreshPreview => 'Aggiorna anteprima';
+
+  @override
+  String aiTokensUsed(String input, String output) {
+    return '$input in / $output out token';
+  }
+
+  @override
+  String aiCostValue(String cost) {
+    return 'costo ~$cost';
+  }
+
+  @override
+  String get aiThinking => 'Il modello sta scrivendo…';
+
+  @override
+  String get aiAnswerStopped => 'Interrotta: il testo qui sopra è parziale.';
+
+  @override
+  String get aiAnswerTruncated =>
+      'Risposta troncata al limite di token: puoi alzarlo nelle impostazioni avanzate.';
+
+  @override
+  String get aiWaitForAnswer => 'Attendi la fine della risposta…';
+
+  @override
+  String get aiFollowUpUnavailable => 'Domande disponibili a report completato';
+
+  @override
+  String get aiFollowUpLimitReached => 'Limite di domande raggiunto';
+
+  @override
+  String aiAskFollowUpHint(int left) {
+    return 'Fai una domanda ($left rimaste)';
+  }
+
+  @override
+  String get aiStopAction => 'Interrompi';
+
+  @override
+  String get aiAskAction => 'Invia domanda';
+
+  @override
+  String get aiHistoryEmpty =>
+      'Nessuna analisi ancora. Avviane una dalla sezione Report.';
+
+  @override
+  String get aiDeleteAnalysisTitle => 'Eliminare l\'analisi?';
+
+  @override
+  String get aiDeleteAction => 'Elimina';
+
+  @override
+  String get aiDeleteAllAction => 'Elimina tutte';
+
+  @override
+  String get aiDeleteAllTitle => 'Eliminare tutte le analisi?';
+
+  @override
+  String get aiDeleteAllMessage =>
+      'Report e conversazioni vengono eliminati definitivamente.';
+
+  @override
+  String get aiRenameAction => 'Rinomina';
+
+  @override
+  String get aiRenameTitle => 'Rinomina analisi';
+
+  @override
+  String get aiCancel => 'Annulla';
+
+  @override
+  String get aiReportsCardTitle => 'Analisi AI';
+
+  @override
+  String get aiReportsCardBody =>
+      'Fatti spiegare i tuoi numeri: un report personalizzato e domande di approfondimento.';
+
+  @override
+  String get aiReportsCardSetupBody =>
+      'Collega il tuo fornitore AI preferito per ottenere report personalizzati sulle tue finanze.';
+
+  @override
+  String get aiReportsCardStart => 'Analizza';
 }

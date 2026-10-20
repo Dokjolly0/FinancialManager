@@ -3185,6 +3185,516 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Salva scopo'**
   String get aiSavePurpose;
+
+  /// No description provided for @aiNewAnalysisTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuova analisi AI'**
+  String get aiNewAnalysisTitle;
+
+  /// No description provided for @aiHistoryTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Cronologia analisi'**
+  String get aiHistoryTitle;
+
+  /// No description provided for @aiHistoryMenuSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Rileggi, rinomina o elimina le analisi'**
+  String get aiHistoryMenuSubtitle;
+
+  /// No description provided for @aiNotReadyTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Configura prima l\'Analisi AI'**
+  String get aiNotReadyTitle;
+
+  /// No description provided for @aiNotReadyBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli un fornitore, inserisci la chiave API e un modello.'**
+  String get aiNotReadyBody;
+
+  /// No description provided for @aiGoToSetup.
+  ///
+  /// In it, this message translates to:
+  /// **'Configura'**
+  String get aiGoToSetup;
+
+  /// No description provided for @aiWhatToAnalyze.
+  ///
+  /// In it, this message translates to:
+  /// **'Cosa vuoi analizzare'**
+  String get aiWhatToAnalyze;
+
+  /// No description provided for @aiCustomQuestionLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'La tua domanda'**
+  String get aiCustomQuestionLabel;
+
+  /// No description provided for @aiCustomQuestionHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Es. quanto ho speso per mangiare fuori e come è cambiato nei mesi?'**
+  String get aiCustomQuestionHint;
+
+  /// No description provided for @aiPeriodLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Periodo'**
+  String get aiPeriodLabel;
+
+  /// No description provided for @aiPeriodLast30Days.
+  ///
+  /// In it, this message translates to:
+  /// **'Ultimi 30 giorni'**
+  String get aiPeriodLast30Days;
+
+  /// No description provided for @aiPeriodLast12Months.
+  ///
+  /// In it, this message translates to:
+  /// **'Ultimi 12 mesi'**
+  String get aiPeriodLast12Months;
+
+  /// No description provided for @aiPeriodCurrentMonth.
+  ///
+  /// In it, this message translates to:
+  /// **'Mese corrente'**
+  String get aiPeriodCurrentMonth;
+
+  /// No description provided for @aiPeriodCurrentYear.
+  ///
+  /// In it, this message translates to:
+  /// **'Anno corrente'**
+  String get aiPeriodCurrentYear;
+
+  /// No description provided for @aiPeriodAllTime.
+  ///
+  /// In it, this message translates to:
+  /// **'Tutta la cronologia'**
+  String get aiPeriodAllTime;
+
+  /// No description provided for @aiPeriodCustom.
+  ///
+  /// In it, this message translates to:
+  /// **'Personalizzato'**
+  String get aiPeriodCustom;
+
+  /// No description provided for @aiPeriodUntil.
+  ///
+  /// In it, this message translates to:
+  /// **'Fino al {date}'**
+  String aiPeriodUntil(String date);
+
+  /// No description provided for @aiWalletsLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Portafogli'**
+  String get aiWalletsLabel;
+
+  /// No description provided for @aiAllWallets.
+  ///
+  /// In it, this message translates to:
+  /// **'Tutti'**
+  String get aiAllWallets;
+
+  /// No description provided for @aiDataToSend.
+  ///
+  /// In it, this message translates to:
+  /// **'Dati da inviare'**
+  String get aiDataToSend;
+
+  /// No description provided for @aiDataToSendHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Periodo, portafogli e totali vengono sempre inviati. Più dati scegli, più l\'analisi è ricca e più token consuma.'**
+  String get aiDataToSendHint;
+
+  /// No description provided for @aiSectionMonthly.
+  ///
+  /// In it, this message translates to:
+  /// **'Andamento mensile'**
+  String get aiSectionMonthly;
+
+  /// No description provided for @aiSectionCategories.
+  ///
+  /// In it, this message translates to:
+  /// **'Categorie'**
+  String get aiSectionCategories;
+
+  /// No description provided for @aiSectionTitles.
+  ///
+  /// In it, this message translates to:
+  /// **'Voci principali'**
+  String get aiSectionTitles;
+
+  /// No description provided for @aiSectionTransfers.
+  ///
+  /// In it, this message translates to:
+  /// **'Trasferimenti'**
+  String get aiSectionTransfers;
+
+  /// No description provided for @aiSectionRecurring.
+  ///
+  /// In it, this message translates to:
+  /// **'Spese ricorrenti'**
+  String get aiSectionRecurring;
+
+  /// No description provided for @aiSectionPersonalContext.
+  ///
+  /// In it, this message translates to:
+  /// **'Contesto personale'**
+  String get aiSectionPersonalContext;
+
+  /// No description provided for @aiIncludeTransactions.
+  ///
+  /// In it, this message translates to:
+  /// **'Includi i singoli movimenti'**
+  String get aiIncludeTransactions;
+
+  /// No description provided for @aiIncludeTransactionsHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Utile per le anomalie; invia data, importo, titolo e categoria dei movimenti più recenti.'**
+  String get aiIncludeTransactionsHint;
+
+  /// No description provided for @aiMaxTransactionsValue.
+  ///
+  /// In it, this message translates to:
+  /// **'max {count}'**
+  String aiMaxTransactionsValue(int count);
+
+  /// No description provided for @aiIncludeAdjustments.
+  ///
+  /// In it, this message translates to:
+  /// **'Includi le rettifiche di saldo'**
+  String get aiIncludeAdjustments;
+
+  /// No description provided for @aiIncludeAdjustmentsHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Di solito correggono errori di registrazione: meglio lasciarle fuori.'**
+  String get aiIncludeAdjustmentsHint;
+
+  /// No description provided for @aiPreviewAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Anteprima'**
+  String get aiPreviewAction;
+
+  /// No description provided for @aiPreviewTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Anteprima'**
+  String get aiPreviewTitle;
+
+  /// No description provided for @aiPreviewMissing.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna anteprima: torna indietro e preparane una.'**
+  String get aiPreviewMissing;
+
+  /// No description provided for @aiPreviewSentTo.
+  ///
+  /// In it, this message translates to:
+  /// **'Sarà inviato a {provider} · {model}'**
+  String aiPreviewSentTo(String provider, String model);
+
+  /// No description provided for @aiPreviewWallets.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 portafoglio} other{{count} portafogli}}'**
+  String aiPreviewWallets(int count);
+
+  /// No description provided for @aiPreviewOnlyTotals.
+  ///
+  /// In it, this message translates to:
+  /// **'Solo periodo, portafogli e totali'**
+  String get aiPreviewOnlyTotals;
+
+  /// No description provided for @aiPreviewSections.
+  ///
+  /// In it, this message translates to:
+  /// **'Sezioni: {sections}'**
+  String aiPreviewSections(String sections);
+
+  /// No description provided for @aiPreviewNoTransactions.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun movimento singolo'**
+  String get aiPreviewNoTransactions;
+
+  /// No description provided for @aiPreviewTransactions.
+  ///
+  /// In it, this message translates to:
+  /// **'{count} movimenti singoli ({omitted} meno recenti esclusi)'**
+  String aiPreviewTransactions(int count, int omitted);
+
+  /// No description provided for @aiPreviewAnonymized.
+  ///
+  /// In it, this message translates to:
+  /// **'Titoli dei movimenti anonimizzati'**
+  String get aiPreviewAnonymized;
+
+  /// No description provided for @aiPreviewWithContext.
+  ///
+  /// In it, this message translates to:
+  /// **'Contesto personale incluso'**
+  String get aiPreviewWithContext;
+
+  /// No description provided for @aiPreviewTokens.
+  ///
+  /// In it, this message translates to:
+  /// **'~{tokens} token in input'**
+  String aiPreviewTokens(String tokens);
+
+  /// No description provided for @aiPreviewCost.
+  ///
+  /// In it, this message translates to:
+  /// **'costo max ~{cost}'**
+  String aiPreviewCost(String cost);
+
+  /// No description provided for @aiInstructionsLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Istruzioni'**
+  String get aiInstructionsLabel;
+
+  /// No description provided for @aiInstructionsHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Puoi modificarle: è l\'unica parte del testo che decidi tu.'**
+  String get aiInstructionsHint;
+
+  /// No description provided for @aiInstructionsRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Scrivi le istruzioni prima di inviare.'**
+  String get aiInstructionsRequired;
+
+  /// No description provided for @aiRestoreInstructions.
+  ///
+  /// In it, this message translates to:
+  /// **'Ripristina'**
+  String get aiRestoreInstructions;
+
+  /// No description provided for @aiSystemPromptLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Regole per il modello'**
+  String get aiSystemPromptLabel;
+
+  /// No description provided for @aiSystemPromptHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Fisse: formato del report, uso corretto dei dati, protezioni'**
+  String get aiSystemPromptHint;
+
+  /// No description provided for @aiDataBlockLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Dati inviati'**
+  String get aiDataBlockLabel;
+
+  /// No description provided for @aiDataBlockHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Generati dal server dai tuoi movimenti, non modificabili'**
+  String get aiDataBlockHint;
+
+  /// No description provided for @aiSendAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Invia e analizza'**
+  String get aiSendAction;
+
+  /// No description provided for @aiAnalysisTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Analisi AI'**
+  String get aiAnalysisTitle;
+
+  /// No description provided for @aiDataSentTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Cosa è stato inviato'**
+  String get aiDataSentTitle;
+
+  /// No description provided for @aiDataSentHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Istruzioni e dati esattamente come inviati'**
+  String get aiDataSentHint;
+
+  /// No description provided for @aiCopyAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Copia testo'**
+  String get aiCopyAction;
+
+  /// No description provided for @aiShareAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Condividi'**
+  String get aiShareAction;
+
+  /// No description provided for @aiCopied.
+  ///
+  /// In it, this message translates to:
+  /// **'Testo copiato'**
+  String get aiCopied;
+
+  /// No description provided for @aiRefreshPreview.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiorna anteprima'**
+  String get aiRefreshPreview;
+
+  /// No description provided for @aiTokensUsed.
+  ///
+  /// In it, this message translates to:
+  /// **'{input} in / {output} out token'**
+  String aiTokensUsed(String input, String output);
+
+  /// No description provided for @aiCostValue.
+  ///
+  /// In it, this message translates to:
+  /// **'costo ~{cost}'**
+  String aiCostValue(String cost);
+
+  /// No description provided for @aiThinking.
+  ///
+  /// In it, this message translates to:
+  /// **'Il modello sta scrivendo…'**
+  String get aiThinking;
+
+  /// No description provided for @aiAnswerStopped.
+  ///
+  /// In it, this message translates to:
+  /// **'Interrotta: il testo qui sopra è parziale.'**
+  String get aiAnswerStopped;
+
+  /// No description provided for @aiAnswerTruncated.
+  ///
+  /// In it, this message translates to:
+  /// **'Risposta troncata al limite di token: puoi alzarlo nelle impostazioni avanzate.'**
+  String get aiAnswerTruncated;
+
+  /// No description provided for @aiWaitForAnswer.
+  ///
+  /// In it, this message translates to:
+  /// **'Attendi la fine della risposta…'**
+  String get aiWaitForAnswer;
+
+  /// No description provided for @aiFollowUpUnavailable.
+  ///
+  /// In it, this message translates to:
+  /// **'Domande disponibili a report completato'**
+  String get aiFollowUpUnavailable;
+
+  /// No description provided for @aiFollowUpLimitReached.
+  ///
+  /// In it, this message translates to:
+  /// **'Limite di domande raggiunto'**
+  String get aiFollowUpLimitReached;
+
+  /// No description provided for @aiAskFollowUpHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Fai una domanda ({left} rimaste)'**
+  String aiAskFollowUpHint(int left);
+
+  /// No description provided for @aiStopAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Interrompi'**
+  String get aiStopAction;
+
+  /// No description provided for @aiAskAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Invia domanda'**
+  String get aiAskAction;
+
+  /// No description provided for @aiHistoryEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna analisi ancora. Avviane una dalla sezione Report.'**
+  String get aiHistoryEmpty;
+
+  /// No description provided for @aiDeleteAnalysisTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Eliminare l\'analisi?'**
+  String get aiDeleteAnalysisTitle;
+
+  /// No description provided for @aiDeleteAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina'**
+  String get aiDeleteAction;
+
+  /// No description provided for @aiDeleteAllAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina tutte'**
+  String get aiDeleteAllAction;
+
+  /// No description provided for @aiDeleteAllTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Eliminare tutte le analisi?'**
+  String get aiDeleteAllTitle;
+
+  /// No description provided for @aiDeleteAllMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Report e conversazioni vengono eliminati definitivamente.'**
+  String get aiDeleteAllMessage;
+
+  /// No description provided for @aiRenameAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Rinomina'**
+  String get aiRenameAction;
+
+  /// No description provided for @aiRenameTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Rinomina analisi'**
+  String get aiRenameTitle;
+
+  /// No description provided for @aiCancel.
+  ///
+  /// In it, this message translates to:
+  /// **'Annulla'**
+  String get aiCancel;
+
+  /// No description provided for @aiReportsCardTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Analisi AI'**
+  String get aiReportsCardTitle;
+
+  /// No description provided for @aiReportsCardBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Fatti spiegare i tuoi numeri: un report personalizzato e domande di approfondimento.'**
+  String get aiReportsCardBody;
+
+  /// No description provided for @aiReportsCardSetupBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Collega il tuo fornitore AI preferito per ottenere report personalizzati sulle tue finanze.'**
+  String get aiReportsCardSetupBody;
+
+  /// No description provided for @aiReportsCardStart.
+  ///
+  /// In it, this message translates to:
+  /// **'Analizza'**
+  String get aiReportsCardStart;
 }
 
 class _AppLocalizationsDelegate

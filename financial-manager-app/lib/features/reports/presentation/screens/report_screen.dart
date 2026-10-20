@@ -10,6 +10,7 @@ import '../../../wallets/data/providers.dart';
 import '../view_models/report_controller.dart';
 import '../widgets/monthly_comparison_section.dart';
 import '../widgets/period_selector.dart';
+import '../widgets/ai_analysis_entry_card.dart';
 import '../widgets/report_breakdown_section.dart';
 import '../widgets/report_summary_card.dart';
 import '../widgets/report_trend_chart.dart';
@@ -94,6 +95,8 @@ class ReportScreen extends ConsumerWidget {
                         AppSpacing.lg,
                       ),
                       children: [
+                        const AiAnalysisEntryCard(),
+                        const SizedBox(height: AppSpacing.md),
                         if (state.summary != null)
                           ReportSummaryCard(summary: state.summary!),
                         const SizedBox(height: AppSpacing.md),

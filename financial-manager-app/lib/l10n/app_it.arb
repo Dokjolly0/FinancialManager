@@ -655,5 +655,176 @@
   "aiPurposeSuggestionEmergency": "Fondo emergenze",
   "aiPurposeSuggestionHome": "Spese di casa e bollette",
   "aiPurposeSuggestionLeisure": "Tempo libero e viaggi",
-  "aiSavePurpose": "Salva scopo"
+  "aiSavePurpose": "Salva scopo",
+  "aiNewAnalysisTitle": "Nuova analisi AI",
+  "aiHistoryTitle": "Cronologia analisi",
+  "aiHistoryMenuSubtitle": "Rileggi, rinomina o elimina le analisi",
+  "aiNotReadyTitle": "Configura prima l'Analisi AI",
+  "aiNotReadyBody": "Scegli un fornitore, inserisci la chiave API e un modello.",
+  "aiGoToSetup": "Configura",
+  "aiWhatToAnalyze": "Cosa vuoi analizzare",
+  "aiCustomQuestionLabel": "La tua domanda",
+  "aiCustomQuestionHint": "Es. quanto ho speso per mangiare fuori e come è cambiato nei mesi?",
+  "aiPeriodLabel": "Periodo",
+  "aiPeriodLast30Days": "Ultimi 30 giorni",
+  "aiPeriodLast12Months": "Ultimi 12 mesi",
+  "aiPeriodCurrentMonth": "Mese corrente",
+  "aiPeriodCurrentYear": "Anno corrente",
+  "aiPeriodAllTime": "Tutta la cronologia",
+  "aiPeriodCustom": "Personalizzato",
+  "aiPeriodUntil": "Fino al {date}",
+  "@aiPeriodUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "aiWalletsLabel": "Portafogli",
+  "aiAllWallets": "Tutti",
+  "aiDataToSend": "Dati da inviare",
+  "aiDataToSendHint": "Periodo, portafogli e totali vengono sempre inviati. Più dati scegli, più l'analisi è ricca e più token consuma.",
+  "aiSectionMonthly": "Andamento mensile",
+  "aiSectionCategories": "Categorie",
+  "aiSectionTitles": "Voci principali",
+  "aiSectionTransfers": "Trasferimenti",
+  "aiSectionRecurring": "Spese ricorrenti",
+  "aiSectionPersonalContext": "Contesto personale",
+  "aiIncludeTransactions": "Includi i singoli movimenti",
+  "aiIncludeTransactionsHint": "Utile per le anomalie; invia data, importo, titolo e categoria dei movimenti più recenti.",
+  "aiMaxTransactionsValue": "max {count}",
+  "@aiMaxTransactionsValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiIncludeAdjustments": "Includi le rettifiche di saldo",
+  "aiIncludeAdjustmentsHint": "Di solito correggono errori di registrazione: meglio lasciarle fuori.",
+  "aiPreviewAction": "Anteprima",
+  "aiPreviewTitle": "Anteprima",
+  "aiPreviewMissing": "Nessuna anteprima: torna indietro e preparane una.",
+  "aiPreviewSentTo": "Sarà inviato a {provider} · {model}",
+  "@aiPreviewSentTo": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPreviewWallets": "{count, plural, =1{1 portafoglio} other{{count} portafogli}}",
+  "@aiPreviewWallets": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiPreviewOnlyTotals": "Solo periodo, portafogli e totali",
+  "aiPreviewSections": "Sezioni: {sections}",
+  "@aiPreviewSections": {
+    "placeholders": {
+      "sections": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPreviewNoTransactions": "Nessun movimento singolo",
+  "aiPreviewTransactions": "{count} movimenti singoli ({omitted} meno recenti esclusi)",
+  "@aiPreviewTransactions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "omitted": {
+        "type": "int"
+      }
+    }
+  },
+  "aiPreviewAnonymized": "Titoli dei movimenti anonimizzati",
+  "aiPreviewWithContext": "Contesto personale incluso",
+  "aiPreviewTokens": "~{tokens} token in input",
+  "@aiPreviewTokens": {
+    "placeholders": {
+      "tokens": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPreviewCost": "costo max ~{cost}",
+  "@aiPreviewCost": {
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
+  "aiInstructionsLabel": "Istruzioni",
+  "aiInstructionsHint": "Puoi modificarle: è l'unica parte del testo che decidi tu.",
+  "aiInstructionsRequired": "Scrivi le istruzioni prima di inviare.",
+  "aiRestoreInstructions": "Ripristina",
+  "aiSystemPromptLabel": "Regole per il modello",
+  "aiSystemPromptHint": "Fisse: formato del report, uso corretto dei dati, protezioni",
+  "aiDataBlockLabel": "Dati inviati",
+  "aiDataBlockHint": "Generati dal server dai tuoi movimenti, non modificabili",
+  "aiSendAction": "Invia e analizza",
+  "aiAnalysisTitle": "Analisi AI",
+  "aiDataSentTitle": "Cosa è stato inviato",
+  "aiDataSentHint": "Istruzioni e dati esattamente come inviati",
+  "aiCopyAction": "Copia testo",
+  "aiShareAction": "Condividi",
+  "aiCopied": "Testo copiato",
+  "aiRefreshPreview": "Aggiorna anteprima",
+  "aiTokensUsed": "{input} in / {output} out token",
+  "@aiTokensUsed": {
+    "placeholders": {
+      "input": {
+        "type": "String"
+      },
+      "output": {
+        "type": "String"
+      }
+    }
+  },
+  "aiCostValue": "costo ~{cost}",
+  "@aiCostValue": {
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
+  "aiThinking": "Il modello sta scrivendo…",
+  "aiAnswerStopped": "Interrotta: il testo qui sopra è parziale.",
+  "aiAnswerTruncated": "Risposta troncata al limite di token: puoi alzarlo nelle impostazioni avanzate.",
+  "aiWaitForAnswer": "Attendi la fine della risposta…",
+  "aiFollowUpUnavailable": "Domande disponibili a report completato",
+  "aiFollowUpLimitReached": "Limite di domande raggiunto",
+  "aiAskFollowUpHint": "Fai una domanda ({left} rimaste)",
+  "@aiAskFollowUpHint": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "aiStopAction": "Interrompi",
+  "aiAskAction": "Invia domanda",
+  "aiHistoryEmpty": "Nessuna analisi ancora. Avviane una dalla sezione Report.",
+  "aiDeleteAnalysisTitle": "Eliminare l'analisi?",
+  "aiDeleteAction": "Elimina",
+  "aiDeleteAllAction": "Elimina tutte",
+  "aiDeleteAllTitle": "Eliminare tutte le analisi?",
+  "aiDeleteAllMessage": "Report e conversazioni vengono eliminati definitivamente.",
+  "aiRenameAction": "Rinomina",
+  "aiRenameTitle": "Rinomina analisi",
+  "aiCancel": "Annulla",
+  "aiReportsCardTitle": "Analisi AI",
+  "aiReportsCardBody": "Fatti spiegare i tuoi numeri: un report personalizzato e domande di approfondimento.",
+  "aiReportsCardSetupBody": "Collega il tuo fornitore AI preferito per ottenere report personalizzati sulle tue finanze.",
+  "aiReportsCardStart": "Analizza"
 }

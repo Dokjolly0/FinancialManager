@@ -8,7 +8,11 @@ import '../features/account/presentation/screens/account_preferences_screen.dart
 import '../features/account/presentation/screens/account_profile_screen.dart';
 import '../features/account/presentation/screens/account_screen.dart';
 import '../features/account/presentation/screens/account_security_screen.dart';
+import '../features/ai/presentation/screens/ai_analysis_screen.dart';
+import '../features/ai/presentation/screens/ai_analysis_setup_screen.dart';
 import '../features/ai/presentation/screens/ai_assistant_screen.dart';
+import '../features/ai/presentation/screens/ai_history_screen.dart';
+import '../features/ai/presentation/screens/ai_prompt_preview_screen.dart';
 import '../features/ai/presentation/screens/ai_personal_context_screen.dart';
 import '../features/ai/presentation/screens/ai_provider_settings_screen.dart';
 import '../features/ai/presentation/screens/ai_wallet_purposes_screen.dart';
@@ -58,6 +62,13 @@ abstract final class AppRoutes {
   static const aiProvider = '/app/account/ai/provider';
   static const aiContext = '/app/account/ai/context';
   static const aiWalletPurposes = '/app/account/ai/wallet-purposes';
+
+  // AI analysis flow: setup → preview → run, plus the history.
+  static const aiNew = '/app/ai/new';
+  static const aiPreview = '/app/ai/preview';
+  static const aiRun = '/app/ai/run';
+  static const aiHistory = '/app/ai/analyses';
+  static String aiAnalysis(String id) => '/app/ai/analyses/$id';
 
   static String transactionDetail(String id) => '/app/transactions/$id';
   static String transactionEdit(String id) => '/app/transactions/$id/edit';
@@ -185,6 +196,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.aiWalletPurposes,
         builder: (_, _) => const AiWalletPurposesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiNew,
+        builder: (_, _) => const AiAnalysisSetupScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiPreview,
+        builder: (_, _) => const AiPromptPreviewScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiRun,
+        builder: (_, _) => const AiAnalysisScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiHistory,
+        builder: (_, _) => const AiHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/app/ai/analyses/:id',
+        builder: (_, state) =>
+            AiAnalysisScreen(analysisId: state.pathParameters['id']),
       ),
       GoRoute(
         path: AppRoutes.walletsNew,
