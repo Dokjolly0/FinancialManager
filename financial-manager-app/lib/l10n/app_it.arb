@@ -463,5 +463,197 @@
   "mediaUploadFailedMessage": "Caricamento non riuscito. Riprova.",
   "mediaRenameDialogTitle": "Rinomina immagine",
   "mediaNameLabel": "Nome",
-  "mediaRenameFailedMessage": "Impossibile rinominare l'immagine."
+  "mediaRenameFailedMessage": "Impossibile rinominare l'immagine.",
+  "aiAssistantMenuTitle": "Assistente AI",
+  "aiAssistantMenuSubtitle": "Analizza le tue finanze con un modello AI",
+  "aiAssistantTitle": "Assistente AI",
+  "aiUnavailableTitle": "Analisi AI non disponibile",
+  "aiUnavailableBody": "Questo server non ha attivato l'Analisi AI. Chi gestisce il server può abilitarla impostando AI_KEY_ENCRYPTION_KEY.",
+  "aiSetupTitle": "Prepara la tua prima analisi",
+  "aiSetupDoneTitle": "Tutto pronto",
+  "aiSetupProgress": "{done} di {total} passaggi completati",
+  "@aiSetupProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "aiSetupOptional": "facoltativo",
+  "aiSetupStepProvider": "Fornitore, chiave e modello",
+  "aiSetupStepProviderHint": "Scegli il servizio AI e inserisci la tua chiave API",
+  "aiSetupStepContext": "Contesto personale",
+  "aiSetupStepContextHint": "Obiettivi e situazione, per consigli su misura",
+  "aiSetupStepPurposes": "Scopo dei portafogli",
+  "aiSetupStepPurposesHint": "A cosa serve ciascun portafoglio",
+  "aiSetupStepFirstAnalysis": "Prima analisi",
+  "aiSetupStepFirstAnalysisHint": "Dalla sezione Report, scheda Analisi AI",
+  "aiProviderMenuTitle": "Fornitore e chiave API",
+  "aiProviderMenuNotConfigured": "Non configurato",
+  "aiContextMenuTitle": "Contesto personale",
+  "aiContextMenuFilled": "Compilato",
+  "aiContextMenuEmpty": "Non ancora compilato",
+  "aiWalletPurposesMenuTitle": "Scopo dei portafogli",
+  "aiWalletPurposesProgress": "{done} di {total} portafogli con uno scopo",
+  "@aiWalletPurposesProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "aiConsentMenuTitle": "Privacy e consenso",
+  "aiConsentMenuPending": "Da accettare prima della prima analisi",
+  "aiConsentMenuAccepted": "Accettato",
+  "aiConsentRevokeAction": "Revoca",
+  "aiConsentRevokeConfirmTitle": "Revocare il consenso?",
+  "aiConsentRevokeConfirmMessage": "Non potrai avviare analisi finché non lo accetterai di nuovo. Le analisi salvate restano nella cronologia.",
+  "aiConsentTitle": "Prima di iniziare",
+  "aiConsentIntro": "L'Analisi AI invia un riepilogo dei tuoi dati al fornitore AI che scegli tu, usando la tua chiave API. Prima di ogni invio vedrai esattamente cosa viene inviato.",
+  "aiConsentSentTitle": "Cosa viene inviato",
+  "aiConsentSentAggregates": "Totali, andamento mensile, categorie e voci principali del periodo scelto",
+  "aiConsentSentWallets": "Nome, tipo, scopo e saldo dei portafogli inclusi",
+  "aiConsentSentTransactions": "Solo se lo attivi: l'elenco dei movimenti, anche con titoli anonimizzati",
+  "aiConsentSentContext": "Solo se lo attivi: il contesto personale che hai scritto",
+  "aiConsentNeverTitle": "Cosa non viene mai inviato",
+  "aiConsentNeverBody": "Email, nome, nome utente, identificativi dell'account e immagini",
+  "aiConsentKeyTitle": "La tua chiave API",
+  "aiConsentKeyBody": "Resta cifrata sul server e non viene mai mostrata di nuovo né esportata",
+  "aiConsentProviderTitle": "Il fornitore",
+  "aiConsentProviderBody": "Tratta i dati secondo le sue condizioni: verifica per quanto tempo conserva le richieste e se le usa per addestrare i modelli",
+  "aiConsentRevokeTitle": "Puoi cambiare idea",
+  "aiConsentRevokeBody": "Revoca il consenso e cancella le analisi in qualsiasi momento da Assistente AI",
+  "aiConsentAccept": "Ho capito, accetto",
+  "aiConsentDecline": "Non ora",
+  "aiProviderLabel": "Fornitore",
+  "aiProviderCompatible": "Compatibile OpenAI (Mistral, Groq, OpenRouter, Ollama…)",
+  "aiProviderHintAnthropic": "Crea una chiave su console.anthropic.com → API keys.",
+  "aiProviderHintOpenai": "Crea una chiave su platform.openai.com → API keys.",
+  "aiProviderHintGemini": "Crea una chiave su aistudio.google.com → Get API key.",
+  "aiProviderHintCompatible": "Per qualsiasi servizio che espone l'API di OpenAI: inserisci il suo indirizzo, di solito terminante in /v1.",
+  "aiBaseUrlLabel": "Indirizzo del servizio (base URL)",
+  "aiBaseUrlHelper": "Indirizzi privati o locali (es. Ollama in casa) funzionano solo se chi gestisce il server lo ha permesso.",
+  "aiApiKeyLabel": "Chiave API",
+  "aiApiKeyOptionalLabel": "Chiave API (se richiesta)",
+  "aiApiKeyHelper": "Viene cifrata sul server: dopo il salvataggio vedrai solo le ultime cifre.",
+  "aiApiKeyWillBeRemoved": "La chiave salvata verrà rimossa al salvataggio.",
+  "aiApiKeyStored": "Chiave salvata {hint}",
+  "@aiApiKeyStored": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "aiApiKeyReplace": "Sostituisci",
+  "aiApiKeyRemove": "Rimuovi",
+  "aiApiKeyShow": "Mostra chiave",
+  "aiApiKeyHide": "Nascondi chiave",
+  "aiModelLabel": "Modello",
+  "aiModelHelper": "Premi «Carica modelli» per sceglierlo dall'elenco del fornitore, oppure scrivine il nome.",
+  "aiModelsLoaded": "{count} modelli disponibili",
+  "@aiModelsLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiModelsNoneFound": "Il fornitore non ha restituito modelli: scrivi il nome a mano.",
+  "aiLoadModels": "Carica modelli",
+  "aiTestConnection": "Verifica connessione",
+  "aiTestOk": "Funziona: {model} ha risposto in {ms} ms.",
+  "@aiTestOk": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "aiTestOkKeyOnly": "Chiave valida (risposta in {ms} ms). Scegli un modello per verificarlo.",
+  "@aiTestOkKeyOnly": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "aiLastTestOk": "Ultima verifica riuscita.",
+  "aiLastTestFailed": "Ultima verifica non riuscita.",
+  "aiAdvancedSettings": "Impostazioni avanzate",
+  "aiMaxOutputTokensLabel": "Lunghezza massima della risposta (token)",
+  "aiMaxOutputTokensHelper": "Tra {min} e {max}. Più è alto, più il report può essere lungo e costare.",
+  "@aiMaxOutputTokensHelper": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "aiPricesTitle": "Prezzi (facoltativi)",
+  "aiPricesHelper": "Prezzo per milione di token del tuo modello, nella valuta del fornitore: serve solo per stimare il costo.",
+  "aiInputPriceLabel": "Input",
+  "aiOutputPriceLabel": "Output",
+  "aiDefaultIncludeTransactions": "Includi i singoli movimenti di default",
+  "aiDefaultIncludeTransactionsHint": "Analisi più precise, ma più dati inviati e più token.",
+  "aiDefaultAnonymizeTitles": "Anonimizza i titoli di default",
+  "aiDefaultAnonymizeTitlesHint": "I nomi dei movimenti diventano «Voce 1», «Voce 2»…",
+  "aiSaveSettings": "Salva",
+  "aiForgetProviderTitle": "Dimenticare questo fornitore?",
+  "aiForgetProviderMessage": "La chiave API salvata viene eliminata dal server.",
+  "aiForgetProviderAction": "Elimina chiave e fornitore",
+  "aiContextIntro": "Queste informazioni aiutano l'AI a darti consigli adatti alla tua situazione. Sono tutte facoltative e le invii solo se includi il contesto personale in un'analisi.",
+  "aiNotSpecified": "Non specificato",
+  "aiHouseholdLabel": "Persone nel nucleo familiare",
+  "aiHouseholdValue": "{count, plural, =1{1 persona} other{{count} persone}}",
+  "@aiHouseholdValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiHouseholdLess": "Una persona in meno",
+  "aiHouseholdMore": "Una persona in più",
+  "aiIncomeTypeLabel": "Tipo di reddito",
+  "aiIncomeEmployee": "Lavoro dipendente",
+  "aiIncomeSelfEmployed": "Lavoro autonomo",
+  "aiIncomeStudent": "Studente",
+  "aiIncomeRetired": "Pensione",
+  "aiIncomeUnemployed": "Senza reddito da lavoro",
+  "aiIncomeMixed": "Misto",
+  "aiIncomeOther": "Altro",
+  "aiAboutMeLabel": "Su di me",
+  "aiAboutMeHint": "Es. vivo in affitto a Milano, ho un'auto, lo stipendio arriva il 27",
+  "aiGoalsLabel": "Obiettivi",
+  "aiGoalsHint": "Es. mettere da parte 5.000 € entro giugno, ridurre le spese per mangiare fuori",
+  "aiIgnoreLabel": "Cose da ignorare o da interpretare",
+  "aiIgnoreHint": "Es. il bonifico a Marco è un prestito che mi restituisce; a luglio ho pagato l'assicurazione annuale",
+  "aiResponseStyleLabel": "Stile delle risposte",
+  "aiStyleDefault": "Standard",
+  "aiStyleConcise": "Conciso",
+  "aiStyleDetailed": "Dettagliato",
+  "aiContextPrivacyNote": "Non scrivere qui dati come IBAN, codice fiscale o password: non servono all'analisi.",
+  "aiSaveContext": "Salva",
+  "aiWalletPurposesIntro": "Indica a cosa serve ogni portafoglio: l'AI potrà dirti se lo stai usando come previsto e suggerirti come organizzarti meglio.",
+  "aiWalletPurposesEmpty": "Non hai ancora portafogli attivi.",
+  "aiWalletNoPurpose": "Nessuno scopo",
+  "aiPurposeSuggestionDaily": "Spese quotidiane",
+  "aiPurposeSuggestionSavings": "Risparmi",
+  "aiPurposeSuggestionEmergency": "Fondo emergenze",
+  "aiPurposeSuggestionHome": "Spese di casa e bollette",
+  "aiPurposeSuggestionLeisure": "Tempo libero e viaggi",
+  "aiSavePurpose": "Salva scopo"
 }

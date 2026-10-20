@@ -2441,6 +2441,750 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Impossibile rinominare l\'immagine.'**
   String get mediaRenameFailedMessage;
+
+  /// No description provided for @aiAssistantMenuTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Assistente AI'**
+  String get aiAssistantMenuTitle;
+
+  /// No description provided for @aiAssistantMenuSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Analizza le tue finanze con un modello AI'**
+  String get aiAssistantMenuSubtitle;
+
+  /// No description provided for @aiAssistantTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Assistente AI'**
+  String get aiAssistantTitle;
+
+  /// No description provided for @aiUnavailableTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Analisi AI non disponibile'**
+  String get aiUnavailableTitle;
+
+  /// No description provided for @aiUnavailableBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo server non ha attivato l\'Analisi AI. Chi gestisce il server può abilitarla impostando AI_KEY_ENCRYPTION_KEY.'**
+  String get aiUnavailableBody;
+
+  /// No description provided for @aiSetupTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Prepara la tua prima analisi'**
+  String get aiSetupTitle;
+
+  /// No description provided for @aiSetupDoneTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Tutto pronto'**
+  String get aiSetupDoneTitle;
+
+  /// No description provided for @aiSetupProgress.
+  ///
+  /// In it, this message translates to:
+  /// **'{done} di {total} passaggi completati'**
+  String aiSetupProgress(int done, int total);
+
+  /// No description provided for @aiSetupOptional.
+  ///
+  /// In it, this message translates to:
+  /// **'facoltativo'**
+  String get aiSetupOptional;
+
+  /// No description provided for @aiSetupStepProvider.
+  ///
+  /// In it, this message translates to:
+  /// **'Fornitore, chiave e modello'**
+  String get aiSetupStepProvider;
+
+  /// No description provided for @aiSetupStepProviderHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli il servizio AI e inserisci la tua chiave API'**
+  String get aiSetupStepProviderHint;
+
+  /// No description provided for @aiSetupStepContext.
+  ///
+  /// In it, this message translates to:
+  /// **'Contesto personale'**
+  String get aiSetupStepContext;
+
+  /// No description provided for @aiSetupStepContextHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Obiettivi e situazione, per consigli su misura'**
+  String get aiSetupStepContextHint;
+
+  /// No description provided for @aiSetupStepPurposes.
+  ///
+  /// In it, this message translates to:
+  /// **'Scopo dei portafogli'**
+  String get aiSetupStepPurposes;
+
+  /// No description provided for @aiSetupStepPurposesHint.
+  ///
+  /// In it, this message translates to:
+  /// **'A cosa serve ciascun portafoglio'**
+  String get aiSetupStepPurposesHint;
+
+  /// No description provided for @aiSetupStepFirstAnalysis.
+  ///
+  /// In it, this message translates to:
+  /// **'Prima analisi'**
+  String get aiSetupStepFirstAnalysis;
+
+  /// No description provided for @aiSetupStepFirstAnalysisHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Dalla sezione Report, scheda Analisi AI'**
+  String get aiSetupStepFirstAnalysisHint;
+
+  /// No description provided for @aiProviderMenuTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Fornitore e chiave API'**
+  String get aiProviderMenuTitle;
+
+  /// No description provided for @aiProviderMenuNotConfigured.
+  ///
+  /// In it, this message translates to:
+  /// **'Non configurato'**
+  String get aiProviderMenuNotConfigured;
+
+  /// No description provided for @aiContextMenuTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Contesto personale'**
+  String get aiContextMenuTitle;
+
+  /// No description provided for @aiContextMenuFilled.
+  ///
+  /// In it, this message translates to:
+  /// **'Compilato'**
+  String get aiContextMenuFilled;
+
+  /// No description provided for @aiContextMenuEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Non ancora compilato'**
+  String get aiContextMenuEmpty;
+
+  /// No description provided for @aiWalletPurposesMenuTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Scopo dei portafogli'**
+  String get aiWalletPurposesMenuTitle;
+
+  /// No description provided for @aiWalletPurposesProgress.
+  ///
+  /// In it, this message translates to:
+  /// **'{done} di {total} portafogli con uno scopo'**
+  String aiWalletPurposesProgress(int done, int total);
+
+  /// No description provided for @aiConsentMenuTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Privacy e consenso'**
+  String get aiConsentMenuTitle;
+
+  /// No description provided for @aiConsentMenuPending.
+  ///
+  /// In it, this message translates to:
+  /// **'Da accettare prima della prima analisi'**
+  String get aiConsentMenuPending;
+
+  /// No description provided for @aiConsentMenuAccepted.
+  ///
+  /// In it, this message translates to:
+  /// **'Accettato'**
+  String get aiConsentMenuAccepted;
+
+  /// No description provided for @aiConsentRevokeAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Revoca'**
+  String get aiConsentRevokeAction;
+
+  /// No description provided for @aiConsentRevokeConfirmTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Revocare il consenso?'**
+  String get aiConsentRevokeConfirmTitle;
+
+  /// No description provided for @aiConsentRevokeConfirmMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Non potrai avviare analisi finché non lo accetterai di nuovo. Le analisi salvate restano nella cronologia.'**
+  String get aiConsentRevokeConfirmMessage;
+
+  /// No description provided for @aiConsentTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Prima di iniziare'**
+  String get aiConsentTitle;
+
+  /// No description provided for @aiConsentIntro.
+  ///
+  /// In it, this message translates to:
+  /// **'L\'Analisi AI invia un riepilogo dei tuoi dati al fornitore AI che scegli tu, usando la tua chiave API. Prima di ogni invio vedrai esattamente cosa viene inviato.'**
+  String get aiConsentIntro;
+
+  /// No description provided for @aiConsentSentTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Cosa viene inviato'**
+  String get aiConsentSentTitle;
+
+  /// No description provided for @aiConsentSentAggregates.
+  ///
+  /// In it, this message translates to:
+  /// **'Totali, andamento mensile, categorie e voci principali del periodo scelto'**
+  String get aiConsentSentAggregates;
+
+  /// No description provided for @aiConsentSentWallets.
+  ///
+  /// In it, this message translates to:
+  /// **'Nome, tipo, scopo e saldo dei portafogli inclusi'**
+  String get aiConsentSentWallets;
+
+  /// No description provided for @aiConsentSentTransactions.
+  ///
+  /// In it, this message translates to:
+  /// **'Solo se lo attivi: l\'elenco dei movimenti, anche con titoli anonimizzati'**
+  String get aiConsentSentTransactions;
+
+  /// No description provided for @aiConsentSentContext.
+  ///
+  /// In it, this message translates to:
+  /// **'Solo se lo attivi: il contesto personale che hai scritto'**
+  String get aiConsentSentContext;
+
+  /// No description provided for @aiConsentNeverTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Cosa non viene mai inviato'**
+  String get aiConsentNeverTitle;
+
+  /// No description provided for @aiConsentNeverBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Email, nome, nome utente, identificativi dell\'account e immagini'**
+  String get aiConsentNeverBody;
+
+  /// No description provided for @aiConsentKeyTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'La tua chiave API'**
+  String get aiConsentKeyTitle;
+
+  /// No description provided for @aiConsentKeyBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Resta cifrata sul server e non viene mai mostrata di nuovo né esportata'**
+  String get aiConsentKeyBody;
+
+  /// No description provided for @aiConsentProviderTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Il fornitore'**
+  String get aiConsentProviderTitle;
+
+  /// No description provided for @aiConsentProviderBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Tratta i dati secondo le sue condizioni: verifica per quanto tempo conserva le richieste e se le usa per addestrare i modelli'**
+  String get aiConsentProviderBody;
+
+  /// No description provided for @aiConsentRevokeTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Puoi cambiare idea'**
+  String get aiConsentRevokeTitle;
+
+  /// No description provided for @aiConsentRevokeBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Revoca il consenso e cancella le analisi in qualsiasi momento da Assistente AI'**
+  String get aiConsentRevokeBody;
+
+  /// No description provided for @aiConsentAccept.
+  ///
+  /// In it, this message translates to:
+  /// **'Ho capito, accetto'**
+  String get aiConsentAccept;
+
+  /// No description provided for @aiConsentDecline.
+  ///
+  /// In it, this message translates to:
+  /// **'Non ora'**
+  String get aiConsentDecline;
+
+  /// No description provided for @aiProviderLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Fornitore'**
+  String get aiProviderLabel;
+
+  /// No description provided for @aiProviderCompatible.
+  ///
+  /// In it, this message translates to:
+  /// **'Compatibile OpenAI (Mistral, Groq, OpenRouter, Ollama…)'**
+  String get aiProviderCompatible;
+
+  /// No description provided for @aiProviderHintAnthropic.
+  ///
+  /// In it, this message translates to:
+  /// **'Crea una chiave su console.anthropic.com → API keys.'**
+  String get aiProviderHintAnthropic;
+
+  /// No description provided for @aiProviderHintOpenai.
+  ///
+  /// In it, this message translates to:
+  /// **'Crea una chiave su platform.openai.com → API keys.'**
+  String get aiProviderHintOpenai;
+
+  /// No description provided for @aiProviderHintGemini.
+  ///
+  /// In it, this message translates to:
+  /// **'Crea una chiave su aistudio.google.com → Get API key.'**
+  String get aiProviderHintGemini;
+
+  /// No description provided for @aiProviderHintCompatible.
+  ///
+  /// In it, this message translates to:
+  /// **'Per qualsiasi servizio che espone l\'API di OpenAI: inserisci il suo indirizzo, di solito terminante in /v1.'**
+  String get aiProviderHintCompatible;
+
+  /// No description provided for @aiBaseUrlLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Indirizzo del servizio (base URL)'**
+  String get aiBaseUrlLabel;
+
+  /// No description provided for @aiBaseUrlHelper.
+  ///
+  /// In it, this message translates to:
+  /// **'Indirizzi privati o locali (es. Ollama in casa) funzionano solo se chi gestisce il server lo ha permesso.'**
+  String get aiBaseUrlHelper;
+
+  /// No description provided for @aiApiKeyLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Chiave API'**
+  String get aiApiKeyLabel;
+
+  /// No description provided for @aiApiKeyOptionalLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Chiave API (se richiesta)'**
+  String get aiApiKeyOptionalLabel;
+
+  /// No description provided for @aiApiKeyHelper.
+  ///
+  /// In it, this message translates to:
+  /// **'Viene cifrata sul server: dopo il salvataggio vedrai solo le ultime cifre.'**
+  String get aiApiKeyHelper;
+
+  /// No description provided for @aiApiKeyWillBeRemoved.
+  ///
+  /// In it, this message translates to:
+  /// **'La chiave salvata verrà rimossa al salvataggio.'**
+  String get aiApiKeyWillBeRemoved;
+
+  /// No description provided for @aiApiKeyStored.
+  ///
+  /// In it, this message translates to:
+  /// **'Chiave salvata {hint}'**
+  String aiApiKeyStored(String hint);
+
+  /// No description provided for @aiApiKeyReplace.
+  ///
+  /// In it, this message translates to:
+  /// **'Sostituisci'**
+  String get aiApiKeyReplace;
+
+  /// No description provided for @aiApiKeyRemove.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovi'**
+  String get aiApiKeyRemove;
+
+  /// No description provided for @aiApiKeyShow.
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra chiave'**
+  String get aiApiKeyShow;
+
+  /// No description provided for @aiApiKeyHide.
+  ///
+  /// In it, this message translates to:
+  /// **'Nascondi chiave'**
+  String get aiApiKeyHide;
+
+  /// No description provided for @aiModelLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Modello'**
+  String get aiModelLabel;
+
+  /// No description provided for @aiModelHelper.
+  ///
+  /// In it, this message translates to:
+  /// **'Premi «Carica modelli» per sceglierlo dall\'elenco del fornitore, oppure scrivine il nome.'**
+  String get aiModelHelper;
+
+  /// No description provided for @aiModelsLoaded.
+  ///
+  /// In it, this message translates to:
+  /// **'{count} modelli disponibili'**
+  String aiModelsLoaded(int count);
+
+  /// No description provided for @aiModelsNoneFound.
+  ///
+  /// In it, this message translates to:
+  /// **'Il fornitore non ha restituito modelli: scrivi il nome a mano.'**
+  String get aiModelsNoneFound;
+
+  /// No description provided for @aiLoadModels.
+  ///
+  /// In it, this message translates to:
+  /// **'Carica modelli'**
+  String get aiLoadModels;
+
+  /// No description provided for @aiTestConnection.
+  ///
+  /// In it, this message translates to:
+  /// **'Verifica connessione'**
+  String get aiTestConnection;
+
+  /// No description provided for @aiTestOk.
+  ///
+  /// In it, this message translates to:
+  /// **'Funziona: {model} ha risposto in {ms} ms.'**
+  String aiTestOk(String model, int ms);
+
+  /// No description provided for @aiTestOkKeyOnly.
+  ///
+  /// In it, this message translates to:
+  /// **'Chiave valida (risposta in {ms} ms). Scegli un modello per verificarlo.'**
+  String aiTestOkKeyOnly(int ms);
+
+  /// No description provided for @aiLastTestOk.
+  ///
+  /// In it, this message translates to:
+  /// **'Ultima verifica riuscita.'**
+  String get aiLastTestOk;
+
+  /// No description provided for @aiLastTestFailed.
+  ///
+  /// In it, this message translates to:
+  /// **'Ultima verifica non riuscita.'**
+  String get aiLastTestFailed;
+
+  /// No description provided for @aiAdvancedSettings.
+  ///
+  /// In it, this message translates to:
+  /// **'Impostazioni avanzate'**
+  String get aiAdvancedSettings;
+
+  /// No description provided for @aiMaxOutputTokensLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Lunghezza massima della risposta (token)'**
+  String get aiMaxOutputTokensLabel;
+
+  /// No description provided for @aiMaxOutputTokensHelper.
+  ///
+  /// In it, this message translates to:
+  /// **'Tra {min} e {max}. Più è alto, più il report può essere lungo e costare.'**
+  String aiMaxOutputTokensHelper(int min, int max);
+
+  /// No description provided for @aiPricesTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Prezzi (facoltativi)'**
+  String get aiPricesTitle;
+
+  /// No description provided for @aiPricesHelper.
+  ///
+  /// In it, this message translates to:
+  /// **'Prezzo per milione di token del tuo modello, nella valuta del fornitore: serve solo per stimare il costo.'**
+  String get aiPricesHelper;
+
+  /// No description provided for @aiInputPriceLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Input'**
+  String get aiInputPriceLabel;
+
+  /// No description provided for @aiOutputPriceLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Output'**
+  String get aiOutputPriceLabel;
+
+  /// No description provided for @aiDefaultIncludeTransactions.
+  ///
+  /// In it, this message translates to:
+  /// **'Includi i singoli movimenti di default'**
+  String get aiDefaultIncludeTransactions;
+
+  /// No description provided for @aiDefaultIncludeTransactionsHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Analisi più precise, ma più dati inviati e più token.'**
+  String get aiDefaultIncludeTransactionsHint;
+
+  /// No description provided for @aiDefaultAnonymizeTitles.
+  ///
+  /// In it, this message translates to:
+  /// **'Anonimizza i titoli di default'**
+  String get aiDefaultAnonymizeTitles;
+
+  /// No description provided for @aiDefaultAnonymizeTitlesHint.
+  ///
+  /// In it, this message translates to:
+  /// **'I nomi dei movimenti diventano «Voce 1», «Voce 2»…'**
+  String get aiDefaultAnonymizeTitlesHint;
+
+  /// No description provided for @aiSaveSettings.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva'**
+  String get aiSaveSettings;
+
+  /// No description provided for @aiForgetProviderTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Dimenticare questo fornitore?'**
+  String get aiForgetProviderTitle;
+
+  /// No description provided for @aiForgetProviderMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'La chiave API salvata viene eliminata dal server.'**
+  String get aiForgetProviderMessage;
+
+  /// No description provided for @aiForgetProviderAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina chiave e fornitore'**
+  String get aiForgetProviderAction;
+
+  /// No description provided for @aiContextIntro.
+  ///
+  /// In it, this message translates to:
+  /// **'Queste informazioni aiutano l\'AI a darti consigli adatti alla tua situazione. Sono tutte facoltative e le invii solo se includi il contesto personale in un\'analisi.'**
+  String get aiContextIntro;
+
+  /// No description provided for @aiNotSpecified.
+  ///
+  /// In it, this message translates to:
+  /// **'Non specificato'**
+  String get aiNotSpecified;
+
+  /// No description provided for @aiHouseholdLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Persone nel nucleo familiare'**
+  String get aiHouseholdLabel;
+
+  /// No description provided for @aiHouseholdValue.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 persona} other{{count} persone}}'**
+  String aiHouseholdValue(int count);
+
+  /// No description provided for @aiHouseholdLess.
+  ///
+  /// In it, this message translates to:
+  /// **'Una persona in meno'**
+  String get aiHouseholdLess;
+
+  /// No description provided for @aiHouseholdMore.
+  ///
+  /// In it, this message translates to:
+  /// **'Una persona in più'**
+  String get aiHouseholdMore;
+
+  /// No description provided for @aiIncomeTypeLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Tipo di reddito'**
+  String get aiIncomeTypeLabel;
+
+  /// No description provided for @aiIncomeEmployee.
+  ///
+  /// In it, this message translates to:
+  /// **'Lavoro dipendente'**
+  String get aiIncomeEmployee;
+
+  /// No description provided for @aiIncomeSelfEmployed.
+  ///
+  /// In it, this message translates to:
+  /// **'Lavoro autonomo'**
+  String get aiIncomeSelfEmployed;
+
+  /// No description provided for @aiIncomeStudent.
+  ///
+  /// In it, this message translates to:
+  /// **'Studente'**
+  String get aiIncomeStudent;
+
+  /// No description provided for @aiIncomeRetired.
+  ///
+  /// In it, this message translates to:
+  /// **'Pensione'**
+  String get aiIncomeRetired;
+
+  /// No description provided for @aiIncomeUnemployed.
+  ///
+  /// In it, this message translates to:
+  /// **'Senza reddito da lavoro'**
+  String get aiIncomeUnemployed;
+
+  /// No description provided for @aiIncomeMixed.
+  ///
+  /// In it, this message translates to:
+  /// **'Misto'**
+  String get aiIncomeMixed;
+
+  /// No description provided for @aiIncomeOther.
+  ///
+  /// In it, this message translates to:
+  /// **'Altro'**
+  String get aiIncomeOther;
+
+  /// No description provided for @aiAboutMeLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Su di me'**
+  String get aiAboutMeLabel;
+
+  /// No description provided for @aiAboutMeHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Es. vivo in affitto a Milano, ho un\'auto, lo stipendio arriva il 27'**
+  String get aiAboutMeHint;
+
+  /// No description provided for @aiGoalsLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Obiettivi'**
+  String get aiGoalsLabel;
+
+  /// No description provided for @aiGoalsHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Es. mettere da parte 5.000 € entro giugno, ridurre le spese per mangiare fuori'**
+  String get aiGoalsHint;
+
+  /// No description provided for @aiIgnoreLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Cose da ignorare o da interpretare'**
+  String get aiIgnoreLabel;
+
+  /// No description provided for @aiIgnoreHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Es. il bonifico a Marco è un prestito che mi restituisce; a luglio ho pagato l\'assicurazione annuale'**
+  String get aiIgnoreHint;
+
+  /// No description provided for @aiResponseStyleLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Stile delle risposte'**
+  String get aiResponseStyleLabel;
+
+  /// No description provided for @aiStyleDefault.
+  ///
+  /// In it, this message translates to:
+  /// **'Standard'**
+  String get aiStyleDefault;
+
+  /// No description provided for @aiStyleConcise.
+  ///
+  /// In it, this message translates to:
+  /// **'Conciso'**
+  String get aiStyleConcise;
+
+  /// No description provided for @aiStyleDetailed.
+  ///
+  /// In it, this message translates to:
+  /// **'Dettagliato'**
+  String get aiStyleDetailed;
+
+  /// No description provided for @aiContextPrivacyNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Non scrivere qui dati come IBAN, codice fiscale o password: non servono all\'analisi.'**
+  String get aiContextPrivacyNote;
+
+  /// No description provided for @aiSaveContext.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva'**
+  String get aiSaveContext;
+
+  /// No description provided for @aiWalletPurposesIntro.
+  ///
+  /// In it, this message translates to:
+  /// **'Indica a cosa serve ogni portafoglio: l\'AI potrà dirti se lo stai usando come previsto e suggerirti come organizzarti meglio.'**
+  String get aiWalletPurposesIntro;
+
+  /// No description provided for @aiWalletPurposesEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Non hai ancora portafogli attivi.'**
+  String get aiWalletPurposesEmpty;
+
+  /// No description provided for @aiWalletNoPurpose.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuno scopo'**
+  String get aiWalletNoPurpose;
+
+  /// No description provided for @aiPurposeSuggestionDaily.
+  ///
+  /// In it, this message translates to:
+  /// **'Spese quotidiane'**
+  String get aiPurposeSuggestionDaily;
+
+  /// No description provided for @aiPurposeSuggestionSavings.
+  ///
+  /// In it, this message translates to:
+  /// **'Risparmi'**
+  String get aiPurposeSuggestionSavings;
+
+  /// No description provided for @aiPurposeSuggestionEmergency.
+  ///
+  /// In it, this message translates to:
+  /// **'Fondo emergenze'**
+  String get aiPurposeSuggestionEmergency;
+
+  /// No description provided for @aiPurposeSuggestionHome.
+  ///
+  /// In it, this message translates to:
+  /// **'Spese di casa e bollette'**
+  String get aiPurposeSuggestionHome;
+
+  /// No description provided for @aiPurposeSuggestionLeisure.
+  ///
+  /// In it, this message translates to:
+  /// **'Tempo libero e viaggi'**
+  String get aiPurposeSuggestionLeisure;
+
+  /// No description provided for @aiSavePurpose.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva scopo'**
+  String get aiSavePurpose;
 }
 
 class _AppLocalizationsDelegate

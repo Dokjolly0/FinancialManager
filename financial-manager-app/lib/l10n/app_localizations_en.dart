@@ -1305,4 +1305,433 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mediaRenameFailedMessage => 'Unable to rename the image.';
+
+  @override
+  String get aiAssistantMenuTitle => 'AI assistant';
+
+  @override
+  String get aiAssistantMenuSubtitle =>
+      'Analyze your finances with an AI model';
+
+  @override
+  String get aiAssistantTitle => 'AI assistant';
+
+  @override
+  String get aiUnavailableTitle => 'AI analysis unavailable';
+
+  @override
+  String get aiUnavailableBody =>
+      'This server has not enabled AI analysis. Whoever runs the server can enable it by setting AI_KEY_ENCRYPTION_KEY.';
+
+  @override
+  String get aiSetupTitle => 'Get ready for your first analysis';
+
+  @override
+  String get aiSetupDoneTitle => 'All set';
+
+  @override
+  String aiSetupProgress(int done, int total) {
+    return '$done of $total steps done';
+  }
+
+  @override
+  String get aiSetupOptional => 'optional';
+
+  @override
+  String get aiSetupStepProvider => 'Provider, key and model';
+
+  @override
+  String get aiSetupStepProviderHint =>
+      'Choose the AI service and enter your API key';
+
+  @override
+  String get aiSetupStepContext => 'Personal context';
+
+  @override
+  String get aiSetupStepContextHint =>
+      'Goals and situation, for tailored advice';
+
+  @override
+  String get aiSetupStepPurposes => 'Wallet purposes';
+
+  @override
+  String get aiSetupStepPurposesHint => 'What each wallet is for';
+
+  @override
+  String get aiSetupStepFirstAnalysis => 'First analysis';
+
+  @override
+  String get aiSetupStepFirstAnalysisHint => 'From Reports, AI analysis card';
+
+  @override
+  String get aiProviderMenuTitle => 'Provider and API key';
+
+  @override
+  String get aiProviderMenuNotConfigured => 'Not set up';
+
+  @override
+  String get aiContextMenuTitle => 'Personal context';
+
+  @override
+  String get aiContextMenuFilled => 'Filled in';
+
+  @override
+  String get aiContextMenuEmpty => 'Not filled in yet';
+
+  @override
+  String get aiWalletPurposesMenuTitle => 'Wallet purposes';
+
+  @override
+  String aiWalletPurposesProgress(int done, int total) {
+    return '$done of $total wallets with a purpose';
+  }
+
+  @override
+  String get aiConsentMenuTitle => 'Privacy and consent';
+
+  @override
+  String get aiConsentMenuPending => 'To accept before the first analysis';
+
+  @override
+  String get aiConsentMenuAccepted => 'Accepted';
+
+  @override
+  String get aiConsentRevokeAction => 'Revoke';
+
+  @override
+  String get aiConsentRevokeConfirmTitle => 'Revoke consent?';
+
+  @override
+  String get aiConsentRevokeConfirmMessage =>
+      'You will not be able to start analyses until you accept it again. Saved analyses stay in the history.';
+
+  @override
+  String get aiConsentTitle => 'Before you start';
+
+  @override
+  String get aiConsentIntro =>
+      'AI analysis sends a summary of your data to the AI provider you choose, with your own API key. Before each send you will see exactly what is sent.';
+
+  @override
+  String get aiConsentSentTitle => 'What is sent';
+
+  @override
+  String get aiConsentSentAggregates =>
+      'Totals, monthly trend, main categories and items of the chosen period';
+
+  @override
+  String get aiConsentSentWallets =>
+      'Name, type, purpose and balance of the included wallets';
+
+  @override
+  String get aiConsentSentTransactions =>
+      'Only if you turn it on: the list of transactions, optionally with anonymized titles';
+
+  @override
+  String get aiConsentSentContext =>
+      'Only if you turn it on: the personal context you wrote';
+
+  @override
+  String get aiConsentNeverTitle => 'What is never sent';
+
+  @override
+  String get aiConsentNeverBody =>
+      'Email, name, username, account identifiers and images';
+
+  @override
+  String get aiConsentKeyTitle => 'Your API key';
+
+  @override
+  String get aiConsentKeyBody =>
+      'It stays encrypted on the server and is never shown again or exported';
+
+  @override
+  String get aiConsentProviderTitle => 'The provider';
+
+  @override
+  String get aiConsentProviderBody =>
+      'It handles the data under its own terms: check how long it keeps requests and whether it uses them for training';
+
+  @override
+  String get aiConsentRevokeTitle => 'You can change your mind';
+
+  @override
+  String get aiConsentRevokeBody =>
+      'Revoke consent and delete analyses at any time from the AI assistant';
+
+  @override
+  String get aiConsentAccept => 'I understand, I accept';
+
+  @override
+  String get aiConsentDecline => 'Not now';
+
+  @override
+  String get aiProviderLabel => 'Provider';
+
+  @override
+  String get aiProviderCompatible =>
+      'OpenAI-compatible (Mistral, Groq, OpenRouter, Ollama…)';
+
+  @override
+  String get aiProviderHintAnthropic =>
+      'Create a key at console.anthropic.com → API keys.';
+
+  @override
+  String get aiProviderHintOpenai =>
+      'Create a key at platform.openai.com → API keys.';
+
+  @override
+  String get aiProviderHintGemini =>
+      'Create a key at aistudio.google.com → Get API key.';
+
+  @override
+  String get aiProviderHintCompatible =>
+      'For any service exposing the OpenAI API: enter its address, usually ending in /v1.';
+
+  @override
+  String get aiBaseUrlLabel => 'Service address (base URL)';
+
+  @override
+  String get aiBaseUrlHelper =>
+      'Private or local addresses (e.g. Ollama at home) only work if whoever runs the server allowed them.';
+
+  @override
+  String get aiApiKeyLabel => 'API key';
+
+  @override
+  String get aiApiKeyOptionalLabel => 'API key (if required)';
+
+  @override
+  String get aiApiKeyHelper =>
+      'It is encrypted on the server: after saving you will only see its last characters.';
+
+  @override
+  String get aiApiKeyWillBeRemoved =>
+      'The saved key will be removed when you save.';
+
+  @override
+  String aiApiKeyStored(String hint) {
+    return 'Saved key $hint';
+  }
+
+  @override
+  String get aiApiKeyReplace => 'Replace';
+
+  @override
+  String get aiApiKeyRemove => 'Remove';
+
+  @override
+  String get aiApiKeyShow => 'Show key';
+
+  @override
+  String get aiApiKeyHide => 'Hide key';
+
+  @override
+  String get aiModelLabel => 'Model';
+
+  @override
+  String get aiModelHelper =>
+      'Press “Load models” to pick it from the provider\'s list, or type its name.';
+
+  @override
+  String aiModelsLoaded(int count) {
+    return '$count models available';
+  }
+
+  @override
+  String get aiModelsNoneFound =>
+      'The provider returned no models: type the name by hand.';
+
+  @override
+  String get aiLoadModels => 'Load models';
+
+  @override
+  String get aiTestConnection => 'Test connection';
+
+  @override
+  String aiTestOk(String model, int ms) {
+    return 'It works: $model answered in $ms ms.';
+  }
+
+  @override
+  String aiTestOkKeyOnly(int ms) {
+    return 'Key valid (answered in $ms ms). Choose a model to test it too.';
+  }
+
+  @override
+  String get aiLastTestOk => 'Last test succeeded.';
+
+  @override
+  String get aiLastTestFailed => 'Last test failed.';
+
+  @override
+  String get aiAdvancedSettings => 'Advanced settings';
+
+  @override
+  String get aiMaxOutputTokensLabel => 'Maximum answer length (tokens)';
+
+  @override
+  String aiMaxOutputTokensHelper(int min, int max) {
+    return 'Between $min and $max. Higher allows longer, costlier reports.';
+  }
+
+  @override
+  String get aiPricesTitle => 'Prices (optional)';
+
+  @override
+  String get aiPricesHelper =>
+      'Your model\'s price per million tokens, in the provider\'s currency: only used to estimate cost.';
+
+  @override
+  String get aiInputPriceLabel => 'Input';
+
+  @override
+  String get aiOutputPriceLabel => 'Output';
+
+  @override
+  String get aiDefaultIncludeTransactions =>
+      'Include single transactions by default';
+
+  @override
+  String get aiDefaultIncludeTransactionsHint =>
+      'More precise analyses, but more data sent and more tokens.';
+
+  @override
+  String get aiDefaultAnonymizeTitles => 'Anonymize titles by default';
+
+  @override
+  String get aiDefaultAnonymizeTitlesHint =>
+      'Transaction names become “Item 1”, “Item 2”…';
+
+  @override
+  String get aiSaveSettings => 'Save';
+
+  @override
+  String get aiForgetProviderTitle => 'Forget this provider?';
+
+  @override
+  String get aiForgetProviderMessage =>
+      'The saved API key is deleted from the server.';
+
+  @override
+  String get aiForgetProviderAction => 'Delete key and provider';
+
+  @override
+  String get aiContextIntro =>
+      'This helps the AI give advice that fits your situation. Everything is optional and is only sent if you include the personal context in an analysis.';
+
+  @override
+  String get aiNotSpecified => 'Not specified';
+
+  @override
+  String get aiHouseholdLabel => 'People in the household';
+
+  @override
+  String aiHouseholdValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '1 person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get aiHouseholdLess => 'One person fewer';
+
+  @override
+  String get aiHouseholdMore => 'One more person';
+
+  @override
+  String get aiIncomeTypeLabel => 'Income type';
+
+  @override
+  String get aiIncomeEmployee => 'Employee';
+
+  @override
+  String get aiIncomeSelfEmployed => 'Self-employed';
+
+  @override
+  String get aiIncomeStudent => 'Student';
+
+  @override
+  String get aiIncomeRetired => 'Retired';
+
+  @override
+  String get aiIncomeUnemployed => 'No work income';
+
+  @override
+  String get aiIncomeMixed => 'Mixed';
+
+  @override
+  String get aiIncomeOther => 'Other';
+
+  @override
+  String get aiAboutMeLabel => 'About me';
+
+  @override
+  String get aiAboutMeHint =>
+      'E.g. I rent in Milan, I own a car, my salary arrives on the 27th';
+
+  @override
+  String get aiGoalsLabel => 'Goals';
+
+  @override
+  String get aiGoalsHint =>
+      'E.g. save €5,000 by June, spend less on eating out';
+
+  @override
+  String get aiIgnoreLabel => 'Things to ignore or interpret';
+
+  @override
+  String get aiIgnoreHint =>
+      'E.g. the transfer to Marco is a loan he pays back; in July I paid the yearly insurance';
+
+  @override
+  String get aiResponseStyleLabel => 'Answer style';
+
+  @override
+  String get aiStyleDefault => 'Standard';
+
+  @override
+  String get aiStyleConcise => 'Concise';
+
+  @override
+  String get aiStyleDetailed => 'Detailed';
+
+  @override
+  String get aiContextPrivacyNote =>
+      'Do not write data such as IBANs, tax codes or passwords here: the analysis does not need them.';
+
+  @override
+  String get aiSaveContext => 'Save';
+
+  @override
+  String get aiWalletPurposesIntro =>
+      'Say what each wallet is for: the AI can then tell you whether you use it as intended and how to organize better.';
+
+  @override
+  String get aiWalletPurposesEmpty => 'You have no active wallets yet.';
+
+  @override
+  String get aiWalletNoPurpose => 'No purpose';
+
+  @override
+  String get aiPurposeSuggestionDaily => 'Daily expenses';
+
+  @override
+  String get aiPurposeSuggestionSavings => 'Savings';
+
+  @override
+  String get aiPurposeSuggestionEmergency => 'Emergency fund';
+
+  @override
+  String get aiPurposeSuggestionHome => 'Home and bills';
+
+  @override
+  String get aiPurposeSuggestionLeisure => 'Leisure and travel';
+
+  @override
+  String get aiSavePurpose => 'Save purpose';
 }

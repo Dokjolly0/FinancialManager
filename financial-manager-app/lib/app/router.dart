@@ -8,6 +8,10 @@ import '../features/account/presentation/screens/account_preferences_screen.dart
 import '../features/account/presentation/screens/account_profile_screen.dart';
 import '../features/account/presentation/screens/account_screen.dart';
 import '../features/account/presentation/screens/account_security_screen.dart';
+import '../features/ai/presentation/screens/ai_assistant_screen.dart';
+import '../features/ai/presentation/screens/ai_personal_context_screen.dart';
+import '../features/ai/presentation/screens/ai_provider_settings_screen.dart';
+import '../features/ai/presentation/screens/ai_wallet_purposes_screen.dart';
 import '../features/authentication/presentation/screens/forgot_password_screen.dart';
 import '../features/authentication/presentation/screens/google_registration_completion_screen.dart';
 import '../features/authentication/presentation/screens/login_screen.dart';
@@ -48,6 +52,12 @@ abstract final class AppRoutes {
   static const accountData = '/app/account/data';
   static const wallets = '/app/account/wallets';
   static const walletsNew = '/app/account/wallets/new';
+
+  // AI analysis settings (plan.md section 32.7).
+  static const aiAssistant = '/app/account/ai';
+  static const aiProvider = '/app/account/ai/provider';
+  static const aiContext = '/app/account/ai/context';
+  static const aiWalletPurposes = '/app/account/ai/wallet-purposes';
 
   static String transactionDetail(String id) => '/app/transactions/$id';
   static String transactionEdit(String id) => '/app/transactions/$id/edit';
@@ -159,6 +169,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.wallets,
         builder: (_, _) => const WalletsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiAssistant,
+        builder: (_, _) => const AiAssistantScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiProvider,
+        builder: (_, _) => const AiProviderSettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiContext,
+        builder: (_, _) => const AiPersonalContextScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiWalletPurposes,
+        builder: (_, _) => const AiWalletPurposesScreen(),
       ),
       GoRoute(
         path: AppRoutes.walletsNew,
