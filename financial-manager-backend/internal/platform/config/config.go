@@ -4,6 +4,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strconv"
@@ -15,6 +16,10 @@ import (
 type Config struct {
 	AppEnv   string
 	HTTPAddr string
+
+	// HTTPRequestTimeout bounds every route except the AI streaming ones,
+	// which have their own limits below (plan.md section 32.4).
+	HTTPRequestTimeout time.Duration
 
 	// MetricsAddr is only used by the worker process (the API exposes
 	// /metrics on HTTPAddr itself, alongside its regular routes).
@@ -65,6 +70,25 @@ type Config struct {
 	GDriveClientID     string
 	GDriveClientSecret string
 	GDriveRefreshToken string
+
+	// AI analysis (plan.md section 32). AIKeyEncryptionKey is a base64
+	// 32-byte key that encrypts the users' provider API keys at rest; when
+	// it is empty the feature is unavailable but the server still starts.
+	// AIKeyEncryptionKeyPrevious is only used to decrypt keys stored
+	// before a rotation.
+	AIKeyEncryptionKey         string
+	AIKeyEncryptionKeyPrevious string
+	// AIAllowPrivateBaseURLs lets an OpenAI-compatible base URL point at a
+	// private or loopback address over plain http (a LAN Ollama server).
+	// Off by default: on a server this is an SSRF hole.
+	AIAllowPrivateBaseURLs bool
+	// AIAllowedBaseURLHosts, when set, restricts OpenAI-compatible base
+	// URLs to these exact hosts.
+	AIAllowedBaseURLHosts []string
+	AIStreamMaxDuration   time.Duration
+	AIStreamIdleTimeout   time.Duration
+	AIMaxPromptTokens     int
+	AIRunsPerHour         int
 }
 
 const (
@@ -152,9 +176,11 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
-		AppEnv:      optionalString("APP_ENV", EnvLocal),
-		HTTPAddr:    optionalString("HTTP_ADDR", ":8080"),
-		MetricsAddr: optionalString("METRICS_ADDR", ":9101"),
+		AppEnv:   optionalString("APP_ENV", EnvLocal),
+		HTTPAddr: optionalString("HTTP_ADDR", ":8080"),
+
+		HTTPRequestTimeout: optionalDuration("HTTP_REQUEST_TIMEOUT", 30*time.Second),
+		MetricsAddr:        optionalString("METRICS_ADDR", ":9101"),
 
 		DatabaseURL: requireString("DATABASE_URL"),
 
@@ -178,6 +204,15 @@ func Load() (Config, error) {
 
 		MaxUploadBytes:    optionalInt64("MAX_UPLOAD_BYTES", 10*1024*1024),
 		AllowedImageTypes: splitList("ALLOWED_IMAGE_TYPES"),
+
+		AIKeyEncryptionKey:         os.Getenv("AI_KEY_ENCRYPTION_KEY"),
+		AIKeyEncryptionKeyPrevious: os.Getenv("AI_KEY_ENCRYPTION_KEY_PREVIOUS"),
+		AIAllowPrivateBaseURLs:     optionalBool("AI_ALLOW_PRIVATE_BASE_URLS", false),
+		AIAllowedBaseURLHosts:      splitList("AI_ALLOWED_BASE_URL_HOSTS"),
+		AIStreamMaxDuration:        optionalDuration("AI_STREAM_MAX_DURATION", 5*time.Minute),
+		AIStreamIdleTimeout:        optionalDuration("AI_STREAM_IDLE_TIMEOUT", 90*time.Second),
+		AIMaxPromptTokens:          int(optionalInt64("AI_MAX_PROMPT_TOKENS", 60000)),
+		AIRunsPerHour:              int(optionalInt64("AI_RUNS_PER_HOUR", 20)),
 	}
 
 	// Backup settings are parsed with errs swapped out, so their parse
@@ -246,11 +281,50 @@ func Load() (Config, error) {
 		errs = append(errs, "MAX_UPLOAD_BYTES must be greater than zero")
 	}
 
+	if cfg.HTTPRequestTimeout <= 0 {
+		errs = append(errs, "HTTP_REQUEST_TIMEOUT must be greater than zero")
+	}
+
+	// A missing AI key only disables the feature, but a malformed one is a
+	// typo worth failing fast on: silently disabling would hide it.
+	for name, v := range map[string]string{
+		"AI_KEY_ENCRYPTION_KEY":          cfg.AIKeyEncryptionKey,
+		"AI_KEY_ENCRYPTION_KEY_PREVIOUS": cfg.AIKeyEncryptionKeyPrevious,
+	} {
+		if v == "" {
+			continue
+		}
+		if key, err := base64.StdEncoding.DecodeString(v); err != nil || len(key) != 32 {
+			errs = append(errs, fmt.Sprintf("%s must be 32 bytes encoded as standard base64 (openssl rand -base64 32)", name))
+		}
+	}
+	if cfg.AIKeyEncryptionKeyPrevious != "" && cfg.AIKeyEncryptionKey == "" {
+		errs = append(errs, "AI_KEY_ENCRYPTION_KEY_PREVIOUS requires AI_KEY_ENCRYPTION_KEY")
+	}
+	if cfg.AIStreamMaxDuration < 10*time.Second {
+		errs = append(errs, "AI_STREAM_MAX_DURATION must be at least 10s")
+	}
+	if cfg.AIStreamIdleTimeout < time.Second || cfg.AIStreamIdleTimeout > cfg.AIStreamMaxDuration {
+		errs = append(errs, "AI_STREAM_IDLE_TIMEOUT must be between 1s and AI_STREAM_MAX_DURATION")
+	}
+	if cfg.AIMaxPromptTokens < 1000 {
+		errs = append(errs, "AI_MAX_PROMPT_TOKENS must be at least 1000")
+	}
+	if cfg.AIRunsPerHour < 1 {
+		errs = append(errs, "AI_RUNS_PER_HOUR must be at least 1")
+	}
+
 	if len(errs) > 0 {
 		return Config{}, fmt.Errorf("invalid configuration:\n  - %s", strings.Join(errs, "\n  - "))
 	}
 
 	return cfg, nil
+}
+
+// AIEnabled reports whether the AI analysis feature can run, i.e. whether
+// there is a key to encrypt the users' provider API keys with.
+func (c Config) AIEnabled() bool {
+	return c.AIKeyEncryptionKey != ""
 }
 
 // IsProduction reports whether the process is running in the production environment.

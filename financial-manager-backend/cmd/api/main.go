@@ -86,7 +86,7 @@ func run() error {
 		Redis:    func(ctx context.Context) error { return redisClient.Ping(ctx).Err() },
 	}
 
-	router := httpserver.New(logger, checks)
+	router := httpserver.New(logger, checks, cfg.HTTPRequestTimeout)
 	mountRoutes(router, dbPool, redisClient, objectStore, cfg, logger)
 
 	srv := &http.Server{
@@ -161,8 +161,11 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		RefreshTokenTTL: cfg.RefreshTokenTTL,
 	})
 	authHandler := auth.NewHandler(authService)
-	authHandler.MountPublic(router)
-	authHandler.MountGooglePublic(router)
+	router.Group(func(r chi.Router) {
+		r.Use(httpserver.Timeout(cfg.HTTPRequestTimeout))
+		authHandler.MountPublic(r)
+		authHandler.MountGooglePublic(r)
+	})
 
 	usersHandler := users.NewHandler(users.NewService(usersRepo))
 	walletsHandler := wallets.NewHandler(walletsRepo)
@@ -213,6 +216,7 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	exportHandler := export.NewHandler(exportService)
 
 	router.Group(func(r chi.Router) {
+		r.Use(httpserver.Timeout(cfg.HTTPRequestTimeout))
 		r.Use(auth.Middleware(cfg.JWTSigningKey))
 		authHandler.MountProtected(r)
 		authHandler.MountGoogleProtected(r)

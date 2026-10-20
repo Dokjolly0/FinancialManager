@@ -19,7 +19,12 @@ import (
 // New builds the base router with platform middleware and health endpoints
 // mounted. Callers add feature routes under the returned router, typically
 // grouped under "/v1".
-func New(logger *slog.Logger, checks HealthChecks) chi.Router {
+//
+// The request timeout is not applied to the whole router: long-lived
+// streaming routes (the AI analysis, plan.md section 32.4) would be cut
+// off mid-response. Callers wrap every other route group in
+// Timeout(requestTimeout) instead, as done here for the health endpoints.
+func New(logger *slog.Logger, checks HealthChecks, requestTimeout time.Duration) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(chimiddleware.RequestID)
@@ -31,17 +36,25 @@ func New(logger *slog.Logger, checks HealthChecks) chi.Router {
 	r.Use(RequestLogger(logger))
 	r.Use(MetricsMiddleware)
 	r.Use(chimiddleware.Recoverer)
-	r.Use(chimiddleware.Timeout(30 * time.Second))
 
-	RegisterHealthRoutes(r, checks)
-	// Unauthenticated by design — a Prometheus scraper has no access
-	// token, and this endpoint exposes only aggregate counts/latencies,
-	// never per-user or financial data (plan.md section 22.1). In
-	// production it must still only be reachable from the scraper's
-	// network, not the public internet.
-	r.Handle("/metrics", metrics.Handler())
+	r.Group(func(r chi.Router) {
+		r.Use(Timeout(requestTimeout))
+		RegisterHealthRoutes(r, checks)
+		// Unauthenticated by design — a Prometheus scraper has no access
+		// token, and this endpoint exposes only aggregate counts/latencies,
+		// never per-user or financial data (plan.md section 22.1). In
+		// production it must still only be reachable from the scraper's
+		// network, not the public internet.
+		r.Handle("/metrics", metrics.Handler())
+	})
 
 	return r
+}
+
+// Timeout cancels the request context after d and answers 504 if the
+// handler gives up because of it. Applied per route group (see New).
+func Timeout(d time.Duration) func(http.Handler) http.Handler {
+	return chimiddleware.Timeout(d)
 }
 
 // MetricsMiddleware records plan.md section 22.1's "richieste per
