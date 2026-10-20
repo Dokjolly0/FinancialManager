@@ -15,6 +15,7 @@ import (
 	"financial-manager-backend/internal/ai/provider"
 	"financial-manager-backend/internal/platform/apierror"
 	"financial-manager-backend/internal/platform/clock"
+	"financial-manager-backend/internal/platform/database"
 	"financial-manager-backend/internal/platform/metrics"
 	"financial-manager-backend/internal/platform/ratelimit"
 	"financial-manager-backend/internal/platform/secretbox"
@@ -42,6 +43,7 @@ type Limits struct {
 }
 
 type Deps struct {
+	DB      *database.Pool
 	Repo    *Repository
 	Wallets *wallets.Repository
 	Users   *users.Repository
@@ -53,11 +55,16 @@ type Deps struct {
 	Providers   provider.Factory
 	Policy      provider.BaseURLPolicy
 	RateLimiter *ratelimit.Limiter // nil disables rate limiting (tests)
-	Clock       clock.Clock
-	Logger      *slog.Logger
+	// Locker allows one stream per user; nil uses an in-process lock,
+	// which is only correct with a single API instance (tests).
+	Locker StreamLocker
+	Clock  clock.Clock
+	Logger *slog.Logger
 }
 
 type Service struct {
+	db          *database.Pool
+	locker      StreamLocker
 	repo        *Repository
 	wallets     *wallets.Repository
 	users       *users.Repository
@@ -90,7 +97,12 @@ func NewService(d Deps) *Service {
 	if limits.StreamMaxDuration == 0 {
 		limits.StreamMaxDuration = 5 * time.Minute
 	}
+	var locker StreamLocker = newMemoryLocker()
+	if d.Locker != nil {
+		locker = d.Locker
+	}
 	return &Service{
+		db: d.DB, locker: locker,
 		repo: d.Repo, wallets: d.Wallets, users: d.Users, reports: d.Reports, limits: limits,
 		box: d.Box, providers: d.Providers, policy: d.Policy,
 		rateLimiter: d.RateLimiter, clock: c, logger: logger,
@@ -256,6 +268,10 @@ func (s *Service) setupStatus(ctx context.Context, userID uuid.UUID, active *cre
 		if w.Purpose != nil {
 			setup.WalletsWithPurpose++
 		}
+	}
+	setup.AnalysesCount, err = s.repo.CountAnalyses(ctx, userID)
+	if err != nil {
+		return setupResponse{}, err
 	}
 	return setup, nil
 }

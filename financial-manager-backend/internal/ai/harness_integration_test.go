@@ -19,6 +19,7 @@ import (
 	"financial-manager-backend/internal/ai/provider"
 	"financial-manager-backend/internal/platform/clock"
 	"financial-manager-backend/internal/platform/database"
+	"financial-manager-backend/internal/platform/httpserver"
 	"financial-manager-backend/internal/platform/reqctx"
 	"financial-manager-backend/internal/platform/secretbox"
 	"financial-manager-backend/internal/reports"
@@ -53,6 +54,9 @@ type harness struct {
 type harnessOptions struct {
 	disabled        bool
 	maxPromptTokens int
+	// requestTimeout, when set, wraps the JSON routes in the platform
+	// timeout as cmd/api does, leaving the streaming routes outside it.
+	requestTimeout time.Duration
 }
 
 func newHarness(t *testing.T, opts ...harnessOptions) *harness {
@@ -98,7 +102,7 @@ func newHarness(t *testing.T, opts ...harnessOptions) *harness {
 		h.box, _ = secretbox.New(key)
 	}
 	h.service = ai.NewService(ai.Deps{
-		Repo: h.repo, Wallets: walletsRepo, Users: usersRepo, Reports: reports.NewRepository(dbPool),
+		DB: dbPool, Repo: h.repo, Wallets: walletsRepo, Users: usersRepo, Reports: reports.NewRepository(dbPool),
 		Limits: ai.Limits{MaxPromptTokens: opt.maxPromptTokens},
 		Box:    h.box, Providers: h.factory,
 		Policy: provider.BaseURLPolicy{}, Clock: clock.Frozen{At: h.now},
@@ -110,7 +114,14 @@ func newHarness(t *testing.T, opts ...harnessOptions) *harness {
 			next.ServeHTTP(w, r.WithContext(reqctx.WithUser(r.Context(), h.userID, uuid.New())))
 		})
 	})
-	ai.NewHandler(h.service).Mount(router)
+	handler := ai.NewHandler(h.service)
+	router.Group(func(r chi.Router) {
+		if opt.requestTimeout > 0 {
+			r.Use(httpserver.Timeout(opt.requestTimeout))
+		}
+		handler.Mount(r)
+	})
+	handler.MountStreaming(router)
 	h.server = httptest.NewServer(router)
 	t.Cleanup(h.server.Close)
 	return h

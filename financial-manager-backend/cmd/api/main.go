@@ -221,7 +221,7 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	})
 	exportHandler := export.NewHandler(exportService)
 
-	aiHandler, err := newAIHandler(cfg, dbPool, walletsRepo, usersRepo, rateLimiter, logger)
+	aiHandler, err := newAIHandler(cfg, dbPool, redisClient, walletsRepo, usersRepo, rateLimiter, logger)
 	if err != nil {
 		return err
 	}
@@ -241,13 +241,19 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		reportsHandler.Mount(r)
 		aiHandler.Mount(r)
 	})
+	// The AI analysis streams outlive the normal request timeout; they are
+	// bounded by AI_STREAM_MAX_DURATION and the provider idle watchdog.
+	router.Group(func(r chi.Router) {
+		r.Use(auth.Middleware(cfg.JWTSigningKey))
+		aiHandler.MountStreaming(r)
+	})
 	return nil
 }
 
 // newAIHandler wires the AI analysis (plan.md section 32). Without
 // AI_KEY_ENCRYPTION_KEY the service has no secretbox and every AI route
 // except GET /v1/ai/settings answers AI_DISABLED.
-func newAIHandler(cfg config.Config, dbPool *database.Pool, walletsRepo *wallets.Repository, usersRepo *users.Repository,
+func newAIHandler(cfg config.Config, dbPool *database.Pool, redisClient *redis.Client, walletsRepo *wallets.Repository, usersRepo *users.Repository,
 	rateLimiter *ratelimit.Limiter, logger *slog.Logger) (*ai.Handler, error) {
 	var box *secretbox.Box
 	if cfg.AIEnabled() {
@@ -269,6 +275,8 @@ func newAIHandler(cfg config.Config, dbPool *database.Pool, walletsRepo *wallets
 	}
 	policy := provider.BaseURLPolicy{AllowPrivate: cfg.AIAllowPrivateBaseURLs, AllowedHosts: cfg.AIAllowedBaseURLHosts}
 	service := ai.NewService(ai.Deps{
+		DB:      dbPool,
+		Locker:  ai.RedisLocker{Client: redisClient},
 		Repo:    ai.NewRepository(dbPool),
 		Wallets: walletsRepo,
 		Users:   usersRepo,
