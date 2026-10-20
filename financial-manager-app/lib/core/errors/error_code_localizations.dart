@@ -91,6 +91,18 @@ String localizeErrorCode(AppLocalizations l10n, String code) {
     'PROVIDER_NOT_SUPPORTED' => l10n.errorCodeProviderNotSupported,
 
     // AI analysis (plan.md section 32.4).
+    'AI_ON_DEVICE_DISABLED' => l10n.errorCodeAiOnDeviceDisabled,
+    'AI_LOCAL_CONSENT_REQUIRED' => l10n.errorCodeAiLocalConsentRequired,
+    'AI_ANALYSIS_ON_DEVICE' => l10n.errorCodeAiAnalysisOnDevice,
+    'AI_ANALYSIS_NOT_ON_DEVICE' => l10n.errorCodeAiAnalysisNotOnDevice,
+    'AI_MESSAGE_FINISHED' => l10n.errorCodeAiMessageFinished,
+    'AI_LOCAL_ENGINE_ERROR' => l10n.errorCodeAiLocalEngineError,
+    'AI_LOCAL_OUT_OF_MEMORY' => l10n.errorCodeAiLocalOutOfMemory,
+    'AI_LOCAL_CONTEXT_TOO_LONG' => l10n.errorCodeAiLocalContextTooLong,
+    'AI_LOCAL_TIMEOUT' => l10n.errorCodeAiLocalTimeout,
+    'AI_LOCAL_MODEL_MISSING' => l10n.errorCodeAiLocalModelMissing,
+    'AI_LOCAL_INTERRUPTED' => l10n.errorCodeAiLocalInterrupted,
+    'AI_LOCAL_UNSUPPORTED' => l10n.errorCodeAiLocalUnsupported,
     'WALLET_NOT_FOUND' => l10n.errorCodeWalletNotFound,
     'AI_DISABLED' => l10n.errorCodeAiDisabled,
     'AI_NOT_CONFIGURED' => l10n.errorCodeAiNotConfigured,

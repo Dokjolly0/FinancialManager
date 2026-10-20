@@ -36,10 +36,40 @@ class AiApi {
     return response.data!['models'] as List<dynamic>? ?? [];
   }
 
-  Future<void> acceptConsent(int version) =>
-      _dio.put<void>('/ai/consent', data: {'consent_version': version});
+  Future<void> acceptConsent(int version, String scope) => _dio.put<void>(
+    '/ai/consent',
+    data: {'consent_version': version, 'scope': scope},
+  );
 
-  Future<void> revokeConsent() => _dio.delete<void>('/ai/consent');
+  Future<void> revokeConsent(String scope) =>
+      _dio.delete<void>('/ai/consent', queryParameters: {'scope': scope});
+
+  Future<Map<String, dynamic>> setMode(Map<String, dynamic> body) async =>
+      (await _dio.put<Map<String, dynamic>>('/ai/mode', data: body)).data!;
+
+  Future<Map<String, dynamic>> prepareLocalAnalysis(
+    Map<String, dynamic> body,
+  ) async => (await _dio.post<Map<String, dynamic>>(
+    '/ai/local/analyses',
+    data: body,
+  )).data!;
+
+  Future<Map<String, dynamic>> prepareLocalFollowUp(
+    String id,
+    String question,
+  ) async => (await _dio.post<Map<String, dynamic>>(
+    '/ai/local/analyses/$id/messages',
+    data: {'content': question},
+  )).data!;
+
+  Future<Map<String, dynamic>> submitLocalResult(
+    String analysisId,
+    String messageId,
+    Map<String, dynamic> body,
+  ) async => (await _dio.put<Map<String, dynamic>>(
+    '/ai/analyses/$analysisId/messages/$messageId/result',
+    data: body,
+  )).data!;
 
   Future<Map<String, dynamic>> getUserContext() async =>
       (await _dio.get<Map<String, dynamic>>('/ai/context')).data!;

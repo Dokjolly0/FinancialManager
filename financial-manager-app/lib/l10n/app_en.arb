@@ -709,5 +709,18 @@
   "aiFilterCategory": "Category: {name}",
   "aiFilterTitle": "Contains “{text}”",
   "aiFilterAmountMin": "From {amount}",
-  "aiFilterAmountMax": "Up to {amount}"
+  "aiFilterAmountMax": "Up to {amount}",
+  "aiProviderOnDevice": "On device",
+  "errorCodeAiOnDeviceDisabled": "On-device analysis is not enabled on this server.",
+  "errorCodeAiLocalConsentRequired": "Accept the on-device analysis notice to continue.",
+  "errorCodeAiAnalysisOnDevice": "This analysis was written on the phone: continue it there.",
+  "errorCodeAiAnalysisNotOnDevice": "This analysis was written by a cloud provider.",
+  "errorCodeAiMessageFinished": "This answer was already saved.",
+  "errorCodeAiLocalEngineError": "The on-device model failed.",
+  "errorCodeAiLocalOutOfMemory": "Not enough memory: choose a smaller model or a shorter context.",
+  "errorCodeAiLocalContextTooLong": "The text doesn't fit the model's context: use the compact profile, a larger context or fewer transactions.",
+  "errorCodeAiLocalTimeout": "The phone took too long and generation was stopped.",
+  "errorCodeAiLocalModelMissing": "No model installed on the phone: download one from the AI assistant.",
+  "errorCodeAiLocalInterrupted": "Generation on the phone was interrupted.",
+  "errorCodeAiLocalUnsupported": "This device cannot run models locally."
 }

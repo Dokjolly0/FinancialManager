@@ -1,5 +1,6 @@
 import 'ai_analysis_request.dart';
 import 'ai_settings.dart';
+import 'local_model.dart';
 
 DateTime? _date(Object? raw) => raw is String ? DateTime.parse(raw) : null;
 
@@ -12,6 +13,8 @@ class AiDisclosure {
     required this.transactionsOmitted,
     required this.anonymized,
     required this.includesPersonalContext,
+    this.profile = 'standard',
+    this.compactionSteps = const [],
   });
 
   final Set<AiDataSection> sections;
@@ -20,6 +23,10 @@ class AiDisclosure {
   final int transactionsOmitted;
   final bool anonymized;
   final bool includesPersonalContext;
+  final String profile;
+
+  /// Detail given up to fit the token budget, in order.
+  final List<String> compactionSteps;
 
   static AiDisclosure fromJson(Map<String, dynamic> json) => AiDisclosure(
     sections: (json['sections'] as List<dynamic>? ?? const [])
@@ -32,7 +39,38 @@ class AiDisclosure {
     anonymized: json['anonymized'] as bool? ?? false,
     includesPersonalContext:
         json['includes_personal_context'] as bool? ?? false,
+    profile: json['profile'] as String? ?? 'standard',
+    compactionSteps: (json['compaction_steps'] as List<dynamic>? ?? const [])
+        .cast<String>(),
   );
+}
+
+/// Whether an on-device prompt and its answer fit the model's context.
+class AiContextFit {
+  const AiContextFit({
+    required this.contextTokens,
+    required this.inputTokens,
+    required this.reservedOutputTokens,
+    required this.fits,
+  });
+
+  final int contextTokens;
+  final int inputTokens;
+  final int reservedOutputTokens;
+  final bool fits;
+
+  /// Share of the context the prompt and answer take (can exceed 1).
+  double get usage => (inputTokens + reservedOutputTokens) / contextTokens;
+
+  static AiContextFit? fromJson(Object? raw) {
+    if (raw is! Map<String, dynamic>) return null;
+    return AiContextFit(
+      contextTokens: raw['context_tokens'] as int? ?? 1,
+      inputTokens: raw['input_tokens'] as int? ?? 0,
+      reservedOutputTokens: raw['reserved_output_tokens'] as int? ?? 0,
+      fits: raw['fits'] as bool? ?? false,
+    );
+  }
 }
 
 /// The exact prompt an analysis would send.
@@ -52,8 +90,13 @@ class AiPreview {
     this.periodFrom,
     required this.periodTo,
     required this.disclosure,
+    this.target = AiMode.cloud,
+    this.contextFit,
   });
 
+  /// Where the run will happen; for on-device, [provider] is onDevice.
+  final AiMode target;
+  final AiContextFit? contextFit;
   final AiProviderKind provider;
   final String model;
   final String promptVersion;
@@ -94,6 +137,8 @@ class AiPreview {
       disclosure: AiDisclosure.fromJson(
         json['disclosure'] as Map<String, dynamic>? ?? const {},
       ),
+      target: AiMode.fromWire(json['target'] as String?),
+      contextFit: AiContextFit.fromJson(json['context_fit']),
     );
   }
 }
@@ -140,6 +185,7 @@ class AiMessage {
     this.outputTokens,
     this.truncated = false,
     this.createdAt,
+    this.durationMs,
   });
 
   final String id;
@@ -152,6 +198,9 @@ class AiMessage {
   final int? outputTokens;
   final bool truncated;
   final DateTime? createdAt;
+
+  /// How long the phone took (on-device only).
+  final int? durationMs;
 
   bool get fromUser =>
       kind == AiMessageKind.question || kind == AiMessageKind.context;
@@ -174,6 +223,7 @@ class AiMessage {
     outputTokens: outputTokens ?? this.outputTokens,
     truncated: truncated ?? this.truncated,
     createdAt: createdAt,
+    durationMs: durationMs,
   );
 
   static AiMessage fromJson(Map<String, dynamic> json) => AiMessage(
@@ -187,6 +237,7 @@ class AiMessage {
     outputTokens: json['output_tokens'] as int?,
     truncated: json['truncated'] as bool? ?? false,
     createdAt: _date(json['created_at']),
+    durationMs: json['duration_ms'] as int?,
   );
 }
 
@@ -205,6 +256,7 @@ class AiAnalysisSummary {
     required this.outputTokens,
     this.cost,
     required this.createdAt,
+    this.runtime,
   });
 
   final String id;
@@ -221,6 +273,11 @@ class AiAnalysisSummary {
   final double? cost;
   final DateTime createdAt;
 
+  /// How an on-device analysis ran; null for cloud ones.
+  final AiLocalRuntime? runtime;
+
+  bool get isOnDevice => provider == AiProviderKind.onDevice;
+
   static AiAnalysisSummary fromJson(Map<String, dynamic> json) =>
       AiAnalysisSummary(
         id: json['id'] as String,
@@ -236,6 +293,7 @@ class AiAnalysisSummary {
         outputTokens: json['output_tokens'] as int? ?? 0,
         cost: (json['cost'] as num?)?.toDouble(),
         createdAt: DateTime.parse(json['created_at'] as String),
+        runtime: AiLocalRuntime.fromJson(json['runtime']),
       );
 }
 

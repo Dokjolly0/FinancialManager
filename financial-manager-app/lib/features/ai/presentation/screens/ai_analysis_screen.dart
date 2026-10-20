@@ -44,7 +44,11 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
         if (draft.request != null && draft.preview != null) {
           ref
               .read(aiConversationControllerProvider(_key).notifier)
-              .startRun(draft.request!, draft.preview!.dataFingerprint);
+              .startRun(
+                draft.request!,
+                draft.preview!.dataFingerprint,
+                target: draft.preview!.target,
+              );
         }
       });
     }

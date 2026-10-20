@@ -873,5 +873,18 @@
         "type": "String"
       }
     }
-  }
+  },
+  "aiProviderOnDevice": "Sul dispositivo",
+  "errorCodeAiOnDeviceDisabled": "L'analisi sul dispositivo non è attiva su questo server.",
+  "errorCodeAiLocalConsentRequired": "Per continuare accetta l'informativa sull'analisi sul dispositivo.",
+  "errorCodeAiAnalysisOnDevice": "Questa analisi è stata scritta sul telefono: continuala da lì.",
+  "errorCodeAiAnalysisNotOnDevice": "Questa analisi è stata scritta da un fornitore cloud.",
+  "errorCodeAiMessageFinished": "Questa risposta era già stata salvata.",
+  "errorCodeAiLocalEngineError": "Il modello sul telefono ha avuto un errore.",
+  "errorCodeAiLocalOutOfMemory": "Memoria insufficiente: scegli un modello più piccolo o un contesto più corto.",
+  "errorCodeAiLocalContextTooLong": "Il testo non entra nel contesto del modello: usa il profilo compatto, un contesto più grande o meno movimenti.",
+  "errorCodeAiLocalTimeout": "Il telefono ha impiegato troppo tempo e la generazione è stata interrotta.",
+  "errorCodeAiLocalModelMissing": "Nessun modello installato sul telefono: scaricane uno da Assistente AI.",
+  "errorCodeAiLocalInterrupted": "La generazione sul telefono si è interrotta.",
+  "errorCodeAiLocalUnsupported": "Questo dispositivo non può eseguire modelli in locale."
 }

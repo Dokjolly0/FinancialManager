@@ -2109,4 +2109,55 @@ class AppLocalizationsIt extends AppLocalizations {
   String aiFilterAmountMax(String amount) {
     return 'Fino a $amount';
   }
+
+  @override
+  String get aiProviderOnDevice => 'Sul dispositivo';
+
+  @override
+  String get errorCodeAiOnDeviceDisabled =>
+      'L\'analisi sul dispositivo non è attiva su questo server.';
+
+  @override
+  String get errorCodeAiLocalConsentRequired =>
+      'Per continuare accetta l\'informativa sull\'analisi sul dispositivo.';
+
+  @override
+  String get errorCodeAiAnalysisOnDevice =>
+      'Questa analisi è stata scritta sul telefono: continuala da lì.';
+
+  @override
+  String get errorCodeAiAnalysisNotOnDevice =>
+      'Questa analisi è stata scritta da un fornitore cloud.';
+
+  @override
+  String get errorCodeAiMessageFinished =>
+      'Questa risposta era già stata salvata.';
+
+  @override
+  String get errorCodeAiLocalEngineError =>
+      'Il modello sul telefono ha avuto un errore.';
+
+  @override
+  String get errorCodeAiLocalOutOfMemory =>
+      'Memoria insufficiente: scegli un modello più piccolo o un contesto più corto.';
+
+  @override
+  String get errorCodeAiLocalContextTooLong =>
+      'Il testo non entra nel contesto del modello: usa il profilo compatto, un contesto più grande o meno movimenti.';
+
+  @override
+  String get errorCodeAiLocalTimeout =>
+      'Il telefono ha impiegato troppo tempo e la generazione è stata interrotta.';
+
+  @override
+  String get errorCodeAiLocalModelMissing =>
+      'Nessun modello installato sul telefono: scaricane uno da Assistente AI.';
+
+  @override
+  String get errorCodeAiLocalInterrupted =>
+      'La generazione sul telefono si è interrotta.';
+
+  @override
+  String get errorCodeAiLocalUnsupported =>
+      'Questo dispositivo non può eseguire modelli in locale.';
 }

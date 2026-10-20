@@ -3809,6 +3809,84 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Fino a {amount}'**
   String aiFilterAmountMax(String amount);
+
+  /// No description provided for @aiProviderOnDevice.
+  ///
+  /// In it, this message translates to:
+  /// **'Sul dispositivo'**
+  String get aiProviderOnDevice;
+
+  /// No description provided for @errorCodeAiOnDeviceDisabled.
+  ///
+  /// In it, this message translates to:
+  /// **'L\'analisi sul dispositivo non è attiva su questo server.'**
+  String get errorCodeAiOnDeviceDisabled;
+
+  /// No description provided for @errorCodeAiLocalConsentRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Per continuare accetta l\'informativa sull\'analisi sul dispositivo.'**
+  String get errorCodeAiLocalConsentRequired;
+
+  /// No description provided for @errorCodeAiAnalysisOnDevice.
+  ///
+  /// In it, this message translates to:
+  /// **'Questa analisi è stata scritta sul telefono: continuala da lì.'**
+  String get errorCodeAiAnalysisOnDevice;
+
+  /// No description provided for @errorCodeAiAnalysisNotOnDevice.
+  ///
+  /// In it, this message translates to:
+  /// **'Questa analisi è stata scritta da un fornitore cloud.'**
+  String get errorCodeAiAnalysisNotOnDevice;
+
+  /// No description provided for @errorCodeAiMessageFinished.
+  ///
+  /// In it, this message translates to:
+  /// **'Questa risposta era già stata salvata.'**
+  String get errorCodeAiMessageFinished;
+
+  /// No description provided for @errorCodeAiLocalEngineError.
+  ///
+  /// In it, this message translates to:
+  /// **'Il modello sul telefono ha avuto un errore.'**
+  String get errorCodeAiLocalEngineError;
+
+  /// No description provided for @errorCodeAiLocalOutOfMemory.
+  ///
+  /// In it, this message translates to:
+  /// **'Memoria insufficiente: scegli un modello più piccolo o un contesto più corto.'**
+  String get errorCodeAiLocalOutOfMemory;
+
+  /// No description provided for @errorCodeAiLocalContextTooLong.
+  ///
+  /// In it, this message translates to:
+  /// **'Il testo non entra nel contesto del modello: usa il profilo compatto, un contesto più grande o meno movimenti.'**
+  String get errorCodeAiLocalContextTooLong;
+
+  /// No description provided for @errorCodeAiLocalTimeout.
+  ///
+  /// In it, this message translates to:
+  /// **'Il telefono ha impiegato troppo tempo e la generazione è stata interrotta.'**
+  String get errorCodeAiLocalTimeout;
+
+  /// No description provided for @errorCodeAiLocalModelMissing.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun modello installato sul telefono: scaricane uno da Assistente AI.'**
+  String get errorCodeAiLocalModelMissing;
+
+  /// No description provided for @errorCodeAiLocalInterrupted.
+  ///
+  /// In it, this message translates to:
+  /// **'La generazione sul telefono si è interrotta.'**
+  String get errorCodeAiLocalInterrupted;
+
+  /// No description provided for @errorCodeAiLocalUnsupported.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo dispositivo non può eseguire modelli in locale.'**
+  String get errorCodeAiLocalUnsupported;
 }
 
 class _AppLocalizationsDelegate

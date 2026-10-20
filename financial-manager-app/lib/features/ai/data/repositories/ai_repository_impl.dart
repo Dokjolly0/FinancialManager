@@ -6,6 +6,7 @@ import '../../domain/models/ai_analysis_request.dart';
 import '../../domain/models/ai_settings.dart';
 import '../../domain/models/ai_stream_event.dart';
 import '../../domain/models/ai_user_context.dart';
+import '../../domain/models/local_model.dart';
 import '../../domain/repositories/ai_repository.dart';
 import '../services/ai_api.dart';
 
@@ -51,11 +52,66 @@ class AiRepositoryImpl implements AiRepository {
       });
 
   @override
-  Future<void> acceptConsent(int version) =>
-      _guard(() => _api.acceptConsent(version));
+  Future<void> acceptConsent(int version, {String scope = 'cloud'}) =>
+      _guard(() => _api.acceptConsent(version, scope));
 
   @override
-  Future<void> revokeConsent() => _guard(_api.revokeConsent);
+  Future<void> revokeConsent({String scope = 'cloud'}) =>
+      _guard(() => _api.revokeConsent(scope));
+
+  @override
+  Future<AiSettings> setMode(
+    AiMode mode, {
+    String? localModel,
+    required int expectedVersion,
+  }) => _guard(
+    () async => AiSettings.fromJson(
+      await _api.setMode({
+        'mode': mode.wire,
+        'local_model': localModel,
+        'version': expectedVersion,
+      }),
+    ),
+  );
+
+  @override
+  Future<AiLocalTurn> prepareLocalAnalysis(
+    AiAnalysisRequest request, {
+    required String dataFingerprint,
+    required String clientRequestId,
+    required AiLocalRuntime runtime,
+  }) => _guard(
+    () async => AiLocalTurn.fromJson(
+      await _api.prepareLocalAnalysis({
+        ...request.toJson(),
+        'target': 'on_device',
+        'data_fingerprint': dataFingerprint,
+        'client_request_id': clientRequestId,
+        'runtime': runtime.toJson(),
+      }),
+    ),
+  );
+
+  @override
+  Future<AiLocalTurn> prepareLocalFollowUp(
+    String analysisId,
+    String question,
+  ) => _guard(
+    () async => AiLocalTurn.fromJson(
+      await _api.prepareLocalFollowUp(analysisId, question),
+    ),
+  );
+
+  @override
+  Future<AiMessage> submitLocalResult(
+    String analysisId,
+    String messageId,
+    AiLocalResult result,
+  ) => _guard(
+    () async => AiMessage.fromJson(
+      await _api.submitLocalResult(analysisId, messageId, result.toJson()),
+    ),
+  );
 
   @override
   Future<AiUserContext> getUserContext() =>

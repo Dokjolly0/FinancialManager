@@ -3,13 +3,23 @@ enum AiProviderKind {
   anthropic('anthropic'),
   openai('openai'),
   gemini('gemini'),
-  openaiCompatible('openai_compatible');
+  openaiCompatible('openai_compatible'),
+
+  /// Analyses written on the phone (plan.md section 33). Never a cloud
+  /// provider choice.
+  onDevice('on_device');
 
   const AiProviderKind(this.wire);
 
   final String wire;
 
   bool get requiresBaseUrl => this == AiProviderKind.openaiCompatible;
+
+  bool get isCloud => this != AiProviderKind.onDevice;
+
+  /// The providers offered in the cloud settings.
+  static List<AiProviderKind> get cloud =>
+      AiProviderKind.values.where((k) => k.isCloud).toList();
 
   /// OpenAI-compatible servers may need no key (a local Ollama).
   bool get requiresApiKey => this != AiProviderKind.openaiCompatible;
@@ -121,9 +131,26 @@ class AiSetupStatus {
   );
 }
 
+/// Which path new analyses take.
+enum AiMode {
+  cloud('cloud'),
+  onDevice('on_device');
+
+  const AiMode(this.wire);
+
+  final String wire;
+
+  static AiMode fromWire(String? value) =>
+      value == 'on_device' ? AiMode.onDevice : AiMode.cloud;
+}
+
 class AiSettings {
   const AiSettings({
     required this.available,
+    this.onDeviceAvailable = false,
+    this.mode = AiMode.cloud,
+    this.localModel,
+    this.localConsent,
     this.active,
     this.credentials = const [],
     this.maxOutputTokens = 4096,
@@ -136,8 +163,21 @@ class AiSettings {
     this.version = 0,
   });
 
-  /// False when the server has no AI_KEY_ENCRYPTION_KEY.
+  /// The cloud path: false when the server has no AI_KEY_ENCRYPTION_KEY.
   final bool available;
+
+  /// The on-device path (plan.md section 33).
+  final bool onDeviceAvailable;
+  final AiMode mode;
+
+  /// Label of the model chosen on the phone, as saved on the server.
+  final String? localModel;
+
+  /// The on-device disclosure; null from an older server.
+  final AiConsent? localConsent;
+
+  /// The feature is usable through at least one path.
+  bool get anyAvailable => available || onDeviceAvailable;
   final AiCredential? active;
   final List<AiCredential> credentials;
   final int maxOutputTokens;
@@ -163,8 +203,15 @@ class AiSettings {
 
   static AiSettings fromJson(Map<String, dynamic> json) {
     final defaults = json['defaults'] as Map<String, dynamic>? ?? const {};
+    final consent = json['consent'] as Map<String, dynamic>? ?? const {};
     return AiSettings(
       available: json['available'] as bool? ?? false,
+      onDeviceAvailable: json['on_device_available'] as bool? ?? false,
+      mode: AiMode.fromWire(json['mode'] as String?),
+      localModel: json['local_model'] as String?,
+      localConsent: consent['on_device'] is Map<String, dynamic>
+          ? AiConsent.fromJson(consent['on_device'] as Map<String, dynamic>)
+          : null,
       active: json['active'] is Map<String, dynamic>
           ? AiCredential.fromJson(json['active'] as Map<String, dynamic>)
           : null,

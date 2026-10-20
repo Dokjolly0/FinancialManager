@@ -112,6 +112,22 @@ class AiAnalysisFilters {
   };
 }
 
+/// The phone model's limits, for an on-device preview's context fit.
+class AiDeviceParams {
+  const AiDeviceParams({
+    required this.contextTokens,
+    required this.maxOutputTokens,
+  });
+
+  final int contextTokens;
+  final int maxOutputTokens;
+
+  Map<String, dynamic> toJson() => {
+    'context_tokens': contextTokens,
+    'max_output_tokens': maxOutputTokens,
+  };
+}
+
 /// The body shared by preview and run.
 class AiAnalysisRequest {
   const AiAnalysisRequest({
@@ -127,6 +143,10 @@ class AiAnalysisRequest {
     this.includeAdjustments = false,
     this.filters,
     this.instructions,
+    this.profile,
+    this.budgetTokens,
+    this.target,
+    this.device,
   });
 
   final String preset;
@@ -148,6 +168,16 @@ class AiAnalysisRequest {
   /// Null uses the preset's default instructions.
   final String? instructions;
 
+  /// 'standard' or 'compact' (small on-device models); null is standard.
+  final String? profile;
+
+  /// When set, the server drops detail until the prompt fits.
+  final int? budgetTokens;
+
+  /// 'cloud' or 'on_device'; null uses the saved mode.
+  final String? target;
+  final AiDeviceParams? device;
+
   AiAnalysisRequest copyWith({String? instructions}) => AiAnalysisRequest(
     preset: preset,
     periodPreset: periodPreset,
@@ -161,6 +191,10 @@ class AiAnalysisRequest {
     includeAdjustments: includeAdjustments,
     filters: filters,
     instructions: instructions ?? this.instructions,
+    profile: profile,
+    budgetTokens: budgetTokens,
+    target: target,
+    device: device,
   );
 
   static String _date(DateTime d) =>
@@ -185,7 +219,11 @@ class AiAnalysisRequest {
       'anonymize_titles': anonymizeTitles,
       'include_adjustments': includeAdjustments,
       if (filters != null && !filters!.isEmpty) 'filters': filters!.toJson(),
+      'profile': ?profile,
+      'budget_tokens': ?budgetTokens,
     },
+    'target': ?target,
+    if (device != null) 'device': device!.toJson(),
     'instructions': instructions,
   };
 }

@@ -2099,4 +2099,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String aiFilterAmountMax(String amount) {
     return 'Up to $amount';
   }
+
+  @override
+  String get aiProviderOnDevice => 'On device';
+
+  @override
+  String get errorCodeAiOnDeviceDisabled =>
+      'On-device analysis is not enabled on this server.';
+
+  @override
+  String get errorCodeAiLocalConsentRequired =>
+      'Accept the on-device analysis notice to continue.';
+
+  @override
+  String get errorCodeAiAnalysisOnDevice =>
+      'This analysis was written on the phone: continue it there.';
+
+  @override
+  String get errorCodeAiAnalysisNotOnDevice =>
+      'This analysis was written by a cloud provider.';
+
+  @override
+  String get errorCodeAiMessageFinished => 'This answer was already saved.';
+
+  @override
+  String get errorCodeAiLocalEngineError => 'The on-device model failed.';
+
+  @override
+  String get errorCodeAiLocalOutOfMemory =>
+      'Not enough memory: choose a smaller model or a shorter context.';
+
+  @override
+  String get errorCodeAiLocalContextTooLong =>
+      'The text doesn\'t fit the model\'s context: use the compact profile, a larger context or fewer transactions.';
+
+  @override
+  String get errorCodeAiLocalTimeout =>
+      'The phone took too long and generation was stopped.';
+
+  @override
+  String get errorCodeAiLocalModelMissing =>
+      'No model installed on the phone: download one from the AI assistant.';
+
+  @override
+  String get errorCodeAiLocalInterrupted =>
+      'Generation on the phone was interrupted.';
+
+  @override
+  String get errorCodeAiLocalUnsupported =>
+      'This device cannot run models locally.';
 }

@@ -8,6 +8,7 @@ import '../../../../core/errors/app_error.dart';
 import '../../data/providers.dart';
 import '../../domain/models/ai_analysis.dart';
 import '../../domain/models/ai_analysis_request.dart';
+import '../../domain/models/ai_settings.dart';
 import '../../domain/models/ai_stream_event.dart';
 import '../../domain/repositories/ai_repository.dart';
 
@@ -87,6 +88,13 @@ class AiConversationController extends Notifier<AiConversationState> {
 
   AiRepository get _repo => ref.read(aiRepositoryProvider);
 
+  /// Follow-ups continue where the report was written.
+  AiTurnSource get _followUpSource => ref.read(
+    aiTurnSourceProvider(
+      state.detail?.summary.isOnDevice == true ? AiMode.onDevice : AiMode.cloud,
+    ),
+  );
+
   @override
   AiConversationState build() {
     ref.onDispose(() {
@@ -121,16 +129,19 @@ class AiConversationController extends Notifier<AiConversationState> {
   void startRun(
     AiAnalysisRequest request,
     String fingerprint, {
+    AiMode target = AiMode.cloud,
     String? clientRequestId,
   }) {
     if (state.isStreaming) return;
     _stream(
-      (token) => _repo.runAnalysis(
-        request,
-        dataFingerprint: fingerprint,
-        clientRequestId: clientRequestId ?? const Uuid().v4(),
-        cancelToken: token,
-      ),
+      (token) => ref
+          .read(aiTurnSourceProvider(target))
+          .runAnalysis(
+            request,
+            dataFingerprint: fingerprint,
+            clientRequestId: clientRequestId ?? const Uuid().v4(),
+            cancelToken: token,
+          ),
       question: null,
     );
   }
@@ -141,7 +152,7 @@ class AiConversationController extends Notifier<AiConversationState> {
     final text = question.trim();
     if (id == null || text.isEmpty || !state.canAsk) return;
     _stream(
-      (token) => _repo.askFollowUp(id, text, cancelToken: token),
+      (token) => _followUpSource.askFollowUp(id, text, cancelToken: token),
       question: text,
     );
   }

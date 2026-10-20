@@ -270,7 +270,7 @@ class _ProviderFormState extends ConsumerState<_ProviderForm> {
           isExpanded: true,
           decoration: InputDecoration(labelText: l10n.aiProviderLabel),
           items: [
-            for (final kind in AiProviderKind.values)
+            for (final kind in AiProviderKind.cloud)
               DropdownMenuItem(
                 value: kind,
                 child: Text(
@@ -287,6 +287,7 @@ class _ProviderFormState extends ConsumerState<_ProviderForm> {
           AiProviderKind.openai => l10n.aiProviderHintOpenai,
           AiProviderKind.gemini => l10n.aiProviderHintGemini,
           AiProviderKind.openaiCompatible => l10n.aiProviderHintCompatible,
+          AiProviderKind.onDevice => '',
         }, style: theme.textTheme.bodySmall),
         if (_provider.requiresBaseUrl) ...[
           const SizedBox(height: AppSpacing.md),
