@@ -45,6 +45,11 @@ dependencies:
   share_plus: ^13.3.0
   gpt_markdown: ^1.3.4
 
+  # On-device AI models (section 33): SHA-256 of downloaded files, and the
+  # "Wi-Fi only" download rule.
+  crypto: ^3.0.7
+  connectivity_plus: ^7.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -54,6 +59,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/ai/local_models.json
 
 # Regenerate with `dart run flutter_launcher_icons` after editing
 # assets/icon/icon.png or icon_foreground.png.

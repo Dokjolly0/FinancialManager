@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -9,9 +12,16 @@ import '../domain/local/local_llm_engine.dart';
 import '../domain/models/ai_analysis_request.dart';
 import '../domain/models/ai_settings.dart';
 import '../domain/models/ai_user_context.dart';
+import '../domain/models/local_model_catalog.dart';
 import '../domain/repositories/ai_repository.dart';
+import 'local/device_capabilities_source.dart';
+import 'local/hugging_face_token_store.dart';
 import 'local/local_ai_runner.dart';
 import 'local/local_result_outbox.dart';
+import 'local/model_downloader.dart';
+import 'local/model_importer.dart';
+import 'local/model_store.dart';
+import 'local/network_status.dart';
 import 'local/unavailable_model_host.dart';
 import 'repositories/ai_repository_impl.dart';
 import 'services/ai_api.dart';
@@ -76,4 +86,60 @@ final aiTurnSourceProvider = Provider.family<AiTurnSource, AiMode>(
   (ref, mode) => mode == AiMode.onDevice
       ? ref.watch(localAiRunnerProvider)
       : ref.watch(aiRepositoryProvider),
+);
+
+/// The bundled catalog of downloadable models.
+final localModelCatalogProvider = FutureProvider<LocalModelCatalog>((
+  ref,
+) async {
+  final raw = await rootBundle.loadString('assets/ai/local_models.json');
+  return LocalModelCatalog.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+});
+
+/// Installed models, in `<app support>/ai_models` (excluded from Android
+/// backups by res/xml/backup_rules.xml and data_extraction_rules.xml).
+final modelStoreProvider = Provider<ModelStore>(
+  (ref) => ModelStore(
+    () async =>
+        Directory('${(await getApplicationSupportDirectory()).path}/ai_models'),
+  ),
+);
+
+final deviceCapabilitiesSourceProvider = Provider<DeviceCapabilitiesSource>(
+  (ref) => const PlatformDeviceCapabilitiesSource(),
+);
+
+final networkStatusProvider = Provider<NetworkStatus>(
+  (ref) => ConnectivityNetworkStatus(),
+);
+
+final huggingFaceTokenStoreProvider = Provider<HuggingFaceTokenStore>(
+  (ref) => HuggingFaceTokenStore(),
+);
+
+Future<int?> Function(Directory) _freeBytes(Ref ref) =>
+    (_) async => (await ref.read(deviceCapabilitiesSourceProvider).read())
+        ?.freeStorageBytes;
+
+/// Its own Dio, not the API client's: model hosts must never see the app's
+/// session token or request ids.
+final modelDownloaderProvider = Provider<ModelDownloader>(
+  (ref) => ModelDownloader(
+    dio: Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 60),
+      ),
+    ),
+    network: ref.watch(networkStatusProvider),
+    freeBytes: _freeBytes(ref),
+    huggingFaceToken: ref.watch(huggingFaceTokenStoreProvider).read,
+  ),
+);
+
+final modelImporterProvider = Provider<ModelImporter>(
+  (ref) => ModelImporter(
+    store: ref.watch(modelStoreProvider),
+    freeBytes: _freeBytes(ref),
+  ),
 );

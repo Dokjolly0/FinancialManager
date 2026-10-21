@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "catalog_version": 1,
+  "models": [
+    {
+      "id": "gemma4-e2b-litert",
+      "family": "gemma4",
+      "display_name": "Gemma 4 E2B",
+      "engine": "litert_lm",
+      "format": "litertlm",
+      "model_type": "gemma4",
+      "quantization": "int4/int8",
+      "url": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/41c5569623a7c189d6eec3e5225260c58cedbce7/gemma-4-E2B-it.litertlm",
+      "revision": "41c5569623a7c189d6eec3e5225260c58cedbce7",
+      "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+      "size_bytes": 2588147712,
+      "ram_min_mb": 6144,
+      "ram_recommended_mb": 8192,
+      "context_default": 16384,
+      "context_max": 16384,
+      "context_max_cpu": 8192,
+      "backends": ["gpu", "cpu"],
+      "gpu_activation": "float32",
+      "token_factor": 1.59,
+      "speed": {
+        "gpu": {"prefill_tps": 600, "decode_tps": 30},
+        "cpu": {"prefill_tps": 200, "decode_tps": 23}
+      },
+      "notes": {
+        "it": "Veloce sulla GPU: un check-up in meno di un minuto. Italiano corretto ma generico.",
+        "en": "Fast on the GPU: a check-up in under a minute. Correct but plain Italian and English."
+      },
+      "license": {
+        "id": "apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0",
+        "gated": false,
+        "requires_acceptance": false
+      },
+      "recommended": true
+    },
+    {
+      "id": "gemma4-e4b-litert",
+      "family": "gemma4",
+      "display_name": "Gemma 4 E4B",
+      "engine": "litert_lm",
+      "format": "litertlm",
+      "model_type": "gemma4",
+      "quantization": "int4/int8",
+      "url": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/e6a3892a8c22cf87ff99583996149cf3cb32452b/gemma-4-E4B-it.litertlm",
+      "revision": "e6a3892a8c22cf87ff99583996149cf3cb32452b",
+      "sha256": "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0",
+      "size_bytes": 3659530240,
+      "ram_min_mb": 8192,
+      "ram_recommended_mb": 10240,
+      "context_default": 16384,
+      "context_max": 16384,
+      "context_max_cpu": 8192,
+      "backends": ["gpu"],
+      "gpu_activation": "float32",
+      "token_factor": 1.59,
+      "speed": {
+        "gpu": {"prefill_tps": 350, "decode_tps": 14}
+      },
+      "notes": {
+        "it": "Report più curati di E2B, a circa metà della velocità. Solo GPU.",
+        "en": "More careful reports than E2B at about half the speed. GPU only."
+      },
+      "license": {
+        "id": "apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0",
+        "gated": false,
+        "requires_acceptance": false
+      },
+      "recommended": false
+    },
+    {
+      "id": "qwen35-4b-q4km-gguf",
+      "family": "qwen35",
+      "display_name": "Qwen3.5 4B",
+      "engine": "llama_cpp",
+      "format": "gguf",
+      "model_type": "qwen35",
+      "quantization": "Q4_K_M",
+      "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/e87f176479d0855a907a41277aca2f8ee7a09523/Qwen3.5-4B-Q4_K_M.gguf",
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523",
+      "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
+      "size_bytes": 2740937888,
+      "ram_min_mb": 6144,
+      "ram_recommended_mb": 8192,
+      "context_default": 8192,
+      "context_max": 16384,
+      "backends": ["cpu"],
+      "token_factor": 1.57,
+      "speed": {
+        "cpu": {"prefill_tps": 48, "decode_tps": 10}
+      },
+      "notes": {
+        "it": "L'italiano migliore tra i modelli provati, ma solo su CPU: un check-up richiede 2–3 minuti.",
+        "en": "The best Italian of the models tested, but CPU only: a check-up takes 2–3 minutes."
+      },
+      "license": {
+        "id": "apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0",
+        "gated": false,
+        "requires_acceptance": false
+      },
+      "recommended": false
+    },
+    {
+      "id": "gemma4-e2b-q4km-gguf",
+      "family": "gemma4",
+      "display_name": "Gemma 4 E2B",
+      "engine": "llama_cpp",
+      "format": "gguf",
+      "model_type": "gemma4",
+      "quantization": "Q4_K_M",
+      "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/0314792d7f1f7e229411f620751375812bb9faf2/gemma-4-E2B-it-Q4_K_M.gguf",
+      "revision": "0314792d7f1f7e229411f620751375812bb9faf2",
+      "sha256": "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8",
+      "size_bytes": 3106738272,
+      "ram_min_mb": 6144,
+      "ram_recommended_mb": 8192,
+      "context_default": 8192,
+      "context_max": 16384,
+      "backends": ["cpu"],
+      "token_factor": 1.59,
+      "speed": {
+        "cpu": {"prefill_tps": 49, "decode_tps": 12}
+      },
+      "notes": {
+        "it": "Lo stesso Gemma 4 E2B in formato GGUF, per telefoni senza una GPU adatta. Un check-up richiede 2–3 minuti.",
+        "en": "The same Gemma 4 E2B as GGUF, for phones without a suitable GPU. A check-up takes 2–3 minutes."
+      },
+      "license": {
+        "id": "apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0",
+        "gated": false,
+        "requires_acceptance": false
+      },
+      "recommended": false
+    }
+  ]
+}

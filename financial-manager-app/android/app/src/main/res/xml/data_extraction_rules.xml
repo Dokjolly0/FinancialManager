@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and newer. Downloaded AI models are gigabytes and can be
+     downloaded again: neither backed up nor moved to a new phone
+     (plan.md section 33). -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="ai_models/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="ai_models/" />
+    </device-transfer>
+</data-extraction-rules>
