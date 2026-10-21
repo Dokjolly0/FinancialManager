@@ -21,7 +21,8 @@ android {
         applicationId = "com.alexviolatto.financialmanager"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // LiteRT-LM (on-device AI, plan.md section 33) needs Android 11.
+        minSdk = maxOf(flutter.minSdkVersion, 30)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -32,7 +33,25 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // R8 strips methods that plugins call only through JNI.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
+    }
+}
+
+// Release APKs are arm64 only: the on-device AI engines ship arm64
+// libraries, and phones that can run a model are arm64. Prebuilt plugin
+// libraries for other ABIs (package:jni's) would otherwise make the APK
+// claim ABIs Flutter itself was not built for. Debug builds keep every ABI
+// for emulators, where on-device AI reports itself unavailable.
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.packaging.jniLibs.excludes.addAll(
+            listOf("lib/armeabi-v7a/**", "lib/x86/**", "lib/x86_64/**"),
+        )
     }
 }
 

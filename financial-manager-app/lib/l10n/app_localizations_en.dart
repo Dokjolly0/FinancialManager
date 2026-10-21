@@ -2148,4 +2148,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorCodeAiLocalUnsupported =>
       'This device cannot run models locally.';
+
+  @override
+  String get errorCodeAiLocalTooHot =>
+      'The phone is too hot to run the model. Let it cool down for a few minutes and try again.';
 }

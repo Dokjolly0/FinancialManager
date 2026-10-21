@@ -722,5 +722,6 @@
   "errorCodeAiLocalTimeout": "The phone took too long and generation was stopped.",
   "errorCodeAiLocalModelMissing": "No model installed on the phone: download one from the AI assistant.",
   "errorCodeAiLocalInterrupted": "Generation on the phone was interrupted.",
-  "errorCodeAiLocalUnsupported": "This device cannot run models locally."
+  "errorCodeAiLocalUnsupported": "This device cannot run models locally.",
+  "errorCodeAiLocalTooHot": "The phone is too hot to run the model. Let it cool down for a few minutes and try again."
 }

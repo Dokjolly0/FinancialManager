@@ -54,10 +54,11 @@ void main() {
   late FakeModelServer server;
   late FakeNetworkStatus network;
   late ProviderContainer container;
+  late ModelStore store;
   final bytes = fakeModelBytes(8000);
 
   ProviderContainer make() {
-    final store = ModelStore(() async => root);
+    store = ModelStore(() async => root);
     return ProviderContainer(
       overrides: [
         localModelCatalogProvider.overrideWith(
@@ -110,7 +111,12 @@ void main() {
   });
 
   tearDown(() async {
+    // Let the work after a finished download (registry, active model) end
+    // before the container goes.
+    await until(() => state().tasks.values.every((t) => !t.isActive));
+    await Future<void>.delayed(const Duration(milliseconds: 20));
     container.dispose();
+    await store.flush();
     await root.delete(recursive: true);
   });
 

@@ -2160,4 +2160,8 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get errorCodeAiLocalUnsupported =>
       'Questo dispositivo non può eseguire modelli in locale.';
+
+  @override
+  String get errorCodeAiLocalTooHot =>
+      'Il telefono è troppo caldo per far girare il modello. Lascialo raffreddare qualche minuto e riprova.';
 }

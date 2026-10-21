@@ -10,6 +10,10 @@ abstract final class LocalErrorCodes {
   static const modelMissing = 'AI_LOCAL_MODEL_MISSING';
   static const interrupted = 'AI_LOCAL_INTERRUPTED';
   static const unsupported = 'AI_LOCAL_UNSUPPORTED';
+
+  /// Thermal status SEVERE or worse: refused before the server is asked,
+  /// so it never reaches the server's list.
+  static const tooHot = 'AI_LOCAL_TOO_HOT';
 }
 
 class LocalEngineException implements Exception {
@@ -77,6 +81,13 @@ abstract interface class LocalLlmEngine {
 
   bool get isLoaded;
 
+  /// Where the loaded model actually runs, which can differ from the
+  /// backend asked for; null when nothing is loaded.
+  LocalBackend? get activeBackend;
+
+  /// True from the start of [generate] until its stream ends.
+  bool get isGenerating;
+
   /// Exact token count of [text] with the loaded model's tokenizer, or
   /// null when the engine can't tell (callers then estimate).
   Future<int?> countTokens(String text);
@@ -111,4 +122,7 @@ abstract interface class LocalModelHost {
 
   /// Measured speed of a finished generation, to improve time estimates.
   void recordSpeed(LocalSession session, LocalGenStats stats);
+
+  /// Unloads the model now (it was deleted, or memory is needed).
+  Future<void> release();
 }

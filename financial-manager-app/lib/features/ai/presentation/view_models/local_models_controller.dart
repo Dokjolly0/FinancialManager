@@ -80,6 +80,7 @@ class LocalModelsState {
   const LocalModelsState({
     this.catalog,
     this.installed = const [],
+    this.activeModelId,
     this.tasks = const {},
     this.wifiOnly = true,
     this.capabilities,
@@ -90,6 +91,9 @@ class LocalModelsState {
 
   final LocalModelCatalog? catalog;
   final List<LocalModelRecord> installed;
+
+  /// The installed model on-device runs use.
+  final String? activeModelId;
 
   /// In queue order.
   final Map<String, LocalModelTask> tasks;
@@ -114,6 +118,7 @@ class LocalModelsState {
   LocalModelsState copyWith({
     LocalModelCatalog? catalog,
     List<LocalModelRecord>? installed,
+    String? Function()? activeModelId,
     Map<String, LocalModelTask>? tasks,
     bool? wifiOnly,
     DeviceCapabilities? capabilities,
@@ -123,6 +128,7 @@ class LocalModelsState {
   }) => LocalModelsState(
     catalog: catalog ?? this.catalog,
     installed: installed ?? this.installed,
+    activeModelId: activeModelId == null ? this.activeModelId : activeModelId(),
     tasks: tasks ?? this.tasks,
     wifiOnly: wifiOnly ?? this.wifiOnly,
     capabilities: capabilities ?? this.capabilities,
@@ -171,6 +177,7 @@ class LocalModelsController extends Notifier<LocalModelsState> {
     try {
       final catalog = await ref.read(localModelCatalogProvider.future);
       final installed = await store.list();
+      final active = await store.activeModelId;
       final tasks = <String, LocalModelTask>{};
       for (final spec in catalog.models) {
         if (installed.any((r) => r.id == spec.id)) continue;
@@ -186,23 +193,31 @@ class LocalModelsController extends Notifier<LocalModelsState> {
           );
         }
       }
+      if (!ref.mounted) return;
       state = state.copyWith(
         catalog: catalog,
         installed: installed,
+        activeModelId: () =>
+            installed.any((r) => r.id == active) ? active : null,
         tasks: {...tasks, ...state.tasks},
         wifiOnly: await store.wifiOnly,
         isLoading: false,
         loadError: () => null,
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, loadError: () => e);
+      if (ref.mounted) {
+        state = state.copyWith(isLoading: false, loadError: () => e);
+      }
     }
     await refreshCapabilities();
   }
 
   Future<void> refreshCapabilities() async {
+    if (!ref.mounted) return;
     final caps = await ref.read(deviceCapabilitiesSourceProvider).read();
-    if (caps != null) state = state.copyWith(capabilities: caps);
+    if (caps != null && ref.mounted) {
+      state = state.copyWith(capabilities: caps);
+    }
   }
 
   void download(String specId) {
@@ -253,15 +268,29 @@ class LocalModelsController extends Notifier<LocalModelsState> {
     await ref.read(modelStoreProvider).remove(id);
   }
 
-  /// Deletes an installed model (or a download in progress).
+  /// Deletes an installed model (or a download in progress). The engine
+  /// lets go of it first if it is the one loaded.
   Future<int> delete(String id) async {
     if (state.tasks.containsKey(id)) await cancel(id);
-    final freed = await ref.read(modelStoreProvider).remove(id);
+    final store = ref.read(modelStoreProvider);
+    if (state.activeModelId == id) {
+      await ref.read(localModelHostProvider).release();
+    }
+    final freed = await store.remove(id);
     state = state.copyWith(
-      installed: await ref.read(modelStoreProvider).list(),
+      installed: await store.list(),
+      activeModelId: () =>
+          state.activeModelId == id ? null : state.activeModelId,
     );
     unawaited(refreshCapabilities());
     return freed;
+  }
+
+  /// Makes [id] the model on-device runs use. The next run loads it.
+  Future<void> setActive(String id) async {
+    if (state.installedById(id) == null) return;
+    await ref.read(modelStoreProvider).setActiveModel(id);
+    if (ref.mounted) state = state.copyWith(activeModelId: () => id);
   }
 
   Future<void> setWifiOnly(bool value) async {
@@ -346,7 +375,9 @@ class LocalModelsController extends Notifier<LocalModelsState> {
   }
 
   void _pump() {
-    if (_running != null) return;
+    // The controller lives as long as the app; a disposed one (tests, a
+    // container torn down) starts nothing.
+    if (!ref.mounted || _running != null) return;
     for (final t in state.tasks.values) {
       if (t.status == LocalModelTaskStatus.queued) {
         unawaited(_run(t));
@@ -387,6 +418,7 @@ class LocalModelsController extends Notifier<LocalModelsState> {
             wifiOnly: state.wifiOnly,
             cancelToken: token,
             onProgress: (stage, received, total) {
+              if (!ref.mounted) return;
               final current = state.tasks[id];
               if (current == null) return;
               _setTask(
@@ -420,9 +452,13 @@ class LocalModelsController extends Notifier<LocalModelsState> {
         );
       }
       _removeTask(id);
-      state = state.copyWith(installed: await store.list());
+      final installed = await store.list();
+      if (!ref.mounted) return;
+      state = state.copyWith(installed: installed);
+      // The first model installed is the one runs use.
+      if (state.activeModelId == null) await setActive(id);
     } on ModelDownloadPaused catch (p) {
-      final current = state.tasks[id];
+      final current = ref.mounted ? state.tasks[id] : null;
       if (current != null) {
         _setTask(
           current.copyWith(
@@ -443,7 +479,9 @@ class LocalModelsController extends Notifier<LocalModelsState> {
         await store.remove(id);
         _removeTask(id);
       }
-      if (_resumeAfterStop.remove(id) && state.tasks.containsKey(id)) {
+      if (_resumeAfterStop.remove(id) &&
+          ref.mounted &&
+          state.tasks.containsKey(id)) {
         _setTask(
           state.tasks[id]!.copyWith(status: LocalModelTaskStatus.queued),
         );
@@ -454,6 +492,7 @@ class LocalModelsController extends Notifier<LocalModelsState> {
   }
 
   void _fail(String id, String code) {
+    if (!ref.mounted) return;
     final current = state.tasks[id];
     if (current == null) return;
     _setTask(
@@ -462,10 +501,12 @@ class LocalModelsController extends Notifier<LocalModelsState> {
   }
 
   void _setTask(LocalModelTask task) {
+    if (!ref.mounted) return;
     state = state.copyWith(tasks: {...state.tasks, task.id: task});
   }
 
   void _removeTask(String id) {
+    if (!ref.mounted) return;
     state = state.copyWith(tasks: {...state.tasks}..remove(id));
   }
 }

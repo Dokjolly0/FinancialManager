@@ -103,6 +103,7 @@ String localizeErrorCode(AppLocalizations l10n, String code) {
     'AI_LOCAL_MODEL_MISSING' => l10n.errorCodeAiLocalModelMissing,
     'AI_LOCAL_INTERRUPTED' => l10n.errorCodeAiLocalInterrupted,
     'AI_LOCAL_UNSUPPORTED' => l10n.errorCodeAiLocalUnsupported,
+    'AI_LOCAL_TOO_HOT' => l10n.errorCodeAiLocalTooHot,
     'WALLET_NOT_FOUND' => l10n.errorCodeWalletNotFound,
     'AI_DISABLED' => l10n.errorCodeAiDisabled,
     'AI_NOT_CONFIGURED' => l10n.errorCodeAiNotConfigured,

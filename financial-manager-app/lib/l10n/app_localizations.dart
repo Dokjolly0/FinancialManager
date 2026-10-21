@@ -3887,6 +3887,12 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Questo dispositivo non può eseguire modelli in locale.'**
   String get errorCodeAiLocalUnsupported;
+
+  /// No description provided for @errorCodeAiLocalTooHot.
+  ///
+  /// In it, this message translates to:
+  /// **'Il telefono è troppo caldo per far girare il modello. Lascialo raffreddare qualche minuto e riprova.'**
+  String get errorCodeAiLocalTooHot;
 }
 
 class _AppLocalizationsDelegate

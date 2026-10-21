@@ -83,3 +83,14 @@ RamFit estimateRamFit({
   if (need <= totalMemBytes * 0.7) return RamFit.tight;
   return RamFit.insufficient;
 }
+
+/// Conditions the app warns about before a run (a SEVERE thermal status
+/// refuses it instead, see LocalErrorCodes.tooHot).
+enum LocalRunWarning { warm, lowBattery, lowMemory }
+
+Set<LocalRunWarning> runWarnings(DeviceCapabilities? c) => {
+  if (c != null && c.isWarm && !c.isHot) LocalRunWarning.warm,
+  if (c != null && (c.batteryPercent ?? 100) < 15 && c.charging != true)
+    LocalRunWarning.lowBattery,
+  if (c != null && c.lowMemory) LocalRunWarning.lowMemory,
+};

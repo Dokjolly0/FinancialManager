@@ -51,6 +51,11 @@ jobs:
       - name: Build debug APK
         run: flutter build apk --debug
 
+      # The on-device AI engines (plan.md section 33) add most of the APK's
+      # native code; the size report keeps an eye on it (~92 MB in Oct 2026).
+      - name: Build release APK (arm64) with size analysis
+        run: flutter build apk --release --target-platform android-arm64 --analyze-size
+
   build-ios:
     runs-on: macos-latest
     needs: analyze-and-test

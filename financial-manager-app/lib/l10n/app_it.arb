@@ -886,5 +886,6 @@
   "errorCodeAiLocalTimeout": "Il telefono ha impiegato troppo tempo e la generazione è stata interrotta.",
   "errorCodeAiLocalModelMissing": "Nessun modello installato sul telefono: scaricane uno da Assistente AI.",
   "errorCodeAiLocalInterrupted": "La generazione sul telefono si è interrotta.",
-  "errorCodeAiLocalUnsupported": "Questo dispositivo non può eseguire modelli in locale."
+  "errorCodeAiLocalUnsupported": "Questo dispositivo non può eseguire modelli in locale.",
+  "errorCodeAiLocalTooHot": "Il telefono è troppo caldo per far girare il modello. Lascialo raffreddare qualche minuto e riprova."
 }

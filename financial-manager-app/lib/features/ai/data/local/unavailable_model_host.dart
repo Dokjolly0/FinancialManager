@@ -12,4 +12,7 @@ class UnavailableLocalModelHost implements LocalModelHost {
 
   @override
   void recordSpeed(LocalSession session, LocalGenStats stats) {}
+
+  @override
+  Future<void> release() async {}
 }

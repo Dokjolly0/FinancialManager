@@ -45,6 +45,8 @@ class InstalledLocalModel {
     required this.path,
     required this.defaultContextTokens,
     required this.maxContextTokens,
+    this.maxContextTokensCpu,
+    this.modelType = 'general',
     this.verified = true,
   });
 
@@ -55,6 +57,13 @@ class InstalledLocalModel {
   final String path;
   final int defaultContextTokens;
   final int maxContextTokens;
+
+  /// Lower ceiling on the CPU, where LiteRT-LM needs much more memory.
+  final int? maxContextTokensCpu;
+
+  /// The engine package's model type (chat template); "general" lets the
+  /// engine read the template from the file.
+  final String modelType;
 
   /// False for an imported file whose checksum wasn't known.
   final bool verified;
@@ -91,16 +100,17 @@ class LocalRuntimeParams {
   /// llama.cpp only: layers offloaded to the GPU.
   final int gpuLayers;
 
-  LocalRuntimeParams copyWith({int? maxOutputTokens}) => LocalRuntimeParams(
-    contextTokens: contextTokens,
-    maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
-    temperature: temperature,
-    topK: topK,
-    topP: topP,
-    threads: threads,
-    backend: backend,
-    gpuLayers: gpuLayers,
-  );
+  LocalRuntimeParams copyWith({int? maxOutputTokens, LocalBackend? backend}) =>
+      LocalRuntimeParams(
+        contextTokens: contextTokens,
+        maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
+        temperature: temperature,
+        topK: topK,
+        topP: topP,
+        threads: threads,
+        backend: backend ?? this.backend,
+        gpuLayers: gpuLayers,
+      );
 }
 
 /// The runtime reported to the server with each on-device run.

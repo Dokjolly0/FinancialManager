@@ -25,6 +25,7 @@ LocalModelRecord _record(String id, {DateTime? at}) => LocalModelRecord(
   installedAt: at ?? DateTime.utc(2026, 10, 21),
   defaultContextTokens: 8192,
   maxContextTokens: 16384,
+  backends: const [LocalBackend.cpu],
   tokenFactor: 1.57,
   catalogVersion: 1,
 );

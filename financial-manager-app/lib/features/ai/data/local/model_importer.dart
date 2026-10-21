@@ -169,6 +169,7 @@ class ModelImporter {
       installedAt: _now(),
       defaultContextTokens: meta.defaultContextTokens,
       maxContextTokens: meta.maxContextTokens,
+      backends: defaultBackendsFor(engine),
     );
     await _store.put(record);
     return record;

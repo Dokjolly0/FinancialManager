@@ -50,6 +50,14 @@ dependencies:
   crypto: ^3.0.7
   connectivity_plus: ^7.3.2
 
+  # On-device AI engines (section 33, docs/ai-on-device-spike.md): one API
+  # over LiteRT-LM (.litertlm, GPU) and llama.cpp (GGUF, CPU); the screen
+  # stays on while a model generates.
+  flutter_edge_ai: ^2.5.0
+  flutter_edge_ai_litertlm: ^1.16.0
+  flutter_edge_ai_llama: ^0.0.2
+  wakelock_plus: ^1.8.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -71,3 +79,15 @@ flutter_launcher_icons:
   adaptive_icon_background: "#193366"
   adaptive_icon_foreground: "assets/icon/icon_foreground.png"
   remove_alpha_ios: true
+
+# llamadart (behind flutter_edge_ai_llama) builds only the llama.cpp runtime
+# (LiteRT-LM comes from flutter_edge_ai_litertlm) and, on Android, only the
+# CPU backend: its Vulkan GPU path crashed on the Adreno of the reference
+# phone, and libggml-vulkan.so alone adds 26 MB (docs/ai-on-device-spike.md).
+hooks:
+  user_defines:
+    llamadart:
+      llamadart_native_runtimes: [llama_cpp]
+      llamadart_native_backends:
+        platforms:
+          android-arm64: [cpu]

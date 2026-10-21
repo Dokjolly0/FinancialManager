@@ -12,6 +12,8 @@ class FakeLocalEngine implements LocalLlmEngine {
     this.error,
     this.errorAfter = 0,
     this.tokensPerChar,
+    this.kind = LocalEngineKind.llamaCpp,
+    this.runsOn,
   });
 
   List<String> deltas;
@@ -22,13 +24,22 @@ class FakeLocalEngine implements LocalLlmEngine {
   /// When set, countTokens returns length * this; null means "can't count".
   double? tokensPerChar;
 
+  @override
+  final LocalEngineKind kind;
+
+  /// Backend the model ends up on; null means the one asked for.
+  LocalBackend? runsOn;
+
+  /// Every load, in order.
+  final loads = <(InstalledLocalModel, LocalRuntimeParams)>[];
+  int unloads = 0;
+  LocalBackend? _active;
+  bool _generating = false;
+
   LocalChatRequest? lastRequest;
   bool cancelled = false;
   bool _loaded = false;
   Completer<void>? _cancel;
-
-  @override
-  LocalEngineKind get kind => LocalEngineKind.llamaCpp;
 
   @override
   Future<bool> isSupported() async => true;
@@ -37,10 +48,20 @@ class FakeLocalEngine implements LocalLlmEngine {
   Future<void> load(
     InstalledLocalModel model,
     LocalRuntimeParams params,
-  ) async => _loaded = true;
+  ) async {
+    loads.add((model, params));
+    _active = runsOn ?? params.backend;
+    _loaded = true;
+  }
 
   @override
   bool get isLoaded => _loaded;
+
+  @override
+  LocalBackend? get activeBackend => _loaded ? _active : null;
+
+  @override
+  bool get isGenerating => _generating;
 
   @override
   Future<int?> countTokens(String text) async =>
@@ -48,6 +69,15 @@ class FakeLocalEngine implements LocalLlmEngine {
 
   @override
   Stream<LocalGenEvent> generate(LocalChatRequest request) async* {
+    _generating = true;
+    try {
+      yield* _generate(request);
+    } finally {
+      _generating = false;
+    }
+  }
+
+  Stream<LocalGenEvent> _generate(LocalChatRequest request) async* {
     lastRequest = request;
     cancelled = false;
     _cancel = Completer<void>();
@@ -65,6 +95,7 @@ class FakeLocalEngine implements LocalLlmEngine {
     yield LocalGenStats(
       promptTokens: 100,
       outputTokens: deltas.length,
+      prefillMs: 5,
       decodeMs: 10,
     );
   }
@@ -76,7 +107,10 @@ class FakeLocalEngine implements LocalLlmEngine {
   }
 
   @override
-  Future<void> unload() async => _loaded = false;
+  Future<void> unload() async {
+    if (_loaded) unloads++;
+    _loaded = false;
+  }
 }
 
 class FakeModelHost implements LocalModelHost {
@@ -113,4 +147,7 @@ class FakeModelHost implements LocalModelHost {
   @override
   void recordSpeed(LocalSession session, LocalGenStats stats) =>
       speeds.add(stats);
+
+  @override
+  Future<void> release() => engine.unload();
 }

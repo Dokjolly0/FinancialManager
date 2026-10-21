@@ -3,21 +3,26 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../app/session/current_user_provider.dart';
 import '../../../core/api/providers.dart';
 import '../domain/local/local_llm_engine.dart';
+import '../domain/models/local_model.dart';
 import '../domain/models/ai_analysis_request.dart';
 import '../domain/models/ai_settings.dart';
 import '../domain/models/ai_user_context.dart';
 import '../domain/models/local_model_catalog.dart';
 import '../domain/repositories/ai_repository.dart';
 import 'local/device_capabilities_source.dart';
+import 'local/engine_model_host.dart';
+import 'local/engines/edge_ai_engine.dart';
 import 'local/hugging_face_token_store.dart';
 import 'local/local_ai_runner.dart';
 import 'local/local_result_outbox.dart';
+import 'local/model_benchmark.dart';
 import 'local/model_downloader.dart';
 import 'local/model_importer.dart';
 import 'local/model_store.dart';
@@ -53,11 +58,39 @@ final aiPresetsProvider = FutureProvider<List<AiPreset>>((ref) {
   return ref.watch(aiRepositoryProvider).listPresets();
 });
 
-/// The phone's model manager (plan.md section 33). Overridden once the
-/// model catalog and engines are available; until then every on-device run
-/// reports AI_LOCAL_MODEL_MISSING.
-final localModelHostProvider = Provider<LocalModelHost>(
-  (ref) => const UnavailableLocalModelHost(),
+/// The phone's model manager (plan.md section 33): LiteRT-LM and llama.cpp
+/// on Android arm64. Elsewhere every on-device run reports
+/// AI_LOCAL_UNSUPPORTED or AI_LOCAL_MODEL_MISSING.
+final localModelHostProvider = Provider<LocalModelHost>((ref) {
+  if (!Platform.isAndroid) return const UnavailableLocalModelHost();
+  final host = EngineModelHost(
+    store: ref.watch(modelStoreProvider),
+    engines: {
+      for (final kind in LocalEngineKind.values) kind: EdgeAiEngine(kind),
+    },
+    device: ref.watch(deviceCapabilitiesSourceProvider),
+  );
+  final observer = _MemoryPressureObserver(host.onMemoryPressure);
+  WidgetsBinding.instance.addObserver(observer);
+  ref.onDispose(() {
+    WidgetsBinding.instance.removeObserver(observer);
+    host.release();
+  });
+  return host;
+});
+
+class _MemoryPressureObserver with WidgetsBindingObserver {
+  _MemoryPressureObserver(this._onPressure);
+
+  final Future<void> Function() _onPressure;
+
+  @override
+  void didHaveMemoryPressure() => _onPressure();
+}
+
+/// "Misura velocità" with the active model.
+final modelBenchmarkProvider = Provider<ModelBenchmark>(
+  (ref) => ModelBenchmark(ref.watch(localModelHostProvider)),
 );
 
 /// Results generated on the phone that the server hasn't received yet.
