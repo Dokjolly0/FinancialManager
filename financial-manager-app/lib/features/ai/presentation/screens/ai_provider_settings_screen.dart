@@ -11,12 +11,17 @@ import '../../../../core/widgets/confirmation_sheet.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/providers.dart';
+import '../../../../app/router.dart';
 import '../../domain/models/ai_settings.dart';
 import '../view_models/ai_provider_form.dart';
+import '../view_models/local_run_plan.dart';
+import '../widgets/ai_consent_sheet.dart';
 import '../widgets/ai_provider_labels.dart';
+import '../widgets/local_model_labels.dart';
 
-/// Provider, API key and model (plan.md section 32.7). The key is never
-/// shown back: a stored key appears as its hint and can be replaced.
+/// Where analyses run: a cloud provider (API key and model, plan.md
+/// section 32.7; the key is never shown back, a stored key appears as its
+/// hint and can be replaced) or the phone (plan.md section 33).
 class AiProviderSettingsScreen extends ConsumerWidget {
   const AiProviderSettingsScreen({super.key});
 
@@ -37,8 +42,219 @@ class AiProviderSettingsScreen extends ConsumerWidget {
             onRetry: () => ref.invalidate(aiSettingsProvider),
           ),
         ),
-        data: (settings) => _ProviderForm(settings: settings),
+        data: (settings) => _ModeBody(settings: settings),
       ),
+    );
+  }
+}
+
+/// The Cloud / On-device switch, when the server offers on-device runs,
+/// above the settings of the chosen mode.
+class _ModeBody extends ConsumerStatefulWidget {
+  const _ModeBody({required this.settings});
+
+  final AiSettings settings;
+
+  @override
+  ConsumerState<_ModeBody> createState() => _ModeBodyState();
+}
+
+class _ModeBodyState extends ConsumerState<_ModeBody> {
+  bool _switching = false;
+
+  Future<void> _switch(AiMode mode) async {
+    final l10n = AppLocalizations.of(context);
+    setState(() => _switching = true);
+    try {
+      String? label;
+      if (mode == AiMode.onDevice) {
+        final store = ref.read(modelStoreProvider);
+        final id = await store.activeModelId;
+        label = id == null ? null : (await store.get(id))?.label;
+      }
+      await ref
+          .read(aiRepositoryProvider)
+          .setMode(
+            mode,
+            localModel: label,
+            expectedVersion: widget.settings.version,
+          );
+      ref.invalidate(aiSettingsProvider);
+    } on AppError catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(presentError(e, l10n).message)));
+      }
+    } finally {
+      if (mounted) setState(() => _switching = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final settings = widget.settings;
+    final mode = settings.onDeviceAvailable ? settings.mode : AiMode.cloud;
+    final Widget content = mode == AiMode.onDevice
+        ? _LocalModeBody(settings: settings)
+        : settings.available
+        ? _ProviderForm(settings: settings)
+        : Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Text(l10n.aiUnavailableBody),
+          );
+    if (!settings.onDeviceAvailable) return content;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md,
+            0,
+          ),
+          child: SegmentedButton<AiMode>(
+            segments: [
+              ButtonSegment(
+                value: AiMode.cloud,
+                icon: const Icon(Icons.cloud_outlined),
+                label: Text(l10n.aiModeCloud),
+              ),
+              ButtonSegment(
+                value: AiMode.onDevice,
+                icon: const Icon(Icons.smartphone_outlined),
+                label: Text(l10n.aiModeOnDevice),
+              ),
+            ],
+            selected: {mode},
+            onSelectionChanged: _switching
+                ? null
+                : (s) {
+                    if (s.first != mode) _switch(s.first);
+                  },
+          ),
+        ),
+        if (_switching) const LinearProgressIndicator(minHeight: 2),
+        Expanded(child: content),
+      ],
+    );
+  }
+}
+
+/// On-device mode: the model, how it runs, and its own disclosure.
+class _LocalModeBody extends ConsumerWidget {
+  const _LocalModeBody({required this.settings});
+
+  final AiSettings settings;
+
+  Future<void> _revokeConsent(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await ConfirmationSheet.show(
+      context,
+      title: l10n.aiConsentRevokeConfirmTitle,
+      message: l10n.aiConsentRevokeConfirmMessage,
+      confirmLabel: l10n.aiConsentRevokeAction,
+      isDestructive: true,
+    );
+    if (!confirmed) return;
+    try {
+      await ref
+          .read(aiRepositoryProvider)
+          .revokeConsent(scope: AiMode.onDevice.wire);
+      ref.invalidate(aiSettingsProvider);
+    } on AppError catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(presentError(e, l10n).message)));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final supported = ref.watch(localAiSupportedProvider);
+    final plan = supported ? ref.watch(localRunPlanProvider).value : null;
+    final consent = settings.localConsent;
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        Text(l10n.aiLocalModeIntro, style: theme.textTheme.bodyMedium),
+        if (!supported) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            l10n.errorCodeAiLocalUnsupported,
+            style: TextStyle(color: theme.colorScheme.error),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        Card(
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.memory_outlined),
+                title: Text(l10n.aiLocalModelsTitle),
+                subtitle: Text(plan?.record.label ?? l10n.aiLocalNoModelShort),
+                trailing: const Icon(Icons.chevron_right),
+                enabled: supported,
+                onTap: () => context.push(AppRoutes.aiLocalModels),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.tune),
+                title: Text(l10n.aiLocalRuntimeTitle),
+                subtitle: Text(
+                  plan == null
+                      ? '-'
+                      : [
+                          localBackendLabel(l10n, plan.params.backend),
+                          l10n.aiLocalContextShort(
+                            formatContextTokens(plan.params.contextTokens),
+                          ),
+                          l10n.aiLocalOutputShort(plan.params.maxOutputTokens),
+                        ].join(' · '),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                enabled: supported && plan != null,
+                onTap: () => context.push(AppRoutes.aiLocalRuntime),
+              ),
+            ],
+          ),
+        ),
+        if (consent != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          Card(
+            child: ListTile(
+              leading: Icon(
+                consent.required
+                    ? Icons.privacy_tip_outlined
+                    : Icons.verified_user_outlined,
+              ),
+              title: Text(l10n.aiLocalConsentMenuTitle),
+              subtitle: Text(
+                consent.required
+                    ? l10n.aiConsentMenuPending
+                    : l10n.aiConsentMenuAccepted,
+              ),
+              trailing: consent.required
+                  ? const Icon(Icons.chevron_right)
+                  : TextButton(
+                      onPressed: () => _revokeConsent(context, ref),
+                      child: Text(l10n.aiConsentRevokeAction),
+                    ),
+              onTap: () => AiConsentSheet.show(
+                context,
+                consentVersion: consent.currentVersion,
+                mode: AiMode.onDevice,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

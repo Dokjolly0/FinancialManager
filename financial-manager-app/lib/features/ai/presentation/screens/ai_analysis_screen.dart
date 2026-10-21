@@ -14,8 +14,11 @@ import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/ai_analysis.dart';
+import '../../domain/models/ai_settings.dart';
 import '../view_models/ai_conversation_controller.dart';
 import '../view_models/ai_draft_controller.dart';
+import '../widgets/local_context_card.dart';
+import '../widgets/local_model_labels.dart';
 import 'ai_prompt_preview_screen.dart';
 
 /// A report and its follow-up conversation (plan.md section 32.7). With
@@ -176,11 +179,17 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
       );
     }
     final requestError = state.requestError;
+    // A new run knows its target from the preview; a stored one from its
+    // provider.
+    final onDevice =
+        state.detail?.summary.isOnDevice ??
+        ref.read(aiDraftControllerProvider).preview?.target == AiMode.onDevice;
     return ListView(
       controller: _scroll,
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         if (state.detail != null) _Header(detail: state.detail!),
+        if (state.isStreaming && onDevice) const _KeepOpenBanner(),
         for (final m in state.messages)
           m.kind == AiMessageKind.question
               ? _QuestionBubble(text: m.content)
@@ -237,6 +246,50 @@ class _Header extends StatelessWidget {
     final tokens = NumberFormat.compact(
       locale: Localizations.localeOf(context).toLanguageTag(),
     );
+    final runtime = s.runtime;
+    if (s.isOnDevice) {
+      // Sul dispositivo · model · quantization · backend · token/s · time.
+      final report = detail.messages
+          .where((m) => m.kind == AiMessageKind.report)
+          .firstOrNull;
+      final ms = report?.durationMs;
+      final out = report?.outputTokens;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.smartphone_outlined,
+              size: 16,
+              color: Theme.of(context).colorScheme.outline,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
+                [
+                  period,
+                  l10n.aiModeOnDevice,
+                  if (runtime != null) ...[
+                    runtime.displayName,
+                    if (runtime.quantization.isNotEmpty) runtime.quantization,
+                    localBackendLabel(l10n, runtime.backend),
+                  ] else
+                    s.model,
+                  if (ms != null && ms > 0 && out != null && out > 0)
+                    l10n.aiLocalTokensPerSecond(
+                      (out / (ms / 1000)).toStringAsFixed(1),
+                    ),
+                  if (ms != null && ms > 0)
+                    formatLocalDuration(Duration(milliseconds: ms)),
+                ].join(' · '),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Text(
@@ -251,6 +304,36 @@ class _Header extends StatelessWidget {
             l10n.aiCostValue(s.cost!.toStringAsFixed(s.cost! < 0.1 ? 4 : 2)),
         ].join(' · '),
         style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+}
+
+/// The phone writes the text: leaving the app can stop it.
+class _KeepOpenBanner extends StatelessWidget {
+  const _KeepOpenBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.smartphone_outlined, color: scheme.onSecondaryContainer),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              AppLocalizations.of(context).aiLocalKeepOpen,
+              style: TextStyle(color: scheme.onSecondaryContainer),
+            ),
+          ),
+        ],
       ),
     );
   }

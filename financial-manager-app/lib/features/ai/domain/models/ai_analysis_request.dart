@@ -25,6 +25,10 @@ const aiMaxTransactions = 500;
 const aiDefaultMaxTransactions = 200;
 const aiInstructionsMaxLength = 4000;
 
+/// The compact profile's transaction list (plan.md section 33).
+const aiCompactDefaultTransactions = 60;
+const aiCompactMaxTransactions = 100;
+
 /// A preset offered on the setup screen, localized by the backend.
 class AiPreset {
   const AiPreset({
@@ -178,23 +182,30 @@ class AiAnalysisRequest {
   final String? target;
   final AiDeviceParams? device;
 
-  AiAnalysisRequest copyWith({String? instructions}) => AiAnalysisRequest(
+  AiAnalysisRequest copyWith({
+    String? instructions,
+    bool? includeTransactions,
+    int? maxTransactions,
+    String? profile,
+    int? budgetTokens,
+    AiDeviceParams? device,
+  }) => AiAnalysisRequest(
     preset: preset,
     periodPreset: periodPreset,
     customFrom: customFrom,
     customTo: customTo,
     walletIds: walletIds,
     sections: sections,
-    includeTransactions: includeTransactions,
-    maxTransactions: maxTransactions,
+    includeTransactions: includeTransactions ?? this.includeTransactions,
+    maxTransactions: maxTransactions ?? this.maxTransactions,
     anonymizeTitles: anonymizeTitles,
     includeAdjustments: includeAdjustments,
     filters: filters,
     instructions: instructions ?? this.instructions,
-    profile: profile,
-    budgetTokens: budgetTokens,
+    profile: profile ?? this.profile,
+    budgetTokens: budgetTokens ?? this.budgetTokens,
     target: target,
-    device: device,
+    device: device ?? this.device,
   );
 
   static String _date(DateTime d) =>

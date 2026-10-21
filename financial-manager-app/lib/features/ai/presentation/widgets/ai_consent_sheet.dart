@@ -6,25 +6,35 @@ import '../../../../core/errors/app_error.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/providers.dart';
+import '../../domain/models/ai_settings.dart';
 
 /// The AI analysis disclosure (plan.md section 32.2): what leaves the
-/// server, to whom, and how to revoke. Accepting records the current
-/// consent version on the backend.
+/// server, to whom, and how to revoke. On-device analyses have their own,
+/// lighter one (plan.md section 33): no third party sees the data.
+/// Accepting records the current consent version of that scope on the
+/// backend.
 class AiConsentSheet extends ConsumerStatefulWidget {
-  const AiConsentSheet({super.key, required this.consentVersion});
+  const AiConsentSheet({
+    super.key,
+    required this.consentVersion,
+    this.mode = AiMode.cloud,
+  });
 
   final int consentVersion;
+  final AiMode mode;
 
   /// Shows the sheet; true when the user accepted and it was saved.
   static Future<bool> show(
     BuildContext context, {
     required int consentVersion,
+    AiMode mode = AiMode.cloud,
   }) async {
     final accepted = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => AiConsentSheet(consentVersion: consentVersion),
+      builder: (_) =>
+          AiConsentSheet(consentVersion: consentVersion, mode: mode),
     );
     return accepted ?? false;
   }
@@ -44,7 +54,9 @@ class _AiConsentSheetState extends ConsumerState<AiConsentSheet> {
       _error = null;
     });
     try {
-      await ref.read(aiRepositoryProvider).acceptConsent(widget.consentVersion);
+      await ref
+          .read(aiRepositoryProvider)
+          .acceptConsent(widget.consentVersion, scope: widget.mode.wire);
       ref.invalidate(aiSettingsProvider);
       if (mounted) Navigator.of(context).pop(true);
     } on AppError catch (e) {
@@ -97,23 +109,40 @@ class _AiConsentSheetState extends ConsumerState<AiConsentSheet> {
         children: [
           Text(l10n.aiConsentTitle, style: theme.textTheme.titleLarge),
           const SizedBox(height: AppSpacing.sm),
-          Text(l10n.aiConsentIntro, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: AppSpacing.md),
-          section(Icons.upload_outlined, l10n.aiConsentSentTitle, [
-            l10n.aiConsentSentAggregates,
-            l10n.aiConsentSentWallets,
-            l10n.aiConsentSentTransactions,
-            l10n.aiConsentSentContext,
-          ]),
-          section(Icons.block_outlined, l10n.aiConsentNeverTitle, [
-            l10n.aiConsentNeverBody,
-          ]),
-          section(Icons.key_outlined, l10n.aiConsentKeyTitle, [
-            l10n.aiConsentKeyBody,
-          ]),
-          section(Icons.policy_outlined, l10n.aiConsentProviderTitle, [
-            l10n.aiConsentProviderBody,
-          ]),
+          if (widget.mode == AiMode.onDevice) ...[
+            Text(l10n.aiLocalConsentIntro, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: AppSpacing.md),
+            section(Icons.smartphone_outlined, l10n.aiLocalConsentWhereTitle, [
+              l10n.aiLocalConsentWhereBody,
+            ]),
+            section(Icons.history, l10n.aiLocalConsentStoredTitle, [
+              l10n.aiLocalConsentStoredBody,
+            ]),
+            section(Icons.rule, l10n.aiLocalConsentMistakesTitle, [
+              l10n.aiLocalConsentMistakesBody,
+            ]),
+            section(Icons.download_outlined, l10n.aiLocalConsentModelTitle, [
+              l10n.aiLocalConsentModelBody,
+            ]),
+          ] else ...[
+            Text(l10n.aiConsentIntro, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: AppSpacing.md),
+            section(Icons.upload_outlined, l10n.aiConsentSentTitle, [
+              l10n.aiConsentSentAggregates,
+              l10n.aiConsentSentWallets,
+              l10n.aiConsentSentTransactions,
+              l10n.aiConsentSentContext,
+            ]),
+            section(Icons.block_outlined, l10n.aiConsentNeverTitle, [
+              l10n.aiConsentNeverBody,
+            ]),
+            section(Icons.key_outlined, l10n.aiConsentKeyTitle, [
+              l10n.aiConsentKeyBody,
+            ]),
+            section(Icons.policy_outlined, l10n.aiConsentProviderTitle, [
+              l10n.aiConsentProviderBody,
+            ]),
+          ],
           section(Icons.undo, l10n.aiConsentRevokeTitle, [
             l10n.aiConsentRevokeBody,
           ]),

@@ -104,6 +104,16 @@ String localizeErrorCode(AppLocalizations l10n, String code) {
     'AI_LOCAL_INTERRUPTED' => l10n.errorCodeAiLocalInterrupted,
     'AI_LOCAL_UNSUPPORTED' => l10n.errorCodeAiLocalUnsupported,
     'AI_LOCAL_TOO_HOT' => l10n.errorCodeAiLocalTooHot,
+    'AI_LOCAL_DOWNLOAD_NETWORK' => l10n.errorCodeAiLocalDownloadNetwork,
+    'AI_LOCAL_DOWNLOAD_GATED' => l10n.errorCodeAiLocalDownloadGated,
+    'AI_LOCAL_DOWNLOAD_NOT_FOUND' => l10n.errorCodeAiLocalDownloadNotFound,
+    'AI_LOCAL_DOWNLOAD_HTTP' => l10n.errorCodeAiLocalDownloadHttp,
+    'AI_LOCAL_DOWNLOAD_NO_SPACE' => l10n.errorCodeAiLocalDownloadNoSpace,
+    'AI_LOCAL_DOWNLOAD_CHECKSUM' => l10n.errorCodeAiLocalDownloadChecksum,
+    'AI_LOCAL_DOWNLOAD_INSECURE_URL' =>
+      l10n.errorCodeAiLocalDownloadInsecureUrl,
+    'AI_LOCAL_IMPORT_UNKNOWN_FORMAT' =>
+      l10n.errorCodeAiLocalImportUnknownFormat,
     'WALLET_NOT_FOUND' => l10n.errorCodeWalletNotFound,
     'AI_DISABLED' => l10n.errorCodeAiDisabled,
     'AI_NOT_CONFIGURED' => l10n.errorCodeAiNotConfigured,

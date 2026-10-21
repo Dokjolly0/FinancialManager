@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,17 +7,29 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/error_code_localizations.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../data/providers.dart';
+import '../../domain/local/local_llm_engine.dart';
 import '../../domain/models/ai_analysis.dart';
 import '../../domain/models/ai_analysis_request.dart';
+import '../../domain/models/ai_settings.dart';
+import '../../domain/models/device_capabilities.dart';
+import '../../domain/models/local_model.dart';
+import '../../domain/models/local_model_record.dart';
 import '../view_models/ai_draft_controller.dart';
+import '../view_models/local_run_plan.dart';
 import '../widgets/ai_provider_labels.dart';
+import '../widgets/local_context_card.dart';
 import 'ai_analysis_setup_screen.dart';
 
 /// The exact prompt before sending (plan.md section 32.6): a summary of
 /// what leaves the server, the editable instructions, and the read-only
-/// rules and data.
+/// rules and data. On the phone (plan.md section 33) it also shows how much
+/// of the model's context the run takes and how long it should last; the
+/// model loads while the user reads, so the estimate becomes an exact
+/// count.
 class AiPromptPreviewScreen extends ConsumerStatefulWidget {
   const AiPromptPreviewScreen({super.key});
 
@@ -27,12 +41,139 @@ class AiPromptPreviewScreen extends ConsumerStatefulWidget {
 class _AiPromptPreviewScreenState extends ConsumerState<AiPromptPreviewScreen> {
   late final TextEditingController _instructions;
 
+  /// The engine's count of the prompt with fingerprint [_counted].
+  int? _exactTokens;
+  String? _counted;
+  bool _warmingUp = false;
+  bool _modelLoaded = false;
+  String? _warmUpError;
+  Set<LocalRunWarning> _warnings = const {};
+
   @override
   void initState() {
     super.initState();
     _instructions = TextEditingController(
       text: ref.read(aiDraftControllerProvider).preview?.instructions ?? '',
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _warmUp());
+  }
+
+  /// Loads the model and counts the prompt with its tokenizer.
+  Future<void> _warmUp() async {
+    final preview = ref.read(aiDraftControllerProvider).preview;
+    if (!mounted ||
+        preview == null ||
+        preview.target != AiMode.onDevice ||
+        !ref.read(localAiSupportedProvider) ||
+        _counted == preview.dataFingerprint) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _warmingUp = true;
+      _warmUpError = null;
+      _exactTokens = null;
+    });
+    try {
+      final caps = await ref.read(deviceCapabilitiesSourceProvider).read();
+      if (mounted) setState(() => _warnings = runWarnings(caps));
+      final session = await ref.read(localModelHostProvider).acquire();
+      final count = await session.engine.countTokens(
+        '${preview.systemPrompt}\n\n${preview.instructions}\n\n${preview.dataBlock}',
+      );
+      if (!mounted) return;
+      setState(() {
+        _modelLoaded = true;
+        _exactTokens = count;
+        _counted = preview.dataFingerprint;
+      });
+    } on LocalEngineException catch (e) {
+      if (mounted) {
+        setState(() => _warmUpError = localizeErrorCode(l10n, e.code));
+      }
+    } catch (_) {
+      // The estimate stays; the run reports any real problem.
+    } finally {
+      if (mounted) setState(() => _warmingUp = false);
+    }
+  }
+
+  Future<void> _repreview(AiAnalysisRequest request) =>
+      ref.read(aiDraftControllerProvider.notifier).preview(request);
+
+  /// Re-previews with the budget and limits of the plan now saved.
+  Future<void> _replan(AiAnalysisRequest request) async {
+    ref.invalidate(localRunPlanProvider);
+    final plan = await ref.read(localRunPlanProvider.future);
+    if (plan == null || !mounted) return;
+    await _repreview(
+      request.copyWith(budgetTokens: plan.budgetTokens, device: plan.device),
+    );
+  }
+
+  Future<void> _shorterAnswer(
+    LocalRunPlan plan,
+    AiAnalysisRequest request,
+  ) async {
+    final store = ref.read(modelStoreProvider);
+    final choice = await store.runtimeChoice(plan.record.id);
+    await store.setRuntimeChoice(
+      plan.record.id,
+      LocalRuntimeChoice(
+        backend: choice?.backend ?? plan.params.backend,
+        contextTokens: choice?.contextTokens ?? plan.params.contextTokens,
+        temperature: choice?.temperature,
+        maxOutputTokens: math.max(256, plan.params.maxOutputTokens ~/ 2),
+      ),
+    );
+    await _replan(request);
+  }
+
+  List<LocalContextFix> _fixes(
+    AppLocalizations l10n,
+    LocalRunPlan plan,
+    LocalContextUsage usage,
+    AiAnalysisRequest request,
+  ) {
+    if (usage.level == LocalContextLevel.ok) return const [];
+    final r = plan.record;
+    final maxContext = plan.params.backend == LocalBackend.cpu
+        ? (r.maxContextTokensCpu ?? r.maxContextTokens)
+        : r.maxContextTokens;
+    return [
+      if (request.profile != 'compact')
+        LocalContextFix(
+          l10n.aiLocalFixCompact,
+          () => _repreview(
+            request.copyWith(
+              profile: 'compact',
+              maxTransactions: math.min(
+                request.maxTransactions,
+                aiCompactDefaultTransactions,
+              ),
+            ),
+          ),
+        ),
+      if (request.includeTransactions && request.maxTransactions > 10)
+        LocalContextFix(
+          l10n.aiLocalFixFewerTransactions,
+          () => _repreview(
+            request.copyWith(
+              maxTransactions: math.max(10, request.maxTransactions ~/ 2),
+            ),
+          ),
+        ),
+      if (plan.params.maxOutputTokens > 512)
+        LocalContextFix(
+          l10n.aiLocalFixShorterAnswer,
+          () => _shorterAnswer(plan, request),
+        ),
+      if (plan.params.contextTokens < maxContext)
+        LocalContextFix(l10n.aiLocalFixLargerContext, () async {
+          await context.push(AppRoutes.aiLocalRuntime);
+          if (mounted) await _replan(request);
+        }),
+    ];
   }
 
   @override
@@ -61,6 +202,11 @@ class _AiPromptPreviewScreenState extends ConsumerState<AiPromptPreviewScreen> {
     final theme = Theme.of(context);
     final draft = ref.watch(aiDraftControllerProvider);
     final preview = draft.preview;
+    // A quick fix re-previews: count the new prompt.
+    ref.listen(
+      aiDraftControllerProvider.select((d) => d.preview?.dataFingerprint),
+      (_, _) => _warmUp(),
+    );
 
     if (preview == null) {
       return Scaffold(
@@ -80,6 +226,15 @@ class _AiPromptPreviewScreenState extends ConsumerState<AiPromptPreviewScreen> {
     );
     final d = preview.disclosure;
     final cost = preview.estimatedMaxCost;
+    final onDevice = preview.target == AiMode.onDevice;
+    final plan = onDevice ? ref.watch(localRunPlanProvider).value : null;
+    final usage = plan?.usage(
+      estimatedInputTokens: preview.estimatedInputTokens,
+      exactInputTokens: _counted == preview.dataFingerprint
+          ? _exactTokens
+          : null,
+    );
+    final overflow = usage?.level == LocalContextLevel.overflow;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.aiPreviewTitle)),
@@ -93,10 +248,14 @@ class _AiPromptPreviewScreenState extends ConsumerState<AiPromptPreviewScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n.aiPreviewSentTo(
-                      aiProviderLabel(l10n, preview.provider),
-                      preview.model,
-                    ),
+                    onDevice
+                        ? l10n.aiPreviewOnDevice(
+                            plan?.record.label ?? preview.model,
+                          )
+                        : l10n.aiPreviewSentTo(
+                            aiProviderLabel(l10n, preview.provider),
+                            preview.model,
+                          ),
                     style: theme.textTheme.titleSmall,
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -138,15 +297,26 @@ class _AiPromptPreviewScreenState extends ConsumerState<AiPromptPreviewScreen> {
                     spacing: AppSpacing.xs,
                     runSpacing: AppSpacing.xs,
                     children: [
-                      Chip(
-                        avatar: const Icon(Icons.token_outlined, size: 18),
-                        label: Text(
-                          l10n.aiPreviewTokens(
-                            numbers.format(preview.estimatedInputTokens),
+                      if (onDevice)
+                        Chip(
+                          avatar: const Icon(Icons.money_off, size: 18),
+                          label: Text(l10n.aiPreviewNoCost),
+                        )
+                      else
+                        Chip(
+                          avatar: const Icon(Icons.token_outlined, size: 18),
+                          label: Text(
+                            l10n.aiPreviewTokens(
+                              numbers.format(preview.estimatedInputTokens),
+                            ),
                           ),
                         ),
-                      ),
-                      if (cost != null)
+                      if (d.profile == 'compact')
+                        Chip(
+                          avatar: const Icon(Icons.compress, size: 18),
+                          label: Text(l10n.aiCompactProfile),
+                        ),
+                      if (!onDevice && cost != null)
                         Chip(
                           avatar: const Icon(Icons.payments_outlined, size: 18),
                           label: Text(
@@ -161,6 +331,28 @@ class _AiPromptPreviewScreenState extends ConsumerState<AiPromptPreviewScreen> {
               ),
             ),
           ),
+          if (d.compactionSteps.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              l10n.aiPreviewCompacted(d.compactionSteps.length),
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+          if (plan != null && usage != null && draft.request != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            LocalContextCard(
+              plan: plan,
+              usage: usage,
+              estimate: plan.estimate(
+                inputTokens: usage.inputTokens,
+                loaded: _modelLoaded,
+              ),
+              warnings: _warnings,
+              warmingUp: _warmingUp,
+              warmUpError: _warmUpError,
+              fixes: _fixes(l10n, plan, usage, draft.request!),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           Text(l10n.aiInstructionsLabel, style: theme.textTheme.titleMedium),
           Text(l10n.aiInstructionsHint, style: theme.textTheme.bodySmall),
@@ -193,9 +385,11 @@ class _AiPromptPreviewScreenState extends ConsumerState<AiPromptPreviewScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
-            onPressed: draft.isLoading ? null : _send,
-            icon: const Icon(Icons.send),
-            label: Text(l10n.aiSendAction),
+            onPressed: draft.isLoading || overflow ? null : _send,
+            icon: Icon(onDevice ? Icons.play_arrow : Icons.send),
+            label: Text(
+              onDevice ? l10n.aiRunOnDeviceAction : l10n.aiSendAction,
+            ),
           ),
         ],
       ),

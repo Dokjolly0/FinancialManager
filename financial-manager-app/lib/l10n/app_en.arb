@@ -723,5 +723,305 @@
   "errorCodeAiLocalModelMissing": "No model installed on the phone: download one from the AI assistant.",
   "errorCodeAiLocalInterrupted": "Generation on the phone was interrupted.",
   "errorCodeAiLocalUnsupported": "This device cannot run models locally.",
-  "errorCodeAiLocalTooHot": "The phone is too hot to run the model. Let it cool down for a few minutes and try again."
+  "errorCodeAiLocalTooHot": "The phone is too hot to run the model. Let it cool down for a few minutes and try again.",
+
+  "aiModeCloud": "Cloud",
+  "aiModeOnDevice": "On device",
+  "aiLocalModeIntro": "The model runs on the phone: your data goes to no outside AI provider. The server prepares the data and keeps reports and questions in the history, as with the cloud.",
+  "aiLocalModelsTitle": "On-device models",
+  "aiLocalRuntimeTitle": "Runtime settings",
+  "aiLocalNoModel": "No active model. Download or import one to use on-device analysis.",
+  "aiLocalNoModelShort": "No model installed",
+  "aiLocalChooseModel": "Choose a model",
+  "aiLocalNotReadyBody": "An on-device analysis needs an installed model. Download one from On-device models.",
+  "aiLocalConsentMenuTitle": "On-device disclosure",
+  "aiLocalConsentIntro": "With on-device analysis the AI model runs on your phone. Before each analysis you see exactly which data it is given.",
+  "aiLocalConsentWhereTitle": "Where the data is processed",
+  "aiLocalConsentWhereBody": "On the phone, with no connection to the model: no outside AI provider receives your data.",
+  "aiLocalConsentStoredTitle": "What the server keeps",
+  "aiLocalConsentStoredBody": "The server prepares the data summary and keeps reports and questions in the history, so you find them on every device.",
+  "aiLocalConsentMistakesTitle": "The model can be wrong",
+  "aiLocalConsentMistakesBody": "Models that run on a phone are small: they can mix up numbers. Check them before deciding.",
+  "aiLocalConsentModelTitle": "The model",
+  "aiLocalConsentModelBody": "You download it from Hugging Face, which sees your IP address. Each model has its own license, shown before the download.",
+  "aiSetupStepLocalModel": "Model on the phone",
+  "aiSetupStepLocalModelHint": "Download a model and accept the on-device disclosure",
+  "aiLocalBackendGpu": "GPU",
+  "aiLocalBackendCpu": "CPU",
+  "aiLocalBackendNpu": "NPU",
+  "aiLocalBackendLabel": "Runs on",
+  "aiLocalBackendGpuHint": "Faster. Recommended.",
+  "aiLocalBackendCpuHint": "Slower and uses more memory; with LiteRT-LM the context goes up to 8k.",
+  "aiLocalContextShort": "{size} context",
+  "@aiLocalContextShort": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalOutputShort": "answer up to {count} tokens",
+  "@aiLocalOutputShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiLocalContextLabel": "Context: {count} tokens",
+  "@aiLocalContextLabel": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalContextHint": "How much text the model keeps in mind: data, report and questions.",
+  "aiLocalContextMemoryWarning": "More context uses more memory. If the app closes during an analysis, lower it.",
+  "aiLocalOutputLabel": "Longest answer: {count} tokens",
+  "@aiLocalOutputLabel": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalOutputHint": "A typical report uses 600–1,000. More room for the answer leaves less for the data.",
+  "aiLocalTemperatureLabel": "Temperature: {value}",
+  "@aiLocalTemperatureLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTemperatureHint": "Low: answers closer to the numbers. High: more varied.",
+  "aiLocalSpeedTitle": "Speed",
+  "aiLocalSpeedValue": "Reading {prefill} tokens/s · writing {decode} tokens/s",
+  "@aiLocalSpeedValue": {
+    "placeholders": {
+      "prefill": {
+        "type": "String"
+      },
+      "decode": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalSpeedMeasured": "Measured on this phone",
+  "aiLocalSpeedCatalog": "Indicative, measured on a Galaxy S26 Ultra",
+  "aiLocalSpeedFallback": "Not measured yet: a cautious guess",
+  "aiLocalMeasure": "Measure speed",
+  "aiLocalMeasuring": "Measuring…",
+  "aiLocalResetDefaults": "Restore defaults",
+  "aiLocalDeviceTitle": "This phone",
+  "aiLocalDeviceRam": "RAM {size}",
+  "@aiLocalDeviceRam": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeviceFree": "{size} free",
+  "@aiLocalDeviceFree": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeviceUnknown": "Memory and storage unknown",
+  "aiLocalWifiOnly": "Download on Wi-Fi only",
+  "aiLocalWifiOnlyHint": "Models weigh a few GB: off Wi-Fi the download waits and resumes by itself.",
+  "aiLocalPickingFile": "Preparing the file…",
+  "aiLocalImporting": "Importing and checking the model…",
+  "aiLocalInstalledTitle": "Installed",
+  "aiLocalInUse": "in use",
+  "aiLocalUnverified": "not verified",
+  "aiLocalUseModel": "Use this model",
+  "aiLocalEngineLitert": "LiteRT-LM",
+  "aiLocalEngineLitertHint": "On the GPU, fast. Models prepared by Google.",
+  "aiLocalEngineLlama": "llama.cpp",
+  "aiLocalEngineLlamaHint": "Any GGUF file and quantization, on the CPU: slower.",
+  "aiLocalRecommended": "Recommended",
+  "aiLocalRamFits": "Enough RAM",
+  "aiLocalRamTight": "RAM tight",
+  "aiLocalRamInsufficient": "Not enough RAM",
+  "aiLocalRamUnknown": "RAM unknown",
+  "aiLocalRamWarningTitle": "Not enough memory",
+  "aiLocalRamWarningMessage": "This phone has less RAM than the model needs: it may not start or may close the app.",
+  "aiLocalDownloadAnyway": "Download anyway",
+  "aiLocalDownload": "Download",
+  "aiLocalProgress": "{done} of {total}",
+  "@aiLocalProgress": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalQueued": "Queued",
+  "aiLocalPaused": "Paused · {progress}",
+  "@aiLocalPaused": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalWaitingForWifi": "Waiting for Wi-Fi",
+  "aiLocalVerifying": "Checking the file…",
+  "aiLocalPause": "Pause",
+  "aiLocalResume": "Resume",
+  "aiLocalRetry": "Retry",
+  "aiLocalCancel": "Cancel",
+  "aiLocalLicenseBody": "The file is {size} and comes from Hugging Face. The model is distributed under the {license} license: by downloading it you accept it.",
+  "@aiLocalLicenseBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "license": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalGatedBody": "This model is gated: accept the license on its Hugging Face page and enter a read token.",
+  "aiLocalAcceptAndDownload": "Accept and download",
+  "aiLocalDeleteTitle": "Delete the model?",
+  "aiLocalDeleteMessage": "{name} will be removed from the phone. Analyses already made stay in the history.",
+  "@aiLocalDeleteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeleted": "Model deleted: {size} freed",
+  "@aiLocalDeleted": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalImportFile": "Import a file",
+  "aiLocalImportUrl": "Download from URL",
+  "aiLocalImportAction": "Import",
+  "aiLocalUrlLabel": "File https address",
+  "aiLocalNameLabel": "Model name",
+  "aiLocalQuantLabel": "Quantization (e.g. Q4_K_M)",
+  "aiLocalShaLabel": "SHA-256 (optional)",
+  "aiLocalShaHelper": "If you enter it the file is checked; otherwise the model stays \"not verified\".",
+  "aiLocalShaInvalid": "Must be 64 hexadecimal characters.",
+  "aiLocalImported": "{name} imported",
+  "@aiLocalImported": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalImportedUnverified": "{name} imported, not verified",
+  "@aiLocalImportedUnverified": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTokenAction": "Hugging Face token",
+  "aiLocalTokenLabel": "Read token",
+  "aiLocalTokenHelper": "Needed only for gated models. It stays on the phone and is sent only to huggingface.co.",
+  "aiLocalTokenStored": "A token is saved on this phone.",
+  "aiLocalTokenNone": "No token saved.",
+  "aiLocalTokenSaved": "Token saved",
+  "aiLocalTokenRemoved": "Token removed",
+  "aiCompactProfile": "Compact profile",
+  "aiCompactProfileHint": "Less detail and shorter rules: a shorter prompt.",
+  "aiCompactProfileHintLocal": "Recommended on the phone: less detail, shorter rules and a prompt that fits the model's context.",
+  "aiPreviewOnDevice": "Processed on the phone with {model}",
+  "@aiPreviewOnDevice": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPreviewNoCost": "No cost",
+  "aiPreviewCompacted": "{count, plural, =1{One detail was reduced to fit the limit.} other{{count} details were reduced to fit the limit.}}",
+  "@aiPreviewCompacted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiRunOnDeviceAction": "Run on the phone",
+  "aiLocalContextUse": "Context: {used} of {total} tokens",
+  "@aiLocalContextUse": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalContextParts": "data {input} · answer {output}",
+  "@aiLocalContextParts": {
+    "placeholders": {
+      "input": {
+        "type": "String"
+      },
+      "output": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalCountExact": "exact count",
+  "aiLocalCountEstimated": "estimate",
+  "aiLocalContextTight": "Nearly full: follow-up questions will have little room.",
+  "aiLocalContextOverflow": "It doesn't fit the model's context. Try one of these:",
+  "aiLocalFixCompact": "Compact profile",
+  "aiLocalFixFewerTransactions": "Fewer transactions",
+  "aiLocalFixShorterAnswer": "Shorter answer",
+  "aiLocalFixLargerContext": "Larger context",
+  "aiLocalTimeEstimate": "Estimated time: {low}–{high}",
+  "@aiLocalTimeEstimate": {
+    "placeholders": {
+      "low": {
+        "type": "String"
+      },
+      "high": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTimeRough": "A rough guess: measure the speed in Runtime settings.",
+  "aiLocalWarnWarm": "The phone is warm: it will be slower.",
+  "aiLocalWarnBattery": "Battery below 15%: plug in the charger.",
+  "aiLocalWarnMemory": "Little free memory: close other apps if the analysis stops.",
+  "aiLocalKeepOpen": "The phone is writing: keep the app open until it finishes.",
+  "aiLocalTokensPerSecond": "{value} tokens/s",
+  "@aiLocalTokensPerSecond": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCodeAiLocalDownloadNetwork": "The download was interrupted by the network: resume when the connection is back.",
+  "errorCodeAiLocalDownloadGated": "Gated model: accept the license on Hugging Face and enter a valid token.",
+  "errorCodeAiLocalDownloadNotFound": "File not found on the server.",
+  "errorCodeAiLocalDownloadHttp": "The server refused the download.",
+  "errorCodeAiLocalDownloadNoSpace": "Not enough space on the phone for this model.",
+  "errorCodeAiLocalDownloadChecksum": "The downloaded file doesn't match the expected one and was discarded.",
+  "errorCodeAiLocalDownloadInsecureUrl": "The address must start with https://.",
+  "errorCodeAiLocalImportUnknownFormat": "Unknown format: .gguf or .litertlm files are needed."
 }

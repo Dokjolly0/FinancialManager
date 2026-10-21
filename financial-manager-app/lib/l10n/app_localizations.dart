@@ -3893,6 +3893,810 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Il telefono è troppo caldo per far girare il modello. Lascialo raffreddare qualche minuto e riprova.'**
   String get errorCodeAiLocalTooHot;
+
+  /// No description provided for @aiModeCloud.
+  ///
+  /// In it, this message translates to:
+  /// **'Cloud'**
+  String get aiModeCloud;
+
+  /// No description provided for @aiModeOnDevice.
+  ///
+  /// In it, this message translates to:
+  /// **'Sul dispositivo'**
+  String get aiModeOnDevice;
+
+  /// No description provided for @aiLocalModeIntro.
+  ///
+  /// In it, this message translates to:
+  /// **'Il modello gira sul telefono: i tuoi dati non vanno a nessun fornitore AI esterno. Il server prepara i dati e salva report e domande nella cronologia, come per il cloud.'**
+  String get aiLocalModeIntro;
+
+  /// No description provided for @aiLocalModelsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Modelli sul dispositivo'**
+  String get aiLocalModelsTitle;
+
+  /// No description provided for @aiLocalRuntimeTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Impostazioni di esecuzione'**
+  String get aiLocalRuntimeTitle;
+
+  /// No description provided for @aiLocalNoModel.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun modello attivo. Scaricane uno o importalo per usare l’analisi sul dispositivo.'**
+  String get aiLocalNoModel;
+
+  /// No description provided for @aiLocalNoModelShort.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun modello installato'**
+  String get aiLocalNoModelShort;
+
+  /// No description provided for @aiLocalChooseModel.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli un modello'**
+  String get aiLocalChooseModel;
+
+  /// No description provided for @aiLocalNotReadyBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Per analizzare sul telefono serve un modello installato. Scaricane uno da Modelli sul dispositivo.'**
+  String get aiLocalNotReadyBody;
+
+  /// No description provided for @aiLocalConsentMenuTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Informativa sul dispositivo'**
+  String get aiLocalConsentMenuTitle;
+
+  /// No description provided for @aiLocalConsentIntro.
+  ///
+  /// In it, this message translates to:
+  /// **'Con l\'analisi sul dispositivo il modello AI gira sul tuo telefono. Prima di ogni analisi vedrai esattamente quali dati gli vengono dati.'**
+  String get aiLocalConsentIntro;
+
+  /// No description provided for @aiLocalConsentWhereTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Dove vengono elaborati i dati'**
+  String get aiLocalConsentWhereTitle;
+
+  /// No description provided for @aiLocalConsentWhereBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Sul telefono, senza connessione al modello: nessun fornitore AI esterno riceve i tuoi dati.'**
+  String get aiLocalConsentWhereBody;
+
+  /// No description provided for @aiLocalConsentStoredTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Cosa resta sul server'**
+  String get aiLocalConsentStoredTitle;
+
+  /// No description provided for @aiLocalConsentStoredBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Il server prepara il riepilogo dei dati e salva report e domande nella cronologia, così li ritrovi su ogni dispositivo.'**
+  String get aiLocalConsentStoredBody;
+
+  /// No description provided for @aiLocalConsentMistakesTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Il modello può sbagliare'**
+  String get aiLocalConsentMistakesTitle;
+
+  /// No description provided for @aiLocalConsentMistakesBody.
+  ///
+  /// In it, this message translates to:
+  /// **'I modelli che girano su un telefono sono piccoli: possono confondere i numeri. Controllali prima di decidere.'**
+  String get aiLocalConsentMistakesBody;
+
+  /// No description provided for @aiLocalConsentModelTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Il modello'**
+  String get aiLocalConsentModelTitle;
+
+  /// No description provided for @aiLocalConsentModelBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Lo scarichi da Hugging Face, che vede il tuo indirizzo IP. Ogni modello ha la sua licenza, mostrata prima del download.'**
+  String get aiLocalConsentModelBody;
+
+  /// No description provided for @aiSetupStepLocalModel.
+  ///
+  /// In it, this message translates to:
+  /// **'Modello sul telefono'**
+  String get aiSetupStepLocalModel;
+
+  /// No description provided for @aiSetupStepLocalModelHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Scarica un modello e accetta l\'informativa sul dispositivo'**
+  String get aiSetupStepLocalModelHint;
+
+  /// No description provided for @aiLocalBackendGpu.
+  ///
+  /// In it, this message translates to:
+  /// **'GPU'**
+  String get aiLocalBackendGpu;
+
+  /// No description provided for @aiLocalBackendCpu.
+  ///
+  /// In it, this message translates to:
+  /// **'CPU'**
+  String get aiLocalBackendCpu;
+
+  /// No description provided for @aiLocalBackendNpu.
+  ///
+  /// In it, this message translates to:
+  /// **'NPU'**
+  String get aiLocalBackendNpu;
+
+  /// No description provided for @aiLocalBackendLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Dove calcola'**
+  String get aiLocalBackendLabel;
+
+  /// No description provided for @aiLocalBackendGpuHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Più veloce. Consigliata.'**
+  String get aiLocalBackendGpuHint;
+
+  /// No description provided for @aiLocalBackendCpuHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Più lenta e usa più memoria; con LiteRT-LM il contesto arriva al massimo a 8k.'**
+  String get aiLocalBackendCpuHint;
+
+  /// No description provided for @aiLocalContextShort.
+  ///
+  /// In it, this message translates to:
+  /// **'contesto {size}'**
+  String aiLocalContextShort(String size);
+
+  /// No description provided for @aiLocalOutputShort.
+  ///
+  /// In it, this message translates to:
+  /// **'risposta fino a {count} token'**
+  String aiLocalOutputShort(int count);
+
+  /// No description provided for @aiLocalContextLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Contesto: {count} token'**
+  String aiLocalContextLabel(String count);
+
+  /// No description provided for @aiLocalContextHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Quanto testo il modello tiene presente: dati, report e domande.'**
+  String get aiLocalContextHint;
+
+  /// No description provided for @aiLocalContextMemoryWarning.
+  ///
+  /// In it, this message translates to:
+  /// **'Più contesto usa più memoria. Se l\'app si chiude durante un\'analisi, riducilo.'**
+  String get aiLocalContextMemoryWarning;
+
+  /// No description provided for @aiLocalOutputLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Risposta massima: {count} token'**
+  String aiLocalOutputLabel(String count);
+
+  /// No description provided for @aiLocalOutputHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Un report tipico ne usa 600–1.000. Più spazio alla risposta lascia meno spazio ai dati.'**
+  String get aiLocalOutputHint;
+
+  /// No description provided for @aiLocalTemperatureLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Temperatura: {value}'**
+  String aiLocalTemperatureLabel(String value);
+
+  /// No description provided for @aiLocalTemperatureHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Bassa: risposte più fedeli ai numeri. Alta: più varie.'**
+  String get aiLocalTemperatureHint;
+
+  /// No description provided for @aiLocalSpeedTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Velocità'**
+  String get aiLocalSpeedTitle;
+
+  /// No description provided for @aiLocalSpeedValue.
+  ///
+  /// In it, this message translates to:
+  /// **'Lettura {prefill} token/s · scrittura {decode} token/s'**
+  String aiLocalSpeedValue(String prefill, String decode);
+
+  /// No description provided for @aiLocalSpeedMeasured.
+  ///
+  /// In it, this message translates to:
+  /// **'Misurata su questo telefono'**
+  String get aiLocalSpeedMeasured;
+
+  /// No description provided for @aiLocalSpeedCatalog.
+  ///
+  /// In it, this message translates to:
+  /// **'Indicativa, misurata su un Galaxy S26 Ultra'**
+  String get aiLocalSpeedCatalog;
+
+  /// No description provided for @aiLocalSpeedFallback.
+  ///
+  /// In it, this message translates to:
+  /// **'Non ancora misurata: stima prudente'**
+  String get aiLocalSpeedFallback;
+
+  /// No description provided for @aiLocalMeasure.
+  ///
+  /// In it, this message translates to:
+  /// **'Misura velocità'**
+  String get aiLocalMeasure;
+
+  /// No description provided for @aiLocalMeasuring.
+  ///
+  /// In it, this message translates to:
+  /// **'Misura in corso…'**
+  String get aiLocalMeasuring;
+
+  /// No description provided for @aiLocalResetDefaults.
+  ///
+  /// In it, this message translates to:
+  /// **'Ripristina i valori predefiniti'**
+  String get aiLocalResetDefaults;
+
+  /// No description provided for @aiLocalDeviceTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo telefono'**
+  String get aiLocalDeviceTitle;
+
+  /// No description provided for @aiLocalDeviceRam.
+  ///
+  /// In it, this message translates to:
+  /// **'RAM {size}'**
+  String aiLocalDeviceRam(String size);
+
+  /// No description provided for @aiLocalDeviceFree.
+  ///
+  /// In it, this message translates to:
+  /// **'{size} liberi'**
+  String aiLocalDeviceFree(String size);
+
+  /// No description provided for @aiLocalDeviceUnknown.
+  ///
+  /// In it, this message translates to:
+  /// **'Memoria e spazio non disponibili'**
+  String get aiLocalDeviceUnknown;
+
+  /// No description provided for @aiLocalWifiOnly.
+  ///
+  /// In it, this message translates to:
+  /// **'Scarica solo con Wi-Fi'**
+  String get aiLocalWifiOnly;
+
+  /// No description provided for @aiLocalWifiOnlyHint.
+  ///
+  /// In it, this message translates to:
+  /// **'I modelli pesano qualche GB: senza Wi-Fi il download aspetta e riprende da solo.'**
+  String get aiLocalWifiOnlyHint;
+
+  /// No description provided for @aiLocalPickingFile.
+  ///
+  /// In it, this message translates to:
+  /// **'Preparazione del file…'**
+  String get aiLocalPickingFile;
+
+  /// No description provided for @aiLocalImporting.
+  ///
+  /// In it, this message translates to:
+  /// **'Importazione e verifica del modello…'**
+  String get aiLocalImporting;
+
+  /// No description provided for @aiLocalInstalledTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Installati'**
+  String get aiLocalInstalledTitle;
+
+  /// No description provided for @aiLocalInUse.
+  ///
+  /// In it, this message translates to:
+  /// **'in uso'**
+  String get aiLocalInUse;
+
+  /// No description provided for @aiLocalUnverified.
+  ///
+  /// In it, this message translates to:
+  /// **'non verificato'**
+  String get aiLocalUnverified;
+
+  /// No description provided for @aiLocalUseModel.
+  ///
+  /// In it, this message translates to:
+  /// **'Usa questo modello'**
+  String get aiLocalUseModel;
+
+  /// No description provided for @aiLocalEngineLitert.
+  ///
+  /// In it, this message translates to:
+  /// **'LiteRT-LM'**
+  String get aiLocalEngineLitert;
+
+  /// No description provided for @aiLocalEngineLitertHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Sulla GPU, veloce. Modelli preparati da Google.'**
+  String get aiLocalEngineLitertHint;
+
+  /// No description provided for @aiLocalEngineLlama.
+  ///
+  /// In it, this message translates to:
+  /// **'llama.cpp'**
+  String get aiLocalEngineLlama;
+
+  /// No description provided for @aiLocalEngineLlamaHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Qualsiasi file GGUF e quantizzazione, sulla CPU: più lento.'**
+  String get aiLocalEngineLlamaHint;
+
+  /// No description provided for @aiLocalRecommended.
+  ///
+  /// In it, this message translates to:
+  /// **'Consigliato'**
+  String get aiLocalRecommended;
+
+  /// No description provided for @aiLocalRamFits.
+  ///
+  /// In it, this message translates to:
+  /// **'RAM sufficiente'**
+  String get aiLocalRamFits;
+
+  /// No description provided for @aiLocalRamTight.
+  ///
+  /// In it, this message translates to:
+  /// **'RAM al limite'**
+  String get aiLocalRamTight;
+
+  /// No description provided for @aiLocalRamInsufficient.
+  ///
+  /// In it, this message translates to:
+  /// **'RAM insufficiente'**
+  String get aiLocalRamInsufficient;
+
+  /// No description provided for @aiLocalRamUnknown.
+  ///
+  /// In it, this message translates to:
+  /// **'RAM non nota'**
+  String get aiLocalRamUnknown;
+
+  /// No description provided for @aiLocalRamWarningTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Memoria insufficiente'**
+  String get aiLocalRamWarningTitle;
+
+  /// No description provided for @aiLocalRamWarningMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo telefono ha meno RAM di quella che serve al modello: potrebbe non partire o far chiudere l\'app.'**
+  String get aiLocalRamWarningMessage;
+
+  /// No description provided for @aiLocalDownloadAnyway.
+  ///
+  /// In it, this message translates to:
+  /// **'Scarica comunque'**
+  String get aiLocalDownloadAnyway;
+
+  /// No description provided for @aiLocalDownload.
+  ///
+  /// In it, this message translates to:
+  /// **'Scarica'**
+  String get aiLocalDownload;
+
+  /// No description provided for @aiLocalProgress.
+  ///
+  /// In it, this message translates to:
+  /// **'{done} di {total}'**
+  String aiLocalProgress(String done, String total);
+
+  /// No description provided for @aiLocalQueued.
+  ///
+  /// In it, this message translates to:
+  /// **'In coda'**
+  String get aiLocalQueued;
+
+  /// No description provided for @aiLocalPaused.
+  ///
+  /// In it, this message translates to:
+  /// **'In pausa · {progress}'**
+  String aiLocalPaused(String progress);
+
+  /// No description provided for @aiLocalWaitingForWifi.
+  ///
+  /// In it, this message translates to:
+  /// **'In attesa del Wi-Fi'**
+  String get aiLocalWaitingForWifi;
+
+  /// No description provided for @aiLocalVerifying.
+  ///
+  /// In it, this message translates to:
+  /// **'Verifica del file…'**
+  String get aiLocalVerifying;
+
+  /// No description provided for @aiLocalPause.
+  ///
+  /// In it, this message translates to:
+  /// **'Pausa'**
+  String get aiLocalPause;
+
+  /// No description provided for @aiLocalResume.
+  ///
+  /// In it, this message translates to:
+  /// **'Riprendi'**
+  String get aiLocalResume;
+
+  /// No description provided for @aiLocalRetry.
+  ///
+  /// In it, this message translates to:
+  /// **'Riprova'**
+  String get aiLocalRetry;
+
+  /// No description provided for @aiLocalCancel.
+  ///
+  /// In it, this message translates to:
+  /// **'Annulla'**
+  String get aiLocalCancel;
+
+  /// No description provided for @aiLocalLicenseBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Il file pesa {size} e viene scaricato da Hugging Face. Il modello è distribuito con licenza {license}: scaricandolo la accetti.'**
+  String aiLocalLicenseBody(String size, String license);
+
+  /// No description provided for @aiLocalGatedBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo modello è riservato: accetta la licenza sulla sua pagina Hugging Face e inserisci un token di lettura.'**
+  String get aiLocalGatedBody;
+
+  /// No description provided for @aiLocalAcceptAndDownload.
+  ///
+  /// In it, this message translates to:
+  /// **'Accetta e scarica'**
+  String get aiLocalAcceptAndDownload;
+
+  /// No description provided for @aiLocalDeleteTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Eliminare il modello?'**
+  String get aiLocalDeleteTitle;
+
+  /// No description provided for @aiLocalDeleteMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'{name} verrà rimosso dal telefono. Le analisi già fatte restano nella cronologia.'**
+  String aiLocalDeleteMessage(String name);
+
+  /// No description provided for @aiLocalDeleted.
+  ///
+  /// In it, this message translates to:
+  /// **'Modello eliminato: liberati {size}'**
+  String aiLocalDeleted(String size);
+
+  /// No description provided for @aiLocalImportFile.
+  ///
+  /// In it, this message translates to:
+  /// **'Importa un file'**
+  String get aiLocalImportFile;
+
+  /// No description provided for @aiLocalImportUrl.
+  ///
+  /// In it, this message translates to:
+  /// **'Scarica da URL'**
+  String get aiLocalImportUrl;
+
+  /// No description provided for @aiLocalImportAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Importa'**
+  String get aiLocalImportAction;
+
+  /// No description provided for @aiLocalUrlLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Indirizzo https del file'**
+  String get aiLocalUrlLabel;
+
+  /// No description provided for @aiLocalNameLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Nome del modello'**
+  String get aiLocalNameLabel;
+
+  /// No description provided for @aiLocalQuantLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Quantizzazione (es. Q4_K_M)'**
+  String get aiLocalQuantLabel;
+
+  /// No description provided for @aiLocalShaLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'SHA-256 (facoltativo)'**
+  String get aiLocalShaLabel;
+
+  /// No description provided for @aiLocalShaHelper.
+  ///
+  /// In it, this message translates to:
+  /// **'Se lo inserisci, il file viene verificato; altrimenti il modello resta \"non verificato\".'**
+  String get aiLocalShaHelper;
+
+  /// No description provided for @aiLocalShaInvalid.
+  ///
+  /// In it, this message translates to:
+  /// **'Deve avere 64 caratteri esadecimali.'**
+  String get aiLocalShaInvalid;
+
+  /// No description provided for @aiLocalImported.
+  ///
+  /// In it, this message translates to:
+  /// **'{name} importato'**
+  String aiLocalImported(String name);
+
+  /// No description provided for @aiLocalImportedUnverified.
+  ///
+  /// In it, this message translates to:
+  /// **'{name} importato, non verificato'**
+  String aiLocalImportedUnverified(String name);
+
+  /// No description provided for @aiLocalTokenAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Token Hugging Face'**
+  String get aiLocalTokenAction;
+
+  /// No description provided for @aiLocalTokenLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Token di lettura'**
+  String get aiLocalTokenLabel;
+
+  /// No description provided for @aiLocalTokenHelper.
+  ///
+  /// In it, this message translates to:
+  /// **'Serve solo per i modelli riservati. Resta sul telefono e viene inviato solo a huggingface.co.'**
+  String get aiLocalTokenHelper;
+
+  /// No description provided for @aiLocalTokenStored.
+  ///
+  /// In it, this message translates to:
+  /// **'Un token è salvato su questo telefono.'**
+  String get aiLocalTokenStored;
+
+  /// No description provided for @aiLocalTokenNone.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun token salvato.'**
+  String get aiLocalTokenNone;
+
+  /// No description provided for @aiLocalTokenSaved.
+  ///
+  /// In it, this message translates to:
+  /// **'Token salvato'**
+  String get aiLocalTokenSaved;
+
+  /// No description provided for @aiLocalTokenRemoved.
+  ///
+  /// In it, this message translates to:
+  /// **'Token rimosso'**
+  String get aiLocalTokenRemoved;
+
+  /// No description provided for @aiCompactProfile.
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo compatto'**
+  String get aiCompactProfile;
+
+  /// No description provided for @aiCompactProfileHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Meno dettagli e regole più brevi: un prompt più corto.'**
+  String get aiCompactProfileHint;
+
+  /// No description provided for @aiCompactProfileHintLocal.
+  ///
+  /// In it, this message translates to:
+  /// **'Consigliato sul telefono: meno dettagli, regole più brevi e un prompt che entra nel contesto del modello.'**
+  String get aiCompactProfileHintLocal;
+
+  /// No description provided for @aiPreviewOnDevice.
+  ///
+  /// In it, this message translates to:
+  /// **'Elaborato sul telefono con {model}'**
+  String aiPreviewOnDevice(String model);
+
+  /// No description provided for @aiPreviewNoCost.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun costo'**
+  String get aiPreviewNoCost;
+
+  /// No description provided for @aiPreviewCompacted.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Un dettaglio è stato ridotto per stare nel limite.} other{{count} dettagli sono stati ridotti per stare nel limite.}}'**
+  String aiPreviewCompacted(int count);
+
+  /// No description provided for @aiRunOnDeviceAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Avvia sul telefono'**
+  String get aiRunOnDeviceAction;
+
+  /// No description provided for @aiLocalContextUse.
+  ///
+  /// In it, this message translates to:
+  /// **'Contesto: {used} di {total} token'**
+  String aiLocalContextUse(String used, String total);
+
+  /// No description provided for @aiLocalContextParts.
+  ///
+  /// In it, this message translates to:
+  /// **'dati {input} · risposta {output}'**
+  String aiLocalContextParts(String input, String output);
+
+  /// No description provided for @aiLocalCountExact.
+  ///
+  /// In it, this message translates to:
+  /// **'conteggio esatto'**
+  String get aiLocalCountExact;
+
+  /// No description provided for @aiLocalCountEstimated.
+  ///
+  /// In it, this message translates to:
+  /// **'stima'**
+  String get aiLocalCountEstimated;
+
+  /// No description provided for @aiLocalContextTight.
+  ///
+  /// In it, this message translates to:
+  /// **'Quasi pieno: le domande successive avranno poco spazio.'**
+  String get aiLocalContextTight;
+
+  /// No description provided for @aiLocalContextOverflow.
+  ///
+  /// In it, this message translates to:
+  /// **'Non entra nel contesto del modello. Prova una di queste soluzioni:'**
+  String get aiLocalContextOverflow;
+
+  /// No description provided for @aiLocalFixCompact.
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo compatto'**
+  String get aiLocalFixCompact;
+
+  /// No description provided for @aiLocalFixFewerTransactions.
+  ///
+  /// In it, this message translates to:
+  /// **'Meno movimenti'**
+  String get aiLocalFixFewerTransactions;
+
+  /// No description provided for @aiLocalFixShorterAnswer.
+  ///
+  /// In it, this message translates to:
+  /// **'Risposta più corta'**
+  String get aiLocalFixShorterAnswer;
+
+  /// No description provided for @aiLocalFixLargerContext.
+  ///
+  /// In it, this message translates to:
+  /// **'Contesto più grande'**
+  String get aiLocalFixLargerContext;
+
+  /// No description provided for @aiLocalTimeEstimate.
+  ///
+  /// In it, this message translates to:
+  /// **'Tempo stimato: {low}–{high}'**
+  String aiLocalTimeEstimate(String low, String high);
+
+  /// No description provided for @aiLocalTimeRough.
+  ///
+  /// In it, this message translates to:
+  /// **'Stima approssimativa: misura la velocità in Impostazioni di esecuzione.'**
+  String get aiLocalTimeRough;
+
+  /// No description provided for @aiLocalWarnWarm.
+  ///
+  /// In it, this message translates to:
+  /// **'Il telefono è caldo: sarà più lento.'**
+  String get aiLocalWarnWarm;
+
+  /// No description provided for @aiLocalWarnBattery.
+  ///
+  /// In it, this message translates to:
+  /// **'Batteria sotto il 15%: collega il caricatore.'**
+  String get aiLocalWarnBattery;
+
+  /// No description provided for @aiLocalWarnMemory.
+  ///
+  /// In it, this message translates to:
+  /// **'Poca memoria libera: chiudi le altre app se l\'analisi si interrompe.'**
+  String get aiLocalWarnMemory;
+
+  /// No description provided for @aiLocalKeepOpen.
+  ///
+  /// In it, this message translates to:
+  /// **'Il telefono sta scrivendo: tieni l\'app aperta finché non ha finito.'**
+  String get aiLocalKeepOpen;
+
+  /// No description provided for @aiLocalTokensPerSecond.
+  ///
+  /// In it, this message translates to:
+  /// **'{value} token/s'**
+  String aiLocalTokensPerSecond(String value);
+
+  /// No description provided for @errorCodeAiLocalDownloadNetwork.
+  ///
+  /// In it, this message translates to:
+  /// **'Download interrotto dalla rete: riprendi quando la connessione torna.'**
+  String get errorCodeAiLocalDownloadNetwork;
+
+  /// No description provided for @errorCodeAiLocalDownloadGated.
+  ///
+  /// In it, this message translates to:
+  /// **'Modello riservato: accetta la licenza su Hugging Face e inserisci un token valido.'**
+  String get errorCodeAiLocalDownloadGated;
+
+  /// No description provided for @errorCodeAiLocalDownloadNotFound.
+  ///
+  /// In it, this message translates to:
+  /// **'File non trovato sul server.'**
+  String get errorCodeAiLocalDownloadNotFound;
+
+  /// No description provided for @errorCodeAiLocalDownloadHttp.
+  ///
+  /// In it, this message translates to:
+  /// **'Il server ha rifiutato il download.'**
+  String get errorCodeAiLocalDownloadHttp;
+
+  /// No description provided for @errorCodeAiLocalDownloadNoSpace.
+  ///
+  /// In it, this message translates to:
+  /// **'Spazio insufficiente sul telefono per questo modello.'**
+  String get errorCodeAiLocalDownloadNoSpace;
+
+  /// No description provided for @errorCodeAiLocalDownloadChecksum.
+  ///
+  /// In it, this message translates to:
+  /// **'Il file scaricato non corrisponde a quello atteso ed è stato scartato.'**
+  String get errorCodeAiLocalDownloadChecksum;
+
+  /// No description provided for @errorCodeAiLocalDownloadInsecureUrl.
+  ///
+  /// In it, this message translates to:
+  /// **'L\'indirizzo deve iniziare con https://.'**
+  String get errorCodeAiLocalDownloadInsecureUrl;
+
+  /// No description provided for @errorCodeAiLocalImportUnknownFormat.
+  ///
+  /// In it, this message translates to:
+  /// **'Formato non riconosciuto: servono file .gguf o .litertlm.'**
+  String get errorCodeAiLocalImportUnknownFormat;
 }
 
 class _AppLocalizationsDelegate

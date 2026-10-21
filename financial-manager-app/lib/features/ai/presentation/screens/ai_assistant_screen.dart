@@ -11,6 +11,7 @@ import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/providers.dart';
 import '../../domain/models/ai_settings.dart';
+import '../view_models/local_run_plan.dart';
 import '../widgets/ai_consent_sheet.dart';
 import '../widgets/ai_provider_labels.dart';
 
@@ -41,7 +42,7 @@ class AiAssistantScreen extends ConsumerWidget {
               ),
             ],
           ),
-          data: (settings) => settings.available
+          data: (settings) => settings.anyAvailable
               ? _AssistantBody(settings: settings)
               : ListView(
                   padding: const EdgeInsets.all(AppSpacing.lg),
@@ -72,6 +73,14 @@ class _AssistantBody extends ConsumerWidget {
 
   final AiSettings settings;
 
+  bool get _onDevice =>
+      settings.onDeviceAvailable && settings.mode == AiMode.onDevice;
+
+  /// The disclosure of the mode in use.
+  AiConsent get _consent => _onDevice
+      ? (settings.localConsent ?? settings.consent)
+      : settings.consent;
+
   Future<void> _revokeConsent(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context);
     final confirmed = await ConfirmationSheet.show(
@@ -83,7 +92,11 @@ class _AssistantBody extends ConsumerWidget {
     );
     if (!confirmed) return;
     try {
-      await ref.read(aiRepositoryProvider).revokeConsent();
+      await ref
+          .read(aiRepositoryProvider)
+          .revokeConsent(
+            scope: _onDevice ? AiMode.onDevice.wire : AiMode.cloud.wire,
+          );
       ref.invalidate(aiSettingsProvider);
     } on AppError catch (e) {
       if (context.mounted) {
@@ -99,20 +112,30 @@ class _AssistantBody extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final setup = settings.setup;
     final active = settings.active;
+    final consent = _consent;
+    final plan = _onDevice ? ref.watch(localRunPlanProvider).value : null;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
-        _SetupChecklist(settings: settings),
+        _SetupChecklist(
+          settings: settings,
+          onDevice: _onDevice,
+          localModelReady: plan != null,
+        ),
         const SizedBox(height: AppSpacing.md),
         Card(
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.key_outlined),
+                leading: Icon(
+                  _onDevice ? Icons.smartphone_outlined : Icons.key_outlined,
+                ),
                 title: Text(l10n.aiProviderMenuTitle),
                 subtitle: Text(
-                  active == null
+                  _onDevice
+                      ? '${l10n.aiModeOnDevice} · ${plan?.record.label ?? l10n.aiLocalNoModelShort}'
+                      : active == null
                       ? l10n.aiProviderMenuNotConfigured
                       : '${aiProviderLabel(l10n, active.provider)} · ${active.model ?? '-'}',
                 ),
@@ -159,7 +182,7 @@ class _AssistantBody extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Card(
-          child: settings.consent.required
+          child: consent.required
               ? ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
                   title: Text(l10n.aiConsentMenuTitle),
@@ -167,7 +190,8 @@ class _AssistantBody extends ConsumerWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => AiConsentSheet.show(
                     context,
-                    consentVersion: settings.consent.currentVersion,
+                    consentVersion: consent.currentVersion,
+                    mode: _onDevice ? AiMode.onDevice : AiMode.cloud,
                   ),
                 )
               : ListTile(
@@ -180,7 +204,8 @@ class _AssistantBody extends ConsumerWidget {
                   ),
                   onTap: () => AiConsentSheet.show(
                     context,
-                    consentVersion: settings.consent.currentVersion,
+                    consentVersion: consent.currentVersion,
+                    mode: _onDevice ? AiMode.onDevice : AiMode.cloud,
                   ),
                 ),
         ),
@@ -190,18 +215,28 @@ class _AssistantBody extends ConsumerWidget {
 }
 
 /// The four setup steps with progress; each undone step links to where it
-/// is done.
+/// is done. On the phone the first step is an installed model and the
+/// on-device disclosure instead of a provider.
 class _SetupChecklist extends StatelessWidget {
-  const _SetupChecklist({required this.settings});
+  const _SetupChecklist({
+    required this.settings,
+    required this.onDevice,
+    required this.localModelReady,
+  });
 
   final AiSettings settings;
+  final bool onDevice;
+  final bool localModelReady;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final setup = settings.setup;
-    final done = setup.stepsDone;
+    final providerDone = onDevice
+        ? localModelReady && settings.localConsent?.required == false
+        : setup.providerReady;
+    final done = setup.stepsDoneWith(providerDone);
 
     Widget step(
       bool isDone,
@@ -242,9 +277,11 @@ class _SetupChecklist extends StatelessWidget {
             LinearProgressIndicator(value: done / AiSetupStatus.stepCount),
             const SizedBox(height: AppSpacing.sm),
             step(
-              setup.providerReady,
-              l10n.aiSetupStepProvider,
-              l10n.aiSetupStepProviderHint,
+              providerDone,
+              onDevice ? l10n.aiSetupStepLocalModel : l10n.aiSetupStepProvider,
+              onDevice
+                  ? l10n.aiSetupStepLocalModelHint
+                  : l10n.aiSetupStepProviderHint,
               () => context.push(AppRoutes.aiProvider),
             ),
             step(

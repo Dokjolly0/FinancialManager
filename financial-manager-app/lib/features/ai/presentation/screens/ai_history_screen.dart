@@ -156,7 +156,10 @@ class AiHistoryScreen extends ConsumerWidget {
                         if (context.mounted) _showError(context, error);
                       },
                       child: ListTile(
-                        leading: _StatusIcon(status: a.status),
+                        leading: _StatusIcon(
+                          status: a.status,
+                          onDevice: a.isOnDevice,
+                        ),
                         title: Text(
                           a.title,
                           maxLines: 2,
@@ -197,16 +200,19 @@ class AiHistoryScreen extends ConsumerWidget {
 }
 
 class _StatusIcon extends StatelessWidget {
-  const _StatusIcon({required this.status});
+  const _StatusIcon({required this.status, this.onDevice = false});
 
   final AiStatus status;
+
+  /// Written on the phone: a phone instead of a document when completed.
+  final bool onDevice;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return switch (status) {
       AiStatus.completed => Icon(
-        Icons.description_outlined,
+        onDevice ? Icons.smartphone_outlined : Icons.description_outlined,
         color: scheme.primary,
       ),
       AiStatus.streaming => const SizedBox.square(

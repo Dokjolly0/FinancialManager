@@ -887,5 +887,305 @@
   "errorCodeAiLocalModelMissing": "Nessun modello installato sul telefono: scaricane uno da Assistente AI.",
   "errorCodeAiLocalInterrupted": "La generazione sul telefono si è interrotta.",
   "errorCodeAiLocalUnsupported": "Questo dispositivo non può eseguire modelli in locale.",
-  "errorCodeAiLocalTooHot": "Il telefono è troppo caldo per far girare il modello. Lascialo raffreddare qualche minuto e riprova."
+  "errorCodeAiLocalTooHot": "Il telefono è troppo caldo per far girare il modello. Lascialo raffreddare qualche minuto e riprova.",
+
+  "aiModeCloud": "Cloud",
+  "aiModeOnDevice": "Sul dispositivo",
+  "aiLocalModeIntro": "Il modello gira sul telefono: i tuoi dati non vanno a nessun fornitore AI esterno. Il server prepara i dati e salva report e domande nella cronologia, come per il cloud.",
+  "aiLocalModelsTitle": "Modelli sul dispositivo",
+  "aiLocalRuntimeTitle": "Impostazioni di esecuzione",
+  "aiLocalNoModel": "Nessun modello attivo. Scaricane uno o importalo per usare l’analisi sul dispositivo.",
+  "aiLocalNoModelShort": "Nessun modello installato",
+  "aiLocalChooseModel": "Scegli un modello",
+  "aiLocalNotReadyBody": "Per analizzare sul telefono serve un modello installato. Scaricane uno da Modelli sul dispositivo.",
+  "aiLocalConsentMenuTitle": "Informativa sul dispositivo",
+  "aiLocalConsentIntro": "Con l'analisi sul dispositivo il modello AI gira sul tuo telefono. Prima di ogni analisi vedrai esattamente quali dati gli vengono dati.",
+  "aiLocalConsentWhereTitle": "Dove vengono elaborati i dati",
+  "aiLocalConsentWhereBody": "Sul telefono, senza connessione al modello: nessun fornitore AI esterno riceve i tuoi dati.",
+  "aiLocalConsentStoredTitle": "Cosa resta sul server",
+  "aiLocalConsentStoredBody": "Il server prepara il riepilogo dei dati e salva report e domande nella cronologia, così li ritrovi su ogni dispositivo.",
+  "aiLocalConsentMistakesTitle": "Il modello può sbagliare",
+  "aiLocalConsentMistakesBody": "I modelli che girano su un telefono sono piccoli: possono confondere i numeri. Controllali prima di decidere.",
+  "aiLocalConsentModelTitle": "Il modello",
+  "aiLocalConsentModelBody": "Lo scarichi da Hugging Face, che vede il tuo indirizzo IP. Ogni modello ha la sua licenza, mostrata prima del download.",
+  "aiSetupStepLocalModel": "Modello sul telefono",
+  "aiSetupStepLocalModelHint": "Scarica un modello e accetta l'informativa sul dispositivo",
+  "aiLocalBackendGpu": "GPU",
+  "aiLocalBackendCpu": "CPU",
+  "aiLocalBackendNpu": "NPU",
+  "aiLocalBackendLabel": "Dove calcola",
+  "aiLocalBackendGpuHint": "Più veloce. Consigliata.",
+  "aiLocalBackendCpuHint": "Più lenta e usa più memoria; con LiteRT-LM il contesto arriva al massimo a 8k.",
+  "aiLocalContextShort": "contesto {size}",
+  "@aiLocalContextShort": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalOutputShort": "risposta fino a {count} token",
+  "@aiLocalOutputShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiLocalContextLabel": "Contesto: {count} token",
+  "@aiLocalContextLabel": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalContextHint": "Quanto testo il modello tiene presente: dati, report e domande.",
+  "aiLocalContextMemoryWarning": "Più contesto usa più memoria. Se l'app si chiude durante un'analisi, riducilo.",
+  "aiLocalOutputLabel": "Risposta massima: {count} token",
+  "@aiLocalOutputLabel": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalOutputHint": "Un report tipico ne usa 600–1.000. Più spazio alla risposta lascia meno spazio ai dati.",
+  "aiLocalTemperatureLabel": "Temperatura: {value}",
+  "@aiLocalTemperatureLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTemperatureHint": "Bassa: risposte più fedeli ai numeri. Alta: più varie.",
+  "aiLocalSpeedTitle": "Velocità",
+  "aiLocalSpeedValue": "Lettura {prefill} token/s · scrittura {decode} token/s",
+  "@aiLocalSpeedValue": {
+    "placeholders": {
+      "prefill": {
+        "type": "String"
+      },
+      "decode": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalSpeedMeasured": "Misurata su questo telefono",
+  "aiLocalSpeedCatalog": "Indicativa, misurata su un Galaxy S26 Ultra",
+  "aiLocalSpeedFallback": "Non ancora misurata: stima prudente",
+  "aiLocalMeasure": "Misura velocità",
+  "aiLocalMeasuring": "Misura in corso…",
+  "aiLocalResetDefaults": "Ripristina i valori predefiniti",
+  "aiLocalDeviceTitle": "Questo telefono",
+  "aiLocalDeviceRam": "RAM {size}",
+  "@aiLocalDeviceRam": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeviceFree": "{size} liberi",
+  "@aiLocalDeviceFree": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeviceUnknown": "Memoria e spazio non disponibili",
+  "aiLocalWifiOnly": "Scarica solo con Wi-Fi",
+  "aiLocalWifiOnlyHint": "I modelli pesano qualche GB: senza Wi-Fi il download aspetta e riprende da solo.",
+  "aiLocalPickingFile": "Preparazione del file…",
+  "aiLocalImporting": "Importazione e verifica del modello…",
+  "aiLocalInstalledTitle": "Installati",
+  "aiLocalInUse": "in uso",
+  "aiLocalUnverified": "non verificato",
+  "aiLocalUseModel": "Usa questo modello",
+  "aiLocalEngineLitert": "LiteRT-LM",
+  "aiLocalEngineLitertHint": "Sulla GPU, veloce. Modelli preparati da Google.",
+  "aiLocalEngineLlama": "llama.cpp",
+  "aiLocalEngineLlamaHint": "Qualsiasi file GGUF e quantizzazione, sulla CPU: più lento.",
+  "aiLocalRecommended": "Consigliato",
+  "aiLocalRamFits": "RAM sufficiente",
+  "aiLocalRamTight": "RAM al limite",
+  "aiLocalRamInsufficient": "RAM insufficiente",
+  "aiLocalRamUnknown": "RAM non nota",
+  "aiLocalRamWarningTitle": "Memoria insufficiente",
+  "aiLocalRamWarningMessage": "Questo telefono ha meno RAM di quella che serve al modello: potrebbe non partire o far chiudere l'app.",
+  "aiLocalDownloadAnyway": "Scarica comunque",
+  "aiLocalDownload": "Scarica",
+  "aiLocalProgress": "{done} di {total}",
+  "@aiLocalProgress": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalQueued": "In coda",
+  "aiLocalPaused": "In pausa · {progress}",
+  "@aiLocalPaused": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalWaitingForWifi": "In attesa del Wi-Fi",
+  "aiLocalVerifying": "Verifica del file…",
+  "aiLocalPause": "Pausa",
+  "aiLocalResume": "Riprendi",
+  "aiLocalRetry": "Riprova",
+  "aiLocalCancel": "Annulla",
+  "aiLocalLicenseBody": "Il file pesa {size} e viene scaricato da Hugging Face. Il modello è distribuito con licenza {license}: scaricandolo la accetti.",
+  "@aiLocalLicenseBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "license": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalGatedBody": "Questo modello è riservato: accetta la licenza sulla sua pagina Hugging Face e inserisci un token di lettura.",
+  "aiLocalAcceptAndDownload": "Accetta e scarica",
+  "aiLocalDeleteTitle": "Eliminare il modello?",
+  "aiLocalDeleteMessage": "{name} verrà rimosso dal telefono. Le analisi già fatte restano nella cronologia.",
+  "@aiLocalDeleteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeleted": "Modello eliminato: liberati {size}",
+  "@aiLocalDeleted": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalImportFile": "Importa un file",
+  "aiLocalImportUrl": "Scarica da URL",
+  "aiLocalImportAction": "Importa",
+  "aiLocalUrlLabel": "Indirizzo https del file",
+  "aiLocalNameLabel": "Nome del modello",
+  "aiLocalQuantLabel": "Quantizzazione (es. Q4_K_M)",
+  "aiLocalShaLabel": "SHA-256 (facoltativo)",
+  "aiLocalShaHelper": "Se lo inserisci, il file viene verificato; altrimenti il modello resta \"non verificato\".",
+  "aiLocalShaInvalid": "Deve avere 64 caratteri esadecimali.",
+  "aiLocalImported": "{name} importato",
+  "@aiLocalImported": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalImportedUnverified": "{name} importato, non verificato",
+  "@aiLocalImportedUnverified": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTokenAction": "Token Hugging Face",
+  "aiLocalTokenLabel": "Token di lettura",
+  "aiLocalTokenHelper": "Serve solo per i modelli riservati. Resta sul telefono e viene inviato solo a huggingface.co.",
+  "aiLocalTokenStored": "Un token è salvato su questo telefono.",
+  "aiLocalTokenNone": "Nessun token salvato.",
+  "aiLocalTokenSaved": "Token salvato",
+  "aiLocalTokenRemoved": "Token rimosso",
+  "aiCompactProfile": "Profilo compatto",
+  "aiCompactProfileHint": "Meno dettagli e regole più brevi: un prompt più corto.",
+  "aiCompactProfileHintLocal": "Consigliato sul telefono: meno dettagli, regole più brevi e un prompt che entra nel contesto del modello.",
+  "aiPreviewOnDevice": "Elaborato sul telefono con {model}",
+  "@aiPreviewOnDevice": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPreviewNoCost": "Nessun costo",
+  "aiPreviewCompacted": "{count, plural, =1{Un dettaglio è stato ridotto per stare nel limite.} other{{count} dettagli sono stati ridotti per stare nel limite.}}",
+  "@aiPreviewCompacted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiRunOnDeviceAction": "Avvia sul telefono",
+  "aiLocalContextUse": "Contesto: {used} di {total} token",
+  "@aiLocalContextUse": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalContextParts": "dati {input} · risposta {output}",
+  "@aiLocalContextParts": {
+    "placeholders": {
+      "input": {
+        "type": "String"
+      },
+      "output": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalCountExact": "conteggio esatto",
+  "aiLocalCountEstimated": "stima",
+  "aiLocalContextTight": "Quasi pieno: le domande successive avranno poco spazio.",
+  "aiLocalContextOverflow": "Non entra nel contesto del modello. Prova una di queste soluzioni:",
+  "aiLocalFixCompact": "Profilo compatto",
+  "aiLocalFixFewerTransactions": "Meno movimenti",
+  "aiLocalFixShorterAnswer": "Risposta più corta",
+  "aiLocalFixLargerContext": "Contesto più grande",
+  "aiLocalTimeEstimate": "Tempo stimato: {low}–{high}",
+  "@aiLocalTimeEstimate": {
+    "placeholders": {
+      "low": {
+        "type": "String"
+      },
+      "high": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTimeRough": "Stima approssimativa: misura la velocità in Impostazioni di esecuzione.",
+  "aiLocalWarnWarm": "Il telefono è caldo: sarà più lento.",
+  "aiLocalWarnBattery": "Batteria sotto il 15%: collega il caricatore.",
+  "aiLocalWarnMemory": "Poca memoria libera: chiudi le altre app se l'analisi si interrompe.",
+  "aiLocalKeepOpen": "Il telefono sta scrivendo: tieni l'app aperta finché non ha finito.",
+  "aiLocalTokensPerSecond": "{value} token/s",
+  "@aiLocalTokensPerSecond": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCodeAiLocalDownloadNetwork": "Download interrotto dalla rete: riprendi quando la connessione torna.",
+  "errorCodeAiLocalDownloadGated": "Modello riservato: accetta la licenza su Hugging Face e inserisci un token valido.",
+  "errorCodeAiLocalDownloadNotFound": "File non trovato sul server.",
+  "errorCodeAiLocalDownloadHttp": "Il server ha rifiutato il download.",
+  "errorCodeAiLocalDownloadNoSpace": "Spazio insufficiente sul telefono per questo modello.",
+  "errorCodeAiLocalDownloadChecksum": "Il file scaricato non corrisponde a quello atteso ed è stato scartato.",
+  "errorCodeAiLocalDownloadInsecureUrl": "L'indirizzo deve iniziare con https://.",
+  "errorCodeAiLocalImportUnknownFormat": "Formato non riconosciuto: servono file .gguf o .litertlm."
 }

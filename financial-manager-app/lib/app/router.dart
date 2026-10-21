@@ -12,6 +12,8 @@ import '../features/ai/presentation/screens/ai_analysis_screen.dart';
 import '../features/ai/presentation/screens/ai_analysis_setup_screen.dart';
 import '../features/ai/presentation/screens/ai_assistant_screen.dart';
 import '../features/ai/presentation/screens/ai_history_screen.dart';
+import '../features/ai/presentation/screens/ai_local_models_screen.dart';
+import '../features/ai/presentation/screens/ai_local_runtime_screen.dart';
 import '../features/ai/presentation/screens/ai_prompt_preview_screen.dart';
 import '../features/ai/presentation/screens/ai_personal_context_screen.dart';
 import '../features/ai/presentation/screens/ai_provider_settings_screen.dart';
@@ -62,6 +64,10 @@ abstract final class AppRoutes {
   static const aiProvider = '/app/account/ai/provider';
   static const aiContext = '/app/account/ai/context';
   static const aiWalletPurposes = '/app/account/ai/wallet-purposes';
+
+  // On-device models (plan.md section 33).
+  static const aiLocalModels = '/app/account/ai/local-models';
+  static const aiLocalRuntime = '/app/account/ai/local-runtime';
 
   // AI analysis flow: setup → preview → run, plus the history.
   static const aiNew = '/app/ai/new';
@@ -196,6 +202,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.aiWalletPurposes,
         builder: (_, _) => const AiWalletPurposesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiLocalModels,
+        builder: (_, _) => const AiLocalModelsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiLocalRuntime,
+        builder: (_, _) => const AiLocalRuntimeScreen(),
       ),
       GoRoute(
         path: AppRoutes.aiNew,

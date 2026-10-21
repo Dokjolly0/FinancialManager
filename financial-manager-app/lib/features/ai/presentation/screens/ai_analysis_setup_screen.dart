@@ -18,6 +18,7 @@ import '../../domain/models/ai_analysis_request.dart';
 import '../../domain/models/ai_settings.dart';
 import '../view_models/ai_draft_controller.dart';
 import '../view_models/ai_period.dart';
+import '../view_models/local_run_plan.dart';
 import '../widgets/ai_consent_sheet.dart';
 
 String aiSectionLabel(AppLocalizations l10n, AiDataSection s) => switch (s) {
@@ -41,7 +42,9 @@ String aiQuickPeriodLabel(AppLocalizations l10n, AiQuickPeriod p) =>
     };
 
 /// Reports → Analisi AI (plan.md section 32.7): choose what to analyze and
-/// what data to send, then open the preview.
+/// what data to send, then open the preview. On the phone (plan.md section
+/// 33) the compact profile is on by default and the prompt is held to what
+/// fits the model's context.
 class AiAnalysisSetupScreen extends ConsumerStatefulWidget {
   const AiAnalysisSetupScreen({super.key});
 
@@ -66,6 +69,9 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
   double _maxTransactions = aiDefaultMaxTransactions.toDouble();
   bool _anonymize = false;
   bool _includeAdjustments = false;
+
+  /// The short prompt for small models; on by default on the phone.
+  bool _compact = false;
   final _question = TextEditingController();
   bool _defaultsApplied = false;
   String? _questionError;
@@ -136,7 +142,17 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
     });
   }
 
-  Future<void> _preview(AiSettings settings) async {
+  bool _onDevice(AiSettings settings) =>
+      settings.onDeviceAvailable && settings.mode == AiMode.onDevice;
+
+  void _setCompact(bool on) => setState(() {
+    _compact = on;
+    _maxTransactions =
+        (on ? aiCompactDefaultTransactions : aiDefaultMaxTransactions)
+            .toDouble();
+  });
+
+  Future<void> _preview(AiSettings settings, LocalRunPlan? plan) async {
     final l10n = AppLocalizations.of(context);
     final preset = _preset;
     if (preset == null) return;
@@ -144,11 +160,16 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
       setState(() => _questionError = l10n.errorCodeRequiredField);
       return;
     }
-    if (settings.consent.required) {
+    final onDevice = _onDevice(settings) && plan != null;
+    final consent = onDevice
+        ? (settings.localConsent ?? settings.consent)
+        : settings.consent;
+    if (consent.required) {
       if (!mounted) return;
       final accepted = await AiConsentSheet.show(
         context,
-        consentVersion: settings.consent.currentVersion,
+        consentVersion: consent.currentVersion,
+        mode: onDevice ? AiMode.onDevice : AiMode.cloud,
       );
       if (!accepted) return;
     }
@@ -166,6 +187,10 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
       anonymizeTitles: _anonymize,
       includeAdjustments: _includeAdjustments,
       instructions: preset.isCustom ? _question.text.trim() : null,
+      profile: _compact ? 'compact' : null,
+      target: onDevice ? AiMode.onDevice.wire : AiMode.cloud.wire,
+      budgetTokens: onDevice ? plan.budgetTokens : null,
+      device: onDevice ? plan.device : null,
     );
     final ok = await ref
         .read(aiDraftControllerProvider.notifier)
@@ -218,7 +243,39 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
   ) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    if (!settings.available || !settings.setup.providerReady) {
+    final onDevice = _onDevice(settings);
+    LocalRunPlan? plan;
+    if (onDevice) {
+      final supported = ref.watch(localAiSupportedProvider);
+      final planAsync = supported ? ref.watch(localRunPlanProvider) : null;
+      if (planAsync != null && planAsync.isLoading && !planAsync.hasValue) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      plan = planAsync?.value;
+      if (plan == null) {
+        return ListView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          children: [
+            Text(l10n.aiNotReadyTitle, style: theme.textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              supported
+                  ? l10n.aiLocalNotReadyBody
+                  : l10n.errorCodeAiLocalUnsupported,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            FilledButton(
+              onPressed: () => context.push(
+                supported ? AppRoutes.aiLocalModels : AppRoutes.aiProvider,
+              ),
+              child: Text(
+                supported ? l10n.aiLocalChooseModel : l10n.aiGoToSetup,
+              ),
+            ),
+          ],
+        );
+      }
+    } else if (!settings.available || !settings.setup.providerReady) {
       return ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
@@ -239,6 +296,10 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
     if (!_defaultsApplied && presets.isNotEmpty) {
       _defaultsApplied = true;
       _anonymize = settings.defaultAnonymizeTitles;
+      if (onDevice) {
+        _compact = true;
+        _maxTransactions = aiCompactDefaultTransactions.toDouble();
+      }
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _selectPreset(presets.first, settings: settings),
       );
@@ -382,6 +443,17 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
+          title: Text(l10n.aiCompactProfile),
+          subtitle: Text(
+            onDevice
+                ? l10n.aiCompactProfileHintLocal
+                : l10n.aiCompactProfileHint,
+          ),
+          value: _compact,
+          onChanged: _setCompact,
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
           title: Text(l10n.aiIncludeTransactions),
           subtitle: Text(l10n.aiIncludeTransactionsHint),
           value: _includeTransactions,
@@ -393,8 +465,9 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
               Expanded(
                 child: Slider(
                   value: _maxTransactions,
-                  min: 50,
-                  max: aiMaxTransactions.toDouble(),
+                  min: _compact ? 10 : 50,
+                  max: (_compact ? aiCompactMaxTransactions : aiMaxTransactions)
+                      .toDouble(),
                   divisions: 9,
                   label: '${_maxTransactions.round()}',
                   onChanged: (v) => setState(() => _maxTransactions = v),
@@ -428,7 +501,7 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
         FilledButton.icon(
           onPressed: draft.isLoading || _preset == null
               ? null
-              : () => _preview(settings),
+              : () => _preview(settings, plan),
           icon: draft.isLoading
               ? const SizedBox.square(
                   dimension: 18,

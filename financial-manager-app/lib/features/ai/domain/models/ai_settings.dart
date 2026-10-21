@@ -112,8 +112,12 @@ class AiSetupStatus {
   bool get hasAnalyses => analysesCount > 0;
 
   /// Steps done out of [stepCount]: provider, context, purposes, analysis.
-  int get stepsDone => [
-    providerReady,
+  int get stepsDone => stepsDoneWith(providerReady);
+
+  /// [stepsDone] with the first step decided by the caller: on-device mode
+  /// needs a model on the phone instead of a provider.
+  int stepsDoneWith(bool providerDone) => [
+    providerDone,
     hasContext,
     purposesDone,
     hasAnalyses,

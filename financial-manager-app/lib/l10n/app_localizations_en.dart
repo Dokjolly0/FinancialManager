@@ -2152,4 +2152,490 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorCodeAiLocalTooHot =>
       'The phone is too hot to run the model. Let it cool down for a few minutes and try again.';
+
+  @override
+  String get aiModeCloud => 'Cloud';
+
+  @override
+  String get aiModeOnDevice => 'On device';
+
+  @override
+  String get aiLocalModeIntro =>
+      'The model runs on the phone: your data goes to no outside AI provider. The server prepares the data and keeps reports and questions in the history, as with the cloud.';
+
+  @override
+  String get aiLocalModelsTitle => 'On-device models';
+
+  @override
+  String get aiLocalRuntimeTitle => 'Runtime settings';
+
+  @override
+  String get aiLocalNoModel =>
+      'No active model. Download or import one to use on-device analysis.';
+
+  @override
+  String get aiLocalNoModelShort => 'No model installed';
+
+  @override
+  String get aiLocalChooseModel => 'Choose a model';
+
+  @override
+  String get aiLocalNotReadyBody =>
+      'An on-device analysis needs an installed model. Download one from On-device models.';
+
+  @override
+  String get aiLocalConsentMenuTitle => 'On-device disclosure';
+
+  @override
+  String get aiLocalConsentIntro =>
+      'With on-device analysis the AI model runs on your phone. Before each analysis you see exactly which data it is given.';
+
+  @override
+  String get aiLocalConsentWhereTitle => 'Where the data is processed';
+
+  @override
+  String get aiLocalConsentWhereBody =>
+      'On the phone, with no connection to the model: no outside AI provider receives your data.';
+
+  @override
+  String get aiLocalConsentStoredTitle => 'What the server keeps';
+
+  @override
+  String get aiLocalConsentStoredBody =>
+      'The server prepares the data summary and keeps reports and questions in the history, so you find them on every device.';
+
+  @override
+  String get aiLocalConsentMistakesTitle => 'The model can be wrong';
+
+  @override
+  String get aiLocalConsentMistakesBody =>
+      'Models that run on a phone are small: they can mix up numbers. Check them before deciding.';
+
+  @override
+  String get aiLocalConsentModelTitle => 'The model';
+
+  @override
+  String get aiLocalConsentModelBody =>
+      'You download it from Hugging Face, which sees your IP address. Each model has its own license, shown before the download.';
+
+  @override
+  String get aiSetupStepLocalModel => 'Model on the phone';
+
+  @override
+  String get aiSetupStepLocalModelHint =>
+      'Download a model and accept the on-device disclosure';
+
+  @override
+  String get aiLocalBackendGpu => 'GPU';
+
+  @override
+  String get aiLocalBackendCpu => 'CPU';
+
+  @override
+  String get aiLocalBackendNpu => 'NPU';
+
+  @override
+  String get aiLocalBackendLabel => 'Runs on';
+
+  @override
+  String get aiLocalBackendGpuHint => 'Faster. Recommended.';
+
+  @override
+  String get aiLocalBackendCpuHint =>
+      'Slower and uses more memory; with LiteRT-LM the context goes up to 8k.';
+
+  @override
+  String aiLocalContextShort(String size) {
+    return '$size context';
+  }
+
+  @override
+  String aiLocalOutputShort(int count) {
+    return 'answer up to $count tokens';
+  }
+
+  @override
+  String aiLocalContextLabel(String count) {
+    return 'Context: $count tokens';
+  }
+
+  @override
+  String get aiLocalContextHint =>
+      'How much text the model keeps in mind: data, report and questions.';
+
+  @override
+  String get aiLocalContextMemoryWarning =>
+      'More context uses more memory. If the app closes during an analysis, lower it.';
+
+  @override
+  String aiLocalOutputLabel(String count) {
+    return 'Longest answer: $count tokens';
+  }
+
+  @override
+  String get aiLocalOutputHint =>
+      'A typical report uses 600–1,000. More room for the answer leaves less for the data.';
+
+  @override
+  String aiLocalTemperatureLabel(String value) {
+    return 'Temperature: $value';
+  }
+
+  @override
+  String get aiLocalTemperatureHint =>
+      'Low: answers closer to the numbers. High: more varied.';
+
+  @override
+  String get aiLocalSpeedTitle => 'Speed';
+
+  @override
+  String aiLocalSpeedValue(String prefill, String decode) {
+    return 'Reading $prefill tokens/s · writing $decode tokens/s';
+  }
+
+  @override
+  String get aiLocalSpeedMeasured => 'Measured on this phone';
+
+  @override
+  String get aiLocalSpeedCatalog =>
+      'Indicative, measured on a Galaxy S26 Ultra';
+
+  @override
+  String get aiLocalSpeedFallback => 'Not measured yet: a cautious guess';
+
+  @override
+  String get aiLocalMeasure => 'Measure speed';
+
+  @override
+  String get aiLocalMeasuring => 'Measuring…';
+
+  @override
+  String get aiLocalResetDefaults => 'Restore defaults';
+
+  @override
+  String get aiLocalDeviceTitle => 'This phone';
+
+  @override
+  String aiLocalDeviceRam(String size) {
+    return 'RAM $size';
+  }
+
+  @override
+  String aiLocalDeviceFree(String size) {
+    return '$size free';
+  }
+
+  @override
+  String get aiLocalDeviceUnknown => 'Memory and storage unknown';
+
+  @override
+  String get aiLocalWifiOnly => 'Download on Wi-Fi only';
+
+  @override
+  String get aiLocalWifiOnlyHint =>
+      'Models weigh a few GB: off Wi-Fi the download waits and resumes by itself.';
+
+  @override
+  String get aiLocalPickingFile => 'Preparing the file…';
+
+  @override
+  String get aiLocalImporting => 'Importing and checking the model…';
+
+  @override
+  String get aiLocalInstalledTitle => 'Installed';
+
+  @override
+  String get aiLocalInUse => 'in use';
+
+  @override
+  String get aiLocalUnverified => 'not verified';
+
+  @override
+  String get aiLocalUseModel => 'Use this model';
+
+  @override
+  String get aiLocalEngineLitert => 'LiteRT-LM';
+
+  @override
+  String get aiLocalEngineLitertHint =>
+      'On the GPU, fast. Models prepared by Google.';
+
+  @override
+  String get aiLocalEngineLlama => 'llama.cpp';
+
+  @override
+  String get aiLocalEngineLlamaHint =>
+      'Any GGUF file and quantization, on the CPU: slower.';
+
+  @override
+  String get aiLocalRecommended => 'Recommended';
+
+  @override
+  String get aiLocalRamFits => 'Enough RAM';
+
+  @override
+  String get aiLocalRamTight => 'RAM tight';
+
+  @override
+  String get aiLocalRamInsufficient => 'Not enough RAM';
+
+  @override
+  String get aiLocalRamUnknown => 'RAM unknown';
+
+  @override
+  String get aiLocalRamWarningTitle => 'Not enough memory';
+
+  @override
+  String get aiLocalRamWarningMessage =>
+      'This phone has less RAM than the model needs: it may not start or may close the app.';
+
+  @override
+  String get aiLocalDownloadAnyway => 'Download anyway';
+
+  @override
+  String get aiLocalDownload => 'Download';
+
+  @override
+  String aiLocalProgress(String done, String total) {
+    return '$done of $total';
+  }
+
+  @override
+  String get aiLocalQueued => 'Queued';
+
+  @override
+  String aiLocalPaused(String progress) {
+    return 'Paused · $progress';
+  }
+
+  @override
+  String get aiLocalWaitingForWifi => 'Waiting for Wi-Fi';
+
+  @override
+  String get aiLocalVerifying => 'Checking the file…';
+
+  @override
+  String get aiLocalPause => 'Pause';
+
+  @override
+  String get aiLocalResume => 'Resume';
+
+  @override
+  String get aiLocalRetry => 'Retry';
+
+  @override
+  String get aiLocalCancel => 'Cancel';
+
+  @override
+  String aiLocalLicenseBody(String size, String license) {
+    return 'The file is $size and comes from Hugging Face. The model is distributed under the $license license: by downloading it you accept it.';
+  }
+
+  @override
+  String get aiLocalGatedBody =>
+      'This model is gated: accept the license on its Hugging Face page and enter a read token.';
+
+  @override
+  String get aiLocalAcceptAndDownload => 'Accept and download';
+
+  @override
+  String get aiLocalDeleteTitle => 'Delete the model?';
+
+  @override
+  String aiLocalDeleteMessage(String name) {
+    return '$name will be removed from the phone. Analyses already made stay in the history.';
+  }
+
+  @override
+  String aiLocalDeleted(String size) {
+    return 'Model deleted: $size freed';
+  }
+
+  @override
+  String get aiLocalImportFile => 'Import a file';
+
+  @override
+  String get aiLocalImportUrl => 'Download from URL';
+
+  @override
+  String get aiLocalImportAction => 'Import';
+
+  @override
+  String get aiLocalUrlLabel => 'File https address';
+
+  @override
+  String get aiLocalNameLabel => 'Model name';
+
+  @override
+  String get aiLocalQuantLabel => 'Quantization (e.g. Q4_K_M)';
+
+  @override
+  String get aiLocalShaLabel => 'SHA-256 (optional)';
+
+  @override
+  String get aiLocalShaHelper =>
+      'If you enter it the file is checked; otherwise the model stays \"not verified\".';
+
+  @override
+  String get aiLocalShaInvalid => 'Must be 64 hexadecimal characters.';
+
+  @override
+  String aiLocalImported(String name) {
+    return '$name imported';
+  }
+
+  @override
+  String aiLocalImportedUnverified(String name) {
+    return '$name imported, not verified';
+  }
+
+  @override
+  String get aiLocalTokenAction => 'Hugging Face token';
+
+  @override
+  String get aiLocalTokenLabel => 'Read token';
+
+  @override
+  String get aiLocalTokenHelper =>
+      'Needed only for gated models. It stays on the phone and is sent only to huggingface.co.';
+
+  @override
+  String get aiLocalTokenStored => 'A token is saved on this phone.';
+
+  @override
+  String get aiLocalTokenNone => 'No token saved.';
+
+  @override
+  String get aiLocalTokenSaved => 'Token saved';
+
+  @override
+  String get aiLocalTokenRemoved => 'Token removed';
+
+  @override
+  String get aiCompactProfile => 'Compact profile';
+
+  @override
+  String get aiCompactProfileHint =>
+      'Less detail and shorter rules: a shorter prompt.';
+
+  @override
+  String get aiCompactProfileHintLocal =>
+      'Recommended on the phone: less detail, shorter rules and a prompt that fits the model\'s context.';
+
+  @override
+  String aiPreviewOnDevice(String model) {
+    return 'Processed on the phone with $model';
+  }
+
+  @override
+  String get aiPreviewNoCost => 'No cost';
+
+  @override
+  String aiPreviewCompacted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count details were reduced to fit the limit.',
+      one: 'One detail was reduced to fit the limit.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get aiRunOnDeviceAction => 'Run on the phone';
+
+  @override
+  String aiLocalContextUse(String used, String total) {
+    return 'Context: $used of $total tokens';
+  }
+
+  @override
+  String aiLocalContextParts(String input, String output) {
+    return 'data $input · answer $output';
+  }
+
+  @override
+  String get aiLocalCountExact => 'exact count';
+
+  @override
+  String get aiLocalCountEstimated => 'estimate';
+
+  @override
+  String get aiLocalContextTight =>
+      'Nearly full: follow-up questions will have little room.';
+
+  @override
+  String get aiLocalContextOverflow =>
+      'It doesn\'t fit the model\'s context. Try one of these:';
+
+  @override
+  String get aiLocalFixCompact => 'Compact profile';
+
+  @override
+  String get aiLocalFixFewerTransactions => 'Fewer transactions';
+
+  @override
+  String get aiLocalFixShorterAnswer => 'Shorter answer';
+
+  @override
+  String get aiLocalFixLargerContext => 'Larger context';
+
+  @override
+  String aiLocalTimeEstimate(String low, String high) {
+    return 'Estimated time: $low–$high';
+  }
+
+  @override
+  String get aiLocalTimeRough =>
+      'A rough guess: measure the speed in Runtime settings.';
+
+  @override
+  String get aiLocalWarnWarm => 'The phone is warm: it will be slower.';
+
+  @override
+  String get aiLocalWarnBattery => 'Battery below 15%: plug in the charger.';
+
+  @override
+  String get aiLocalWarnMemory =>
+      'Little free memory: close other apps if the analysis stops.';
+
+  @override
+  String get aiLocalKeepOpen =>
+      'The phone is writing: keep the app open until it finishes.';
+
+  @override
+  String aiLocalTokensPerSecond(String value) {
+    return '$value tokens/s';
+  }
+
+  @override
+  String get errorCodeAiLocalDownloadNetwork =>
+      'The download was interrupted by the network: resume when the connection is back.';
+
+  @override
+  String get errorCodeAiLocalDownloadGated =>
+      'Gated model: accept the license on Hugging Face and enter a valid token.';
+
+  @override
+  String get errorCodeAiLocalDownloadNotFound =>
+      'File not found on the server.';
+
+  @override
+  String get errorCodeAiLocalDownloadHttp => 'The server refused the download.';
+
+  @override
+  String get errorCodeAiLocalDownloadNoSpace =>
+      'Not enough space on the phone for this model.';
+
+  @override
+  String get errorCodeAiLocalDownloadChecksum =>
+      'The downloaded file doesn\'t match the expected one and was discarded.';
+
+  @override
+  String get errorCodeAiLocalDownloadInsecureUrl =>
+      'The address must start with https://.';
+
+  @override
+  String get errorCodeAiLocalImportUnknownFormat =>
+      'Unknown format: .gguf or .litertlm files are needed.';
 }
