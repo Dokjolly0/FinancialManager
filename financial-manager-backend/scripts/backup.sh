@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Backs up PostgreSQL (pg_dump, custom format) and the object storage
-# bucket (mirrored via a throwaway minio/mc container — no host install
+# bucket (mirrored via a throwaway mc container — no host install
 # required) for whichever `docker compose` stack is currently up (plan.md
 # section 21.10). Redis is deliberately not backed up here — it holds
 # caches/rate limits/idempotency records, never the source of truth
@@ -13,6 +13,8 @@
 #                           (openssl aes-256-cbc); keep this in a secret
 #                           manager in staging/production, never in .env
 #   RETENTION_DAYS          prune backups older than this (default 30)
+#   MC_IMAGE                MinIO client image (default dokjolly/mc,
+#                           see docs/backup-restore.md "MinIO images")
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -31,6 +33,9 @@ BACKUP_DIR="${BACKUP_DIR:-./backups}"
 RETENTION_DAYS="${RETENTION_DAYS:-30}"
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 NETWORK="financial-manager_backend_internal"
+# MinIO client image: upstream's minio/mc is no longer published, this is
+# the last mc release rebuilt from source (github.com/Dokjolly0/minio).
+MC_IMAGE="${MC_IMAGE:-dokjolly/mc:RELEASE.2025-08-13T08-35-41Z-r1}"
 
 mkdir -p "$BACKUP_DIR/postgres" "$BACKUP_DIR/object-storage"
 
@@ -57,7 +62,7 @@ MIRROR_DIR="$BACKUP_DIR/object-storage/${TIMESTAMP}"
 mkdir -p "$MIRROR_DIR"
 docker run --rm --network "$NETWORK" --entrypoint sh \
   -v "$(pwd)/$MIRROR_DIR:/backup" \
-  minio/mc:latest -c "
+  "$MC_IMAGE" -c "
     mc alias set src http://object-storage:9000 '$OBJECT_STORAGE_ACCESS_KEY' '$OBJECT_STORAGE_SECRET_KEY' >/dev/null &&
     mc mirror --quiet src/$OBJECT_STORAGE_BUCKET /backup
   "
