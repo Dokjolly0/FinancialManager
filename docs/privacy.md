@@ -20,7 +20,7 @@ I dati servono esclusivamente a far funzionare l'app. Non vengono venduti, non v
 
 ## Dove sono conservati
 
-I dati sono conservati sul server che ospita il backend dell'app. Il proprietario dell'istanza ne esegue periodicamente un **backup cifrato** sul proprio Google Drive. L'app accede a Google Drive solo con l'autorizzazione `drive.file`, quindi vede e gestisce esclusivamente i file di backup che ha creato lei, mai altri file presenti su Drive.
+I dati sono conservati sul server che ospita il backend dell'app. Tra l'app e il server viaggiano solo su connessioni cifrate (HTTPS): l'app non accetta collegamenti in chiaro. Il proprietario dell'istanza ne esegue periodicamente un **backup cifrato** sul proprio Google Drive. L'app accede a Google Drive solo con l'autorizzazione `drive.file`, quindi vede e gestisce esclusivamente i file di backup che ha creato lei, mai altri file presenti su Drive.
 
 ## Analisi AI (facoltativa)
 
