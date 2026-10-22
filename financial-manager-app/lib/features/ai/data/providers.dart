@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,10 +12,10 @@ import 'package:path_provider/path_provider.dart';
 import '../../../app/session/current_user_provider.dart';
 import '../../../core/api/providers.dart';
 import '../../../core/errors/error_code_localizations.dart';
+import '../../../core/platform/platform_info.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../account/presentation/view_models/account_providers.dart';
 import '../domain/local/local_llm_engine.dart';
-import '../domain/models/local_model.dart';
 import '../domain/models/ai_analysis_request.dart';
 import '../domain/models/ai_settings.dart';
 import '../domain/models/ai_user_context.dart';
@@ -25,7 +26,7 @@ import 'local/ai_notifier.dart';
 import 'local/background_work.dart';
 import 'local/device_capabilities_source.dart';
 import 'local/engine_model_host.dart';
-import 'local/engines/edge_ai_engine.dart';
+import 'local/engines/local_engines.dart';
 import 'local/hugging_face_token_store.dart';
 import 'local/local_ai_runner.dart';
 import 'local/local_result_outbox.dart';
@@ -66,15 +67,13 @@ final aiPresetsProvider = FutureProvider<List<AiPreset>>((ref) {
 });
 
 /// The phone's model manager (plan.md section 33): LiteRT-LM and llama.cpp
-/// on Android arm64. Elsewhere every on-device run reports
+/// on Android arm64. Elsewhere (iOS, the web) every on-device run reports
 /// AI_LOCAL_UNSUPPORTED or AI_LOCAL_MODEL_MISSING.
 final localModelHostProvider = Provider<LocalModelHost>((ref) {
-  if (!Platform.isAndroid) return const UnavailableLocalModelHost();
+  if (!isAndroidApp) return const UnavailableLocalModelHost();
   final host = EngineModelHost(
     store: ref.watch(modelStoreProvider),
-    engines: {
-      for (final kind in LocalEngineKind.values) kind: EdgeAiEngine(kind),
-    },
+    engines: createLocalEngines(),
     device: ref.watch(deviceCapabilitiesSourceProvider),
   );
   final observer = _MemoryPressureObserver(host.onMemoryPressure);
@@ -101,12 +100,15 @@ final modelBenchmarkProvider = Provider<ModelBenchmark>(
 );
 
 /// Results generated on the phone that the server hasn't received yet.
+/// The browser never generates any, and has no files: an empty outbox.
 final localResultOutboxProvider = Provider<LocalResultOutbox>(
-  (ref) => FileLocalResultOutbox(
-    () async => File(
-      '${(await getApplicationSupportDirectory()).path}/ai_local/outbox.json',
-    ),
-  ),
+  (ref) => kIsWeb
+      ? MemoryLocalResultOutbox()
+      : FileLocalResultOutbox(
+          () async => File(
+            '${(await getApplicationSupportDirectory()).path}/ai_local/outbox.json',
+          ),
+        ),
 );
 
 /// Sends results left in the outbox when someone signs in and whenever the
@@ -242,7 +244,7 @@ final appL10nProvider = Provider.autoDispose<AppLocalizations>((ref) {
 /// The foreground service that keeps downloads and on-device analyses
 /// going in the background (Android only).
 final backgroundWorkProvider = Provider<BackgroundWork>((ref) {
-  if (!Platform.isAndroid) return const NoopBackgroundWork();
+  if (!isAndroidApp) return const NoopBackgroundWork();
   return ForegroundTaskBackgroundWork(() {
     final l10n = ref.read(appL10nProvider);
     return BackgroundTexts(
@@ -256,7 +258,7 @@ final backgroundWorkProvider = Provider<BackgroundWork>((ref) {
 
 /// "Analisi pronta", "Modello pronto" (Android only).
 final aiNotifierProvider = Provider<AiNotifier>(
-  (ref) => Platform.isAndroid ? LocalAiNotifier() : const NoopAiNotifier(),
+  (ref) => isAndroidApp ? LocalAiNotifier() : const NoopAiNotifier(),
 );
 
 /// Whether the app is on screen; overridden in tests.

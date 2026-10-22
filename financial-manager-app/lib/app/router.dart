@@ -9,6 +9,7 @@ import '../features/account/presentation/screens/account_profile_screen.dart';
 import '../features/account/presentation/screens/account_screen.dart';
 import '../features/account/presentation/screens/account_security_screen.dart';
 import '../features/account/presentation/view_models/account_providers.dart';
+import '../features/ai/presentation/view_models/local_run_plan.dart';
 import '../features/ai/presentation/screens/ai_analysis_screen.dart';
 import '../features/ai/presentation/screens/ai_analysis_setup_screen.dart';
 import '../features/ai/presentation/screens/ai_assistant_screen.dart';
@@ -118,7 +119,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       switch (status) {
         case SessionStatus.checking:
-          return path == AppRoutes.splash ? null : AppRoutes.splash;
+          // Keep where the user was going (a reload or a link in the
+          // browser), to land there once the session is restored.
+          if (path == AppRoutes.splash) return null;
+          return Uri(
+            path: AppRoutes.splash,
+            queryParameters: {'from': state.uri.toString()},
+          ).toString();
         case SessionStatus.unauthenticated:
           return isAuthRoute && path != AppRoutes.splash
               ? null
@@ -128,7 +135,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ? null
               : AppRoutes.registerGoogleCompletion;
         case SessionStatus.authenticated:
-          if (isAuthRoute) return AppRoutes.home;
+          if (isAuthRoute) {
+            final from = state.uri.queryParameters['from'];
+            return path == AppRoutes.splash &&
+                    from != null &&
+                    from.startsWith('/app/')
+                ? from
+                : AppRoutes.home;
+          }
           // AI features turned off (section 32.10): their screens are
           // gone too, even from a stale link.
           final aiOff =
@@ -137,6 +151,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               (path.startsWith('/app/ai') ||
                   path.startsWith(AppRoutes.aiAssistant))) {
             return AppRoutes.account;
+          }
+          // Model management and the phone's outbox don't exist where
+          // models can't run (the web dashboard).
+          if (!ref.read(localAiSupportedProvider) &&
+              (path == AppRoutes.aiLocalModels ||
+                  path == AppRoutes.aiLocalRuntime ||
+                  path == AppRoutes.aiPending)) {
+            return AppRoutes.aiAssistant;
           }
           return null;
       }

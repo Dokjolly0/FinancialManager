@@ -477,4 +477,32 @@ void main() {
     );
     expect(find.text('Informativa sul dispositivo'), findsOneWidget);
   });
+
+  testWidgets('without on-device support (the web) only the cloud form shows', (
+    tester,
+  ) async {
+    // The account switched to on-device mode on the phone.
+    repo.settings = const AiSettings(
+      available: true,
+      onDeviceAvailable: true,
+      mode: AiMode.onDevice,
+      consent: AiConsent(currentVersion: 1, required: false),
+      localConsent: AiConsent(currentVersion: 1, required: false),
+      version: 3,
+    );
+    final c = ProviderContainer(
+      overrides: [
+        aiRepositoryProvider.overrideWithValue(repo),
+        localAiSupportedProvider.overrideWithValue(false),
+      ],
+    );
+    addTearDown(c.dispose);
+    await tester.pumpWidget(_app(c, const AiProviderSettingsScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Sul dispositivo'), findsNothing, reason: 'no switch');
+    expect(find.text('Chiave API'), findsOneWidget, reason: 'cloud form');
+    expect(find.textContaining('solo i fornitori cloud'), findsOneWidget);
+    expect(find.text('Modelli sul dispositivo'), findsNothing);
+    expect(repo.modes, isEmpty);
+  });
 }

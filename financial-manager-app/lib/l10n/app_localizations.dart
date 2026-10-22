@@ -3894,6 +3894,12 @@ abstract class AppLocalizations {
   /// **'Il telefono è troppo caldo per far girare il modello. Lascialo raffreddare qualche minuto e riprova.'**
   String get errorCodeAiLocalTooHot;
 
+  /// AI provider settings on a device without on-device models (the web dashboard) while the account is in on-device mode.
+  ///
+  /// In it, this message translates to:
+  /// **'Qui le analisi usano solo i fornitori cloud con la tua chiave API. Il modello sul telefono resta attivo nell\'app.'**
+  String get aiCloudOnlyHereNote;
+
   /// No description provided for @aiModeCloud.
   ///
   /// In it, this message translates to:

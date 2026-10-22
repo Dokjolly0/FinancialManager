@@ -24,6 +24,7 @@ class AiAssistantScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final settingsAsync = ref.watch(aiSettingsProvider);
+    final localSupported = ref.watch(localAiSupportedProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.aiAssistantTitle)),
@@ -42,8 +43,14 @@ class AiAssistantScreen extends ConsumerWidget {
               ),
             ],
           ),
-          data: (settings) => settings.anyAvailable
-              ? _AssistantBody(settings: settings)
+          // On the web only the cloud path can run.
+          data: (settings) =>
+              settings.available ||
+                  (settings.onDeviceAvailable && localSupported)
+              ? _AssistantBody(
+                  settings: settings,
+                  localSupported: localSupported,
+                )
               : ListView(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   children: [
@@ -69,12 +76,18 @@ class AiAssistantScreen extends ConsumerWidget {
 }
 
 class _AssistantBody extends ConsumerWidget {
-  const _AssistantBody({required this.settings});
+  const _AssistantBody({required this.settings, required this.localSupported});
 
   final AiSettings settings;
 
+  /// Whether this device runs models (false on the web): the account may
+  /// be in on-device mode because of the phone.
+  final bool localSupported;
+
   bool get _onDevice =>
-      settings.onDeviceAvailable && settings.mode == AiMode.onDevice;
+      localSupported &&
+      settings.onDeviceAvailable &&
+      settings.mode == AiMode.onDevice;
 
   /// The disclosure of the mode in use.
   AiConsent get _consent => _onDevice

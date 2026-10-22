@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +9,7 @@ import '../../domain/models/local_model.dart';
 import '../../domain/models/local_model_catalog.dart';
 import '../../domain/models/local_model_record.dart';
 import 'local_models_controller.dart';
+import '../../../../core/platform/platform_info.dart';
 
 /// Real tokens per server-estimated token for files outside the catalog
 /// (the catalog models measured 1.56–1.75, docs/ai-on-device-spike.md).
@@ -147,8 +147,9 @@ class LocalRunPlan {
 }
 
 /// On-device models run on Android only (iOS builds, but the feature is
-/// unavailable there). Overridden in tests.
-final localAiSupportedProvider = Provider<bool>((ref) => Platform.isAndroid);
+/// unavailable there; the web dashboard has no engines and uses cloud
+/// providers only). Overridden in tests.
+final localAiSupportedProvider = Provider<bool>((ref) => isAndroidApp);
 
 /// The plan for the active model; null when none is installed. Refreshed
 /// when the active model changes; invalidate after saving runtime

@@ -725,6 +725,10 @@
   "errorCodeAiLocalUnsupported": "This device cannot run models locally.",
   "errorCodeAiLocalTooHot": "The phone is too hot to run the model. Let it cool down for a few minutes and try again.",
 
+  "aiCloudOnlyHereNote": "Here analyses only use cloud providers with your API key. The model on your phone stays active in the app.",
+  "@aiCloudOnlyHereNote": {
+    "description": "AI provider settings on a device without on-device models (the web dashboard) while the account is in on-device mode."
+  },
   "aiModeCloud": "Cloud",
   "aiModeOnDevice": "On device",
   "aiLocalModeIntro": "The model runs on the phone: your data goes to no outside AI provider. The server prepares the data and keeps reports and questions in the history, as with the cloud.",

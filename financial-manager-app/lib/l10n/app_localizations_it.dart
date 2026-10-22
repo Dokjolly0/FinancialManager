@@ -2166,6 +2166,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il telefono è troppo caldo per far girare il modello. Lascialo raffreddare qualche minuto e riprova.';
 
   @override
+  String get aiCloudOnlyHereNote =>
+      'Qui le analisi usano solo i fornitori cloud con la tua chiave API. Il modello sul telefono resta attivo nell\'app.';
+
+  @override
   String get aiModeCloud => 'Cloud';
 
   @override
