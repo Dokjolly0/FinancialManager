@@ -102,6 +102,40 @@ final localResultOutboxProvider = Provider<LocalResultOutbox>(
   ),
 );
 
+/// Sends results left in the outbox when someone signs in and whenever the
+/// app comes back to the foreground; each run also flushes before it
+/// starts. Watched by the root widget.
+final localOutboxFlusherProvider = Provider<void>((ref) {
+  void flush() {
+    final userId = ref.read(currentUserProvider)?.id;
+    if (userId == null) return;
+    ref
+        .read(localResultOutboxProvider)
+        .flush(ref.read(aiRepositoryProvider), userId)
+        .catchError((_) {});
+  }
+
+  ref.listen(
+    currentUserProvider.select((u) => u?.id),
+    (_, id) => id == null ? null : flush(),
+    fireImmediately: true,
+  );
+  final observer = _ResumeObserver(flush);
+  WidgetsBinding.instance.addObserver(observer);
+  ref.onDispose(() => WidgetsBinding.instance.removeObserver(observer));
+});
+
+class _ResumeObserver with WidgetsBindingObserver {
+  _ResumeObserver(this._onResume);
+
+  final void Function() _onResume;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _onResume();
+  }
+}
+
 /// Not auto-disposed: a run must finish and submit its result even when
 /// the screen that started it is gone.
 final localAiRunnerProvider = Provider<LocalAiRunner>(

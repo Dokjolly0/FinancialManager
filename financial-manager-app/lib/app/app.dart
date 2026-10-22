@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/account/presentation/view_models/account_providers.dart';
+import '../features/ai/data/providers.dart';
 import '../l10n/app_localizations.dart';
 import 'router.dart';
 import 'session/session_controller.dart';
@@ -20,6 +21,8 @@ class FinancialManagerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    // On-device AI reports written offline go out at sign-in and resume.
+    ref.watch(localOutboxFlusherProvider);
     final isAuthenticated =
         ref.watch(sessionControllerProvider) == SessionStatus.authenticated;
     final profile = isAuthenticated
