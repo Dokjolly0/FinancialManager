@@ -1,6 +1,6 @@
 # financialmanager
 
-The Flutter client of FinancialManager (Android and iOS). The full specification is in [`../plan.md`](../plan.md).
+The Flutter client of FinancialManager (Android, iOS and the web dashboard at https://financialmanager.alexviolatto.dev). The full specification is in [`../plan.md`](../plan.md).
 
 ## Run
 
@@ -11,6 +11,19 @@ flutter test
 ```
 
 The API base URL comes from `--dart-define` (`lib/core/api/api_environment.dart`); without it, builds use production, `https://financialmanager.alexviolatto.dev/api/v1`. Only debug builds may use plain http (the debug manifest sets `usesCleartextTraffic` for the local backend on the emulator); release builds are HTTPS only.
+
+## Web
+
+The same code builds for the browser (`flutter build web --release --no-web-resources-cdn`); in production compose builds and serves it (`Dockerfile`, `docker/Caddyfile.web`). Locally: `flutter run -d chrome --web-port 5000 --dart-define=API_BASE_URL=http://localhost:10003/v1`, with `CORS_ALLOWED_ORIGINS=http://localhost:5000` in the backend's `.env`.
+
+What differs in the browser:
+
+- No on-device AI: the engines use `dart:ffi` and come from `lib/features/ai/data/local/engines/local_engines.dart`, a conditional export with no engines on the web; `localAiSupportedProvider` is false, so analyses use cloud providers only and the model screens redirect to the AI settings.
+- Google sign-in and linking use Google's rendered button (`lib/core/auth/google_web_button.dart`); the ID token arrives on `GoogleSignInService.webIdTokens`.
+- Files (export, AI report) are browser downloads via `saveOrShareFile` (`lib/core/files/save_file.dart`); image cropping uses cropperjs, vendored in `web/cropperjs`.
+- From 840 px the shell shows a side rail and pages are centered (`lib/app/layout/breakpoints.dart`); URLs use the path strategy.
+
+To keep the web build working: no `dart:io` `Platform`/`File` outside `_io`/`_ffi` files (use `isAndroidApp`/`isIosApp` from `lib/core/platform/platform_info.dart` or `kIsWeb`), native-only code behind a conditional export. CI runs `flutter build web` on every push. Details: [`../docs/build-deploy.md`](../docs/build-deploy.md), "Dashboard web" and "Web in locale".
 
 ## Signing
 

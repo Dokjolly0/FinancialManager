@@ -8,12 +8,12 @@ See [`plan.md`](plan.md) for the full product and architecture specification.
 
 ## Stack
 
-Flutter (Android + iOS) · Go · PostgreSQL · Redis · Docker · MinIO
+Flutter (Android + iOS + web dashboard) · Go · PostgreSQL · Redis · Docker · MinIO
 
 ## Repository structure
 
 - [`financial-manager-backend/`](financial-manager-backend) — Go modular-monolith API (PostgreSQL as the source of truth, Redis as an accelerator/coordinator only, MinIO for images).
-- [`financial-manager-app/`](financial-manager-app) — Flutter mobile client.
+- [`financial-manager-app/`](financial-manager-app) — Flutter client: the Android/iOS app and, built for the browser, the web dashboard at https://financialmanager.alexviolatto.dev.
 - [`plan.md`](plan.md) — full product and architecture spec (screens, data model, API contract, security, roadmap, etc.).
 
 ## Getting started
@@ -26,7 +26,7 @@ cp .env.example .env
 docker compose -f compose.yaml -f compose.dev.yaml up --build
 ```
 
-Default host ports: PostgreSQL `10001`, Redis `10002`, API `10003`, MinIO `10004`. In production the backend runs on the `alex-violatto` VPS behind Caddy, and clients use `https://financialmanager.alexviolatto.dev/api/v1` (the API is published only on `127.0.0.1:10003`); ports are configurable through the backend `.env` file. See [`docs/build-deploy.md`](docs/build-deploy.md) for deploy, HTTPS and Android release signing. See [`financial-manager-backend/README.md`](financial-manager-backend/README.md) for running without Docker, migrations, and health checks.
+Default host ports: PostgreSQL `10001`, Redis `10002`, API `10003`, MinIO `10004`. In production the backend runs on the `alex-violatto` VPS behind Caddy, and clients use `https://financialmanager.alexviolatto.dev/api/v1` (the API is published only on `127.0.0.1:10003`); ports are configurable through the backend `.env` file. The production compose also builds and serves the web dashboard (service `web`, on `127.0.0.1:10005` behind the same Caddy). See [`docs/build-deploy.md`](docs/build-deploy.md) for deploy, HTTPS, the web dashboard and Android release signing. See [`financial-manager-backend/README.md`](financial-manager-backend/README.md) for running without Docker, migrations, and health checks.
 
 ### App
 
@@ -34,6 +34,8 @@ Default host ports: PostgreSQL `10001`, Redis `10002`, API `10003`, MinIO `10004
 cd financial-manager-app
 flutter pub get
 flutter run
+# web dashboard against the local backend (CORS_ALLOWED_ORIGINS=http://localhost:5000 in its .env)
+flutter run -d chrome --web-port 5000 --dart-define=API_BASE_URL=http://localhost:10003/v1
 ```
 
 `flutter pub get`/`flutter run` regenerate the localized strings (`AppLocalizations`, from `lib/l10n/*.arb`) automatically; run `flutter gen-l10n` directly only if you need to regenerate them without building the app.

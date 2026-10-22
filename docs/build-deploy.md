@@ -1,6 +1,6 @@
 # Build e deploy
 
-Guida operativa per pubblicare il backend su una VPS e compilare e firmare l'app Flutter.
+Guida operativa per pubblicare il backend e la dashboard web su una VPS e compilare e firmare l'app Flutter.
 
 ## Architettura in produzione
 
@@ -15,9 +15,9 @@ Guida operativa per pubblicare il backend su una VPS e compilare e firmare l'app
   (git self-hosted)                    │                          │
                               /api/*  (senza /api)          tutto il resto
                                        │                          │
-                              127.0.0.1:10003          /var/www/financialmanager
-                              container api             (dashboard web; per ora
-                                       │                  pagina segnaposto)
+                              127.0.0.1:10003            127.0.0.1:10005
+                              container api              container web
+                                       │                 (dashboard Flutter web)
                          rete Docker backend_internal
                postgres · redis · object-storage (MinIO) · worker
 ```
@@ -25,7 +25,7 @@ Guida operativa per pubblicare il backend su una VPS e compilare e firmare l'app
 - Il progetto è in `/projects/FinancialManager` sulla VPS `alex-violatto`. Fino a ottobre 2026 il backend girava sulla VPS `remote-viewer` (`http://83.228.246.84:10003`), che ora resta dedicata a RemoteViewer: lo spostamento è descritto nella sezione 10.
 - Su Internet è esposto solo Caddy. L'API è pubblicata sull'host solo su `127.0.0.1:10003`; PostgreSQL, Redis e MinIO sono raggiungibili solo sulla rete interna di Docker.
 - L'app usa `https://financialmanager.alexviolatto.dev/api/v1`: Caddy toglie il prefisso `/api`, quindi il backend continua a esporre `/v1/...` e `/health/...` come in locale.
-- La dashboard web (il sottodominio senza `/api`) non è ancora implementata: la build Flutter web è un lavoro separato. Quando ci sarà, basterà copiare il contenuto di `build/web` in `/var/www/financialmanager`; stando sullo stesso dominio dell'API non servirà configurare CORS.
+- La dashboard web (il sottodominio senza `/api`) è la stessa app Flutter compilata per il browser, servita dal container `web` (sezione 11). Sta sullo stesso dominio dell'API, quindi in produzione non serve CORS. `docker compose ... up -d --build` aggiorna backend e dashboard insieme.
 
 ## Backend su VPS
 
@@ -36,6 +36,7 @@ Il backend e' un'app Go eseguita via Docker Compose con PostgreSQL, Redis e MinI
 - `financial-manager-backend/.env.example`
 - `financial-manager-backend/Dockerfile`
 - `financial-manager-backend/deploy/Caddyfile.example` (il blocco del sito per Caddy)
+- `financial-manager-app/Dockerfile` (la dashboard web, servizio `web` di `compose.prod.yaml`)
 
 ### 1. Preparare la VPS
 
@@ -179,9 +180,13 @@ financialmanager.alexviolatto.dev {
 	}
 
 	handle {
-		root * /var/www/financialmanager
-		try_files {path} /index.html
-		file_server
+		header {
+			Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://accounts.google.com/gsi/ https://fonts.gstatic.com; frame-src https://accounts.google.com/gsi/; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+			X-Content-Type-Options "nosniff"
+			Referrer-Policy "strict-origin-when-cross-origin"
+			Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		}
+		reverse_proxy 127.0.0.1:10005
 	}
 }
 ```
@@ -191,14 +196,13 @@ Cosa fa ogni parte:
 - `Strict-Transport-Security`: i client ricordano per un anno di usare solo HTTPS (plan.md sezione 19.3);
 - `/api/metrics` risponde 404: il backend espone le metriche Prometheus su `/metrics` senza autenticazione e non devono essere pubbliche (plan.md sezione 22.1). La regola sta **dentro** `handle_path`, dove il prefisso `/api` è già stato tolto (quindi `/metrics*`): Caddy esegue `handle_path` prima di `respond`, e un `respond` messo fuori dal blocco non verrebbe mai applicato;
 - `handle_path /api/*` inoltra all'API togliendo `/api` (`/api/v1/me` → `/v1/me`, `/api/health/ready` → `/health/ready`) e aggiunge `X-Forwarded-For`. `flush_interval -1` serve allo streaming delle analisi AI (sezione 8);
-- `handle` serve i file statici della dashboard; `try_files` rimanda a `index.html` i percorsi che non sono file, così le route dell'app web funzioneranno anche ricaricando la pagina.
+- `handle` inoltra tutto il resto al container `web` (la dashboard, sezione 11), che rimanda a `index.html` i percorsi che non sono file (`/app/history` ricaricato nel browser funziona). Gli header valgono solo per la dashboard:
+  - `Content-Security-Policy`: il browser carica solo i file della dashboard, lo script e il popup di accesso Google (`accounts.google.com/gsi/…`) e i font che Flutter scarica da `fonts.gstatic.com` per i caratteri che non ha. `'wasm-unsafe-eval'` serve a CanvasKit (WebAssembly), `'unsafe-inline'` negli stili perché Flutter posiziona i suoi elementi con attributi `style`; script inline invece non sono ammessi. Le immagini possono venire da qualsiasi `https` (immagini delle categorie dai fornitori di ricerca), da `data:` e `blob:` (file scelti prima dell'upload). `frame-ancestors 'none'` impedisce di incorporare la dashboard in altri siti;
+  - `nosniff`, `Referrer-Policy` e `Permissions-Policy` (niente fotocamera, microfono e posizione via API del browser: la scelta di una foto usa il normale selettore di file).
 
-Creare la pagina segnaposto e ricaricare Caddy:
+Ricaricare Caddy:
 
 ```bash
-sudo mkdir -p /var/www/financialmanager
-echo '<!doctype html><meta charset="utf-8"><title>Financial Manager</title><p>Financial Manager: dashboard in arrivo.</p>' \
-  | sudo tee /var/www/financialmanager/index.html
 sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl reload caddy
 ```
@@ -223,8 +227,9 @@ Il compose avvia:
 - `migrate`
 - `api`
 - `worker`
+- `web` (la dashboard, solo in production: sezione 11)
 
-Il servizio `migrate` applica le migrazioni SQL prima dell'avvio dell'API e del worker. Sulla VPS da 1 vCPU la prima build delle immagini richiede alcuni minuti.
+Il servizio `migrate` applica le migrazioni SQL prima dell'avvio dell'API e del worker. Sulla VPS da 1 vCPU la prima build delle immagini richiede alcuni minuti; quella di `web` è la più lunga (sezione 11).
 
 **Immagine di MinIO.** `object-storage` usa `dokjolly/minio:RELEASE.2025-10-15T17-29-55Z-r1`, non `minio/minio`. Da ottobre 2025 MinIO Inc. non pubblica più le immagini della versione community; in seguito le ha tolte da Docker Hub (`docker pull minio/minio` risponde "pull access denied") e ha chiuso i download anonimi da quay.io, e il progetto open source è archiviato. Un deploy da zero con `minio/minio:latest` oggi fallisce; funzionava solo dove l'immagine era già in cache.
 
@@ -267,7 +272,11 @@ Altri controlli da un PC esterno:
 curl -I http://financialmanager.alexviolatto.dev/               # redirect (308) a https
 curl -I https://financialmanager.alexviolatto.dev/api/metrics   # 404
 curl -m 5 http://83.228.220.189:10003/health/ready              # deve fallire: porta non esposta
+curl -m 5 http://83.228.220.189:10005/                          # deve fallire: porta non esposta
+curl -sI https://financialmanager.alexviolatto.dev/app/history | grep -i "content-security\|cache-control"   # 200, CSP e no-cache
 ```
+
+Poi aprire `https://financialmanager.alexviolatto.dev` nel browser, accedere e guardare la console degli strumenti per sviluppatori: non devono comparire errori `Content-Security-Policy`.
 
 L'API espone le route applicative sotto `/v1`, quindi l'app Flutter deve puntare a:
 
@@ -379,6 +388,7 @@ Con l'analisi sul dispositivo (plan.md sezione 33) il modello gira sul telefono 
 - `AI_LOCAL_MAX_DURATION` è la scadenza data al telefono per finire un messaggio; dopo, un messaggio ancora in attesa compare come interrotto.
 - Le route locali sono JSON normali (niente streaming): il reverse proxy non ha bisogno di configurazioni particolari. L'invio del risultato accetta corpi fino a 512 KB.
 - I modelli si scaricano dal telefono direttamente da Hugging Face: il server non li ospita e non li vede.
+- Solo l'app Android: la dashboard web non ha motori locali e usa solo i fornitori cloud (sezione 11).
 
 La migrazione `0034_ai_on_device` (applicata dal servizio `migrate` al riavvio) aggiunge a `ai_settings` la modalità, il modello locale e il consenso dedicato, a `ai_analyses` la colonna `runtime` e a `ai_messages` la durata. Il file `.down.sql` rimuove colonne e vincoli ma lascia le analisi `on_device` già salvate, che una versione precedente del backend non sa mostrare correttamente: prima di un rollback conviene eliminarle.
 
@@ -471,7 +481,52 @@ rm ~/fm-migration.dump ~/fm-media.tar.gz
 rm ~/fm-migration.dump ~/fm-media.tar.gz
 ```
 
+### 11. Dashboard web
+
+La dashboard su `https://financialmanager.alexviolatto.dev` è l'app Flutter compilata per il browser: stesse schermate e stesse API dell'app Android, con un layout per schermi larghi.
+
+**Come viene costruita e servita.**
+
+- `financial-manager-app/Dockerfile`, usato dal servizio `web` di `compose.prod.yaml`:
+  1. stage di build: Debian `trixie-slim`, Flutter clonato al tag della release (`FLUTTER_VERSION`, oggi `3.47.2`, la stessa usata per l'APK), solo gli artefatti web, poi `flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_URL=…`;
+  2. stage finale: `caddy:2.11.7-alpine` con `financial-manager-app/docker/Caddyfile.web`, che serve i file su `:8080`, comprime con zstd/gzip, rimanda le route dell'app a `index.html` e manda `Cache-Control: no-cache` su tutto. I nomi dei file di Flutter (`main.dart.js`, `canvaskit/…`) non contengono un hash, quindi i browser devono sempre rivalidare (con ETag, risposte 304 leggere), altrimenti dopo un deploy terrebbero la versione vecchia.
+- Il container è pubblicato solo su `127.0.0.1:${WEB_HOST_PORT:-10005}`; il Caddy di sistema lo raggiunge da lì (sezione 3) e aggiunge HTTPS e gli header di sicurezza. Non è collegato alla rete `backend_internal`: parla con l'API come qualsiasi browser, via `https://…/api/v1`.
+- `--no-web-resources-cdn` fa servire CanvasKit dal container invece che dal CDN di Google.
+- `web` esiste solo in `compose.prod.yaml`: lo stack di sviluppo non compila Flutter.
+
+**Aggiornare la dashboard.** Con il comando di sempre:
+
+```bash
+cd /projects/FinancialManager && git pull
+cd financial-manager-backend
+docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+```
+
+Compose ricostruisce `web` solo se è cambiato qualcosa in `financial-manager-app`. Per ricostruire solo la dashboard: `docker compose -f compose.yaml -f compose.prod.yaml up -d --build web`. Per controllare che i browser vedano la nuova versione: `curl -s https://financialmanager.alexviolatto.dev/version.json` (riporta `version` e `build_number` di `pubspec.yaml`).
+
+**Tempi e risorse.** La prima build scarica Flutter e le dipendenze: sul PC circa 4,5 minuti, sulla VPS da 1 vCPU di più. Le successive riusano lo strato con Flutter e la cache di pub (mount di BuildKit) e rifanno solo `flutter build web`. La compilazione usa molta RAM: sulla VPS da 2 GB serve la swap della sezione 1. Il risultato è un'immagine di circa 165 MB; `main.dart.js` pesa circa 8,7 MB, 3,4 MB compresso.
+
+**Variabili** (nel `.env`, tutte facoltative):
+
+| Variabile | Default | Significato |
+|---|---|---|
+| `WEB_HOST_PORT` | `10005` | Porta su `127.0.0.1` a cui Caddy inoltra la dashboard |
+| `WEB_API_BASE_URL` | `https://financialmanager.alexviolatto.dev/api/v1` | URL dell'API compilato nella dashboard |
+
+**Aggiornare Flutter.** Cambiare `FLUTTER_VERSION` in `financial-manager-app/Dockerfile` insieme alla versione installata sul PC con cui si compila l'APK (`flutter --version`), così web e Android escono dallo stesso SDK.
+
+**Cosa cambia rispetto all'app.**
+
+- **Analisi AI**: solo con i fornitori cloud e la chiave API dell'utente. Nel browser non ci sono motori locali: niente selettore "Sul dispositivo", niente gestione dei modelli né "Risposte non inviate" (le rotte rimandano alle impostazioni AI). Se il profilo è in modalità "sul dispositivo" (scelta dal telefono), le impostazioni AI mostrano il modulo cloud con una nota e il telefono non viene toccato.
+- **Accesso con Google**: con il pulsante ufficiale di Google (Google Identity Services) invece del selettore di Android; il backend riceve lo stesso ID token. Serve che nel client OAuth **Web** `394336083524-bulv…` su Google Cloud, alla voce *Origini JavaScript autorizzate*, ci siano `https://financialmanager.alexviolatto.dev` e, per lo sviluppo, `http://localhost:5000`; altrimenti il popup di Google risponde `origin_mismatch`. Il client secret non serve: l'app usa solo ID token.
+- **Sessione**: il refresh token resta nel browser (cifrato da `flutter_secure_storage` con WebCrypto, in localStorage), quindi si resta collegati tra una visita e l'altra finché non si esce. La Content-Security-Policy limita gli script che potrebbero leggerlo. Ogni browser compare come sessione separata ("Chrome (Windows)") in Account → Sicurezza.
+- **File**: l'export dei dati e il report di un'analisi ("Scarica (.md)") si scaricano come file; le immagini si scelgono dal disco e si ritagliano in una finestra (cropperjs, in `web/cropperjs`).
+- **Layout**: sotto 840 px è identico all'app; da 840 px la navigazione passa in una barra laterale con "Aggiungi", e le pagine sono centrate (1100 px per le schede, 840 px per le pagine aperte sopra).
+- **URL**: puliti (`/app/history`), si possono salvare nei preferiti; ricaricando una pagina si resta lì dopo il ripristino della sessione.
+
 ## Build Flutter
+
+La stessa app si compila per Android (APK/AAB), iOS e il web. La build web per la produzione la fa compose (sezione 11); questa parte riguarda soprattutto Android, e la sezione 8 lo sviluppo della dashboard.
 
 L'app Flutter legge l'URL API da `--dart-define`.
 
@@ -679,6 +734,38 @@ Oggi la CI (`.github/workflows/mobile-ci.yml`) compila la release senza `key.pro
 
 Il runner viene distrutto a fine job, quindi `upload.jks` e `key.properties` non restano da nessuna parte; non stamparli mai nei log.
 
+### 8. Web in locale (sviluppo della dashboard)
+
+Il backend di sviluppo gira su `http://localhost:10003`, la dashboard di `flutter run` su un'altra porta: per il browser sono origini diverse, quindi serve CORS solo in questo caso.
+
+1. Nel `.env` del backend di sviluppo:
+   ```env
+   CORS_ALLOWED_ORIGINS=http://localhost:5000
+   ```
+   e riavviare l'API (`docker compose -f compose.yaml -f compose.dev.yaml up -d api`). In produzione la variabile resta vuota.
+2. Avviare la dashboard sulla porta 5000 (deve coincidere con l'origine autorizzata, anche su Google Cloud per il pulsante Google):
+   ```bash
+   cd financial-manager-app
+   flutter run -d chrome --web-port 5000 --dart-define=API_BASE_URL=http://localhost:10003/v1
+   ```
+3. Per provare la build di produzione senza Docker: `flutter build web --release --no-web-resources-cdn` e servire `build/web` con un server statico che rimandi a `index.html` i percorsi sconosciuti.
+
+Per provare l'immagine esattamente come sulla VPS:
+
+```bash
+cd financial-manager-app
+docker build -t fm-web .
+docker run --rm -p 127.0.0.1:18080:8080 fm-web
+```
+
+Le pagine si aprono su `http://127.0.0.1:18080`, ma da lì le chiamate all'API di produzione sono bloccate dal browser (origine diversa e nessun CORS in produzione): serve solo a controllare build, file serviti, routing e cache.
+
+Regole per il codice, perché la build web continui a funzionare (la CI la verifica con il job `build-web`):
+
+- niente `dart:io` `Platform`/`File`/`Directory` fuori dai file `_io`/`_ffi`; per sapere la piattaforma `isAndroidApp`/`isIosApp` (`lib/core/platform/platform_info.dart`) o `kIsWeb`;
+- il codice nativo va dietro un export condizionale: `if (dart.library.ffi)` per i motori AI (`local_engines.dart`), `if (dart.library.js_interop)` per le parti solo web (`google_web_button.dart`, `save_file.dart`);
+- i file si consegnano con `saveOrShareFile` (`lib/core/files/save_file.dart`).
+
 ## Cose da sistemare prima di una release pubblica
 
 Già fatto:
@@ -686,11 +773,12 @@ Già fatto:
 - firma release Android con una keystore unica (sezione "Firma Android");
 - API in HTTPS dietro Caddy, porta `10003` solo su loopback;
 - `android:usesCleartextTraffic` tolto dalle build release.
+- dashboard web su `https://financialmanager.alexviolatto.dev`, costruita e aggiornata da compose (sezione 11).
 
 Ancora da fare prima di distribuire a utenti reali:
 
 - Registrare su Google Cloud lo SHA-1 della chiave di firma di Play (alla prima pubblicazione) e il bundle ID iOS se usi Google Sign-In su iOS.
-- Dashboard web: build Flutter web e pubblicazione in `/var/www/financialmanager` (piano separato).
+- Dashboard web: le analisi AI sul dispositivo non esistono nel browser (solo fornitori cloud); il layout desktop copre navigazione e larghezza delle pagine, non schermate pensate apposta per il desktop.
 - Firma in CI (sezione 7 di "Build Flutter").
 - Storage delle immagini: MinIO community non è più mantenuto. Oggi si usa la sua ultima release ricompilata (`dokjolly/minio`, sezione 4); nel lungo periodo valutare uno storage compatibile S3 ancora sviluppato (per esempio Garage o SeaweedFS). Il backend usa un client S3 standard, quindi cambierebbero solo il compose, la copia del bucket e gli script di backup.
 - Non committare mai `.env`, keystore, `key.properties`, password o chiavi.
@@ -702,6 +790,7 @@ financial-manager-app/android/app/build.gradle.kts
 financial-manager-app/android/app/src/main/AndroidManifest.xml
 financial-manager-app/android/app/src/debug/AndroidManifest.xml
 financial-manager-backend/deploy/Caddyfile.example
+financial-manager-app/Dockerfile
 ```
 
 ## Checklist veloce

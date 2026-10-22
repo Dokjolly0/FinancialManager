@@ -22,6 +22,17 @@ I dati servono esclusivamente a far funzionare l'app. Non vengono venduti, non v
 
 I dati sono conservati sul server che ospita il backend dell'app. Tra l'app e il server viaggiano solo su connessioni cifrate (HTTPS): l'app non accetta collegamenti in chiaro. Il proprietario dell'istanza ne esegue periodicamente un **backup cifrato** sul proprio Google Drive. L'app accede a Google Drive solo con l'autorizzazione `drive.file`, quindi vede e gestisce esclusivamente i file di backup che ha creato lei, mai altri file presenti su Drive.
 
+## Dashboard web
+
+FinancialManager si usa anche dal browser, su `financialmanager.alexviolatto.dev`, con gli stessi dati dell'app.
+
+- **Sessione**: per restare collegato, il browser conserva un token di sessione nella propria memoria locale, cifrato. Resta lì finché non esci dall'account (o non cancelli i dati del sito); da Account → Sicurezza puoi vedere e chiudere le sessioni aperte, browser compresi. Su un computer condiviso esci sempre al termine.
+- **Accesso con Google**: il pulsante "Continua con Google" è fornito da Google e carica uno script di Google; quando lo usi, Google tratta i dati dell'accesso secondo le proprie regole, come nell'app.
+- **Caratteri**: per alcuni caratteri che non contiene, la pagina li scarica dal servizio di font di Google (fonts.gstatic.com), che vede quindi il tuo indirizzo IP; non riceve dati finanziari.
+- **Nessun cookie di profilazione** e nessuno strumento di statistiche o pubblicità.
+- **Analisi AI**: nel browser sono disponibili solo le analisi con un fornitore cloud e la tua chiave API, descritte qui sotto; l'analisi sul dispositivo esiste solo nell'app Android.
+- I file che scarichi (export dei dati, report delle analisi) finiscono nella cartella download del tuo computer: da quel momento sono sotto il tuo controllo.
+
 ## Analisi AI (facoltativa)
 
 L'Analisi AI è disattivata finché non la configuri tu. Se non ti interessa, puoi anche nasconderla del tutto da **Account → Preferenze → Funzioni AI**: spegnendola non viene cancellato nulla. Per usarla scegli un fornitore di modelli linguistici (per esempio Anthropic, OpenAI, Google o un servizio compatibile con OpenAI) e inserisci una tua chiave API. Prima della prima analisi l'app ti chiede un consenso esplicito, che puoi revocare in qualsiasi momento da **Account → Assistente AI → Privacy e consenso**.
