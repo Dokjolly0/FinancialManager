@@ -28,11 +28,15 @@ class GoogleSignInController extends Notifier<GoogleSignInState> {
   @override
   GoogleSignInState build() => const GoogleSignInState();
 
-  Future<GoogleSignInOutcome?> signIn() async {
+  /// [idToken] is the token from Google's web button; null runs the
+  /// native flow.
+  Future<GoogleSignInOutcome?> signIn({String? idToken}) async {
     state = state.copyWith(isSubmitting: true, error: null);
 
     try {
-      final outcome = await ref.read(authRepositoryProvider).signInWithGoogle();
+      final outcome = await ref
+          .read(authRepositoryProvider)
+          .signInWithGoogle(idToken: idToken);
 
       switch (outcome) {
         case GoogleSignInAuthenticated(:final user):

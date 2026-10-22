@@ -2158,6 +2158,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Here analyses only use cloud providers with your API key. The model on your phone stays active in the app.';
 
   @override
+  String get googleWebLinkDialogTitle => 'Choose the Google account to link';
+
+  @override
   String get aiModeCloud => 'Cloud';
 
   @override

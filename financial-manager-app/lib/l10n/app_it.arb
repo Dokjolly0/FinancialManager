@@ -893,6 +893,10 @@
   "@aiCloudOnlyHereNote": {
     "description": "AI provider settings on a device without on-device models (the web dashboard) while the account is in on-device mode."
   },
+  "googleWebLinkDialogTitle": "Scegli l'account Google da collegare",
+  "@googleWebLinkDialogTitle": {
+    "description": "Web dashboard: dialog with Google's button when linking Google to the account."
+  },
   "aiModeCloud": "Cloud",
   "aiModeOnDevice": "Sul dispositivo",
   "aiLocalModeIntro": "Il modello gira sul telefono: i tuoi dati non vanno a nessun fornitore AI esterno. Il server prepara i dati e salva report e domande nella cronologia, come per il cloud.",

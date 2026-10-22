@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/auth/google_web_sign_in_dialog.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/confirmation_sheet.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../authentication/data/providers.dart';
 import '../../../authentication/presentation/widgets/password_field.dart';
 import '../../domain/models/linked_identity.dart';
 import '../view_models/linked_accounts_controller.dart';
@@ -42,9 +44,22 @@ class AccountLinkedAccountsScreen extends ConsumerWidget {
     );
     if (confirmed != true || !context.mounted) return;
 
+    // On the web Google's button gives the token; elsewhere linkGoogle
+    // runs the native flow.
+    String? idToken;
+    final google = ref.read(googleSignInServiceProvider);
+    if (google.usesWebButton) {
+      idToken = await showGoogleWebSignInDialog(
+        context,
+        google,
+        title: l10n.googleWebLinkDialogTitle,
+      );
+      if (idToken == null || !context.mounted) return;
+    }
+
     final error = await ref
         .read(linkedAccountsControllerProvider.notifier)
-        .linkGoogle(passwordController.text);
+        .linkGoogle(passwordController.text, idToken: idToken);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

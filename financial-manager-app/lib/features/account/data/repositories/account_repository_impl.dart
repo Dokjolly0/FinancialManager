@@ -104,8 +104,8 @@ class AccountRepositoryImpl implements AccountRepository {
   }
 
   @override
-  Future<void> linkGoogle(String currentPassword) async {
-    final idToken = await _googleSignIn.signIn();
+  Future<void> linkGoogle(String currentPassword, {String? idToken}) async {
+    idToken ??= await _googleSignIn.signIn();
     try {
       await _api.linkGoogle(idToken: idToken, currentPassword: currentPassword);
     } on DioException catch (e) {

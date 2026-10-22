@@ -3900,6 +3900,12 @@ abstract class AppLocalizations {
   /// **'Qui le analisi usano solo i fornitori cloud con la tua chiave API. Il modello sul telefono resta attivo nell\'app.'**
   String get aiCloudOnlyHereNote;
 
+  /// Web dashboard: dialog with Google's button when linking Google to the account.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli l\'account Google da collegare'**
+  String get googleWebLinkDialogTitle;
+
   /// No description provided for @aiModeCloud.
   ///
   /// In it, this message translates to:

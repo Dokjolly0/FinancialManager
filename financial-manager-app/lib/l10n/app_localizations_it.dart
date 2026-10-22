@@ -2170,6 +2170,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Qui le analisi usano solo i fornitori cloud con la tua chiave API. Il modello sul telefono resta attivo nell\'app.';
 
   @override
+  String get googleWebLinkDialogTitle =>
+      'Scegli l\'account Google da collegare';
+
+  @override
   String get aiModeCloud => 'Cloud';
 
   @override

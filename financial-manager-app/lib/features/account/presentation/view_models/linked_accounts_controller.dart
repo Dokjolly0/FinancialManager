@@ -52,9 +52,14 @@ class LinkedAccountsController extends Notifier<LinkedAccountsState> {
   }
 
   /// Returns null on success, or the [AppError] to show if it failed.
-  Future<AppError?> linkGoogle(String currentPassword) async {
+  Future<AppError?> linkGoogle(
+    String currentPassword, {
+    String? idToken,
+  }) async {
     try {
-      await ref.read(accountRepositoryProvider).linkGoogle(currentPassword);
+      await ref
+          .read(accountRepositoryProvider)
+          .linkGoogle(currentPassword, idToken: idToken);
       await refresh();
       return null;
     } on AppError catch (e) {
