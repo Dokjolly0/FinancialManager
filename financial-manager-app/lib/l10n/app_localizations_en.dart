@@ -780,7 +780,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountPreferencesMenuSubtitle =>
-      'Theme, timezone, language, balance';
+      'Theme, timezone, language, balance, AI features';
 
   @override
   String get accountDataMenuTitle => 'Data';
@@ -2638,4 +2638,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorCodeAiLocalImportUnknownFormat =>
       'Unknown format: .gguf or .litertlm files are needed.';
+
+  @override
+  String get aiFeaturesSwitchTitle => 'AI features';
+
+  @override
+  String get aiFeaturesSwitchSubtitle =>
+      'AI assistant, analyses in Reports and History, wallet purposes. Turning them off deletes nothing: analyses, keys and models stay where they are.';
+
+  @override
+  String get aiRunModelLabel => 'Model';
 }

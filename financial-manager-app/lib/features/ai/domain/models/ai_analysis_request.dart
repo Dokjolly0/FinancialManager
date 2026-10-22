@@ -150,6 +150,7 @@ class AiAnalysisRequest {
     this.profile,
     this.budgetTokens,
     this.target,
+    this.credentialId,
     this.device,
   });
 
@@ -180,6 +181,9 @@ class AiAnalysisRequest {
 
   /// 'cloud' or 'on_device'; null uses the saved mode.
   final String? target;
+
+  /// The cloud account to run with; null uses the active one.
+  final String? credentialId;
   final AiDeviceParams? device;
 
   AiAnalysisRequest copyWith({
@@ -205,6 +209,7 @@ class AiAnalysisRequest {
     profile: profile ?? this.profile,
     budgetTokens: budgetTokens ?? this.budgetTokens,
     target: target,
+    credentialId: credentialId,
     device: device ?? this.device,
   );
 
@@ -234,6 +239,7 @@ class AiAnalysisRequest {
       'budget_tokens': ?budgetTokens,
     },
     'target': ?target,
+    'credential_id': ?credentialId,
     if (device != null) 'device': device!.toJson(),
     'instructions': instructions,
   };

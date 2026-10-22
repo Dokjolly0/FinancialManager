@@ -280,7 +280,7 @@
   "accountSecurityMenuSubtitle": "Password, active sessions, logout",
   "accountLinkedAccountsMenuTitle": "Linked accounts",
   "accountPreferencesMenuTitle": "Preferences",
-  "accountPreferencesMenuSubtitle": "Theme, timezone, language, balance",
+  "accountPreferencesMenuSubtitle": "Theme, timezone, language, balance, AI features",
   "accountDataMenuTitle": "Data",
   "accountDataMenuSubtitle": "Export or delete your account",
 
@@ -1023,5 +1023,8 @@
   "errorCodeAiLocalDownloadNoSpace": "Not enough space on the phone for this model.",
   "errorCodeAiLocalDownloadChecksum": "The downloaded file doesn't match the expected one and was discarded.",
   "errorCodeAiLocalDownloadInsecureUrl": "The address must start with https://.",
-  "errorCodeAiLocalImportUnknownFormat": "Unknown format: .gguf or .litertlm files are needed."
+  "errorCodeAiLocalImportUnknownFormat": "Unknown format: .gguf or .litertlm files are needed.",
+  "aiFeaturesSwitchTitle": "AI features",
+  "aiFeaturesSwitchSubtitle": "AI assistant, analyses in Reports and History, wallet purposes. Turning them off deletes nothing: analyses, keys and models stay where they are.",
+  "aiRunModelLabel": "Model"
 }

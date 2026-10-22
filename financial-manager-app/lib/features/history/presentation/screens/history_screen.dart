@@ -11,6 +11,7 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../core/widgets/skeleton_list.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../account/presentation/view_models/account_providers.dart';
 import '../../../ai/data/providers.dart';
 import '../../../ai/presentation/view_models/ai_period.dart';
 import '../../../categories/data/providers.dart';
@@ -102,7 +103,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       appBar: AppBar(
         title: const Text('Cronologia'),
         actions: [
-          if (ref.watch(aiSettingsProvider).value?.available == true)
+          if (ref.watch(aiFeaturesEnabledProvider) &&
+              ref.watch(aiSettingsProvider).value?.anyAvailable == true)
             IconButton(
               icon: const Icon(Icons.auto_awesome_outlined),
               tooltip: l10n.aiHistoryAnalyzeAction,

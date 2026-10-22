@@ -5,11 +5,15 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../account/presentation/view_models/account_providers.dart';
 import '../../../ai/data/providers.dart';
+import '../../../ai/domain/models/ai_settings.dart';
 
 /// The way into the AI analysis from Reports (plan.md section 32.7).
-/// Hidden when the server does not offer the feature or settings can't
-/// be loaded; points to setup until a provider is configured.
+/// Hidden when the AI features are off (section 32.10), the server offers
+/// neither path or settings can't be loaded; points to setup until a
+/// provider is configured, unless analyses run on the phone (the setup
+/// screen then says what is missing).
 class AiAnalysisEntryCard extends ConsumerWidget {
   const AiAnalysisEntryCard({super.key});
 
@@ -17,9 +21,14 @@ class AiAnalysisEntryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    if (!ref.watch(aiFeaturesEnabledProvider)) return const SizedBox.shrink();
     final settings = ref.watch(aiSettingsProvider).value;
-    if (settings == null || !settings.available) return const SizedBox.shrink();
-    final ready = settings.setup.providerReady;
+    if (settings == null || !settings.anyAvailable) {
+      return const SizedBox.shrink();
+    }
+    final ready =
+        (settings.available && settings.setup.providerReady) ||
+        (settings.onDeviceAvailable && settings.mode == AiMode.onDevice);
 
     return Card(
       color: theme.colorScheme.secondaryContainer,

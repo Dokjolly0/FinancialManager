@@ -322,21 +322,25 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
                       errorText: fieldError('name'),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  TextField(
-                    controller: _purposeController,
-                    maxLength: walletPurposeMaxLength,
-                    minLines: 1,
-                    maxLines: 3,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: InputDecoration(
-                      labelText: l10n.walletPurposeLabel,
-                      hintText: l10n.walletPurposeHint,
-                      helperText: l10n.walletPurposeHelper,
-                      helperMaxLines: 2,
-                      errorText: fieldError('purpose'),
+                  // Part of the AI features: hidden with them, its value
+                  // kept as it is (section 32.10).
+                  if (ref.watch(aiFeaturesEnabledProvider)) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      controller: _purposeController,
+                      maxLength: walletPurposeMaxLength,
+                      minLines: 1,
+                      maxLines: 3,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        labelText: l10n.walletPurposeLabel,
+                        hintText: l10n.walletPurposeHint,
+                        helperText: l10n.walletPurposeHelper,
+                        helperMaxLines: 2,
+                        errorText: fieldError('purpose'),
+                      ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     l10n.walletTypeLabel,

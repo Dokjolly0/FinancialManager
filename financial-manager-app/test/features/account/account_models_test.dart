@@ -30,6 +30,7 @@ void main() {
     expect(profile.avatarMediaId, isNull);
     expect(profile.firstDayOfWeek, 'monday');
     expect(profile.version, 3);
+    expect(profile.aiEnabled, isTrue, reason: 'older servers omit it');
   });
 
   test('AccountSession.fromJson parses the backend shape', () {

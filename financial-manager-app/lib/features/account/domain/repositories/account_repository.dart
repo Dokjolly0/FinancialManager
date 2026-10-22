@@ -16,6 +16,7 @@ class ProfileUpdate {
     required this.theme,
     required this.balanceHiddenDefault,
     required this.firstDayOfWeek,
+    this.aiEnabled,
     required this.expectedVersion,
   });
 
@@ -26,6 +27,9 @@ class ProfileUpdate {
   final String theme;
   final bool balanceHiddenDefault;
   final String firstDayOfWeek;
+
+  /// Null leaves the AI switch as it is.
+  final bool? aiEnabled;
   final int expectedVersion;
 }
 

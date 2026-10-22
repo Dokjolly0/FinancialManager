@@ -18,8 +18,11 @@ import '../../domain/models/ai_analysis_request.dart';
 import '../../domain/models/ai_settings.dart';
 import '../view_models/ai_draft_controller.dart';
 import '../view_models/ai_period.dart';
+import '../view_models/ai_run_choice.dart';
+import '../view_models/local_models_controller.dart';
 import '../view_models/local_run_plan.dart';
 import '../widgets/ai_consent_sheet.dart';
+import '../widgets/ai_provider_labels.dart';
 
 String aiSectionLabel(AppLocalizations l10n, AiDataSection s) => switch (s) {
   AiDataSection.monthly => l10n.aiSectionMonthly,
@@ -42,9 +45,10 @@ String aiQuickPeriodLabel(AppLocalizations l10n, AiQuickPeriod p) =>
     };
 
 /// Reports → Analisi AI (plan.md section 32.7): choose what to analyze and
-/// what data to send, then open the preview. On the phone (plan.md section
-/// 33) the compact profile is on by default and the prompt is held to what
-/// fits the model's context.
+/// what data to send, then open the preview. Any configured model can run
+/// it: every cloud account with a model and every model installed on the
+/// phone. On the phone (plan.md section 33) the compact profile is on by
+/// default and the prompt is held to what fits the model's context.
 class AiAnalysisSetupScreen extends ConsumerStatefulWidget {
   const AiAnalysisSetupScreen({super.key});
 
@@ -72,6 +76,9 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
 
   /// The short prompt for small models; on by default on the phone.
   bool _compact = false;
+
+  /// The picked [AiRunChoice.key]; null starts on the saved mode's model.
+  String? _choiceKey;
   final _question = TextEditingController();
   bool _defaultsApplied = false;
   String? _questionError;
@@ -142,8 +149,43 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
     });
   }
 
-  bool _onDevice(AiSettings settings) =>
-      settings.onDeviceAvailable && settings.mode == AiMode.onDevice;
+  AiRunChoice? _choiceFor(
+    List<AiRunChoice> choices,
+    AiSettings settings,
+    String? activeLocalModelId,
+  ) {
+    for (final c in choices) {
+      if (c.key == _choiceKey) return c;
+    }
+    return defaultAiRunChoice(
+      choices,
+      settings,
+      activeLocalModelId: activeLocalModelId,
+    );
+  }
+
+  /// Moving between the phone and the cloud flips the compact profile to
+  /// its default there. A phone model becomes the active one: that is the
+  /// model the engine loads.
+  void _selectChoice(AiRunChoice choice, AiRunChoice? previous) {
+    setState(() => _choiceKey = choice.key);
+    if (choice.isOnDevice != (previous?.isOnDevice ?? false)) {
+      _setCompact(choice.isOnDevice);
+    }
+    if (choice is AiLocalChoice &&
+        ref.read(localModelsControllerProvider).activeModelId !=
+            choice.record.id) {
+      ref
+          .read(localModelsControllerProvider.notifier)
+          .setActive(choice.record.id);
+    }
+  }
+
+  String _choiceLabel(AppLocalizations l10n, AiRunChoice c) => switch (c) {
+    AiCloudChoice(:final credential) =>
+      '${aiProviderLabel(l10n, credential.provider)} · ${credential.model}',
+    AiLocalChoice(:final record) => '${l10n.aiModeOnDevice} · ${record.label}',
+  };
 
   void _setCompact(bool on) => setState(() {
     _compact = on;
@@ -152,7 +194,11 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
             .toDouble();
   });
 
-  Future<void> _preview(AiSettings settings, LocalRunPlan? plan) async {
+  Future<void> _preview(
+    AiSettings settings,
+    AiRunChoice choice,
+    LocalRunPlan? plan,
+  ) async {
     final l10n = AppLocalizations.of(context);
     final preset = _preset;
     if (preset == null) return;
@@ -160,7 +206,7 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
       setState(() => _questionError = l10n.errorCodeRequiredField);
       return;
     }
-    final onDevice = _onDevice(settings) && plan != null;
+    final onDevice = choice is AiLocalChoice && plan != null;
     final consent = onDevice
         ? (settings.localConsent ?? settings.consent)
         : settings.consent;
@@ -189,6 +235,7 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
       instructions: preset.isCustom ? _question.text.trim() : null,
       profile: _compact ? 'compact' : null,
       target: onDevice ? AiMode.onDevice.wire : AiMode.cloud.wire,
+      credentialId: choice is AiCloudChoice ? choice.credential.id : null,
       budgetTokens: onDevice ? plan.budgetTokens : null,
       device: onDevice ? plan.device : null,
     );
@@ -243,55 +290,59 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
   ) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final onDevice = _onDevice(settings);
-    LocalRunPlan? plan;
-    if (onDevice) {
-      final supported = ref.watch(localAiSupportedProvider);
-      final planAsync = supported ? ref.watch(localRunPlanProvider) : null;
-      if (planAsync != null && planAsync.isLoading && !planAsync.hasValue) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      plan = planAsync?.value;
-      if (plan == null) {
-        return ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          children: [
-            Text(l10n.aiNotReadyTitle, style: theme.textTheme.titleMedium),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              supported
-                  ? l10n.aiLocalNotReadyBody
-                  : l10n.errorCodeAiLocalUnsupported,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            FilledButton(
-              onPressed: () => context.push(
-                supported ? AppRoutes.aiLocalModels : AppRoutes.aiProvider,
-              ),
-              child: Text(
-                supported ? l10n.aiLocalChooseModel : l10n.aiGoToSetup,
-              ),
-            ),
-          ],
-        );
-      }
-    } else if (!settings.available || !settings.setup.providerReady) {
+    final supported = ref.watch(localAiSupportedProvider);
+    final models = settings.onDeviceAvailable && supported
+        ? ref.watch(localModelsControllerProvider)
+        : null;
+    if (models != null && models.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final choices = aiRunChoices(
+      settings,
+      localSupported: supported,
+      installed: models?.installed ?? const [],
+    );
+    final choice = _choiceFor(choices, settings, models?.activeModelId);
+    if (choice == null) {
+      final localFirst =
+          settings.onDeviceAvailable &&
+          (settings.mode == AiMode.onDevice || !settings.available);
       return ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           Text(l10n.aiNotReadyTitle, style: theme.textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            settings.available ? l10n.aiNotReadyBody : l10n.aiUnavailableBody,
+            localFirst
+                ? (supported
+                      ? l10n.aiLocalNotReadyBody
+                      : l10n.errorCodeAiLocalUnsupported)
+                : settings.available
+                ? l10n.aiNotReadyBody
+                : l10n.aiUnavailableBody,
           ),
           const SizedBox(height: AppSpacing.md),
-          if (settings.available)
+          if (localFirst && supported)
+            FilledButton(
+              onPressed: () => context.push(AppRoutes.aiLocalModels),
+              child: Text(l10n.aiLocalChooseModel),
+            )
+          else if (settings.anyAvailable)
             FilledButton(
               onPressed: () => context.push(AppRoutes.aiAssistant),
               child: Text(l10n.aiGoToSetup),
             ),
         ],
       );
+    }
+    final onDevice = choice.isOnDevice;
+    LocalRunPlan? plan;
+    if (choice is AiLocalChoice) {
+      plan = ref.watch(localRunPlanProvider).value;
+      // Still loading, or the picked model is becoming the active one.
+      if (plan == null || plan.record.id != choice.record.id) {
+        return const Center(child: CircularProgressIndicator());
+      }
     }
     if (!_defaultsApplied && presets.isNotEmpty) {
       _defaultsApplied = true;
@@ -313,6 +364,33 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
+        DropdownButtonFormField<String>(
+          key: ValueKey('model-${choice.key}'),
+          initialValue: choice.key,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: l10n.aiRunModelLabel,
+            prefixIcon: Icon(
+              onDevice ? Icons.smartphone_outlined : Icons.cloud_outlined,
+            ),
+          ),
+          items: [
+            for (final c in choices)
+              DropdownMenuItem(
+                value: c.key,
+                child: Text(
+                  _choiceLabel(l10n, c),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+          onChanged: (key) {
+            for (final c in choices) {
+              if (c.key == key) _selectChoice(c, choice);
+            }
+          },
+        ),
+        const SizedBox(height: AppSpacing.lg),
         Text(l10n.aiWhatToAnalyze, style: theme.textTheme.titleMedium),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
@@ -501,7 +579,7 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
         FilledButton.icon(
           onPressed: draft.isLoading || _preset == null
               ? null
-              : () => _preview(settings, plan),
+              : () => _preview(settings, choice, plan),
           icon: draft.isLoading
               ? const SizedBox.square(
                   dimension: 18,

@@ -10,3 +10,10 @@ import '../../domain/models/user_profile.dart';
 final accountProfileProvider = FutureProvider<UserProfile>((ref) {
   return ref.watch(accountRepositoryProvider).getProfile();
 });
+
+/// Whether the AI features show (Preferences → Funzioni AI, plan.md
+/// section 32.10). False until the profile is known, so a user who turned
+/// them off never sees them flash in.
+final aiFeaturesEnabledProvider = Provider<bool>(
+  (ref) => ref.watch(accountProfileProvider).value?.aiEnabled ?? false,
+);

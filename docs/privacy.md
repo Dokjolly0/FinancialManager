@@ -24,7 +24,7 @@ I dati sono conservati sul server che ospita il backend dell'app. Il proprietari
 
 ## Analisi AI (facoltativa)
 
-L'Analisi AI è disattivata finché non la configuri tu. Per usarla scegli un fornitore di modelli linguistici (per esempio Anthropic, OpenAI, Google o un servizio compatibile con OpenAI) e inserisci una tua chiave API. Prima della prima analisi l'app ti chiede un consenso esplicito, che puoi revocare in qualsiasi momento da **Account → Assistente AI → Privacy e consenso**.
+L'Analisi AI è disattivata finché non la configuri tu. Se non ti interessa, puoi anche nasconderla del tutto da **Account → Preferenze → Funzioni AI**: spegnendola non viene cancellato nulla. Per usarla scegli un fornitore di modelli linguistici (per esempio Anthropic, OpenAI, Google o un servizio compatibile con OpenAI) e inserisci una tua chiave API. Prima della prima analisi l'app ti chiede un consenso esplicito, che puoi revocare in qualsiasi momento da **Account → Assistente AI → Privacy e consenso**.
 
 **Cosa viene inviato al fornitore che hai scelto**, solo quando avvii un'analisi o fai una domanda:
 

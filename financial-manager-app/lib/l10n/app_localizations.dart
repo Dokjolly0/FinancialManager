@@ -1457,7 +1457,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountPreferencesMenuSubtitle.
   ///
   /// In it, this message translates to:
-  /// **'Tema, fuso orario, lingua, saldo'**
+  /// **'Tema, fuso orario, lingua, saldo, funzioni AI'**
   String get accountPreferencesMenuSubtitle;
 
   /// No description provided for @accountDataMenuTitle.
@@ -4697,6 +4697,24 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Formato non riconosciuto: servono file .gguf o .litertlm.'**
   String get errorCodeAiLocalImportUnknownFormat;
+
+  /// No description provided for @aiFeaturesSwitchTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Funzioni AI'**
+  String get aiFeaturesSwitchTitle;
+
+  /// No description provided for @aiFeaturesSwitchSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Assistente AI, analisi nei Report e in Cronologia, scopo dei portafogli. Spegnendole non si cancella nulla: analisi, chiavi e modelli restano dove sono.'**
+  String get aiFeaturesSwitchSubtitle;
+
+  /// No description provided for @aiRunModelLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Modello'**
+  String get aiRunModelLabel;
 }
 
 class _AppLocalizationsDelegate

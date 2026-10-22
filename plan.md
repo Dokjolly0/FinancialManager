@@ -3134,7 +3134,7 @@ Non-goals:
 - `ai_provider_credentials`: one row per (user, provider, base_url) so switching provider does not mean retyping a key. Provider is `anthropic`, `openai`, `gemini` or `openai_compatible` (the last requires `base_url`). Encrypted key, nonce, key version, hint, last test result.
 - `ai_settings`: one row per user: active credential, model, consent version and date, defaults for the analysis options, `max_output_tokens`, optional prices per million tokens, `version` for optimistic locking.
 - `ai_user_context`: one row per user: household size, income type, free text "about me", goals, things to ignore, response style.
-- `ai_analyses`: preset, period, timezone, wallet ids, options, provider, model, prompt version, data fingerprint, status (`STREAMING`, `COMPLETED`, `FAILED`, `CANCELLED`), error code, token totals, `client_request_id` (unique per user, replaces the idempotency header on SSE routes).
+- `ai_analyses`: preset, period, timezone, wallet ids, options, provider, model, the provider account it ran with (`credential_id`, `ON DELETE SET NULL`), prompt version, data fingerprint, status (`STREAMING`, `COMPLETED`, `FAILED`, `CANCELLED`), error code, token totals, `client_request_id` (unique per user, replaces the idempotency header on SSE routes).
 - `ai_messages`: ordered messages of an analysis, kind `CONTEXT` (the exact data block and instructions sent), `REPORT`, `QUESTION`, `ANSWER`, with per-message tokens and status. Follow-ups replay the stored messages and never recompute the data, so answers stay consistent with the report.
 
 ### 32.4 API
@@ -3160,7 +3160,7 @@ All routes require authentication. JSON routes keep the normal request timeout; 
 
 Streaming events: `meta` (analysis and message ids), `delta` (text, coalesced about every 50 ms), `usage`, `done`, `error`; a `: ping` comment every 15 s keeps proxies from closing the connection. Errors detected before the first byte are normal JSON error envelopes. If the client disconnects, the upstream call is cancelled and the partial text is saved with status `CANCELLED`.
 
-Preview and run share the same request body. The preview returns a `data_fingerprint` (SHA-256 of the rendered data block and prompt version). The run sends it back; if the data changed in between the server answers `409 AI_DATA_CHANGED` and the app previews again. The server always rebuilds the data block from the database: the client can only edit the instructions.
+Preview and run share the same request body. A cloud run may pick any of the user's stored provider accounts with `credential_id` (one that has a model and, when the provider needs one, a key); without it the active account runs. The account is stored on the analysis and its follow-ups keep using it, falling back to the active one if it was removed. The setup screen lists every such account and every model installed on the phone (section 33), so the user switches model per analysis without touching the settings; picking a phone model makes it the phone's active model. The preview returns a `data_fingerprint` (SHA-256 of the rendered data block and prompt version). The run sends it back; if the data changed in between the server answers `409 AI_DATA_CHANGED` and the app previews again. The server always rebuilds the data block from the database: the client can only edit the instructions.
 
 On-device analyses (section 33) add `PUT /v1/ai/mode`, a `scope` on the consent routes, `target` and `device` on the preview, and the JSON routes under `/v1/ai/local/` plus `PUT /v1/ai/analyses/{id}/messages/{messageId}/result`; see section 33.8.
 
@@ -3194,6 +3194,8 @@ Error codes: `AI_DISABLED` (503, feature not configured on the server), `AI_NOT_
 - Reverse proxies must not buffer the streaming routes; see `docs/build-deploy.md`.
 
 ### 32.9 Tests
+
+- Credential choice: a run with a non-active account (preview, model sent, stored provider), follow-ups on the same account, fallback after its removal, refused ids including another user's.
 
 - Provider adapters against scripted `httptest` servers: deltas, usage, end of stream, cancellation, error classification, model list parsing.
 - SSRF policy table, secretbox round trip, tampering and key rotation.
@@ -3382,6 +3384,14 @@ Error codes: `AI_ON_DEVICE_DISABLED` (503), `AI_LOCAL_CONSENT_REQUIRED` (403), `
 - Backend (`internal/ai/local_integration_test.go`, harness without the secretbox): full path without a cloud credential, missing local consent → 403, fingerprint mismatch → 409, prepare idempotency, result over 200 KB → 422, result sent twice (same → 200, different → 409), result on a cloud analysis → 409, local follow-ups and their limit, cloud follow-up on a local analysis → 409, expiry window with a fake clock, rate limit, mode version conflict, unknown error codes normalized. Compact golden files it/en, collector limits, budget determinism, preview/run fingerprint equality.
 - App, with fake engines and servers: runner (event order, submitted content, stop, out of memory, context too long, outbox, history trimming), turn routing, downloader (resume, restart, 416, changed ETag, wrong checksum, Wi-Fi lost, no space, gated), store, catalog validation (unique ids, pinned URLs and SHA-256, engine/format coherence, RAM and context bounds, licenses, notes in both languages), model host (params, reloads, idle unload, thermal refusal, speeds, benchmark), run plan (budget, context levels, estimate, speed sources), outbox flush on sign-in and resume; widget tests for the preview's context states and quick fixes, the models screen (progress, pause, failure, license, gated token), the on-device disclosure and the mode switch.
 - Manual protocol on the S26 Ultra: download with Wi-Fi lost and resumed, corrupted file, GGUF import, benchmark, standard and compact check-ups on CPU and GPU, follow-ups, stop, app killed mid-run, airplane mode after prepare, heat after repeated runs, model deletion, history on a second device. First field result: a full report on three months and 150 transactions in 40–60 s with Gemma 4 E2B on the GPU.
+
+### 32.10 AI features switch
+
+**Account → Preferenze → Funzioni AI** turns every AI entry point off for the account: the Assistente AI menu, the Analisi AI card in Reports, the "analyze with AI" action in Cronologia, the wallet purpose field, and the `/app/ai/…` and `/app/account/ai/…` routes (a stale link lands on Account). Turning it off deletes nothing: analyses, keys, personal context, wallet purposes and models on the phone stay as they are and come back when it is turned on.
+
+- Stored as `users.ai_enabled` (migration `0035_ai_choice_and_switch`, default `true`, so existing accounts keep what they had), returned by `GET /v1/me` and accepted by `PATCH /v1/me`, where an omitted value keeps the stored one (older apps don't send it).
+- It only drives what the app shows; the AI routes don't check it.
+- Until the profile has loaded the app treats the features as off, so they never flash in for a user who turned them off.
 
 ---
 

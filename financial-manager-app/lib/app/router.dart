@@ -8,6 +8,7 @@ import '../features/account/presentation/screens/account_preferences_screen.dart
 import '../features/account/presentation/screens/account_profile_screen.dart';
 import '../features/account/presentation/screens/account_screen.dart';
 import '../features/account/presentation/screens/account_security_screen.dart';
+import '../features/account/presentation/view_models/account_providers.dart';
 import '../features/ai/presentation/screens/ai_analysis_screen.dart';
 import '../features/ai/presentation/screens/ai_analysis_setup_screen.dart';
 import '../features/ai/presentation/screens/ai_assistant_screen.dart';
@@ -125,7 +126,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ? null
               : AppRoutes.registerGoogleCompletion;
         case SessionStatus.authenticated:
-          return isAuthRoute ? AppRoutes.home : null;
+          if (isAuthRoute) return AppRoutes.home;
+          // AI features turned off (section 32.10): their screens are
+          // gone too, even from a stale link.
+          final aiOff =
+              ref.read(accountProfileProvider).value?.aiEnabled == false;
+          if (aiOff &&
+              (path.startsWith('/app/ai') ||
+                  path.startsWith(AppRoutes.aiAssistant))) {
+            return AppRoutes.account;
+          }
+          return null;
       }
     },
     routes: [

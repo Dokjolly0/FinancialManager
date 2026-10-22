@@ -16,6 +16,7 @@ class UserProfile {
     required this.theme,
     required this.balanceHiddenDefault,
     required this.firstDayOfWeek,
+    this.aiEnabled = true,
     required this.version,
     required this.createdAt,
   });
@@ -35,6 +36,9 @@ class UserProfile {
   final String theme;
   final bool balanceHiddenDefault;
   final String firstDayOfWeek;
+
+  /// Shows the AI analysis features (plan.md section 32.10).
+  final bool aiEnabled;
   final int version;
   final DateTime createdAt;
 
@@ -55,6 +59,7 @@ class UserProfile {
       theme: json['theme'] as String,
       balanceHiddenDefault: json['balance_hidden_default'] as bool,
       firstDayOfWeek: json['first_day_of_week'] as String,
+      aiEnabled: json['ai_enabled'] as bool? ?? true,
       version: json['version'] as int,
       createdAt: DateTime.parse(json['created_at'] as String),
     );

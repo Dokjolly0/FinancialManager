@@ -42,6 +42,7 @@ class AccountRepositoryImpl implements AccountRepository {
         'locale': update.locale,
         'theme': update.theme,
         'balance_hidden_default': update.balanceHiddenDefault,
+        'ai_enabled': ?update.aiEnabled,
         'first_day_of_week': update.firstDayOfWeek,
         'version': update.expectedVersion,
       });

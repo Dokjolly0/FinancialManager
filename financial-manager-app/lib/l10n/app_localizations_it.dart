@@ -785,7 +785,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get accountPreferencesMenuSubtitle =>
-      'Tema, fuso orario, lingua, saldo';
+      'Tema, fuso orario, lingua, saldo, funzioni AI';
 
   @override
   String get accountDataMenuTitle => 'Dati';
@@ -2651,4 +2651,14 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get errorCodeAiLocalImportUnknownFormat =>
       'Formato non riconosciuto: servono file .gguf o .litertlm.';
+
+  @override
+  String get aiFeaturesSwitchTitle => 'Funzioni AI';
+
+  @override
+  String get aiFeaturesSwitchSubtitle =>
+      'Assistente AI, analisi nei Report e in Cronologia, scopo dei portafogli. Spegnendole non si cancella nulla: analisi, chiavi e modelli restano dove sono.';
+
+  @override
+  String get aiRunModelLabel => 'Modello';
 }

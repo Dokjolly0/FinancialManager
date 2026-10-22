@@ -262,7 +262,7 @@
   "accountSecurityMenuSubtitle": "Password, sessioni attive, logout",
   "accountLinkedAccountsMenuTitle": "Account collegati",
   "accountPreferencesMenuTitle": "Preferenze",
-  "accountPreferencesMenuSubtitle": "Tema, fuso orario, lingua, saldo",
+  "accountPreferencesMenuSubtitle": "Tema, fuso orario, lingua, saldo, funzioni AI",
   "accountDataMenuTitle": "Dati",
   "accountDataMenuSubtitle": "Esporta o elimina il tuo account",
 
@@ -1187,5 +1187,8 @@
   "errorCodeAiLocalDownloadNoSpace": "Spazio insufficiente sul telefono per questo modello.",
   "errorCodeAiLocalDownloadChecksum": "Il file scaricato non corrisponde a quello atteso ed è stato scartato.",
   "errorCodeAiLocalDownloadInsecureUrl": "L'indirizzo deve iniziare con https://.",
-  "errorCodeAiLocalImportUnknownFormat": "Formato non riconosciuto: servono file .gguf o .litertlm."
+  "errorCodeAiLocalImportUnknownFormat": "Formato non riconosciuto: servono file .gguf o .litertlm.",
+  "aiFeaturesSwitchTitle": "Funzioni AI",
+  "aiFeaturesSwitchSubtitle": "Assistente AI, analisi nei Report e in Cronologia, scopo dei portafogli. Spegnendole non si cancella nulla: analisi, chiavi e modelli restano dove sono.",
+  "aiRunModelLabel": "Modello"
 }

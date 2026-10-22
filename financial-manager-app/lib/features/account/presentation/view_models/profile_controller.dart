@@ -23,6 +23,7 @@ class ProfileController {
     String? theme,
     bool? balanceHiddenDefault,
     String? firstDayOfWeek,
+    bool? aiEnabled,
   }) async {
     final updated = await ref
         .read(accountRepositoryProvider)
@@ -36,6 +37,7 @@ class ProfileController {
             balanceHiddenDefault:
                 balanceHiddenDefault ?? current.balanceHiddenDefault,
             firstDayOfWeek: firstDayOfWeek ?? current.firstDayOfWeek,
+            aiEnabled: aiEnabled,
             expectedVersion: current.version,
           ),
         );
