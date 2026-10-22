@@ -97,6 +97,12 @@ flutter_launcher_icons:
   adaptive_icon_background: "#193366"
   adaptive_icon_foreground: "assets/icon/icon_foreground.png"
   remove_alpha_ios: true
+  # Web dashboard: favicon and web/icons/* (manifest icons).
+  web:
+    generate: true
+    image_path: "assets/icon/icon.png"
+    background_color: "#193366"
+    theme_color: "#193366"
 
 # llamadart (behind flutter_edge_ai_llama) builds only the llama.cpp runtime
 # (LiteRT-LM comes from flutter_edge_ai_litertlm) and, on Android, only the
