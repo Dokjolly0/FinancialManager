@@ -1,0 +1,42 @@
+# Site block for the host's Caddy (installed as a system service, config in
+# /etc/caddy/Caddyfile). Append it next to the other sites, then:
+#   sudo caddy validate --config /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+# Caddy gets and renews the Let's Encrypt certificate by itself once the DNS
+# record points at the VPS, and redirects http to https.
+# See docs/build-deploy.md, "DNS e HTTPS".
+
+financialmanager.alexviolatto.dev {
+	# HTTPS only from now on, for a year (plan.md section 19.3). .dev is
+	# HSTS-preloaded anyway.
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	# The API serves Prometheus metrics on /metrics without auth: they must
+	# stay off the public internet (plan.md section 22.1).
+	@metrics path /api/metrics /api/metrics/*
+	respond @metrics 404
+
+	# The API, published by compose.prod.yaml on 127.0.0.1:10003
+	# (API_HOST_BIND=127.0.0.1). handle_path strips /api, so the backend keeps
+	# its own routes (/v1/..., /health/...): the app's base URL is
+	# https://financialmanager.alexviolatto.dev/api/v1.
+	# Caddy sets X-Forwarded-For; the API trusts it only from
+	# TRUSTED_PROXY_CIDRS.
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:10003 {
+			# AI analyses stream as Server-Sent Events: send every chunk at
+			# once. Caddy has no read timeout by default, so streams up to
+			# AI_STREAM_MAX_DURATION are not cut.
+			flush_interval -1
+		}
+	}
+
+	# Everything else: the web dashboard's static files (a placeholder page
+	# until the Flutter web build exists). try_files sends unknown paths to
+	# index.html so the app's own routes work on reload.
+	handle {
+		root * /var/www/financialmanager
+		try_files {path} /index.html
+		file_server
+	}
+}

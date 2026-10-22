@@ -17,7 +17,7 @@ func clearEnv(t *testing.T) {
 		"BACKUP_ENABLED", "BACKUP_ENCRYPTION_KEY", "BACKUP_INTERVAL", "BACKUP_RETENTION_DAYS",
 		"BACKUP_RETENTION_MONTHS", "BACKUP_INCLUDE_MEDIA", "BACKUP_GDRIVE_FOLDER_NAME",
 		"GDRIVE_CLIENT_ID", "GDRIVE_CLIENT_SECRET", "GDRIVE_REFRESH_TOKEN",
-		"HTTP_REQUEST_TIMEOUT", "AI_KEY_ENCRYPTION_KEY", "AI_KEY_ENCRYPTION_KEY_PREVIOUS",
+		"HTTP_REQUEST_TIMEOUT", "TRUSTED_PROXY_CIDRS", "AI_KEY_ENCRYPTION_KEY", "AI_KEY_ENCRYPTION_KEY_PREVIOUS",
 		"AI_ALLOW_PRIVATE_BASE_URLS", "AI_ALLOWED_BASE_URL_HOSTS", "AI_STREAM_MAX_DURATION",
 		"AI_STREAM_IDLE_TIMEOUT", "AI_MAX_PROMPT_TOKENS", "AI_RUNS_PER_HOUR",
 		"AI_ON_DEVICE_ENABLED", "AI_LOCAL_RUNS_PER_HOUR", "AI_LOCAL_MAX_DURATION",
@@ -244,5 +244,28 @@ func TestLoad_AIInvalidSettings(t *testing.T) {
 				t.Fatal("expected a configuration error")
 			}
 		})
+	}
+}
+
+func TestLoad_TrustedProxies(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("DATABASE_URL", "postgres://localhost/test")
+	t.Setenv("TRUSTED_PROXY_CIDRS", "172.16.0.0/12, 10.0.0.1")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	got := make([]string, 0, len(cfg.TrustedProxies))
+	for _, p := range cfg.TrustedProxies {
+		got = append(got, p.String())
+	}
+	if strings.Join(got, ",") != "172.16.0.0/12,10.0.0.1/32" {
+		t.Fatalf("TrustedProxies = %v", got)
+	}
+
+	t.Setenv("TRUSTED_PROXY_CIDRS", "not-an-ip")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "TRUSTED_PROXY_CIDRS") {
+		t.Fatalf("expected a TRUSTED_PROXY_CIDRS error, got %v", err)
 	}
 }

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // Kotlin is provided by AGP's built-in Kotlin support (android.builtInKotlin=true),
@@ -5,6 +7,16 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android Gradle plugin.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// One upload key for every PC (and later for Play App Signing): its path
+// and passwords live in android/key.properties, which is never committed
+// (see key.properties.example and docs/build-deploy.md, "Firma Android").
+// Without the file, builds fall back to this PC's debug key, as CI does.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val hasUploadKey = !keystoreProperties.isEmpty
 
 android {
     namespace = "com.alexviolatto.financialmanager"
@@ -30,11 +42,26 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasUploadKey) {
+            create("upload") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
+        // Debug builds use the upload key too, so Google Sign-In needs a
+        // single SHA-1 registered whatever PC built the APK.
+        val signing = signingConfigs.getByName(if (hasUploadKey) "upload" else "debug")
+        debug {
+            signingConfig = signing
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signing
             // R8 strips methods that plugins call only through JNI.
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

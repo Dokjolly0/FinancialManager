@@ -1,0 +1,9 @@
+# Copy to key.properties (never committed) and fill in. storeFile can be an
+# absolute path, so the keystore can live outside the repository; a
+# relative path is resolved from android/app. With a PKCS12 keystore the
+# store and key passwords are the same. See docs/build-deploy.md, "Firma
+# Android".
+storeFile=C:/Users/Alex/.android-keys/financialmanager-upload.jks
+storePassword=CHANGE_ME
+keyAlias=upload
+keyPassword=CHANGE_ME

@@ -157,6 +157,21 @@ Restoring an older database dump next to the latest media archive is
 safe for balances and transactions. At worst a few images are missing,
 for assets the orphan cleanup had already removed.
 
+### Moving to another server
+
+To move the whole stack to another VPS, copy the live data rather than
+the last Drive backup: stop `api` and `worker`, take a `pg_dump` and a
+tar of the `financial-manager_object_storage_data` volume, restore both
+on the new host and reuse the same `.env`, so sessions, the users'
+encrypted AI keys and the existing Drive backups stay valid. The
+step-by-step procedure, used in October 2026 to move from `remote-viewer`
+to `alex-violatto`, is in
+[`../../docs/build-deploy.md`](../../docs/build-deploy.md), section 10.
+The Drive backups above are the fallback if the old host is gone.
+
+Never run two instances against the same Drive folder: each worker
+applies its own retention, and the two histories would mix.
+
 ### Inspecting a backup on your own machine
 
 `cmd/restore-backup` turns an encrypted backup into a running database
@@ -282,8 +297,8 @@ must be run from a cron/scheduler external to the application container,
 for example:
 
 ```cron
-0 3 * * * cd /path/to/financial-manager-backend && BACKUP_ENCRYPTION_KEY=$(cat /run/secrets/backup_key) ./scripts/backup.sh compose.yaml compose.prod.yaml >> /var/log/fm-backup.log 2>&1
-0 5 * * 0 cd /path/to/financial-manager-backend && BACKUP_ENCRYPTION_KEY=$(cat /run/secrets/backup_key) ./scripts/test-restore.sh compose.yaml compose.prod.yaml >> /var/log/fm-restore-test.log 2>&1
+0 3 * * * cd /projects/FinancialManager/financial-manager-backend && BACKUP_ENCRYPTION_KEY=$(cat /run/secrets/backup_key) ./scripts/backup.sh compose.yaml compose.prod.yaml >> /var/log/fm-backup.log 2>&1
+0 5 * * 0 cd /projects/FinancialManager/financial-manager-backend && BACKUP_ENCRYPTION_KEY=$(cat /run/secrets/backup_key) ./scripts/test-restore.sh compose.yaml compose.prod.yaml >> /var/log/fm-restore-test.log 2>&1
 ```
 
 A `test-restore.sh` failure is an alertable event (plan.md section

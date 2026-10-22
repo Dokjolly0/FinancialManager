@@ -1013,7 +1013,7 @@ Do not keep the balance as client-modifiable global state. After a mutation, use
 
 The client must include:
 
-- base URL per environment;
+- base URL per environment (`lib/core/api/api_environment.dart`: production `https://financialmanager.alexviolatto.dev/api/v1`, local `http://10.0.2.2:10003/v1` for the Android emulator; `--dart-define=API_BASE_URL` overrides both);
 - differentiated timeouts;
 - access-token interceptor;
 - serialized refresh token, avoiding concurrent refresh requests;
@@ -2300,6 +2300,8 @@ Do not expose methods that fetch a record by ID and delegate the check to the cl
 - No PostgreSQL or Redis port exposed publicly.
 - Certificates with automatic renewal.
 
+Implemented: the host's Caddy on the `alex-violatto` VPS terminates TLS for `financialmanager.alexviolatto.dev` with automatic Let's Encrypt certificates, redirects http to https and sends `Strict-Transport-Security: max-age=31536000; includeSubDomains`; it forwards `/api/*` to the API on `127.0.0.1:10003` with the prefix stripped and answers 404 on `/api/metrics` (section 22.1). The site block is `financial-manager-backend/deploy/Caddyfile.example`. Android release builds refuse cleartext traffic: only the debug manifest sets `usesCleartextTraffic`, for the local backend on the emulator. See `docs/build-deploy.md`.
+
 ### 19.4 Secrets
 
 - Secret manager in production.
@@ -2319,6 +2321,8 @@ Scopes:
 - image upload and search.
 
 Apply stricter limits to login, password reset, email verification, and the Google exchange.
+
+Client IP behind the reverse proxy: chi's `RealIP` is not used, because it trusts `X-Forwarded-For`/`X-Real-IP` from anyone. `httpserver.RealIP` reads `X-Forwarded-For` only when the TCP peer is inside `TRUSTED_PROXY_CIDRS` (in production `172.16.0.0/12`, the Docker bridge Caddy connects through) and takes the rightmost untrusted address; with the variable empty the TCP peer is the client. The session's client IP hash uses that address, without the port.
 
 ### 19.6 Upload
 
@@ -2464,7 +2468,7 @@ In production it's preferable not to publish PostgreSQL and Redis. If an operati
 - "127.0.0.1:10002:6379"
 ```
 
-The API can listen on `10003`, ideally behind a TLS reverse proxy on `443`. MinIO is exposed on `10004` for local host-run tooling and integration tests only; services inside Docker still use `object-storage:9000`.
+The API can listen on `10003`, ideally behind a TLS reverse proxy on `443`. In production it is published on `127.0.0.1:10003` only (`API_HOST_BIND=127.0.0.1`) and reached through the host's Caddy (section 19.3). MinIO is exposed on `10004` for local host-run tooling and integration tests only; services inside Docker still use `object-storage:9000`.
 
 ### 21.4 Services
 
@@ -2482,6 +2486,8 @@ reverse-proxy   -- production
 - `backend_internal`: API, worker, PostgreSQL, Redis, object storage.
 - `edge`: reverse proxy and API.
 - Database and Redis not connected to the edge network.
+
+In production the reverse proxy is Caddy installed on the host (it also serves other sites), not a container: it reaches the API through the published loopback port, so the `edge` network only carries the API.
 
 Containers communicate using the service name and internal port, not the host port:
 
@@ -2703,6 +2709,8 @@ Initial targets to validate:
 - signing only in a protected environment;
 - distribution to testers.
 
+Android signing (implemented): one upload keystore signs release and debug builds on every PC, so Google Sign-In needs a single SHA-1 and APKs built anywhere update each other. `android/app/build.gradle.kts` reads its path and passwords from `android/key.properties` (never committed; `key.properties.example` shows the fields); without it builds fall back to the local debug key, which is what CI does today. For the Play Store the keystore is the upload key of Play App Signing, and the SHA-1 of Google's app signing key gets its own Android OAuth client. Signing in CI from GitHub Secrets is documented as future work in `docs/build-deploy.md`.
+
 ### 24.2 Go pipeline
 
 - `go fmt`/format check;
@@ -2717,6 +2725,8 @@ Initial targets to validate:
 - registry push.
 
 ### 24.3 Deploy
+
+Production runs on the `alex-violatto` VPS (`/projects/FinancialManager`, Docker Compose behind the host's Caddy); `docs/build-deploy.md` has the procedure, including moving the stack to another VPS (database dump plus the MinIO volume, same `.env`).
 
 1. Backup or verification of a recent backup.
 2. Running compatible migrations.

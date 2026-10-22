@@ -10,7 +10,11 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:10003/v1   # emulator →
 flutter test
 ```
 
-The API base URL comes from `--dart-define` (`lib/core/api/api_environment.dart`); release builds are described in [`../docs/build-deploy.md`](../docs/build-deploy.md).
+The API base URL comes from `--dart-define` (`lib/core/api/api_environment.dart`); without it, builds use production, `https://financialmanager.alexviolatto.dev/api/v1`. Only debug builds may use plain http (the debug manifest sets `usesCleartextTraffic` for the local backend on the emulator); release builds are HTTPS only.
+
+## Signing
+
+Release and debug builds are signed with one upload key, the same on every PC, read from `android/key.properties` (copy `android/key.properties.example`; the file and the keystore are never committed). Without it builds fall back to the PC's debug key: they compile, but cannot update an installed app and Google Sign-In fails. Creating the key, using it on several PCs, registering its SHA-1 for Google Sign-In and the Play Store setup are in [`../docs/build-deploy.md`](../docs/build-deploy.md) ("Firma Android").
 
 ## Structure
 

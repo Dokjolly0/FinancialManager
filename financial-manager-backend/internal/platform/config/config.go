@@ -6,6 +6,7 @@ package config
 import (
 	"encoding/base64"
 	"fmt"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
@@ -20,6 +21,11 @@ type Config struct {
 	// HTTPRequestTimeout bounds every route except the AI streaming ones,
 	// which have their own limits below (plan.md section 32.4).
 	HTTPRequestTimeout time.Duration
+
+	// TrustedProxies are the reverse proxies whose X-Forwarded-For header
+	// names the real client (TRUSTED_PROXY_CIDRS). Empty: the TCP peer is
+	// the client, as when the API is reached directly.
+	TrustedProxies []netip.Prefix
 
 	// MetricsAddr is only used by the worker process (the API exposes
 	// /metrics on HTTPAddr itself, alongside its regular routes).
@@ -181,11 +187,26 @@ func Load() (Config, error) {
 		return out
 	}
 
+	parsePrefixes := func(name string) []netip.Prefix {
+		var out []netip.Prefix
+		for _, e := range splitList(name) {
+			if p, err := netip.ParsePrefix(e); err == nil {
+				out = append(out, p.Masked())
+			} else if addr, err := netip.ParseAddr(e); err == nil {
+				out = append(out, netip.PrefixFrom(addr, addr.BitLen()))
+			} else {
+				errs = append(errs, fmt.Sprintf("%s: %q is not a CIDR or IP address", name, e))
+			}
+		}
+		return out
+	}
+
 	cfg := Config{
 		AppEnv:   optionalString("APP_ENV", EnvLocal),
 		HTTPAddr: optionalString("HTTP_ADDR", ":8080"),
 
 		HTTPRequestTimeout: optionalDuration("HTTP_REQUEST_TIMEOUT", 30*time.Second),
+		TrustedProxies:     parsePrefixes("TRUSTED_PROXY_CIDRS"),
 		MetricsAddr:        optionalString("METRICS_ADDR", ":9101"),
 
 		DatabaseURL: requireString("DATABASE_URL"),

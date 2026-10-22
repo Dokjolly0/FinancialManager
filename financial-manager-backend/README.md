@@ -14,7 +14,7 @@ cp .env.example .env
 docker compose -f compose.yaml -f compose.dev.yaml up --build
 ```
 
-Default dev host ports (loopback-only, configurable in `.env`): PostgreSQL `10001`, Redis `10002`, API `10003`, MinIO `10004`. In production, only the API is published, by default on `0.0.0.0:10003`, and clients reach it at `http://83.228.246.84:10003/v1`. Worker metrics stay internal on `9101`.
+Default dev host ports (loopback-only, configurable in `.env`): PostgreSQL `10001`, Redis `10002`, API `10003`, MinIO `10004`. In production, only the API is published, on `API_HOST_BIND:API_HOST_PORT` (`127.0.0.1:10003` on the live VPS): the host's Caddy terminates HTTPS and forwards `https://financialmanager.alexviolatto.dev/api/*` to it with the `/api` prefix stripped, so clients use `https://financialmanager.alexviolatto.dev/api/v1`. `TRUSTED_PROXY_CIDRS` lets the API read the real client IP from Caddy's `X-Forwarded-For`. The site block is in [`deploy/Caddyfile.example`](deploy/Caddyfile.example); the full procedure is in [`../docs/build-deploy.md`](../docs/build-deploy.md). Worker metrics stay internal on `9101`.
 
 Run migrations manually against the dev stack:
 
