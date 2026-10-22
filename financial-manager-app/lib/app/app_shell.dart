@@ -207,8 +207,9 @@ class _NavButton extends StatelessWidget {
             Icon(selected ? selectedIcon : icon, color: color),
             Text(
               label,
-              style: Theme.of(context).textTheme.labelMedium
-                  ?.copyWith(color: color),
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(color: color),
             ),
           ],
         ),

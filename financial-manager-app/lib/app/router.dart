@@ -8,6 +8,18 @@ import '../features/account/presentation/screens/account_preferences_screen.dart
 import '../features/account/presentation/screens/account_profile_screen.dart';
 import '../features/account/presentation/screens/account_screen.dart';
 import '../features/account/presentation/screens/account_security_screen.dart';
+import '../features/account/presentation/view_models/account_providers.dart';
+import '../features/ai/presentation/screens/ai_analysis_screen.dart';
+import '../features/ai/presentation/screens/ai_analysis_setup_screen.dart';
+import '../features/ai/presentation/screens/ai_assistant_screen.dart';
+import '../features/ai/presentation/screens/ai_history_screen.dart';
+import '../features/ai/presentation/screens/ai_local_models_screen.dart';
+import '../features/ai/presentation/screens/ai_local_runtime_screen.dart';
+import '../features/ai/presentation/screens/ai_pending_results_screen.dart';
+import '../features/ai/presentation/screens/ai_prompt_preview_screen.dart';
+import '../features/ai/presentation/screens/ai_personal_context_screen.dart';
+import '../features/ai/presentation/screens/ai_provider_settings_screen.dart';
+import '../features/ai/presentation/screens/ai_wallet_purposes_screen.dart';
 import '../features/authentication/presentation/screens/forgot_password_screen.dart';
 import '../features/authentication/presentation/screens/google_registration_completion_screen.dart';
 import '../features/authentication/presentation/screens/login_screen.dart';
@@ -48,6 +60,24 @@ abstract final class AppRoutes {
   static const accountData = '/app/account/data';
   static const wallets = '/app/account/wallets';
   static const walletsNew = '/app/account/wallets/new';
+
+  // AI analysis settings (plan.md section 32.7).
+  static const aiAssistant = '/app/account/ai';
+  static const aiProvider = '/app/account/ai/provider';
+  static const aiContext = '/app/account/ai/context';
+  static const aiWalletPurposes = '/app/account/ai/wallet-purposes';
+
+  // On-device models (plan.md section 33).
+  static const aiLocalModels = '/app/account/ai/local-models';
+  static const aiLocalRuntime = '/app/account/ai/local-runtime';
+
+  // AI analysis flow: setup → preview → run, plus the history.
+  static const aiNew = '/app/ai/new';
+  static const aiPreview = '/app/ai/preview';
+  static const aiRun = '/app/ai/run';
+  static const aiHistory = '/app/ai/analyses';
+  static const aiPending = '/app/ai/pending';
+  static String aiAnalysis(String id) => '/app/ai/analyses/$id';
 
   static String transactionDetail(String id) => '/app/transactions/$id';
   static String transactionEdit(String id) => '/app/transactions/$id/edit';
@@ -98,7 +128,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ? null
               : AppRoutes.registerGoogleCompletion;
         case SessionStatus.authenticated:
-          return isAuthRoute ? AppRoutes.home : null;
+          if (isAuthRoute) return AppRoutes.home;
+          // AI features turned off (section 32.10): their screens are
+          // gone too, even from a stale link.
+          final aiOff =
+              ref.read(accountProfileProvider).value?.aiEnabled == false;
+          if (aiOff &&
+              (path.startsWith('/app/ai') ||
+                  path.startsWith(AppRoutes.aiAssistant))) {
+            return AppRoutes.account;
+          }
+          return null;
       }
     },
     routes: [
@@ -159,6 +199,55 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.wallets,
         builder: (_, _) => const WalletsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiAssistant,
+        builder: (_, _) => const AiAssistantScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiProvider,
+        builder: (_, _) => const AiProviderSettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiContext,
+        builder: (_, _) => const AiPersonalContextScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiWalletPurposes,
+        builder: (_, _) => const AiWalletPurposesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiLocalModels,
+        builder: (_, _) => const AiLocalModelsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiLocalRuntime,
+        builder: (_, _) => const AiLocalRuntimeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiNew,
+        builder: (_, _) => const AiAnalysisSetupScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiPreview,
+        builder: (_, _) => const AiPromptPreviewScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiRun,
+        builder: (_, _) => const AiAnalysisScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiPending,
+        builder: (_, _) => const AiPendingResultsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiHistory,
+        builder: (_, _) => const AiHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/app/ai/analyses/:id',
+        builder: (_, state) =>
+            AiAnalysisScreen(analysisId: state.pathParameters['id']),
       ),
       GoRoute(
         path: AppRoutes.walletsNew,

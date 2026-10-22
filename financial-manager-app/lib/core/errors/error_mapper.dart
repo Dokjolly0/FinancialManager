@@ -49,7 +49,11 @@ abstract final class ErrorMapper {
       return SessionExpiredError(requestId: envelope?.requestId);
     }
 
-    if (status == 429) {
+    // A 429 with a specific code (e.g. AI_PROVIDER_RATE_LIMITED, the
+    // user's AI provider throttling them) is a domain error with its own
+    // message; only the platform's own RATE_LIMITED is "too many attempts".
+    if (status == 429 &&
+        (envelope == null || envelope.code == 'RATE_LIMITED')) {
       final retryAfterHeader = response?.headers.value('retry-after');
       final retryAfterSeconds = int.tryParse(retryAfterHeader ?? '');
       return RateLimitedError(

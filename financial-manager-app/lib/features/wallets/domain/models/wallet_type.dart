@@ -43,6 +43,9 @@ const List<String> walletIconKeys = [
   'restaurant',
 ];
 
+/// Matches the backend wallets.MaxPurposeLength (migration 0030).
+const walletPurposeMaxLength = 280;
+
 const String defaultWalletIcon = 'wallet';
 const String defaultWalletColor = '#6750A4';
 

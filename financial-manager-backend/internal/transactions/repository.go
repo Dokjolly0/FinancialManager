@@ -336,7 +336,7 @@ func (r *Repository) List(ctx context.Context, filter ListFilter) (Page, error) 
 		// Substring match anywhere in the title or description, so "sim" (or
 		// just "si") finds "Canone sim". LIKE metacharacters typed by the user
 		// are escaped so they match literally.
-		args = append(args, "%"+escapeLike(NormalizeTitle(filter.Title))+"%")
+		args = append(args, TitleSearchPattern(filter.Title))
 		placeholder := "$" + strconv.Itoa(len(args))
 		conditions = append(conditions, "(title_normalized LIKE "+placeholder+` ESCAPE '\'`+
 			" OR lower(description) LIKE "+placeholder+` ESCAPE '\')`)
@@ -460,6 +460,13 @@ func (r *Repository) ListPaymentGroupSummaries(ctx context.Context, userID uuid.
 		out = append(out, s)
 	}
 	return out, rows.Err()
+}
+
+// TitleSearchPattern is the LIKE pattern List uses for a title search:
+// the normalized text, escaped, anywhere in the title. Shared with the
+// reports filter so the AI analysis matches exactly what Cronologia shows.
+func TitleSearchPattern(title string) string {
+	return "%" + escapeLike(NormalizeTitle(title)) + "%"
 }
 
 // escapeLike escapes the LIKE metacharacters (%, _ and the escape character

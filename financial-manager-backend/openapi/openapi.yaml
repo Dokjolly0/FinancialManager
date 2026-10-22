@@ -13,6 +13,11 @@ info:
 servers:
   - url: /v1
 
+# Every route requires the access token except the health probes, which
+# opt out with an empty security list.
+security:
+  - bearerAuth: []
+
 paths:
   /wallets/{id}/voucher-lots:
     get:
@@ -166,11 +171,659 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/VoucherExpenseResult" }
 
+  /ai/settings:
+    get:
+      summary: AI analysis settings, stored providers (keys masked), consent and setup checklist.
+      description: >
+        Available on every server. When AI_KEY_ENCRYPTION_KEY is not set the
+        response has available=false and every other /ai route answers 503
+        AI_DISABLED (plan.md section 32.5).
+      operationId: getAiSettings
+      tags: [ai]
+      responses:
+        "200":
+          description: Current settings. API keys are never returned, only key_hint.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiSettings" }
+    put:
+      summary: Save the provider, model and analysis defaults, and make that provider active.
+      description: >
+        Upserts the stored credential for (provider, base_url). api_key
+        omitted or null keeps the stored key, "" removes it, any other value
+        replaces it. A provider other than openai_compatible must end up
+        with a key.
+      operationId: saveAiSettings
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiSettingsRequest" }
+      responses:
+        "200":
+          description: The saved settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiSettings" }
+        "409":
+          description: version is stale (CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: >
+            Validation error. Field codes include AI_PROVIDER_INVALID,
+            AI_BASE_URL_INVALID (not https, credentials, query or fragment),
+            AI_BASE_URL_NOT_ALLOWED (private or reserved address, or not in
+            AI_ALLOWED_BASE_URL_HOSTS), REQUIRED_FIELD (model, api_key),
+            AI_TEXT_TOO_LONG and VALUE_OUT_OF_RANGE (max_output_tokens).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: AI_DISABLED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/settings/test:
+    post:
+      summary: Check a provider configuration with the cheapest possible call.
+      description: >
+        With an empty body the active configuration is tested. Otherwise
+        missing fields fall back to the stored credential for that provider
+        and base URL, so a form can be tested before saving. With a model a
+        16-token completion is sent, otherwise the model list is fetched.
+        Provider failures are reported in the body. Rate limited to 10 probes
+        per 10 minutes, shared with /ai/models.
+      operationId: testAiConnection
+      tags: [ai]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiProbeRequest" }
+      responses:
+        "200":
+          description: Result of the probe.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  latency_ms: { type: integer }
+                  model: { type: [string, "null"] }
+                  error_code: { type: [string, "null"], description: "An AI_PROVIDER_* code." }
+                  error_message: { type: [string, "null"], description: "The provider's explanation, truncated and redacted." }
+        "409":
+          description: AI_NOT_CONFIGURED (empty body and no active provider).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: RATE_LIMITED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/models:
+    post:
+      summary: List the provider's chat models.
+      description: POST because the body may carry an API key. Same resolution and rate limit as /ai/settings/test.
+      operationId: listAiModels
+      tags: [ai]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiProbeRequest" }
+      responses:
+        "200":
+          description: At most 500 models.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        display_name: { type: string }
+        "502":
+          description: An AI_PROVIDER_* error (429 for AI_PROVIDER_RATE_LIMITED, 504 for AI_PROVIDER_TIMEOUT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/credentials/{id}:
+    delete:
+      summary: Forget a stored provider and its key. If it was active, no provider is active afterwards.
+      operationId: deleteAiCredential
+      tags: [ai]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Deleted.
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/consent:
+    put:
+      summary: Accept the AI analysis disclosure.
+      operationId: acceptAiConsent
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [consent_version]
+              properties:
+                consent_version:
+                  type: integer
+                  description: Must equal the scope's current_version from GET /ai/settings.
+                scope: { type: string, enum: [cloud, on_device], default: cloud }
+      responses:
+        "204":
+          description: Accepted.
+        "422":
+          description: AI_CONSENT_VERSION_INVALID.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      summary: Revoke consent. Analyses are refused until it is accepted again.
+      operationId: revokeAiConsent
+      tags: [ai]
+      parameters:
+        - name: scope
+          in: query
+          schema: { type: string, enum: [cloud, on_device], default: cloud }
+      responses:
+        "204":
+          description: Revoked.
+
+  /ai/context:
+    get:
+      summary: The personal context sent to the model (version 0 when never saved).
+      operationId: getAiContext
+      tags: [ai]
+      responses:
+        "200":
+          description: The context.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiUserContext" }
+    put:
+      summary: Replace the personal context. Blank text is stored as null.
+      operationId: saveAiContext
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiUserContext" }
+      responses:
+        "200":
+          description: The saved context.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiUserContext" }
+        "409":
+          description: version is stale (CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: VALUE_OUT_OF_RANGE, INVALID_VALUE or AI_TEXT_TOO_LONG.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/presets:
+    get:
+      summary: Analysis presets in the user's language, with their default instructions and data sections.
+      operationId: listAiPresets
+      tags: [ai]
+      responses:
+        "200":
+          description: Presets in display order.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  presets:
+                    type: array
+                    items: { $ref: "#/components/schemas/AiPreset" }
+        "503":
+          description: AI_DISABLED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/analyses/preview:
+    post:
+      summary: Build the exact prompt an analysis would send, without sending it.
+      description: >
+        The server always rebuilds the data from the database; only the
+        instructions are taken from the client. Send data_fingerprint back
+        when running the analysis: if the data changed in between the run
+        answers 409 AI_DATA_CHANGED (plan.md section 32.4).
+      operationId: previewAiAnalysis
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiAnalysisRequest" }
+      responses:
+        "200":
+          description: The prompt and what it discloses.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiPreview" }
+        "403":
+          description: AI_CONSENT_REQUIRED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: AI_NOT_CONFIGURED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: >
+            Validation error (preset, period, timezone, wallet_ids
+            WALLET_NOT_FOUND, options.sections, options.max_transactions,
+            instructions REQUIRED_FIELD or AI_TEXT_TOO_LONG), or
+            AI_PROMPT_TOO_LARGE when the estimate exceeds AI_MAX_PROMPT_TOKENS.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/analyses:
+    post:
+      summary: Run an analysis and stream the report as Server-Sent Events.
+      description: >
+        Send the previewed request with its data_fingerprint and a fresh
+        client_request_id. Every check (consent, provider, fingerprint, rate
+        limit of AI_RUNS_PER_HOUR shared with follow-ups, one stream per user)
+        happens before the stream starts and fails as a normal JSON error.
+        Then the response is text/event-stream with these events, each data
+        line being JSON:
+        meta {analysis_id, message_id, kind}; delta {text}, repeated;
+        then usage {input_tokens, output_tokens, truncated} or
+        error {code, message}; and finally done {status}. A ": ping" comment
+        is sent every 15 s. If the client disconnects the provider call is
+        cancelled and the partial text is kept with status CANCELLED. Not
+        subject to the normal request timeout: bounded by
+        AI_STREAM_MAX_DURATION.
+      operationId: runAiAnalysis
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: "#/components/schemas/AiAnalysisRequest" }
+                - type: object
+                  required: [data_fingerprint, client_request_id]
+                  properties:
+                    data_fingerprint: { type: string }
+                    client_request_id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: The event stream.
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "403":
+          description: AI_CONSENT_REQUIRED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: >
+            AI_NOT_CONFIGURED, AI_DATA_CHANGED (preview again),
+            AI_STREAM_IN_PROGRESS or AI_ANALYSIS_EXISTS (client_request_id
+            already used).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: Same validation as the preview, plus client_request_id.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: RATE_LIMITED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    get:
+      summary: The user's analyses, newest first.
+      operationId: listAiAnalyses
+      tags: [ai]
+      parameters:
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        "200":
+          description: A page of analyses.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AiAnalysisSummary" }
+                  next_cursor: { type: [string, "null"] }
+        "422":
+          description: Invalid cursor.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      summary: Delete every analysis of the user.
+      operationId: deleteAllAiAnalyses
+      tags: [ai]
+      responses:
+        "204":
+          description: Deleted.
+
+  /ai/analyses/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: One analysis with its whole conversation, including the data that was sent.
+      operationId: getAiAnalysis
+      tags: [ai]
+      responses:
+        "200":
+          description: The analysis.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiAnalysisDetail" }
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    patch:
+      summary: Rename an analysis.
+      operationId: renameAiAnalysis
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: The renamed analysis.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiAnalysisDetail" }
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      summary: Delete an analysis and its conversation.
+      operationId: deleteAiAnalysis
+      tags: [ai]
+      responses:
+        "204":
+          description: Deleted.
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/analyses/{id}/messages:
+    post:
+      summary: Ask a follow-up question and stream the answer (same events as running an analysis).
+      description: >
+        The conversation sent is the stored one (system prompt, original
+        data, report and earlier answered questions), so answers stay
+        consistent with the report. Needs a finished report; at most 20
+        questions per analysis.
+      operationId: askAiFollowUp
+      tags: [ai]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, maxLength: 2000 }
+      responses:
+        "200":
+          description: The event stream.
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "404":
+          description: Not found.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: AI_ANALYSIS_NOT_READY, AI_FOLLOWUP_LIMIT, AI_STREAM_IN_PROGRESS or AI_NOT_CONFIGURED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/mode:
+    put:
+      summary: Choose whether new analyses run on a cloud provider or on the phone.
+      operationId: setAiMode
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mode, version]
+              properties:
+                mode: { type: string, enum: [cloud, on_device] }
+                local_model: { type: [string, "null"], maxLength: 200, description: "Label of the model chosen on the phone (informational)." }
+                version: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: The settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiSettings" }
+        "409":
+          description: version is stale (CONFLICT).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: AI_DISABLED (cloud) or AI_ON_DEVICE_DISABLED for the chosen mode.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/local/analyses:
+    post:
+      summary: Start an on-device analysis (plan.md section 33).
+      description: >
+        Same body as a cloud run plus the runtime the phone will use. Stores
+        the analysis (provider on_device) and returns what the phone must
+        feed its model. Needs the on-device consent but no cloud provider or
+        encryption key. Retrying with the same client_request_id while the
+        report is pending returns the same turn (200) so a phone can resume.
+      operationId: prepareLocalAiAnalysis
+      tags: [ai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: "#/components/schemas/AiAnalysisRequest" }
+                - type: object
+                  required: [data_fingerprint, client_request_id, runtime]
+                  properties:
+                    data_fingerprint: { type: string }
+                    client_request_id: { type: string, format: uuid }
+                    runtime: { $ref: "#/components/schemas/AiLocalRuntime" }
+      responses:
+        "201":
+          description: The turn to generate.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiLocalTurn" }
+        "200":
+          description: The same pending turn, for a retried request.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiLocalTurn" }
+        "403":
+          description: AI_LOCAL_CONSENT_REQUIRED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: AI_DATA_CHANGED or AI_ANALYSIS_EXISTS.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: Validation, AI_LOCAL_CONTEXT_TOO_LONG (prompt plus max output exceed the context) or AI_PROMPT_TOO_LARGE.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/local/analyses/{id}/messages:
+    post:
+      summary: Ask a follow-up question on an on-device analysis; returns the stored conversation to replay on the phone.
+      operationId: prepareLocalAiFollowUp
+      tags: [ai]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, maxLength: 2000 }
+      responses:
+        "201":
+          description: The turn to generate.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiLocalTurn" }
+        "409":
+          description: AI_ANALYSIS_NOT_ON_DEVICE, AI_ANALYSIS_NOT_READY, AI_FOLLOWUP_LIMIT or AI_STREAM_IN_PROGRESS.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /ai/analyses/{id}/messages/{messageId}/result:
+    put:
+      summary: Save what the phone generated for one report or answer.
+      description: >
+        Idempotent: the same result sent again is accepted (the app retries
+        from an outbox); a different one for a saved message is
+        AI_MESSAGE_FINISHED. Body up to 512 KB, content up to 200 KB.
+        error_code outside the AI_LOCAL_* list is stored as
+        AI_LOCAL_ENGINE_ERROR.
+      operationId: submitLocalAiResult
+      tags: [ai]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, status]
+              properties:
+                content: { type: string }
+                status: { type: string, enum: [COMPLETED, FAILED, CANCELLED] }
+                error_code:
+                  type: [string, "null"]
+                  enum: [AI_LOCAL_ENGINE_ERROR, AI_LOCAL_OUT_OF_MEMORY, AI_LOCAL_CONTEXT_TOO_LONG, AI_LOCAL_TIMEOUT, AI_LOCAL_MODEL_MISSING, AI_LOCAL_INTERRUPTED, null]
+                input_tokens: { type: integer, minimum: 0 }
+                output_tokens: { type: integer, minimum: 0 }
+                truncated: { type: boolean }
+                duration_ms: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: The saved message.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiMessage" }
+        "409":
+          description: AI_MESSAGE_FINISHED or AI_ANALYSIS_NOT_ON_DEVICE.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: Validation or AI_ANSWER_TOO_LONG.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /health/live:
     get:
       summary: Liveness probe. Never depends on external services.
       operationId: getHealthLive
       tags: [health]
+      security: []
       responses:
         "200":
           description: Process is running.
@@ -187,6 +840,7 @@ paths:
       summary: Readiness probe. Checks PostgreSQL and Redis connectivity.
       operationId: getHealthReady
       tags: [health]
+      security: []
       responses:
         "200":
           description: Ready to serve traffic.
@@ -194,6 +848,13 @@ paths:
           description: One or more dependencies are unavailable.
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token from the auth endpoints (plan.md section 15).
+
   schemas:
     # Only the fields the voucher endpoints' payloads need — not a full
     # retroactive spec of the wallet/transaction resources (see the top-level
@@ -211,6 +872,13 @@ components:
         color: { type: string }
         version: { type: integer, format: int64 }
         updated_at: { type: string, format: date-time }
+        purpose:
+          type: [string, "null"]
+          maxLength: 280
+          description: >
+            What the wallet is for, written by the user (plan.md section
+            32.3). Read by the AI analysis. Blank input is stored as null;
+            PATCH /wallets/{id} replaces it like the other fields.
         voucher_unit_value_minor:
           type: integer
           format: int64
@@ -305,6 +973,359 @@ components:
           description: Present only when the vouchers didn't cover the full expense.
         voucher_wallet: { $ref: "#/components/schemas/Wallet" }
         other_wallet: { $ref: "#/components/schemas/Wallet" }
+
+    AiProvider:
+      type: string
+      enum: [anthropic, openai, gemini, openai_compatible]
+
+    AiCredential:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        provider: { $ref: "#/components/schemas/AiProvider" }
+        base_url: { type: [string, "null"], description: "Only for openai_compatible." }
+        model: { type: [string, "null"] }
+        has_key: { type: boolean }
+        key_hint: { type: [string, "null"], description: "Masked key, e.g. sk-…a1b2." }
+        last_tested_at: { type: [string, "null"], format: date-time }
+        last_test_ok: { type: [boolean, "null"] }
+
+    AiSettings:
+      type: object
+      properties:
+        available: { type: boolean, description: "The cloud path (AI_KEY_ENCRYPTION_KEY set)." }
+        on_device_available: { type: boolean }
+        mode: { type: string, enum: [cloud, on_device] }
+        local_model: { type: [string, "null"] }
+        active:
+          oneOf:
+            - { $ref: "#/components/schemas/AiCredential" }
+            - { type: "null" }
+        credentials:
+          type: array
+          items: { $ref: "#/components/schemas/AiCredential" }
+        max_output_tokens: { type: integer, minimum: 256, maximum: 32000 }
+        input_price_per_mtok: { type: [number, "null"], description: "User-entered price per million input tokens." }
+        output_price_per_mtok: { type: [number, "null"] }
+        defaults:
+          type: object
+          properties:
+            include_transactions: { type: boolean }
+            anonymize_titles: { type: boolean }
+        consent:
+          type: object
+          properties:
+            accepted_version: { type: [integer, "null"] }
+            current_version: { type: integer }
+            accepted_at: { type: [string, "null"], format: date-time }
+            required: { type: boolean }
+            on_device:
+              type: object
+              description: The separate on-device disclosure.
+              properties:
+                accepted_version: { type: [integer, "null"] }
+                current_version: { type: integer }
+                accepted_at: { type: [string, "null"], format: date-time }
+                required: { type: boolean }
+        setup:
+          type: object
+          description: Drives the app's setup checklist.
+          properties:
+            has_provider: { type: boolean }
+            has_model: { type: boolean }
+            has_context: { type: boolean }
+            wallets_total: { type: integer }
+            wallets_with_purpose: { type: integer }
+            analyses_count: { type: integer }
+        version: { type: integer, format: int64 }
+
+    AiSettingsRequest:
+      type: object
+      required: [provider, model, max_output_tokens]
+      properties:
+        provider: { $ref: "#/components/schemas/AiProvider" }
+        base_url: { type: string, description: "Required for openai_compatible, e.g. https://api.mistral.ai/v1." }
+        model: { type: string, maxLength: 200 }
+        api_key:
+          type: [string, "null"]
+          maxLength: 512
+          description: Omitted or null keeps the stored key; "" removes it.
+        max_output_tokens: { type: integer, minimum: 256, maximum: 32000 }
+        input_price_per_mtok: { type: [number, "null"], minimum: 0 }
+        output_price_per_mtok: { type: [number, "null"], minimum: 0 }
+        defaults:
+          type: object
+          properties:
+            include_transactions: { type: boolean }
+            anonymize_titles: { type: boolean }
+        version: { type: integer, format: int64, description: "0 on the first save." }
+
+    AiProbeRequest:
+      type: object
+      properties:
+        provider: { $ref: "#/components/schemas/AiProvider" }
+        base_url: { type: string }
+        api_key: { type: string }
+        model: { type: string }
+
+    AiUserContext:
+      type: object
+      properties:
+        household_size: { type: [integer, "null"], minimum: 1, maximum: 20 }
+        income_type:
+          type: [string, "null"]
+          enum: [EMPLOYEE, SELF_EMPLOYED, STUDENT, RETIRED, UNEMPLOYED, MIXED, OTHER, null]
+        about_me: { type: [string, "null"], maxLength: 2000 }
+        goals: { type: [string, "null"], maxLength: 2000 }
+        ignore_notes: { type: [string, "null"], maxLength: 2000 }
+        response_style: { type: [string, "null"], enum: [CONCISE, DETAILED, null] }
+        version: { type: integer, format: int64, description: "0 when never saved; send it back on PUT." }
+        updated_at: { type: [string, "null"], format: date-time, readOnly: true }
+
+    AiDataSection:
+      type: string
+      description: Optional data sections. Period, wallets and totals are always sent.
+      enum: [monthly, categories, titles, transfers, recurring, personal_context]
+
+    AiPreset:
+      type: object
+      properties:
+        id: { type: string, enum: [MONTHLY_CHECKUP, ANOMALIES, SAVINGS, RECURRING, WALLET_PURPOSE, CUSTOM] }
+        title: { type: string }
+        description: { type: string }
+        default_instructions: { type: string, description: "Empty for CUSTOM." }
+        default_sections:
+          type: array
+          items: { $ref: "#/components/schemas/AiDataSection" }
+        default_include_transactions: { type: boolean }
+        default_period_preset: { type: string }
+
+    AiAnalysisRequest:
+      type: object
+      required: [preset]
+      properties:
+        preset: { type: string }
+        target:
+          type: string
+          enum: [cloud, on_device]
+          description: Defaults to the saved mode. on_device needs the on-device consent instead of a cloud provider.
+        credential_id:
+          type: string
+          format: uuid
+          description: >-
+            Cloud only: which stored provider account runs the analysis (any of the
+            user's credentials with a model and, when needed, a key). Defaults to the
+            active one. Follow-ups keep using it; if it is removed they fall back to
+            the active one.
+        device:
+          type: object
+          description: On-device preview only; adds context_fit.
+          properties:
+            context_tokens: { type: integer, minimum: 512, maximum: 131072 }
+            max_output_tokens: { type: integer, minimum: 0 }
+        period:
+          type: object
+          properties:
+            preset:
+              type: string
+              enum: [last_30_days, last_12_months, all_time, current_month, current_year, custom]
+              default: last_12_months
+            from: { type: string, description: "custom only: YYYY-MM-DD (or RFC3339). Alone: from that day to today." }
+            to: { type: string, description: "custom only, inclusive. Alone: the whole history up to that day." }
+        timezone: { type: string, description: "IANA name; defaults to the user's." }
+        wallet_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: Empty means every wallet, archived ones included.
+        options:
+          type: object
+          properties:
+            sections:
+              type: array
+              items: { $ref: "#/components/schemas/AiDataSection" }
+            include_transactions: { type: boolean, default: false }
+            max_transactions: { type: integer, minimum: 1, maximum: 500, default: 200 }
+            anonymize_titles: { type: boolean, default: false }
+            include_adjustments: { type: boolean, default: false }
+            profile:
+              type: string
+              enum: [standard, compact]
+              default: standard
+              description: >
+                compact caps every list, keeps the last 12 months and sends
+                shorter rules, for small on-device models (plan.md section 33).
+                Its default transaction list is 60.
+            budget_tokens:
+              type: integer
+              minimum: 1000
+              maximum: 32000
+              description: >
+                When set, detail is given up in a fixed order until the
+                estimated prompt fits (see disclosure.compaction_steps);
+                AI_PROMPT_TOO_LARGE if it never does.
+            filters:
+              type: object
+              description: >
+                Restricts every figure to matching transactions, with the
+                Cronologia filter semantics. Balances and transfer flows
+                are then left out of the data block.
+              properties:
+                direction: { type: string, enum: [DEBIT, CREDIT] }
+                category_id: { type: string, format: uuid, description: "Own or system category; otherwise CATEGORY_NOT_FOUND." }
+                title: { type: string, maxLength: 120, description: "Substring of the title or description." }
+                amount_min_minor: { type: integer, format: int64, minimum: 0 }
+                amount_max_minor: { type: integer, format: int64, minimum: 0 }
+        instructions:
+          type: [string, "null"]
+          maxLength: 4000
+          description: Null uses the preset's default instructions; required for CUSTOM.
+
+    AiPreview:
+      type: object
+      properties:
+        provider: { $ref: "#/components/schemas/AiProvider" }
+        model: { type: string }
+        prompt_version: { type: string }
+        system_prompt: { type: string, description: "Read-only rules and report structure." }
+        instructions: { type: string, description: "Editable; sent back on run." }
+        data_block: { type: string, description: "Read-only data, between <financial_data> and optional <user_context> tags." }
+        data_fingerprint: { type: string, description: "SHA-256 of the prompt version, system prompt and data block." }
+        estimated_input_tokens: { type: integer, description: "Rough estimate (characters / 3.5)." }
+        max_output_tokens: { type: integer }
+        estimated_cost:
+          type: [object, "null"]
+          description: Only when the user entered prices; the output cost is an upper bound.
+          properties:
+            input_cost: { type: number }
+            max_output_cost: { type: number }
+        period_from: { type: [string, "null"], format: date }
+        period_to: { type: string, format: date }
+        target: { type: string, enum: [cloud, on_device] }
+        context_fit:
+          type: [object, "null"]
+          properties:
+            context_tokens: { type: integer }
+            input_tokens: { type: integer }
+            reserved_output_tokens: { type: integer }
+            fits: { type: boolean }
+        disclosure:
+          type: object
+          properties:
+            sections:
+              type: array
+              items: { $ref: "#/components/schemas/AiDataSection" }
+            wallet_count: { type: integer }
+            transaction_count: { type: integer }
+            transactions_omitted: { type: integer }
+            anonymized: { type: boolean }
+            includes_personal_context: { type: boolean }
+            profile: { type: string, enum: [standard, compact] }
+            compaction_steps:
+              type: array
+              items:
+                type: string
+                enum: [transactions_30, transactions_0, credit_titles, groups_5, months_6, transfers, recurring_4, context_150]
+
+    AiStatus:
+      type: string
+      enum: [STREAMING, COMPLETED, FAILED, CANCELLED]
+      description: >
+        A STREAMING row whose stream can no longer be running (the server
+        restarted) is reported as FAILED with error_code
+        AI_STREAM_INTERRUPTED.
+
+    AiAnalysisSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        preset: { type: string }
+        period_from: { type: [string, "null"], format: date }
+        period_to: { type: string, format: date }
+        status: { $ref: "#/components/schemas/AiStatus" }
+        error_code: { type: [string, "null"] }
+        provider:
+          type: string
+          enum: [anthropic, openai, gemini, openai_compatible, on_device]
+        model: { type: string }
+        input_tokens: { type: integer }
+        output_tokens: { type: integer }
+        cost: { type: [number, "null"], description: "From the user's prices, when set; null on device." }
+        runtime:
+          oneOf:
+            - { $ref: "#/components/schemas/AiLocalRuntime" }
+            - { type: "null" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    AiMessage:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        seq: { type: integer }
+        role: { type: string, enum: [user, assistant] }
+        kind:
+          type: string
+          enum: [CONTEXT, REPORT, QUESTION, ANSWER]
+          description: CONTEXT is the first message sent (instructions and data).
+        content: { type: string }
+        status: { $ref: "#/components/schemas/AiStatus" }
+        error_code: { type: [string, "null"] }
+        model: { type: [string, "null"] }
+        input_tokens: { type: [integer, "null"] }
+        output_tokens: { type: [integer, "null"] }
+        truncated: { type: boolean, description: "Stopped at the output token limit." }
+        duration_ms: { type: [integer, "null"], description: "On-device only." }
+        created_at: { type: string, format: date-time }
+
+    AiAnalysisDetail:
+      allOf:
+        - { $ref: "#/components/schemas/AiAnalysisSummary" }
+        - type: object
+          properties:
+            timezone: { type: string }
+            wallet_ids:
+              type: array
+              items: { type: string, format: uuid }
+            options: { type: object }
+            prompt_version: { type: string }
+            system_prompt: { type: string }
+            follow_ups_left: { type: integer }
+            can_ask_follow_ups: { type: boolean }
+            messages:
+              type: array
+              items: { $ref: "#/components/schemas/AiMessage" }
+
+    AiLocalRuntime:
+      type: object
+      required: [engine, model_id, display_name, quantization, backend, context_tokens, max_output_tokens]
+      properties:
+        engine: { type: string, enum: [litert_lm, llama_cpp] }
+        model_id: { type: string, maxLength: 200 }
+        display_name: { type: string, maxLength: 100 }
+        quantization: { type: string, maxLength: 32, description: "e.g. int4, Q4_K_M." }
+        backend: { type: string, enum: [cpu, gpu, npu] }
+        context_tokens: { type: integer, minimum: 512, maximum: 131072 }
+        max_output_tokens: { type: integer, minimum: 64, description: "Below context_tokens." }
+        app_version: { type: string, maxLength: 32 }
+
+    AiLocalTurn:
+      type: object
+      properties:
+        analysis_id: { type: string, format: uuid }
+        question_id: { type: string, format: uuid, description: "Follow-ups only." }
+        message_id: { type: string, format: uuid, description: "The assistant message to submit the result for." }
+        kind: { type: string, enum: [REPORT, ANSWER] }
+        system_prompt: { type: string }
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              role: { type: string, enum: [user, assistant] }
+              content: { type: string }
+        max_output_tokens: { type: integer }
+        deadline_at: { type: string, format: date-time, description: "After this the analysis shows as interrupted (AI_LOCAL_MAX_DURATION)." }
 
     Error:
       type: object

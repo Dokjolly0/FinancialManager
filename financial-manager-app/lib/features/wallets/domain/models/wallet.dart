@@ -12,6 +12,7 @@ class Wallet {
     required this.version,
     required this.updatedAt,
     this.archivedAt,
+    this.purpose,
     this.voucherUnitValueMinor,
     this.voucherExpiryCutoffMonth,
     this.voucherExpiryMonth,
@@ -28,6 +29,10 @@ class Wallet {
   final int version;
   final DateTime updatedAt;
   final DateTime? archivedAt;
+
+  /// What the wallet is for, in the user's words — read by the AI analysis
+  /// (plan.md section 32.3). Null when unset, never blank.
+  final String? purpose;
 
   /// Only set when [type] is [WalletType.mealVoucher] — the face value of
   /// one voucher, fixed at wallet creation (never editable afterwards).
@@ -66,6 +71,7 @@ class Wallet {
       archivedAt: json['archived_at'] != null
           ? DateTime.parse(json['archived_at'] as String)
           : null,
+      purpose: json['purpose'] as String?,
       voucherUnitValueMinor: json['voucher_unit_value_minor'] as int?,
       voucherExpiryCutoffMonth: json['voucher_expiry_cutoff_month'] as int?,
       voucherExpiryMonth: json['voucher_expiry_month'] as int?,

@@ -35,6 +35,7 @@ type UpdateProfileInput struct {
 	Theme                string
 	BalanceHiddenDefault bool
 	FirstDayOfWeek       string
+	AIEnabled            *bool
 	ExpectedVersion      int64
 }
 
@@ -47,6 +48,7 @@ func (s *Service) UpdateProfile(ctx context.Context, userID uuid.UUID, in Update
 		Theme:                in.Theme,
 		BalanceHiddenDefault: in.BalanceHiddenDefault,
 		FirstDayOfWeek:       in.FirstDayOfWeek,
+		AIEnabled:            in.AIEnabled,
 	}
 
 	updated, err := s.repo.UpdateProfile(ctx, userID, in.ExpectedVersion, fields)

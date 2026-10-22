@@ -1,0 +1,38 @@
+{
+  "MONTHLY_CHECKUP": {
+    "title": "Period check-up",
+    "description": "The big picture: how income and expenses went and what to watch.",
+    "headings": ["Summary", "Where the money goes", "Points of attention", "Suggestions", "Questions for you"],
+    "instructions": "Give me a check-up of my finances in the selected period. Summarize how income, expenses and savings went, point out the categories and items that weigh the most and compare the months with each other. Flag what deserves attention and suggest at most 5 concrete actions, ordered by impact."
+  },
+  "ANOMALIES": {
+    "title": "Unusual spending",
+    "description": "Spikes, unusual months and out-of-the-ordinary expenses.",
+    "headings": ["Summary", "Anomalies found", "Possible explanations", "What to check"],
+    "instructions": "Look for anomalies in my transactions: months with expenses very different from the others, single expenses much higher than usual, categories growing quickly, items that appear suddenly. For each one show the data that reveals it and a possible explanation, separating what is certain from what is a guess."
+  },
+  "SAVINGS": {
+    "title": "Where to save",
+    "description": "Concrete opportunities to spend less, with an estimate of the savings.",
+    "headings": ["Summary", "Savings opportunities", "Estimated savings", "Action plan"],
+    "instructions": "Find where I could save. Focus on discretionary and repeated expenses, estimate for each opportunity how much I could save per month and per year, and order the opportunities from the easiest to the hardest to put into practice. Take my goals into account, if I gave any."
+  },
+  "RECURRING": {
+    "title": "Subscriptions and fixed costs",
+    "description": "Payments that repeat every month and how much they weigh.",
+    "headings": ["Summary", "Recurring expenses", "Price changes", "What to consider"],
+    "instructions": "Analyze my recurring expenses (subscriptions, bills, installments, fixed costs). List them with their monthly and yearly amount, flag those whose amount changed over time and those that might be duplicated or no longer useful. Work out how much they weigh in total compared with income."
+  },
+  "WALLET_PURPOSE": {
+    "title": "Wallet usage",
+    "description": "Is each wallet used for the purpose you gave it?",
+    "headings": ["Summary", "Wallet by wallet", "Inconsistencies", "Suggestions"],
+    "instructions": "Check whether I use each wallet consistently with the purpose I gave it. For each wallet describe how it is actually used (expenses, income, transfers), flag the uses that do not match its purpose and suggest how to organize the movements between wallets better. If a wallet has no purpose, suggest one based on how it is used."
+  },
+  "CUSTOM": {
+    "title": "Your own question",
+    "description": "Write what you want to know about your data.",
+    "headings": ["Answer", "Data it is based on"],
+    "instructions": ""
+  }
+}

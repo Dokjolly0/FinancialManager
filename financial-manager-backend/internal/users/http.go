@@ -42,6 +42,7 @@ type userResponse struct {
 	Theme                string  `json:"theme"`
 	BalanceHiddenDefault bool    `json:"balance_hidden_default"`
 	FirstDayOfWeek       string  `json:"first_day_of_week"`
+	AIEnabled            bool    `json:"ai_enabled"`
 	Version              int64   `json:"version"`
 	CreatedAt            string  `json:"created_at"`
 }
@@ -68,6 +69,7 @@ func toUserResponse(u User) userResponse {
 		Theme:                u.Theme,
 		BalanceHiddenDefault: u.BalanceHiddenDefault,
 		FirstDayOfWeek:       u.FirstDayOfWeek,
+		AIEnabled:            u.AIEnabled,
 		Version:              u.Version,
 		CreatedAt:            u.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
@@ -97,7 +99,9 @@ type updateMeRequest struct {
 	Theme                string `json:"theme"`
 	BalanceHiddenDefault bool   `json:"balance_hidden_default"`
 	FirstDayOfWeek       string `json:"first_day_of_week"`
-	ExpectedVersion      int64  `json:"version"`
+	// AIEnabled omitted keeps the stored value: older apps don't send it.
+	AIEnabled       *bool `json:"ai_enabled"`
+	ExpectedVersion int64 `json:"version"`
 }
 
 func (h *Handler) updateMe(w http.ResponseWriter, r *http.Request) {
@@ -139,6 +143,7 @@ func (h *Handler) updateMe(w http.ResponseWriter, r *http.Request) {
 		Theme:                req.Theme,
 		BalanceHiddenDefault: req.BalanceHiddenDefault,
 		FirstDayOfWeek:       req.FirstDayOfWeek,
+		AIEnabled:            req.AIEnabled,
 		ExpectedVersion:      req.ExpectedVersion,
 	})
 	if err != nil {

@@ -29,7 +29,8 @@ func (r *Repository) WithQuerier(q database.Querier) *Repository {
 
 const walletColumns = `
 	id, user_id, name, currency, current_balance_minor, type, icon, color, created_at, updated_at, version, archived_at,
-	voucher_unit_value_minor, voucher_expiry_cutoff_month, voucher_expiry_month, voucher_expiry_day
+	voucher_unit_value_minor, voucher_expiry_cutoff_month, voucher_expiry_month, voucher_expiry_day,
+	purpose
 `
 
 func scanWallet(row pgx.Row) (Wallet, error) {
@@ -38,6 +39,7 @@ func scanWallet(row pgx.Row) (Wallet, error) {
 		&w.ID, &w.UserID, &w.Name, &w.Currency, &w.CurrentBalanceMinor, &w.Type, &w.Icon, &w.Color,
 		&w.CreatedAt, &w.UpdatedAt, &w.Version, &w.ArchivedAt,
 		&w.VoucherUnitValueMinor, &w.VoucherExpiryCutoffMonth, &w.VoucherExpiryMonth, &w.VoucherExpiryDay,
+		&w.Purpose,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Wallet{}, ErrNotFound
@@ -65,6 +67,7 @@ type CreateRowInput struct {
 	VoucherExpiryCutoffMonth *int
 	VoucherExpiryMonth       *int
 	VoucherExpiryDay         *int
+	Purpose                  *string
 }
 
 // Create inserts the wallet with its opening balance already set — there
@@ -79,12 +82,14 @@ func (r *Repository) Create(ctx context.Context, in CreateRowInput) (Wallet, err
 	row := r.db.QueryRow(ctx, `
 		INSERT INTO wallets (
 			user_id, name, currency, current_balance_minor, type, icon, color,
-			voucher_unit_value_minor, voucher_expiry_cutoff_month, voucher_expiry_month, voucher_expiry_day
+			voucher_unit_value_minor, voucher_expiry_cutoff_month, voucher_expiry_month, voucher_expiry_day,
+			purpose
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING `+walletColumns,
 		in.UserID, in.Name, in.Currency, in.OpeningBalanceMinor, in.Type, in.Icon, in.Color,
 		in.VoucherUnitValueMinor, in.VoucherExpiryCutoffMonth, in.VoucherExpiryMonth, in.VoucherExpiryDay,
+		in.Purpose,
 	)
 	return scanWallet(row)
 }
@@ -217,6 +222,9 @@ type UpdateInput struct {
 	VoucherExpiryCutoffMonth *int
 	VoucherExpiryMonth       *int
 	VoucherExpiryDay         *int
+
+	// Purpose is always written: nil clears it.
+	Purpose *string
 }
 
 func (r *Repository) Update(ctx context.Context, id, userID uuid.UUID, in UpdateInput, expectedVersion int64) (Wallet, error) {
@@ -224,11 +232,13 @@ func (r *Repository) Update(ctx context.Context, id, userID uuid.UUID, in Update
 		UPDATE wallets SET
 			name = $1, type = $2, icon = $3, color = $4,
 			voucher_expiry_cutoff_month = $5, voucher_expiry_month = $6, voucher_expiry_day = $7,
+			purpose = $8,
 			updated_at = now(), version = version + 1
-		WHERE id = $8 AND user_id = $9 AND version = $10 AND archived_at IS NULL
+		WHERE id = $9 AND user_id = $10 AND version = $11 AND archived_at IS NULL
 		RETURNING `+walletColumns,
 		in.Name, in.Type, in.Icon, in.Color,
 		in.VoucherExpiryCutoffMonth, in.VoucherExpiryMonth, in.VoucherExpiryDay,
+		in.Purpose,
 		id, userID, expectedVersion,
 	)
 	return scanWallet(row)

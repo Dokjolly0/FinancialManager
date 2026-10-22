@@ -40,6 +40,7 @@ class WalletFormScreen extends ConsumerStatefulWidget {
 
 class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
   final _nameController = TextEditingController();
+  final _purposeController = TextEditingController();
   final _openingBalanceController = TextEditingController(text: '0');
   final _voucherUnitValueController = TextEditingController();
   final _initialVoucherQuantityController = TextEditingController(text: '0');
@@ -81,6 +82,7 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
         _existing = wallet;
         _openingBalanceTransaction = openingBalanceTransaction;
         _nameController.text = wallet.name;
+        _purposeController.text = wallet.purpose ?? '';
         _type = wallet.type;
         _icon = wallet.icon;
         _color = colorFromHex(wallet.color);
@@ -108,6 +110,7 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _purposeController.dispose();
     _openingBalanceController.dispose();
     _voucherUnitValueController.dispose();
     _initialVoucherQuantityController.dispose();
@@ -120,6 +123,8 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
       setState(() => _fieldErrors = {'name': 'REQUIRED_FIELD'});
       return;
     }
+    final purposeText = _purposeController.text.trim();
+    final purpose = purposeText.isEmpty ? null : purposeText;
 
     setState(() {
       _isSaving = true;
@@ -139,6 +144,7 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
                 icon: _icon,
                 color: colorToHex(_color),
                 expectedVersion: _expectedVersion!,
+                purpose: purpose,
                 voucherExpiryCutoffMonth: _type == WalletType.mealVoucher
                     ? _voucherExpiryCutoffMonth
                     : null,
@@ -164,6 +170,7 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
                 type: _type,
                 icon: _icon,
                 color: colorToHex(_color),
+                purpose: purpose,
                 voucherUnitValueMinor: voucherUnitValueMinor,
                 voucherExpiryCutoffMonth: _voucherExpiryCutoffMonth,
                 voucherExpiryMonth: _voucherExpiryMonth,
@@ -183,6 +190,7 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
                 type: _type,
                 icon: _icon,
                 color: colorToHex(_color),
+                purpose: purpose,
                 openingBalanceMinor: openingBalanceMinor,
               ),
             );
@@ -314,6 +322,25 @@ class _WalletFormScreenState extends ConsumerState<WalletFormScreen> {
                       errorText: fieldError('name'),
                     ),
                   ),
+                  // Part of the AI features: hidden with them, its value
+                  // kept as it is (section 32.10).
+                  if (ref.watch(aiFeaturesEnabledProvider)) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      controller: _purposeController,
+                      maxLength: walletPurposeMaxLength,
+                      minLines: 1,
+                      maxLines: 3,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        labelText: l10n.walletPurposeLabel,
+                        hintText: l10n.walletPurposeHint,
+                        helperText: l10n.walletPurposeHelper,
+                        helperMaxLines: 2,
+                        errorText: fieldError('purpose'),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     l10n.walletTypeLabel,

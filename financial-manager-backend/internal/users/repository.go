@@ -33,7 +33,7 @@ const userColumns = `
 	id, first_name, last_name, username, username_normalized,
 	email, email_normalized, email_verified_at,
 	avatar_mode, avatar_media_id, avatar_background_color, avatar_text_color,
-	locale, timezone, theme, balance_hidden_default, first_day_of_week, status,
+	locale, timezone, theme, balance_hidden_default, first_day_of_week, ai_enabled, status,
 	created_at, updated_at, deleted_at, version
 `
 
@@ -43,7 +43,7 @@ func scanUser(row pgx.Row) (User, error) {
 		&u.ID, &u.FirstName, &u.LastName, &u.Username, &u.UsernameNormalized,
 		&u.Email, &u.EmailNormalized, &u.EmailVerifiedAt,
 		&u.AvatarMode, &u.AvatarMediaID, &u.AvatarBackgroundColor, &u.AvatarTextColor,
-		&u.Locale, &u.Timezone, &u.Theme, &u.BalanceHiddenDefault, &u.FirstDayOfWeek, &u.Status,
+		&u.Locale, &u.Timezone, &u.Theme, &u.BalanceHiddenDefault, &u.FirstDayOfWeek, &u.AIEnabled, &u.Status,
 		&u.CreatedAt, &u.UpdatedAt, &u.DeletedAt, &u.Version,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -137,6 +137,8 @@ type UpdateProfileFields struct {
 	Theme                string
 	BalanceHiddenDefault bool
 	FirstDayOfWeek       string
+	// AIEnabled nil keeps the stored value.
+	AIEnabled *bool
 }
 
 func (r *Repository) UpdateProfile(ctx context.Context, userID uuid.UUID, expectedVersion int64, in UpdateProfileFields) (User, error) {
@@ -144,12 +146,13 @@ func (r *Repository) UpdateProfile(ctx context.Context, userID uuid.UUID, expect
 		UPDATE users SET
 			first_name = $1, last_name = $2, timezone = $3, locale = $4, theme = $5,
 			balance_hidden_default = $6, first_day_of_week = $7,
+			ai_enabled = COALESCE($10, ai_enabled),
 			updated_at = now(), version = version + 1
 		WHERE id = $8 AND version = $9 AND deleted_at IS NULL
 		RETURNING `+userColumns,
 		in.FirstName, in.LastName, in.Timezone, in.Locale, in.Theme,
 		in.BalanceHiddenDefault, in.FirstDayOfWeek,
-		userID, expectedVersion,
+		userID, expectedVersion, in.AIEnabled,
 	)
 	return scanUser(row)
 }

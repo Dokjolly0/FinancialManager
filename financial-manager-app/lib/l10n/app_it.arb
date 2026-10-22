@@ -21,6 +21,36 @@
     }
   },
   "errorCodeUnknownError": "Si è verificato un errore imprevisto. Riprova.",
+  "errorCodeWalletNotFound": "Portafoglio non trovato.",
+  "errorCodeAiDisabled": "L'Analisi AI non è attiva su questo server.",
+  "errorCodeAiNotConfigured": "Configura prima fornitore, chiave API e modello.",
+  "errorCodeAiConsentRequired": "Per continuare accetta l'informativa sull'Analisi AI.",
+  "errorCodeAiDataChanged": "I tuoi dati sono cambiati dopo l'anteprima: controllala di nuovo.",
+  "errorCodeAiStreamInProgress": "C'è già un'analisi in corso: attendi che finisca o interrompila.",
+  "errorCodeAiPromptTooLarge": "Troppi dati per una sola analisi: scegli un periodo più breve, meno portafogli o meno movimenti.",
+  "errorCodeAiFollowupLimit": "Hai raggiunto il numero massimo di domande per questa analisi: avviane una nuova.",
+  "errorCodeAiAnalysisExists": "Questa analisi è già stata avviata: la trovi nella cronologia.",
+  "errorCodeAiAnalysisNotReady": "Le domande di approfondimento richiedono un report completato.",
+  "errorCodeAiKeyUnreadable": "La chiave API salvata non è più leggibile: inseriscila di nuovo.",
+  "errorCodeAiStreamInterrupted": "L'analisi si è interrotta prima di terminare.",
+  "errorCodeAiAnswerTooLong": "La risposta era troppo lunga ed è stata troncata.",
+  "errorCodeAiProviderError": "Il fornitore AI ha restituito un errore.",
+  "errorCodeAiProviderInvalidKey": "La chiave API non è valida o non ha i permessi necessari.",
+  "errorCodeAiProviderRateLimited": "Il fornitore AI sta limitando le richieste: riprova tra poco.",
+  "errorCodeAiProviderQuotaExceeded": "Credito o quota del fornitore AI esauriti: controlla il tuo account presso il fornitore.",
+  "errorCodeAiProviderContextTooLong": "Il modello non riesce a leggere così tanti dati: riduci il periodo o i movimenti inclusi.",
+  "errorCodeAiProviderModelNotFound": "Il modello scelto non esiste o non è disponibile per la tua chiave.",
+  "errorCodeAiProviderContentBlocked": "Il fornitore AI ha bloccato la risposta per i suoi filtri di sicurezza.",
+  "errorCodeAiProviderUnavailable": "Il fornitore AI è momentaneamente sovraccarico o non disponibile.",
+  "errorCodeAiProviderTimeout": "Il fornitore AI ha impiegato troppo tempo e l'analisi è stata interrotta.",
+  "errorCodeAiProviderUnreachable": "Impossibile raggiungere il fornitore AI.",
+  "errorCodeAiProviderInvalid": "Fornitore non supportato.",
+  "errorCodeAiBaseUrlInvalid": "Inserisci un indirizzo https valido, senza credenziali né parametri.",
+  "errorCodeAiBaseUrlNotAllowed": "Questo server non può collegarsi a indirizzi privati o locali.",
+  "errorCodeAiTextTooLong": "Il testo è troppo lungo.",
+  "errorCodeValueOutOfRange": "Valore fuori dai limiti consentiti.",
+  "errorCodeInvalidValue": "Valore non valido.",
+  "errorCodeAiConsentVersionInvalid": "L'informativa è stata aggiornata: rileggila e accettala di nuovo.",
 
   "errorCodeValidationError": "Controlla i campi evidenziati.",
   "errorCodeBadRequest": "Richiesta malformata.",
@@ -70,6 +100,7 @@
   "errorCodeInvalidMonth": "Mese non valido.",
   "errorCodeInvalidDay": "Giorno non valido.",
   "errorCodeNotAllowedForWalletType": "Non consentito per questo tipo di portafoglio.",
+  "errorCodePurposeLengthInvalid": "Lo scopo può contenere al massimo 280 caratteri.",
   "errorCodeLinkTargetNotFound": "Transazione da collegare non trovata.",
   "errorCodeLinkTargetNotLinkable": "Questa transazione non può essere collegata.",
   "errorCodeNotInPaymentGroup": "Questa transazione non è collegata ad altre.",
@@ -132,6 +163,9 @@
   "newWalletScreenTitle": "Nuovo portafoglio",
   "editWalletScreenTitle": "Modifica portafoglio",
   "walletNameLabel": "Nome",
+  "walletPurposeLabel": "Scopo (facoltativo)",
+  "walletPurposeHint": "Es. spese quotidiane, fondo emergenze, risparmi per le vacanze",
+  "walletPurposeHelper": "Aiuta l'Analisi AI a capire a cosa serve questo portafoglio.",
   "walletTypeLabel": "Tipo",
   "walletTypeCash": "Contante",
   "walletTypeBank": "Conto bancario",
@@ -228,7 +262,7 @@
   "accountSecurityMenuSubtitle": "Password, sessioni attive, logout",
   "accountLinkedAccountsMenuTitle": "Account collegati",
   "accountPreferencesMenuTitle": "Preferenze",
-  "accountPreferencesMenuSubtitle": "Tema, fuso orario, lingua, saldo",
+  "accountPreferencesMenuSubtitle": "Tema, fuso orario, lingua, saldo, funzioni AI",
   "accountDataMenuTitle": "Dati",
   "accountDataMenuSubtitle": "Esporta o elimina il tuo account",
 
@@ -251,7 +285,7 @@
   "currentPasswordOptionalGoogleLabel": "Password attuale (vuota se solo Google)",
   "deleteAccountAction": "Elimina account",
   "exportDataSectionTitle": "Esporta i tuoi dati",
-  "exportDataDescription": "CSV per le operazioni, JSON per profilo, portafoglio, categorie, modelli e operazioni.",
+  "exportDataDescription": "CSV per le operazioni, JSON per profilo, portafoglio, categorie, modelli, operazioni e analisi AI.",
   "exportCsvAction": "Esporta CSV",
   "exportJsonAction": "Esporta JSON",
   "dangerZoneTitle": "Zona pericolosa",
@@ -429,5 +463,856 @@
   "mediaUploadFailedMessage": "Caricamento non riuscito. Riprova.",
   "mediaRenameDialogTitle": "Rinomina immagine",
   "mediaNameLabel": "Nome",
-  "mediaRenameFailedMessage": "Impossibile rinominare l'immagine."
+  "mediaRenameFailedMessage": "Impossibile rinominare l'immagine.",
+  "aiAssistantMenuTitle": "Assistente AI",
+  "aiAssistantMenuSubtitle": "Analizza le tue finanze con un modello AI",
+  "aiAssistantTitle": "Assistente AI",
+  "aiUnavailableTitle": "Analisi AI non disponibile",
+  "aiUnavailableBody": "Questo server non ha attivato l'Analisi AI. Chi gestisce il server può abilitarla impostando AI_KEY_ENCRYPTION_KEY.",
+  "aiSetupTitle": "Prepara la tua prima analisi",
+  "aiSetupDoneTitle": "Tutto pronto",
+  "aiSetupProgress": "{done} di {total} passaggi completati",
+  "@aiSetupProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "aiSetupOptional": "facoltativo",
+  "aiSetupStepProvider": "Fornitore, chiave e modello",
+  "aiSetupStepProviderHint": "Scegli il servizio AI e inserisci la tua chiave API",
+  "aiSetupStepContext": "Contesto personale",
+  "aiSetupStepContextHint": "Obiettivi e situazione, per consigli su misura",
+  "aiSetupStepPurposes": "Scopo dei portafogli",
+  "aiSetupStepPurposesHint": "A cosa serve ciascun portafoglio",
+  "aiSetupStepFirstAnalysis": "Prima analisi",
+  "aiSetupStepFirstAnalysisHint": "Dalla sezione Report, scheda Analisi AI",
+  "aiProviderMenuTitle": "Fornitore e chiave API",
+  "aiProviderMenuNotConfigured": "Non configurato",
+  "aiContextMenuTitle": "Contesto personale",
+  "aiContextMenuFilled": "Compilato",
+  "aiContextMenuEmpty": "Non ancora compilato",
+  "aiWalletPurposesMenuTitle": "Scopo dei portafogli",
+  "aiWalletPurposesProgress": "{done} di {total} portafogli con uno scopo",
+  "@aiWalletPurposesProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "aiConsentMenuTitle": "Privacy e consenso",
+  "aiConsentMenuPending": "Da accettare prima della prima analisi",
+  "aiConsentMenuAccepted": "Accettato",
+  "aiConsentRevokeAction": "Revoca",
+  "aiConsentRevokeConfirmTitle": "Revocare il consenso?",
+  "aiConsentRevokeConfirmMessage": "Non potrai avviare analisi finché non lo accetterai di nuovo. Le analisi salvate restano nella cronologia.",
+  "aiConsentTitle": "Prima di iniziare",
+  "aiConsentIntro": "L'Analisi AI invia un riepilogo dei tuoi dati al fornitore AI che scegli tu, usando la tua chiave API. Prima di ogni invio vedrai esattamente cosa viene inviato.",
+  "aiConsentSentTitle": "Cosa viene inviato",
+  "aiConsentSentAggregates": "Totali, andamento mensile, categorie e voci principali del periodo scelto",
+  "aiConsentSentWallets": "Nome, tipo, scopo e saldo dei portafogli inclusi",
+  "aiConsentSentTransactions": "Solo se lo attivi: l'elenco dei movimenti, anche con titoli anonimizzati",
+  "aiConsentSentContext": "Solo se lo attivi: il contesto personale che hai scritto",
+  "aiConsentNeverTitle": "Cosa non viene mai inviato",
+  "aiConsentNeverBody": "Email, nome, nome utente, identificativi dell'account e immagini",
+  "aiConsentKeyTitle": "La tua chiave API",
+  "aiConsentKeyBody": "Resta cifrata sul server e non viene mai mostrata di nuovo né esportata",
+  "aiConsentProviderTitle": "Il fornitore",
+  "aiConsentProviderBody": "Tratta i dati secondo le sue condizioni: verifica per quanto tempo conserva le richieste e se le usa per addestrare i modelli",
+  "aiConsentRevokeTitle": "Puoi cambiare idea",
+  "aiConsentRevokeBody": "Revoca il consenso e cancella le analisi in qualsiasi momento da Assistente AI",
+  "aiConsentAccept": "Ho capito, accetto",
+  "aiConsentDecline": "Non ora",
+  "aiProviderLabel": "Fornitore",
+  "aiProviderCompatible": "Compatibile OpenAI (Mistral, Groq, OpenRouter, Ollama…)",
+  "aiProviderHintAnthropic": "Crea una chiave su console.anthropic.com → API keys.",
+  "aiProviderHintOpenai": "Crea una chiave su platform.openai.com → API keys.",
+  "aiProviderHintGemini": "Crea una chiave su aistudio.google.com → Get API key.",
+  "aiProviderHintCompatible": "Per qualsiasi servizio che espone l'API di OpenAI: inserisci il suo indirizzo, di solito terminante in /v1.",
+  "aiBaseUrlLabel": "Indirizzo del servizio (base URL)",
+  "aiBaseUrlHelper": "Indirizzi privati o locali (es. Ollama in casa) funzionano solo se chi gestisce il server lo ha permesso.",
+  "aiApiKeyLabel": "Chiave API",
+  "aiApiKeyOptionalLabel": "Chiave API (se richiesta)",
+  "aiApiKeyHelper": "Viene cifrata sul server: dopo il salvataggio vedrai solo le ultime cifre.",
+  "aiApiKeyWillBeRemoved": "La chiave salvata verrà rimossa al salvataggio.",
+  "aiApiKeyStored": "Chiave salvata {hint}",
+  "@aiApiKeyStored": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "aiApiKeyReplace": "Sostituisci",
+  "aiApiKeyRemove": "Rimuovi",
+  "aiApiKeyShow": "Mostra chiave",
+  "aiApiKeyHide": "Nascondi chiave",
+  "aiModelLabel": "Modello",
+  "aiModelHelper": "Premi «Carica modelli» per sceglierlo dall'elenco del fornitore, oppure scrivine il nome.",
+  "aiModelsLoaded": "{count} modelli disponibili",
+  "@aiModelsLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiModelsNoneFound": "Il fornitore non ha restituito modelli: scrivi il nome a mano.",
+  "aiLoadModels": "Carica modelli",
+  "aiTestConnection": "Verifica connessione",
+  "aiTestOk": "Funziona: {model} ha risposto in {ms} ms.",
+  "@aiTestOk": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "aiTestOkKeyOnly": "Chiave valida (risposta in {ms} ms). Scegli un modello per verificarlo.",
+  "@aiTestOkKeyOnly": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "aiLastTestOk": "Ultima verifica riuscita.",
+  "aiLastTestFailed": "Ultima verifica non riuscita.",
+  "aiAdvancedSettings": "Impostazioni avanzate",
+  "aiMaxOutputTokensLabel": "Lunghezza massima della risposta (token)",
+  "aiMaxOutputTokensHelper": "Tra {min} e {max}. Più è alto, più il report può essere lungo e costare.",
+  "@aiMaxOutputTokensHelper": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "aiPricesTitle": "Prezzi (facoltativi)",
+  "aiPricesHelper": "Prezzo per milione di token del tuo modello, nella valuta del fornitore: serve solo per stimare il costo.",
+  "aiInputPriceLabel": "Input",
+  "aiOutputPriceLabel": "Output",
+  "aiDefaultIncludeTransactions": "Includi i singoli movimenti di default",
+  "aiDefaultIncludeTransactionsHint": "Analisi più precise, ma più dati inviati e più token.",
+  "aiDefaultAnonymizeTitles": "Anonimizza i titoli di default",
+  "aiDefaultAnonymizeTitlesHint": "I nomi dei movimenti diventano «Voce 1», «Voce 2»…",
+  "aiSaveSettings": "Salva",
+  "aiForgetProviderTitle": "Dimenticare questo fornitore?",
+  "aiForgetProviderMessage": "La chiave API salvata viene eliminata dal server.",
+  "aiForgetProviderAction": "Elimina chiave e fornitore",
+  "aiContextIntro": "Queste informazioni aiutano l'AI a darti consigli adatti alla tua situazione. Sono tutte facoltative e le invii solo se includi il contesto personale in un'analisi.",
+  "aiNotSpecified": "Non specificato",
+  "aiHouseholdLabel": "Persone nel nucleo familiare",
+  "aiHouseholdValue": "{count, plural, =1{1 persona} other{{count} persone}}",
+  "@aiHouseholdValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiHouseholdLess": "Una persona in meno",
+  "aiHouseholdMore": "Una persona in più",
+  "aiIncomeTypeLabel": "Tipo di reddito",
+  "aiIncomeEmployee": "Lavoro dipendente",
+  "aiIncomeSelfEmployed": "Lavoro autonomo",
+  "aiIncomeStudent": "Studente",
+  "aiIncomeRetired": "Pensione",
+  "aiIncomeUnemployed": "Senza reddito da lavoro",
+  "aiIncomeMixed": "Misto",
+  "aiIncomeOther": "Altro",
+  "aiAboutMeLabel": "Su di me",
+  "aiAboutMeHint": "Es. vivo in affitto a Milano, ho un'auto, lo stipendio arriva il 27",
+  "aiGoalsLabel": "Obiettivi",
+  "aiGoalsHint": "Es. mettere da parte 5.000 € entro giugno, ridurre le spese per mangiare fuori",
+  "aiIgnoreLabel": "Cose da ignorare o da interpretare",
+  "aiIgnoreHint": "Es. il bonifico a Marco è un prestito che mi restituisce; a luglio ho pagato l'assicurazione annuale",
+  "aiResponseStyleLabel": "Stile delle risposte",
+  "aiStyleDefault": "Standard",
+  "aiStyleConcise": "Conciso",
+  "aiStyleDetailed": "Dettagliato",
+  "aiContextPrivacyNote": "Non scrivere qui dati come IBAN, codice fiscale o password: non servono all'analisi.",
+  "aiSaveContext": "Salva",
+  "aiWalletPurposesIntro": "Indica a cosa serve ogni portafoglio: l'AI potrà dirti se lo stai usando come previsto e suggerirti come organizzarti meglio.",
+  "aiWalletPurposesEmpty": "Non hai ancora portafogli attivi.",
+  "aiWalletNoPurpose": "Nessuno scopo",
+  "aiPurposeSuggestionDaily": "Spese quotidiane",
+  "aiPurposeSuggestionSavings": "Risparmi",
+  "aiPurposeSuggestionEmergency": "Fondo emergenze",
+  "aiPurposeSuggestionHome": "Spese di casa e bollette",
+  "aiPurposeSuggestionLeisure": "Tempo libero e viaggi",
+  "aiSavePurpose": "Salva scopo",
+  "aiNewAnalysisTitle": "Nuova analisi AI",
+  "aiHistoryTitle": "Cronologia analisi",
+  "aiHistoryMenuSubtitle": "Rileggi, rinomina o elimina le analisi",
+  "aiNotReadyTitle": "Configura prima l'Analisi AI",
+  "aiNotReadyBody": "Scegli un fornitore, inserisci la chiave API e un modello.",
+  "aiGoToSetup": "Configura",
+  "aiWhatToAnalyze": "Cosa vuoi analizzare",
+  "aiCustomQuestionLabel": "La tua domanda",
+  "aiCustomQuestionHint": "Es. quanto ho speso per mangiare fuori e come è cambiato nei mesi?",
+  "aiPeriodLabel": "Periodo",
+  "aiPeriodLast30Days": "Ultimi 30 giorni",
+  "aiPeriodLast12Months": "Ultimi 12 mesi",
+  "aiPeriodCurrentMonth": "Mese corrente",
+  "aiPeriodCurrentYear": "Anno corrente",
+  "aiPeriodAllTime": "Tutta la cronologia",
+  "aiPeriodCustom": "Personalizzato",
+  "aiPeriodUntil": "Fino al {date}",
+  "@aiPeriodUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "aiWalletsLabel": "Portafogli",
+  "aiAllWallets": "Tutti",
+  "aiDataToSend": "Dati da inviare",
+  "aiDataToSendHint": "Periodo, portafogli e totali vengono sempre inviati. Più dati scegli, più l'analisi è ricca e più token consuma.",
+  "aiSectionMonthly": "Andamento mensile",
+  "aiSectionCategories": "Categorie",
+  "aiSectionTitles": "Voci principali",
+  "aiSectionTransfers": "Trasferimenti",
+  "aiSectionRecurring": "Spese ricorrenti",
+  "aiSectionPersonalContext": "Contesto personale",
+  "aiIncludeTransactions": "Includi i singoli movimenti",
+  "aiIncludeTransactionsHint": "Utile per le anomalie; invia data, importo, titolo e categoria dei movimenti più recenti.",
+  "aiMaxTransactionsValue": "max {count}",
+  "@aiMaxTransactionsValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiIncludeAdjustments": "Includi le rettifiche di saldo",
+  "aiIncludeAdjustmentsHint": "Di solito correggono errori di registrazione: meglio lasciarle fuori.",
+  "aiPreviewAction": "Anteprima",
+  "aiPreviewTitle": "Anteprima",
+  "aiPreviewMissing": "Nessuna anteprima: torna indietro e preparane una.",
+  "aiPreviewSentTo": "Sarà inviato a {provider} · {model}",
+  "@aiPreviewSentTo": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPreviewWallets": "{count, plural, =1{1 portafoglio} other{{count} portafogli}}",
+  "@aiPreviewWallets": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiPreviewOnlyTotals": "Solo periodo, portafogli e totali",
+  "aiPreviewSections": "Sezioni: {sections}",
+  "@aiPreviewSections": {
+    "placeholders": {
+      "sections": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPreviewNoTransactions": "Nessun movimento singolo",
+  "aiPreviewTransactions": "{count} movimenti singoli ({omitted} meno recenti esclusi)",
+  "@aiPreviewTransactions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "omitted": {
+        "type": "int"
+      }
+    }
+  },
+  "aiPreviewAnonymized": "Titoli dei movimenti anonimizzati",
+  "aiPreviewWithContext": "Contesto personale incluso",
+  "aiPreviewTokens": "~{tokens} token in input",
+  "@aiPreviewTokens": {
+    "placeholders": {
+      "tokens": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPreviewCost": "costo max ~{cost}",
+  "@aiPreviewCost": {
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
+  "aiInstructionsLabel": "Istruzioni",
+  "aiInstructionsHint": "Puoi modificarle: è l'unica parte del testo che decidi tu.",
+  "aiInstructionsRequired": "Scrivi le istruzioni prima di inviare.",
+  "aiRestoreInstructions": "Ripristina",
+  "aiSystemPromptLabel": "Regole per il modello",
+  "aiSystemPromptHint": "Fisse: formato del report, uso corretto dei dati, protezioni",
+  "aiDataBlockLabel": "Dati inviati",
+  "aiDataBlockHint": "Generati dal server dai tuoi movimenti, non modificabili",
+  "aiSendAction": "Invia e analizza",
+  "aiAnalysisTitle": "Analisi AI",
+  "aiDataSentTitle": "Cosa è stato inviato",
+  "aiDataSentHint": "Istruzioni e dati esattamente come inviati",
+  "aiCopyAction": "Copia testo",
+  "aiShareAction": "Condividi",
+  "aiCopied": "Testo copiato",
+  "aiRefreshPreview": "Aggiorna anteprima",
+  "aiTokensUsed": "{input} in / {output} out token",
+  "@aiTokensUsed": {
+    "placeholders": {
+      "input": {
+        "type": "String"
+      },
+      "output": {
+        "type": "String"
+      }
+    }
+  },
+  "aiCostValue": "costo ~{cost}",
+  "@aiCostValue": {
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
+  "aiThinking": "Il modello sta scrivendo…",
+  "aiAnswerStopped": "Interrotta: il testo qui sopra è parziale.",
+  "aiAnswerTruncated": "Risposta troncata al limite di token: puoi alzarlo nelle impostazioni avanzate.",
+  "aiWaitForAnswer": "Attendi la fine della risposta…",
+  "aiFollowUpUnavailable": "Domande disponibili a report completato",
+  "aiFollowUpLimitReached": "Limite di domande raggiunto",
+  "aiAskFollowUpHint": "Fai una domanda ({left} rimaste)",
+  "@aiAskFollowUpHint": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "aiStopAction": "Interrompi",
+  "aiAskAction": "Invia domanda",
+  "aiHistoryEmpty": "Nessuna analisi ancora. Avviane una dalla sezione Report.",
+  "aiDeleteAnalysisTitle": "Eliminare l'analisi?",
+  "aiDeleteAction": "Elimina",
+  "aiDeleteAllAction": "Elimina tutte",
+  "aiDeleteAllTitle": "Eliminare tutte le analisi?",
+  "aiDeleteAllMessage": "Report e conversazioni vengono eliminati definitivamente.",
+  "aiRenameAction": "Rinomina",
+  "aiRenameTitle": "Rinomina analisi",
+  "aiCancel": "Annulla",
+  "aiReportsCardTitle": "Analisi AI",
+  "aiReportsCardBody": "Fatti spiegare i tuoi numeri: un report personalizzato e domande di approfondimento.",
+  "aiReportsCardSetupBody": "Collega il tuo fornitore AI preferito per ottenere report personalizzati sulle tue finanze.",
+  "aiReportsCardStart": "Analizza",
+  "aiHistoryAnalyzeAction": "Analizza con AI i movimenti filtrati",
+  "aiHistoryAnalyzeAdjustments": "L'Analisi AI considera entrate e uscite: togli il filtro «rettifiche» per analizzare questi movimenti.",
+  "aiHistoryAnalyzeTransfers": "I trasferimenti spostano denaro tra i tuoi portafogli e non vengono analizzati: togli il filtro «trasferimenti».",
+  "aiPeriodLastMonth": "Mese scorso",
+  "aiPeriodLastQuarter": "Trimestre scorso",
+  "aiDateFrom": "Da",
+  "aiDateTo": "A",
+  "aiDateFromEmpty": "Dall'inizio",
+  "aiDateToEmpty": "Oggi",
+  "aiDateClear": "Rimuovi data",
+  "aiFiltersTitle": "Filtri",
+  "aiFiltersFromHistoryTitle": "Filtri dalla Cronologia",
+  "aiFiltersHint": "L'analisi considera solo i movimenti che rispettano questi filtri. Saldi e trasferimenti non vengono inclusi.",
+  "aiFilterExpenses": "Solo uscite",
+  "aiFilterIncome": "Solo entrate",
+  "aiFilterCategory": "Categoria: {name}",
+  "@aiFilterCategory": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiFilterTitle": "Contiene «{text}»",
+  "@aiFilterTitle": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "aiFilterAmountMin": "Da {amount}",
+  "@aiFilterAmountMin": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "aiFilterAmountMax": "Fino a {amount}",
+  "@aiFilterAmountMax": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOnDevice": "Sul dispositivo",
+  "errorCodeAiOnDeviceDisabled": "L'analisi sul dispositivo non è attiva su questo server.",
+  "errorCodeAiLocalConsentRequired": "Per continuare accetta l'informativa sull'analisi sul dispositivo.",
+  "errorCodeAiAnalysisOnDevice": "Questa analisi è stata scritta sul telefono: continuala da lì.",
+  "errorCodeAiAnalysisNotOnDevice": "Questa analisi è stata scritta da un fornitore cloud.",
+  "errorCodeAiMessageFinished": "Questa risposta era già stata salvata.",
+  "errorCodeAiLocalEngineError": "Il modello sul telefono ha avuto un errore.",
+  "errorCodeAiLocalOutOfMemory": "Memoria insufficiente: scegli un modello più piccolo o un contesto più corto.",
+  "errorCodeAiLocalContextTooLong": "Il testo non entra nel contesto del modello: usa il profilo compatto, un contesto più grande o meno movimenti.",
+  "errorCodeAiLocalTimeout": "Il telefono ha impiegato troppo tempo e la generazione è stata interrotta.",
+  "errorCodeAiLocalModelMissing": "Nessun modello installato sul telefono: scaricane uno da Assistente AI.",
+  "errorCodeAiLocalInterrupted": "La generazione sul telefono si è interrotta.",
+  "errorCodeAiLocalUnsupported": "Questo dispositivo non può eseguire modelli in locale.",
+  "errorCodeAiLocalTooHot": "Il telefono è troppo caldo per far girare il modello. Lascialo raffreddare qualche minuto e riprova.",
+
+  "aiModeCloud": "Cloud",
+  "aiModeOnDevice": "Sul dispositivo",
+  "aiLocalModeIntro": "Il modello gira sul telefono: i tuoi dati non vanno a nessun fornitore AI esterno. Il server prepara i dati e salva report e domande nella cronologia, come per il cloud.",
+  "aiLocalModelsTitle": "Modelli sul dispositivo",
+  "aiLocalRuntimeTitle": "Impostazioni di esecuzione",
+  "aiLocalNoModel": "Nessun modello attivo. Scaricane uno o importalo per usare l’analisi sul dispositivo.",
+  "aiLocalNoModelShort": "Nessun modello installato",
+  "aiLocalChooseModel": "Scegli un modello",
+  "aiLocalNotReadyBody": "Per analizzare sul telefono serve un modello installato. Scaricane uno da Modelli sul dispositivo.",
+  "aiLocalConsentMenuTitle": "Informativa sul dispositivo",
+  "aiLocalConsentIntro": "Con l'analisi sul dispositivo il modello AI gira sul tuo telefono. Prima di ogni analisi vedrai esattamente quali dati gli vengono dati.",
+  "aiLocalConsentWhereTitle": "Dove vengono elaborati i dati",
+  "aiLocalConsentWhereBody": "Sul telefono, senza connessione al modello: nessun fornitore AI esterno riceve i tuoi dati.",
+  "aiLocalConsentStoredTitle": "Cosa resta sul server",
+  "aiLocalConsentStoredBody": "Il server prepara il riepilogo dei dati e salva report e domande nella cronologia, così li ritrovi su ogni dispositivo.",
+  "aiLocalConsentMistakesTitle": "Il modello può sbagliare",
+  "aiLocalConsentMistakesBody": "I modelli che girano su un telefono sono piccoli: possono confondere i numeri. Controllali prima di decidere.",
+  "aiLocalConsentModelTitle": "Il modello",
+  "aiLocalConsentModelBody": "Lo scarichi da Hugging Face, che vede il tuo indirizzo IP. Ogni modello ha la sua licenza, mostrata prima del download.",
+  "aiSetupStepLocalModel": "Modello sul telefono",
+  "aiSetupStepLocalModelHint": "Scarica un modello e accetta l'informativa sul dispositivo",
+  "aiLocalBackendGpu": "GPU",
+  "aiLocalBackendCpu": "CPU",
+  "aiLocalBackendNpu": "NPU",
+  "aiLocalBackendLabel": "Dove calcola",
+  "aiLocalBackendGpuHint": "Più veloce. Consigliata.",
+  "aiLocalBackendCpuHint": "Più lenta e usa più memoria; con LiteRT-LM il contesto arriva al massimo a 8k.",
+  "aiLocalContextShort": "contesto {size}",
+  "@aiLocalContextShort": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalOutputShort": "risposta fino a {count} token",
+  "@aiLocalOutputShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiLocalContextLabel": "Contesto: {count} token",
+  "@aiLocalContextLabel": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalContextHint": "Quanto testo il modello tiene presente: dati, report e domande.",
+  "aiLocalContextMemoryWarning": "Più contesto usa più memoria. Se l'app si chiude durante un'analisi, riducilo.",
+  "aiLocalOutputLabel": "Risposta massima: {count} token",
+  "@aiLocalOutputLabel": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalOutputHint": "Un report tipico ne usa 600–1.000. Più spazio alla risposta lascia meno spazio ai dati.",
+  "aiLocalTemperatureLabel": "Temperatura: {value}",
+  "@aiLocalTemperatureLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTemperatureHint": "Bassa: risposte più fedeli ai numeri. Alta: più varie.",
+  "aiLocalSpeedTitle": "Velocità",
+  "aiLocalSpeedValue": "Lettura {prefill} token/s · scrittura {decode} token/s",
+  "@aiLocalSpeedValue": {
+    "placeholders": {
+      "prefill": {
+        "type": "String"
+      },
+      "decode": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalSpeedMeasured": "Misurata su questo telefono",
+  "aiLocalSpeedCatalog": "Indicativa, misurata su un Galaxy S26 Ultra",
+  "aiLocalSpeedFallback": "Non ancora misurata: stima prudente",
+  "aiLocalMeasure": "Misura velocità",
+  "aiLocalMeasuring": "Misura in corso…",
+  "aiLocalResetDefaults": "Ripristina i valori predefiniti",
+  "aiLocalDeviceTitle": "Questo telefono",
+  "aiLocalDeviceRam": "RAM {size}",
+  "@aiLocalDeviceRam": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeviceFree": "{size} liberi",
+  "@aiLocalDeviceFree": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeviceUnknown": "Memoria e spazio non disponibili",
+  "aiLocalWifiOnly": "Scarica solo con Wi-Fi",
+  "aiLocalWifiOnlyHint": "I modelli pesano qualche GB: senza Wi-Fi il download aspetta e riprende da solo.",
+  "aiLocalPickingFile": "Preparazione del file…",
+  "aiLocalImporting": "Importazione e verifica del modello…",
+  "aiLocalInstalledTitle": "Installati",
+  "aiLocalInUse": "in uso",
+  "aiLocalUnverified": "non verificato",
+  "aiLocalUseModel": "Usa questo modello",
+  "aiLocalEngineLitert": "LiteRT-LM",
+  "aiLocalEngineLitertHint": "Sulla GPU, veloce. Modelli preparati da Google.",
+  "aiLocalEngineLlama": "llama.cpp",
+  "aiLocalEngineLlamaHint": "Qualsiasi file GGUF e quantizzazione, sulla CPU: più lento.",
+  "aiLocalRecommended": "Consigliato",
+  "aiLocalRamFits": "RAM sufficiente",
+  "aiLocalRamTight": "RAM al limite",
+  "aiLocalRamInsufficient": "RAM insufficiente",
+  "aiLocalRamUnknown": "RAM non nota",
+  "aiLocalRamWarningTitle": "Memoria insufficiente",
+  "aiLocalRamWarningMessage": "Questo telefono ha meno RAM di quella che serve al modello: potrebbe non partire o far chiudere l'app.",
+  "aiLocalDownloadAnyway": "Scarica comunque",
+  "aiLocalDownload": "Scarica",
+  "aiLocalProgress": "{done} di {total}",
+  "@aiLocalProgress": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalQueued": "In coda",
+  "aiLocalPaused": "In pausa · {progress}",
+  "@aiLocalPaused": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalWaitingForWifi": "In attesa del Wi-Fi",
+  "aiLocalVerifying": "Verifica del file…",
+  "aiLocalPause": "Pausa",
+  "aiLocalResume": "Riprendi",
+  "aiLocalRetry": "Riprova",
+  "aiLocalCancel": "Annulla",
+  "aiLocalLicenseBody": "Il file pesa {size} e viene scaricato da Hugging Face. Il modello è distribuito con licenza {license}: scaricandolo la accetti.",
+  "@aiLocalLicenseBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "license": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalGatedBody": "Questo modello è riservato: accetta la licenza sulla sua pagina Hugging Face e inserisci un token di lettura.",
+  "aiLocalAcceptAndDownload": "Accetta e scarica",
+  "aiLocalDeleteTitle": "Eliminare il modello?",
+  "aiLocalDeleteMessage": "{name} verrà rimosso dal telefono. Le analisi già fatte restano nella cronologia.",
+  "@aiLocalDeleteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeleted": "Modello eliminato: liberati {size}",
+  "@aiLocalDeleted": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalImportFile": "Importa un file",
+  "aiLocalImportUrl": "Scarica da URL",
+  "aiLocalImportAction": "Importa",
+  "aiLocalUrlLabel": "Indirizzo https del file",
+  "aiLocalNameLabel": "Nome del modello",
+  "aiLocalQuantLabel": "Quantizzazione (es. Q4_K_M)",
+  "aiLocalShaLabel": "SHA-256 (facoltativo)",
+  "aiLocalShaHelper": "Se lo inserisci, il file viene verificato; altrimenti il modello resta \"non verificato\".",
+  "aiLocalShaInvalid": "Deve avere 64 caratteri esadecimali.",
+  "aiLocalImported": "{name} importato",
+  "@aiLocalImported": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalImportedUnverified": "{name} importato, non verificato",
+  "@aiLocalImportedUnverified": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTokenAction": "Token Hugging Face",
+  "aiLocalTokenLabel": "Token di lettura",
+  "aiLocalTokenHelper": "Serve solo per i modelli riservati. Resta sul telefono e viene inviato solo a huggingface.co.",
+  "aiLocalTokenStored": "Un token è salvato su questo telefono.",
+  "aiLocalTokenNone": "Nessun token salvato.",
+  "aiLocalTokenSaved": "Token salvato",
+  "aiLocalTokenRemoved": "Token rimosso",
+  "aiCompactProfile": "Profilo compatto",
+  "aiCompactProfileHint": "Meno dettagli e regole più brevi: un prompt più corto.",
+  "aiCompactProfileHintLocal": "Consigliato sul telefono: meno dettagli, regole più brevi e un prompt che entra nel contesto del modello.",
+  "aiPreviewOnDevice": "Elaborato sul telefono con {model}",
+  "@aiPreviewOnDevice": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPreviewNoCost": "Nessun costo",
+  "aiPreviewCompacted": "{count, plural, =1{Un dettaglio è stato ridotto per stare nel limite.} other{{count} dettagli sono stati ridotti per stare nel limite.}}",
+  "@aiPreviewCompacted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiRunOnDeviceAction": "Avvia sul telefono",
+  "aiLocalContextUse": "Contesto: {used} di {total} token",
+  "@aiLocalContextUse": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalContextParts": "dati {input} · risposta {output}",
+  "@aiLocalContextParts": {
+    "placeholders": {
+      "input": {
+        "type": "String"
+      },
+      "output": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalCountExact": "conteggio esatto",
+  "aiLocalCountEstimated": "stima",
+  "aiLocalContextTight": "Quasi pieno: le domande successive avranno poco spazio.",
+  "aiLocalContextOverflow": "Non entra nel contesto del modello. Prova una di queste soluzioni:",
+  "aiLocalFixCompact": "Profilo compatto",
+  "aiLocalFixFewerTransactions": "Meno movimenti",
+  "aiLocalFixShorterAnswer": "Risposta più corta",
+  "aiLocalFixLargerContext": "Contesto più grande",
+  "aiLocalTimeEstimate": "Tempo stimato: {low}–{high}",
+  "@aiLocalTimeEstimate": {
+    "placeholders": {
+      "low": {
+        "type": "String"
+      },
+      "high": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTimeRough": "Stima approssimativa: misura la velocità in Impostazioni di esecuzione.",
+  "aiLocalWarnWarm": "Il telefono è caldo: sarà più lento.",
+  "aiLocalWarnBattery": "Batteria sotto il 15%: collega il caricatore.",
+  "aiLocalWarnMemory": "Poca memoria libera: chiudi le altre app se l'analisi si interrompe.",
+  "aiLocalKeepOpen": "Il telefono sta scrivendo. Puoi uscire dall'app: ti avvisiamo quando ha finito.",
+  "aiLocalTokensPerSecond": "{value} token/s",
+  "@aiLocalTokensPerSecond": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCodeAiLocalDownloadNetwork": "Download interrotto dalla rete: riprendi quando la connessione torna.",
+  "errorCodeAiLocalDownloadGated": "Modello riservato: accetta la licenza su Hugging Face e inserisci un token valido.",
+  "errorCodeAiLocalDownloadNotFound": "File non trovato sul server.",
+  "errorCodeAiLocalDownloadHttp": "Il server ha rifiutato il download.",
+  "errorCodeAiLocalDownloadNoSpace": "Spazio insufficiente sul telefono per questo modello.",
+  "errorCodeAiLocalDownloadChecksum": "Il file scaricato non corrisponde a quello atteso ed è stato scartato.",
+  "errorCodeAiLocalDownloadInsecureUrl": "L'indirizzo deve iniziare con https://.",
+  "errorCodeAiLocalImportUnknownFormat": "Formato non riconosciuto: servono file .gguf o .litertlm.",
+  "aiFeaturesSwitchTitle": "Funzioni AI",
+  "aiFeaturesSwitchSubtitle": "Assistente AI, analisi nei Report e in Cronologia, scopo dei portafogli. Spegnendole non si cancella nulla: analisi, chiavi e modelli restano dove sono.",
+  "aiRunModelLabel": "Modello",
+  "aiPendingTitle": "Risposte non inviate",
+  "aiPendingIntro": "Report e risposte scritti su questo telefono che il server non ha ancora: la rete mancava quando sono finiti, oppure il server li ha rifiutati. Restano qui finché chi li ha scritti non li invia o li elimina. Chiunque usi l'app su questo telefono può leggerli.",
+  "aiPendingEmpty": "Nessuna risposta in attesa: il server ha tutto.",
+  "aiPendingReport": "Report",
+  "aiPendingAnswer": "Risposta a una domanda",
+  "aiPendingUnknownOwner": "account sconosciuto",
+  "aiPendingWaiting": "In attesa di invio: parte da sola quando l'autore accede o riapre l'app.",
+  "aiPendingRefused": "Rifiutato dal server: {reason}",
+  "@aiPendingRefused": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPendingResend": "Invia ora",
+  "aiPendingSent": "Inviato: ora è nella cronologia.",
+  "aiPendingRefusedAgain": "Il server lo rifiuta ancora: puoi leggerlo qui o eliminarlo.",
+  "aiPendingNotOwner": "Solo chi lo ha scritto può inviarlo.",
+  "aiPendingOwnerOnly": "Solo {owner} può inviarlo o eliminarlo.",
+  "@aiPendingOwnerOnly": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPendingDeleteTitle": "Eliminare questa risposta?",
+  "aiPendingDeleteMessage": "Il testo esiste solo su questo telefono: eliminandolo va perso.",
+  "aiPendingBanner": "{count, plural, =1{Una risposta scritta sul telefono non è ancora sul server} other{{count} risposte scritte sul telefono non sono ancora sul server}}",
+  "@aiPendingBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiLocalFollowUpUnsupported": "Questa analisi è stata scritta sul telefono: continua le domande da un telefono Android con un modello installato.",
+  "aiLocalFollowUpNoModel": "Per rispondere serve un modello sul telefono: installane uno da Modelli sul dispositivo.",
+  "aiLocalFollowUpOtherModel": "Il modello del report ({report}) non è più installato: risponderà {current}.",
+  "@aiLocalFollowUpOtherModel": {
+    "placeholders": {
+      "report": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "bgWorkTitle": "Analisi AI sul dispositivo",
+  "bgWorkChannel": "Attività in corso",
+  "bgWorkStop": "Interrompi",
+  "bgDownloading": "Download {name} · {percent}%",
+  "@bgDownloading": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bgVerifying": "Verifica di {name}",
+  "@bgVerifying": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bgWaitingWifi": "{name} · in attesa del Wi-Fi",
+  "@bgWaitingWifi": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bgQueued": "{name} · in coda",
+  "@bgQueued": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiNotifyChannel": "Analisi AI",
+  "notifyModelReadyTitle": "Modello pronto",
+  "notifyModelReadyBody": "{name} è installato: puoi usarlo per le analisi.",
+  "@notifyModelReadyBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifyDownloadFailedTitle": "Download non riuscito",
+  "aiLeaveTitle": "L'analisi è ancora in corso",
+  "aiLeaveBody": "Il telefono sta ancora scrivendo. Puoi interromperla (il testo scritto finora viene salvato), restare qui o lasciarla continuare in background: ti avvisiamo con una notifica quando ha finito.",
+  "aiLeaveStop": "Interrompi",
+  "aiLeaveStay": "Resta",
+  "aiLeaveBackground": "Continua in background",
+  "bgWritingReport": "Scrittura del report · {words} parole",
+  "@bgWritingReport": {
+    "placeholders": {
+      "words": {
+        "type": "int"
+      }
+    }
+  },
+  "bgWritingAnswer": "Scrittura della risposta · {words} parole",
+  "@bgWritingAnswer": {
+    "placeholders": {
+      "words": {
+        "type": "int"
+      }
+    }
+  },
+  "notifyReportReadyTitle": "Analisi pronta",
+  "notifyAnswerReadyTitle": "Risposta pronta",
+  "notifyAnalysisFailedTitle": "Analisi interrotta",
+  "notifyAnalysisFallbackBody": "Tocca per leggerla."
 }

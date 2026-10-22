@@ -11,7 +11,8 @@ import '../view_models/account_providers.dart';
 import '../view_models/profile_controller.dart';
 
 /// Preferences (plan.md section 7.13): theme, timezone, language, balance
-/// visibility on open, first day of the week.
+/// visibility on open, first day of the week, and the AI features switch
+/// (section 32.10).
 class AccountPreferencesScreen extends ConsumerStatefulWidget {
   const AccountPreferencesScreen({super.key});
 
@@ -49,6 +50,7 @@ class _AccountPreferencesScreenState
     String? locale,
     bool? balanceHiddenDefault,
     String? firstDayOfWeek,
+    bool? aiEnabled,
   }) async {
     if (_isSaving) return;
     setState(() => _isSaving = true);
@@ -62,6 +64,7 @@ class _AccountPreferencesScreenState
             locale: locale,
             balanceHiddenDefault: balanceHiddenDefault,
             firstDayOfWeek: firstDayOfWeek,
+            aiEnabled: aiEnabled,
           );
     } on AppError catch (e) {
       if (mounted) {
@@ -149,6 +152,13 @@ class _AccountPreferencesScreenState
                   subtitle: Text(l10n.hideBalanceOnOpenSubtitle),
                   value: profile.balanceHiddenDefault,
                   onChanged: (v) => _update(profile, balanceHiddenDefault: v),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.aiFeaturesSwitchTitle),
+                  subtitle: Text(l10n.aiFeaturesSwitchSubtitle),
+                  value: profile.aiEnabled,
+                  onChanged: (v) => _update(profile, aiEnabled: v),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Text(

@@ -53,6 +53,120 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorCodeUnknownError => 'Something went wrong. Please try again.';
 
   @override
+  String get errorCodeWalletNotFound => 'Wallet not found.';
+
+  @override
+  String get errorCodeAiDisabled =>
+      'AI analysis is not enabled on this server.';
+
+  @override
+  String get errorCodeAiNotConfigured =>
+      'Set up a provider, an API key and a model first.';
+
+  @override
+  String get errorCodeAiConsentRequired =>
+      'Accept the AI analysis notice to continue.';
+
+  @override
+  String get errorCodeAiDataChanged =>
+      'Your data changed after the preview: check it again.';
+
+  @override
+  String get errorCodeAiStreamInProgress =>
+      'Another analysis is in progress: wait for it or stop it.';
+
+  @override
+  String get errorCodeAiPromptTooLarge =>
+      'Too much data for one analysis: choose a shorter period, fewer wallets or fewer transactions.';
+
+  @override
+  String get errorCodeAiFollowupLimit =>
+      'You reached the maximum number of questions for this analysis: start a new one.';
+
+  @override
+  String get errorCodeAiAnalysisExists =>
+      'This analysis was already started: find it in the history.';
+
+  @override
+  String get errorCodeAiAnalysisNotReady =>
+      'Follow-up questions need a completed report.';
+
+  @override
+  String get errorCodeAiKeyUnreadable =>
+      'The saved API key can no longer be read: enter it again.';
+
+  @override
+  String get errorCodeAiStreamInterrupted =>
+      'The analysis stopped before finishing.';
+
+  @override
+  String get errorCodeAiAnswerTooLong =>
+      'The answer was too long and was cut short.';
+
+  @override
+  String get errorCodeAiProviderError => 'The AI provider returned an error.';
+
+  @override
+  String get errorCodeAiProviderInvalidKey =>
+      'The API key is invalid or lacks the required permissions.';
+
+  @override
+  String get errorCodeAiProviderRateLimited =>
+      'The AI provider is limiting requests: try again shortly.';
+
+  @override
+  String get errorCodeAiProviderQuotaExceeded =>
+      'Your AI provider credit or quota is used up: check your account with the provider.';
+
+  @override
+  String get errorCodeAiProviderContextTooLong =>
+      'The model cannot read this much data: shorten the period or include fewer transactions.';
+
+  @override
+  String get errorCodeAiProviderModelNotFound =>
+      'The chosen model does not exist or is not available to your key.';
+
+  @override
+  String get errorCodeAiProviderContentBlocked =>
+      'The AI provider blocked the answer with its safety filters.';
+
+  @override
+  String get errorCodeAiProviderUnavailable =>
+      'The AI provider is temporarily overloaded or unavailable.';
+
+  @override
+  String get errorCodeAiProviderTimeout =>
+      'The AI provider took too long and the analysis was stopped.';
+
+  @override
+  String get errorCodeAiProviderUnreachable =>
+      'The AI provider could not be reached.';
+
+  @override
+  String get errorCodeAiProviderInvalid => 'Unsupported provider.';
+
+  @override
+  String get errorCodeAiBaseUrlInvalid =>
+      'Enter a valid https address, without credentials or parameters.';
+
+  @override
+  String get errorCodeAiBaseUrlNotAllowed =>
+      'This server cannot connect to private or local addresses.';
+
+  @override
+  String get errorCodeAiTextTooLong => 'The text is too long.';
+
+  @override
+  String get errorCodeValueOutOfRange => 'Value out of the allowed range.';
+
+  @override
+  String get errorCodeInvalidValue => 'Invalid value.';
+
+  @override
+  String get errorCodeAiConsentVersionInvalid =>
+      'The notice was updated: read and accept it again.';
+
+  @override
   String get errorCodeValidationError => 'Check the highlighted fields.';
 
   @override
@@ -226,6 +340,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorCodeNotAllowedForWalletType =>
       'Not allowed for this wallet type.';
+
+  @override
+  String get errorCodePurposeLengthInvalid =>
+      'The purpose can be at most 280 characters.';
 
   @override
   String get errorCodeLinkTargetNotFound =>
@@ -409,6 +527,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletNameLabel => 'Name';
+
+  @override
+  String get walletPurposeLabel => 'Purpose (optional)';
+
+  @override
+  String get walletPurposeHint =>
+      'E.g. daily expenses, emergency fund, holiday savings';
+
+  @override
+  String get walletPurposeHelper =>
+      'Helps AI analysis understand what this wallet is for.';
 
   @override
   String get walletTypeLabel => 'Type';
@@ -651,7 +780,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountPreferencesMenuSubtitle =>
-      'Theme, timezone, language, balance';
+      'Theme, timezone, language, balance, AI features';
 
   @override
   String get accountDataMenuTitle => 'Data';
@@ -718,7 +847,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exportDataDescription =>
-      'CSV for transactions, JSON for profile, wallet, categories, templates, and transactions.';
+      'CSV for transactions, JSON for profile, wallet, categories, templates, transactions, and AI analyses.';
 
   @override
   String get exportCsvAction => 'Export CSV';
@@ -1176,4 +1305,1505 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mediaRenameFailedMessage => 'Unable to rename the image.';
+
+  @override
+  String get aiAssistantMenuTitle => 'AI assistant';
+
+  @override
+  String get aiAssistantMenuSubtitle =>
+      'Analyze your finances with an AI model';
+
+  @override
+  String get aiAssistantTitle => 'AI assistant';
+
+  @override
+  String get aiUnavailableTitle => 'AI analysis unavailable';
+
+  @override
+  String get aiUnavailableBody =>
+      'This server has not enabled AI analysis. Whoever runs the server can enable it by setting AI_KEY_ENCRYPTION_KEY.';
+
+  @override
+  String get aiSetupTitle => 'Get ready for your first analysis';
+
+  @override
+  String get aiSetupDoneTitle => 'All set';
+
+  @override
+  String aiSetupProgress(int done, int total) {
+    return '$done of $total steps done';
+  }
+
+  @override
+  String get aiSetupOptional => 'optional';
+
+  @override
+  String get aiSetupStepProvider => 'Provider, key and model';
+
+  @override
+  String get aiSetupStepProviderHint =>
+      'Choose the AI service and enter your API key';
+
+  @override
+  String get aiSetupStepContext => 'Personal context';
+
+  @override
+  String get aiSetupStepContextHint =>
+      'Goals and situation, for tailored advice';
+
+  @override
+  String get aiSetupStepPurposes => 'Wallet purposes';
+
+  @override
+  String get aiSetupStepPurposesHint => 'What each wallet is for';
+
+  @override
+  String get aiSetupStepFirstAnalysis => 'First analysis';
+
+  @override
+  String get aiSetupStepFirstAnalysisHint => 'From Reports, AI analysis card';
+
+  @override
+  String get aiProviderMenuTitle => 'Provider and API key';
+
+  @override
+  String get aiProviderMenuNotConfigured => 'Not set up';
+
+  @override
+  String get aiContextMenuTitle => 'Personal context';
+
+  @override
+  String get aiContextMenuFilled => 'Filled in';
+
+  @override
+  String get aiContextMenuEmpty => 'Not filled in yet';
+
+  @override
+  String get aiWalletPurposesMenuTitle => 'Wallet purposes';
+
+  @override
+  String aiWalletPurposesProgress(int done, int total) {
+    return '$done of $total wallets with a purpose';
+  }
+
+  @override
+  String get aiConsentMenuTitle => 'Privacy and consent';
+
+  @override
+  String get aiConsentMenuPending => 'To accept before the first analysis';
+
+  @override
+  String get aiConsentMenuAccepted => 'Accepted';
+
+  @override
+  String get aiConsentRevokeAction => 'Revoke';
+
+  @override
+  String get aiConsentRevokeConfirmTitle => 'Revoke consent?';
+
+  @override
+  String get aiConsentRevokeConfirmMessage =>
+      'You will not be able to start analyses until you accept it again. Saved analyses stay in the history.';
+
+  @override
+  String get aiConsentTitle => 'Before you start';
+
+  @override
+  String get aiConsentIntro =>
+      'AI analysis sends a summary of your data to the AI provider you choose, with your own API key. Before each send you will see exactly what is sent.';
+
+  @override
+  String get aiConsentSentTitle => 'What is sent';
+
+  @override
+  String get aiConsentSentAggregates =>
+      'Totals, monthly trend, main categories and items of the chosen period';
+
+  @override
+  String get aiConsentSentWallets =>
+      'Name, type, purpose and balance of the included wallets';
+
+  @override
+  String get aiConsentSentTransactions =>
+      'Only if you turn it on: the list of transactions, optionally with anonymized titles';
+
+  @override
+  String get aiConsentSentContext =>
+      'Only if you turn it on: the personal context you wrote';
+
+  @override
+  String get aiConsentNeverTitle => 'What is never sent';
+
+  @override
+  String get aiConsentNeverBody =>
+      'Email, name, username, account identifiers and images';
+
+  @override
+  String get aiConsentKeyTitle => 'Your API key';
+
+  @override
+  String get aiConsentKeyBody =>
+      'It stays encrypted on the server and is never shown again or exported';
+
+  @override
+  String get aiConsentProviderTitle => 'The provider';
+
+  @override
+  String get aiConsentProviderBody =>
+      'It handles the data under its own terms: check how long it keeps requests and whether it uses them for training';
+
+  @override
+  String get aiConsentRevokeTitle => 'You can change your mind';
+
+  @override
+  String get aiConsentRevokeBody =>
+      'Revoke consent and delete analyses at any time from the AI assistant';
+
+  @override
+  String get aiConsentAccept => 'I understand, I accept';
+
+  @override
+  String get aiConsentDecline => 'Not now';
+
+  @override
+  String get aiProviderLabel => 'Provider';
+
+  @override
+  String get aiProviderCompatible =>
+      'OpenAI-compatible (Mistral, Groq, OpenRouter, Ollama…)';
+
+  @override
+  String get aiProviderHintAnthropic =>
+      'Create a key at console.anthropic.com → API keys.';
+
+  @override
+  String get aiProviderHintOpenai =>
+      'Create a key at platform.openai.com → API keys.';
+
+  @override
+  String get aiProviderHintGemini =>
+      'Create a key at aistudio.google.com → Get API key.';
+
+  @override
+  String get aiProviderHintCompatible =>
+      'For any service exposing the OpenAI API: enter its address, usually ending in /v1.';
+
+  @override
+  String get aiBaseUrlLabel => 'Service address (base URL)';
+
+  @override
+  String get aiBaseUrlHelper =>
+      'Private or local addresses (e.g. Ollama at home) only work if whoever runs the server allowed them.';
+
+  @override
+  String get aiApiKeyLabel => 'API key';
+
+  @override
+  String get aiApiKeyOptionalLabel => 'API key (if required)';
+
+  @override
+  String get aiApiKeyHelper =>
+      'It is encrypted on the server: after saving you will only see its last characters.';
+
+  @override
+  String get aiApiKeyWillBeRemoved =>
+      'The saved key will be removed when you save.';
+
+  @override
+  String aiApiKeyStored(String hint) {
+    return 'Saved key $hint';
+  }
+
+  @override
+  String get aiApiKeyReplace => 'Replace';
+
+  @override
+  String get aiApiKeyRemove => 'Remove';
+
+  @override
+  String get aiApiKeyShow => 'Show key';
+
+  @override
+  String get aiApiKeyHide => 'Hide key';
+
+  @override
+  String get aiModelLabel => 'Model';
+
+  @override
+  String get aiModelHelper =>
+      'Press “Load models” to pick it from the provider\'s list, or type its name.';
+
+  @override
+  String aiModelsLoaded(int count) {
+    return '$count models available';
+  }
+
+  @override
+  String get aiModelsNoneFound =>
+      'The provider returned no models: type the name by hand.';
+
+  @override
+  String get aiLoadModels => 'Load models';
+
+  @override
+  String get aiTestConnection => 'Test connection';
+
+  @override
+  String aiTestOk(String model, int ms) {
+    return 'It works: $model answered in $ms ms.';
+  }
+
+  @override
+  String aiTestOkKeyOnly(int ms) {
+    return 'Key valid (answered in $ms ms). Choose a model to test it too.';
+  }
+
+  @override
+  String get aiLastTestOk => 'Last test succeeded.';
+
+  @override
+  String get aiLastTestFailed => 'Last test failed.';
+
+  @override
+  String get aiAdvancedSettings => 'Advanced settings';
+
+  @override
+  String get aiMaxOutputTokensLabel => 'Maximum answer length (tokens)';
+
+  @override
+  String aiMaxOutputTokensHelper(int min, int max) {
+    return 'Between $min and $max. Higher allows longer, costlier reports.';
+  }
+
+  @override
+  String get aiPricesTitle => 'Prices (optional)';
+
+  @override
+  String get aiPricesHelper =>
+      'Your model\'s price per million tokens, in the provider\'s currency: only used to estimate cost.';
+
+  @override
+  String get aiInputPriceLabel => 'Input';
+
+  @override
+  String get aiOutputPriceLabel => 'Output';
+
+  @override
+  String get aiDefaultIncludeTransactions =>
+      'Include single transactions by default';
+
+  @override
+  String get aiDefaultIncludeTransactionsHint =>
+      'More precise analyses, but more data sent and more tokens.';
+
+  @override
+  String get aiDefaultAnonymizeTitles => 'Anonymize titles by default';
+
+  @override
+  String get aiDefaultAnonymizeTitlesHint =>
+      'Transaction names become “Item 1”, “Item 2”…';
+
+  @override
+  String get aiSaveSettings => 'Save';
+
+  @override
+  String get aiForgetProviderTitle => 'Forget this provider?';
+
+  @override
+  String get aiForgetProviderMessage =>
+      'The saved API key is deleted from the server.';
+
+  @override
+  String get aiForgetProviderAction => 'Delete key and provider';
+
+  @override
+  String get aiContextIntro =>
+      'This helps the AI give advice that fits your situation. Everything is optional and is only sent if you include the personal context in an analysis.';
+
+  @override
+  String get aiNotSpecified => 'Not specified';
+
+  @override
+  String get aiHouseholdLabel => 'People in the household';
+
+  @override
+  String aiHouseholdValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '1 person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get aiHouseholdLess => 'One person fewer';
+
+  @override
+  String get aiHouseholdMore => 'One more person';
+
+  @override
+  String get aiIncomeTypeLabel => 'Income type';
+
+  @override
+  String get aiIncomeEmployee => 'Employee';
+
+  @override
+  String get aiIncomeSelfEmployed => 'Self-employed';
+
+  @override
+  String get aiIncomeStudent => 'Student';
+
+  @override
+  String get aiIncomeRetired => 'Retired';
+
+  @override
+  String get aiIncomeUnemployed => 'No work income';
+
+  @override
+  String get aiIncomeMixed => 'Mixed';
+
+  @override
+  String get aiIncomeOther => 'Other';
+
+  @override
+  String get aiAboutMeLabel => 'About me';
+
+  @override
+  String get aiAboutMeHint =>
+      'E.g. I rent in Milan, I own a car, my salary arrives on the 27th';
+
+  @override
+  String get aiGoalsLabel => 'Goals';
+
+  @override
+  String get aiGoalsHint =>
+      'E.g. save €5,000 by June, spend less on eating out';
+
+  @override
+  String get aiIgnoreLabel => 'Things to ignore or interpret';
+
+  @override
+  String get aiIgnoreHint =>
+      'E.g. the transfer to Marco is a loan he pays back; in July I paid the yearly insurance';
+
+  @override
+  String get aiResponseStyleLabel => 'Answer style';
+
+  @override
+  String get aiStyleDefault => 'Standard';
+
+  @override
+  String get aiStyleConcise => 'Concise';
+
+  @override
+  String get aiStyleDetailed => 'Detailed';
+
+  @override
+  String get aiContextPrivacyNote =>
+      'Do not write data such as IBANs, tax codes or passwords here: the analysis does not need them.';
+
+  @override
+  String get aiSaveContext => 'Save';
+
+  @override
+  String get aiWalletPurposesIntro =>
+      'Say what each wallet is for: the AI can then tell you whether you use it as intended and how to organize better.';
+
+  @override
+  String get aiWalletPurposesEmpty => 'You have no active wallets yet.';
+
+  @override
+  String get aiWalletNoPurpose => 'No purpose';
+
+  @override
+  String get aiPurposeSuggestionDaily => 'Daily expenses';
+
+  @override
+  String get aiPurposeSuggestionSavings => 'Savings';
+
+  @override
+  String get aiPurposeSuggestionEmergency => 'Emergency fund';
+
+  @override
+  String get aiPurposeSuggestionHome => 'Home and bills';
+
+  @override
+  String get aiPurposeSuggestionLeisure => 'Leisure and travel';
+
+  @override
+  String get aiSavePurpose => 'Save purpose';
+
+  @override
+  String get aiNewAnalysisTitle => 'New AI analysis';
+
+  @override
+  String get aiHistoryTitle => 'Analysis history';
+
+  @override
+  String get aiHistoryMenuSubtitle => 'Reread, rename or delete analyses';
+
+  @override
+  String get aiNotReadyTitle => 'Set up AI analysis first';
+
+  @override
+  String get aiNotReadyBody =>
+      'Choose a provider, enter the API key and a model.';
+
+  @override
+  String get aiGoToSetup => 'Set up';
+
+  @override
+  String get aiWhatToAnalyze => 'What to analyze';
+
+  @override
+  String get aiCustomQuestionLabel => 'Your question';
+
+  @override
+  String get aiCustomQuestionHint =>
+      'E.g. how much did I spend eating out and how did it change over the months?';
+
+  @override
+  String get aiPeriodLabel => 'Period';
+
+  @override
+  String get aiPeriodLast30Days => 'Last 30 days';
+
+  @override
+  String get aiPeriodLast12Months => 'Last 12 months';
+
+  @override
+  String get aiPeriodCurrentMonth => 'This month';
+
+  @override
+  String get aiPeriodCurrentYear => 'This year';
+
+  @override
+  String get aiPeriodAllTime => 'Whole history';
+
+  @override
+  String get aiPeriodCustom => 'Custom';
+
+  @override
+  String aiPeriodUntil(String date) {
+    return 'Up to $date';
+  }
+
+  @override
+  String get aiWalletsLabel => 'Wallets';
+
+  @override
+  String get aiAllWallets => 'All';
+
+  @override
+  String get aiDataToSend => 'Data to send';
+
+  @override
+  String get aiDataToSendHint =>
+      'Period, wallets and totals are always sent. More data means a richer analysis and more tokens.';
+
+  @override
+  String get aiSectionMonthly => 'Monthly trend';
+
+  @override
+  String get aiSectionCategories => 'Categories';
+
+  @override
+  String get aiSectionTitles => 'Top items';
+
+  @override
+  String get aiSectionTransfers => 'Transfers';
+
+  @override
+  String get aiSectionRecurring => 'Recurring expenses';
+
+  @override
+  String get aiSectionPersonalContext => 'Personal context';
+
+  @override
+  String get aiIncludeTransactions => 'Include single transactions';
+
+  @override
+  String get aiIncludeTransactionsHint =>
+      'Useful for anomalies; sends date, amount, title and category of the most recent ones.';
+
+  @override
+  String aiMaxTransactionsValue(int count) {
+    return 'max $count';
+  }
+
+  @override
+  String get aiIncludeAdjustments => 'Include balance adjustments';
+
+  @override
+  String get aiIncludeAdjustmentsHint =>
+      'They usually fix bookkeeping mistakes: better left out.';
+
+  @override
+  String get aiPreviewAction => 'Preview';
+
+  @override
+  String get aiPreviewTitle => 'Preview';
+
+  @override
+  String get aiPreviewMissing => 'No preview: go back and prepare one.';
+
+  @override
+  String aiPreviewSentTo(String provider, String model) {
+    return 'Will be sent to $provider · $model';
+  }
+
+  @override
+  String aiPreviewWallets(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count wallets',
+      one: '1 wallet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get aiPreviewOnlyTotals => 'Only period, wallets and totals';
+
+  @override
+  String aiPreviewSections(String sections) {
+    return 'Sections: $sections';
+  }
+
+  @override
+  String get aiPreviewNoTransactions => 'No single transactions';
+
+  @override
+  String aiPreviewTransactions(int count, int omitted) {
+    return '$count single transactions ($omitted older ones left out)';
+  }
+
+  @override
+  String get aiPreviewAnonymized => 'Transaction titles anonymized';
+
+  @override
+  String get aiPreviewWithContext => 'Personal context included';
+
+  @override
+  String aiPreviewTokens(String tokens) {
+    return '~$tokens input tokens';
+  }
+
+  @override
+  String aiPreviewCost(String cost) {
+    return 'max cost ~$cost';
+  }
+
+  @override
+  String get aiInstructionsLabel => 'Instructions';
+
+  @override
+  String get aiInstructionsHint =>
+      'You can edit them: they are the only part of the text you decide.';
+
+  @override
+  String get aiInstructionsRequired => 'Write the instructions before sending.';
+
+  @override
+  String get aiRestoreInstructions => 'Restore';
+
+  @override
+  String get aiSystemPromptLabel => 'Rules for the model';
+
+  @override
+  String get aiSystemPromptHint =>
+      'Fixed: report format, correct use of data, safeguards';
+
+  @override
+  String get aiDataBlockLabel => 'Data sent';
+
+  @override
+  String get aiDataBlockHint =>
+      'Generated by the server from your transactions, not editable';
+
+  @override
+  String get aiSendAction => 'Send and analyze';
+
+  @override
+  String get aiAnalysisTitle => 'AI analysis';
+
+  @override
+  String get aiDataSentTitle => 'What was sent';
+
+  @override
+  String get aiDataSentHint => 'Instructions and data exactly as sent';
+
+  @override
+  String get aiCopyAction => 'Copy text';
+
+  @override
+  String get aiShareAction => 'Share';
+
+  @override
+  String get aiCopied => 'Text copied';
+
+  @override
+  String get aiRefreshPreview => 'Refresh preview';
+
+  @override
+  String aiTokensUsed(String input, String output) {
+    return '$input in / $output out tokens';
+  }
+
+  @override
+  String aiCostValue(String cost) {
+    return 'cost ~$cost';
+  }
+
+  @override
+  String get aiThinking => 'The model is writing…';
+
+  @override
+  String get aiAnswerStopped => 'Stopped: the text above is partial.';
+
+  @override
+  String get aiAnswerTruncated =>
+      'Answer cut at the token limit: you can raise it in the advanced settings.';
+
+  @override
+  String get aiWaitForAnswer => 'Wait for the answer to finish…';
+
+  @override
+  String get aiFollowUpUnavailable =>
+      'Questions available once the report is done';
+
+  @override
+  String get aiFollowUpLimitReached => 'Question limit reached';
+
+  @override
+  String aiAskFollowUpHint(int left) {
+    return 'Ask a question ($left left)';
+  }
+
+  @override
+  String get aiStopAction => 'Stop';
+
+  @override
+  String get aiAskAction => 'Send question';
+
+  @override
+  String get aiHistoryEmpty => 'No analyses yet. Start one from Reports.';
+
+  @override
+  String get aiDeleteAnalysisTitle => 'Delete the analysis?';
+
+  @override
+  String get aiDeleteAction => 'Delete';
+
+  @override
+  String get aiDeleteAllAction => 'Delete all';
+
+  @override
+  String get aiDeleteAllTitle => 'Delete all analyses?';
+
+  @override
+  String get aiDeleteAllMessage =>
+      'Reports and conversations are deleted permanently.';
+
+  @override
+  String get aiRenameAction => 'Rename';
+
+  @override
+  String get aiRenameTitle => 'Rename analysis';
+
+  @override
+  String get aiCancel => 'Cancel';
+
+  @override
+  String get aiReportsCardTitle => 'AI analysis';
+
+  @override
+  String get aiReportsCardBody =>
+      'Have your numbers explained: a personalized report and follow-up questions.';
+
+  @override
+  String get aiReportsCardSetupBody =>
+      'Connect your preferred AI provider to get personalized reports on your finances.';
+
+  @override
+  String get aiReportsCardStart => 'Analyze';
+
+  @override
+  String get aiHistoryAnalyzeAction =>
+      'Analyze the filtered transactions with AI';
+
+  @override
+  String get aiHistoryAnalyzeAdjustments =>
+      'AI analysis looks at income and expenses: remove the \"adjustments\" filter to analyze these transactions.';
+
+  @override
+  String get aiHistoryAnalyzeTransfers =>
+      'Transfers move money between your wallets and are not analyzed: remove the \"transfers\" filter.';
+
+  @override
+  String get aiPeriodLastMonth => 'Last month';
+
+  @override
+  String get aiPeriodLastQuarter => 'Last quarter';
+
+  @override
+  String get aiDateFrom => 'From';
+
+  @override
+  String get aiDateTo => 'To';
+
+  @override
+  String get aiDateFromEmpty => 'The beginning';
+
+  @override
+  String get aiDateToEmpty => 'Today';
+
+  @override
+  String get aiDateClear => 'Clear date';
+
+  @override
+  String get aiFiltersTitle => 'Filters';
+
+  @override
+  String get aiFiltersFromHistoryTitle => 'Filters from History';
+
+  @override
+  String get aiFiltersHint =>
+      'The analysis only covers transactions matching these filters. Balances and transfers are left out.';
+
+  @override
+  String get aiFilterExpenses => 'Expenses only';
+
+  @override
+  String get aiFilterIncome => 'Income only';
+
+  @override
+  String aiFilterCategory(String name) {
+    return 'Category: $name';
+  }
+
+  @override
+  String aiFilterTitle(String text) {
+    return 'Contains “$text”';
+  }
+
+  @override
+  String aiFilterAmountMin(String amount) {
+    return 'From $amount';
+  }
+
+  @override
+  String aiFilterAmountMax(String amount) {
+    return 'Up to $amount';
+  }
+
+  @override
+  String get aiProviderOnDevice => 'On device';
+
+  @override
+  String get errorCodeAiOnDeviceDisabled =>
+      'On-device analysis is not enabled on this server.';
+
+  @override
+  String get errorCodeAiLocalConsentRequired =>
+      'Accept the on-device analysis notice to continue.';
+
+  @override
+  String get errorCodeAiAnalysisOnDevice =>
+      'This analysis was written on the phone: continue it there.';
+
+  @override
+  String get errorCodeAiAnalysisNotOnDevice =>
+      'This analysis was written by a cloud provider.';
+
+  @override
+  String get errorCodeAiMessageFinished => 'This answer was already saved.';
+
+  @override
+  String get errorCodeAiLocalEngineError => 'The on-device model failed.';
+
+  @override
+  String get errorCodeAiLocalOutOfMemory =>
+      'Not enough memory: choose a smaller model or a shorter context.';
+
+  @override
+  String get errorCodeAiLocalContextTooLong =>
+      'The text doesn\'t fit the model\'s context: use the compact profile, a larger context or fewer transactions.';
+
+  @override
+  String get errorCodeAiLocalTimeout =>
+      'The phone took too long and generation was stopped.';
+
+  @override
+  String get errorCodeAiLocalModelMissing =>
+      'No model installed on the phone: download one from the AI assistant.';
+
+  @override
+  String get errorCodeAiLocalInterrupted =>
+      'Generation on the phone was interrupted.';
+
+  @override
+  String get errorCodeAiLocalUnsupported =>
+      'This device cannot run models locally.';
+
+  @override
+  String get errorCodeAiLocalTooHot =>
+      'The phone is too hot to run the model. Let it cool down for a few minutes and try again.';
+
+  @override
+  String get aiModeCloud => 'Cloud';
+
+  @override
+  String get aiModeOnDevice => 'On device';
+
+  @override
+  String get aiLocalModeIntro =>
+      'The model runs on the phone: your data goes to no outside AI provider. The server prepares the data and keeps reports and questions in the history, as with the cloud.';
+
+  @override
+  String get aiLocalModelsTitle => 'On-device models';
+
+  @override
+  String get aiLocalRuntimeTitle => 'Runtime settings';
+
+  @override
+  String get aiLocalNoModel =>
+      'No active model. Download or import one to use on-device analysis.';
+
+  @override
+  String get aiLocalNoModelShort => 'No model installed';
+
+  @override
+  String get aiLocalChooseModel => 'Choose a model';
+
+  @override
+  String get aiLocalNotReadyBody =>
+      'An on-device analysis needs an installed model. Download one from On-device models.';
+
+  @override
+  String get aiLocalConsentMenuTitle => 'On-device disclosure';
+
+  @override
+  String get aiLocalConsentIntro =>
+      'With on-device analysis the AI model runs on your phone. Before each analysis you see exactly which data it is given.';
+
+  @override
+  String get aiLocalConsentWhereTitle => 'Where the data is processed';
+
+  @override
+  String get aiLocalConsentWhereBody =>
+      'On the phone, with no connection to the model: no outside AI provider receives your data.';
+
+  @override
+  String get aiLocalConsentStoredTitle => 'What the server keeps';
+
+  @override
+  String get aiLocalConsentStoredBody =>
+      'The server prepares the data summary and keeps reports and questions in the history, so you find them on every device.';
+
+  @override
+  String get aiLocalConsentMistakesTitle => 'The model can be wrong';
+
+  @override
+  String get aiLocalConsentMistakesBody =>
+      'Models that run on a phone are small: they can mix up numbers. Check them before deciding.';
+
+  @override
+  String get aiLocalConsentModelTitle => 'The model';
+
+  @override
+  String get aiLocalConsentModelBody =>
+      'You download it from Hugging Face, which sees your IP address. Each model has its own license, shown before the download.';
+
+  @override
+  String get aiSetupStepLocalModel => 'Model on the phone';
+
+  @override
+  String get aiSetupStepLocalModelHint =>
+      'Download a model and accept the on-device disclosure';
+
+  @override
+  String get aiLocalBackendGpu => 'GPU';
+
+  @override
+  String get aiLocalBackendCpu => 'CPU';
+
+  @override
+  String get aiLocalBackendNpu => 'NPU';
+
+  @override
+  String get aiLocalBackendLabel => 'Runs on';
+
+  @override
+  String get aiLocalBackendGpuHint => 'Faster. Recommended.';
+
+  @override
+  String get aiLocalBackendCpuHint =>
+      'Slower and uses more memory; with LiteRT-LM the context goes up to 8k.';
+
+  @override
+  String aiLocalContextShort(String size) {
+    return '$size context';
+  }
+
+  @override
+  String aiLocalOutputShort(int count) {
+    return 'answer up to $count tokens';
+  }
+
+  @override
+  String aiLocalContextLabel(String count) {
+    return 'Context: $count tokens';
+  }
+
+  @override
+  String get aiLocalContextHint =>
+      'How much text the model keeps in mind: data, report and questions.';
+
+  @override
+  String get aiLocalContextMemoryWarning =>
+      'More context uses more memory. If the app closes during an analysis, lower it.';
+
+  @override
+  String aiLocalOutputLabel(String count) {
+    return 'Longest answer: $count tokens';
+  }
+
+  @override
+  String get aiLocalOutputHint =>
+      'A typical report uses 600–1,000. More room for the answer leaves less for the data.';
+
+  @override
+  String aiLocalTemperatureLabel(String value) {
+    return 'Temperature: $value';
+  }
+
+  @override
+  String get aiLocalTemperatureHint =>
+      'Low: answers closer to the numbers. High: more varied.';
+
+  @override
+  String get aiLocalSpeedTitle => 'Speed';
+
+  @override
+  String aiLocalSpeedValue(String prefill, String decode) {
+    return 'Reading $prefill tokens/s · writing $decode tokens/s';
+  }
+
+  @override
+  String get aiLocalSpeedMeasured => 'Measured on this phone';
+
+  @override
+  String get aiLocalSpeedCatalog =>
+      'Indicative, measured on a Galaxy S26 Ultra';
+
+  @override
+  String get aiLocalSpeedFallback => 'Not measured yet: a cautious guess';
+
+  @override
+  String get aiLocalMeasure => 'Measure speed';
+
+  @override
+  String get aiLocalMeasuring => 'Measuring…';
+
+  @override
+  String get aiLocalResetDefaults => 'Restore defaults';
+
+  @override
+  String get aiLocalDeviceTitle => 'This phone';
+
+  @override
+  String aiLocalDeviceRam(String size) {
+    return 'RAM $size';
+  }
+
+  @override
+  String aiLocalDeviceFree(String size) {
+    return '$size free';
+  }
+
+  @override
+  String get aiLocalDeviceUnknown => 'Memory and storage unknown';
+
+  @override
+  String get aiLocalWifiOnly => 'Download on Wi-Fi only';
+
+  @override
+  String get aiLocalWifiOnlyHint =>
+      'Models weigh a few GB: off Wi-Fi the download waits and resumes by itself.';
+
+  @override
+  String get aiLocalPickingFile => 'Preparing the file…';
+
+  @override
+  String get aiLocalImporting => 'Importing and checking the model…';
+
+  @override
+  String get aiLocalInstalledTitle => 'Installed';
+
+  @override
+  String get aiLocalInUse => 'in use';
+
+  @override
+  String get aiLocalUnverified => 'not verified';
+
+  @override
+  String get aiLocalUseModel => 'Use this model';
+
+  @override
+  String get aiLocalEngineLitert => 'LiteRT-LM';
+
+  @override
+  String get aiLocalEngineLitertHint =>
+      'On the GPU, fast. Models prepared by Google.';
+
+  @override
+  String get aiLocalEngineLlama => 'llama.cpp';
+
+  @override
+  String get aiLocalEngineLlamaHint =>
+      'Any GGUF file and quantization, on the CPU: slower.';
+
+  @override
+  String get aiLocalRecommended => 'Recommended';
+
+  @override
+  String get aiLocalRamFits => 'Enough RAM';
+
+  @override
+  String get aiLocalRamTight => 'RAM tight';
+
+  @override
+  String get aiLocalRamInsufficient => 'Not enough RAM';
+
+  @override
+  String get aiLocalRamUnknown => 'RAM unknown';
+
+  @override
+  String get aiLocalRamWarningTitle => 'Not enough memory';
+
+  @override
+  String get aiLocalRamWarningMessage =>
+      'This phone has less RAM than the model needs: it may not start or may close the app.';
+
+  @override
+  String get aiLocalDownloadAnyway => 'Download anyway';
+
+  @override
+  String get aiLocalDownload => 'Download';
+
+  @override
+  String aiLocalProgress(String done, String total) {
+    return '$done of $total';
+  }
+
+  @override
+  String get aiLocalQueued => 'Queued';
+
+  @override
+  String aiLocalPaused(String progress) {
+    return 'Paused · $progress';
+  }
+
+  @override
+  String get aiLocalWaitingForWifi => 'Waiting for Wi-Fi';
+
+  @override
+  String get aiLocalVerifying => 'Checking the file…';
+
+  @override
+  String get aiLocalPause => 'Pause';
+
+  @override
+  String get aiLocalResume => 'Resume';
+
+  @override
+  String get aiLocalRetry => 'Retry';
+
+  @override
+  String get aiLocalCancel => 'Cancel';
+
+  @override
+  String aiLocalLicenseBody(String size, String license) {
+    return 'The file is $size and comes from Hugging Face. The model is distributed under the $license license: by downloading it you accept it.';
+  }
+
+  @override
+  String get aiLocalGatedBody =>
+      'This model is gated: accept the license on its Hugging Face page and enter a read token.';
+
+  @override
+  String get aiLocalAcceptAndDownload => 'Accept and download';
+
+  @override
+  String get aiLocalDeleteTitle => 'Delete the model?';
+
+  @override
+  String aiLocalDeleteMessage(String name) {
+    return '$name will be removed from the phone. Analyses already made stay in the history.';
+  }
+
+  @override
+  String aiLocalDeleted(String size) {
+    return 'Model deleted: $size freed';
+  }
+
+  @override
+  String get aiLocalImportFile => 'Import a file';
+
+  @override
+  String get aiLocalImportUrl => 'Download from URL';
+
+  @override
+  String get aiLocalImportAction => 'Import';
+
+  @override
+  String get aiLocalUrlLabel => 'File https address';
+
+  @override
+  String get aiLocalNameLabel => 'Model name';
+
+  @override
+  String get aiLocalQuantLabel => 'Quantization (e.g. Q4_K_M)';
+
+  @override
+  String get aiLocalShaLabel => 'SHA-256 (optional)';
+
+  @override
+  String get aiLocalShaHelper =>
+      'If you enter it the file is checked; otherwise the model stays \"not verified\".';
+
+  @override
+  String get aiLocalShaInvalid => 'Must be 64 hexadecimal characters.';
+
+  @override
+  String aiLocalImported(String name) {
+    return '$name imported';
+  }
+
+  @override
+  String aiLocalImportedUnverified(String name) {
+    return '$name imported, not verified';
+  }
+
+  @override
+  String get aiLocalTokenAction => 'Hugging Face token';
+
+  @override
+  String get aiLocalTokenLabel => 'Read token';
+
+  @override
+  String get aiLocalTokenHelper =>
+      'Needed only for gated models. It stays on the phone and is sent only to huggingface.co.';
+
+  @override
+  String get aiLocalTokenStored => 'A token is saved on this phone.';
+
+  @override
+  String get aiLocalTokenNone => 'No token saved.';
+
+  @override
+  String get aiLocalTokenSaved => 'Token saved';
+
+  @override
+  String get aiLocalTokenRemoved => 'Token removed';
+
+  @override
+  String get aiCompactProfile => 'Compact profile';
+
+  @override
+  String get aiCompactProfileHint =>
+      'Less detail and shorter rules: a shorter prompt.';
+
+  @override
+  String get aiCompactProfileHintLocal =>
+      'Recommended on the phone: less detail, shorter rules and a prompt that fits the model\'s context.';
+
+  @override
+  String aiPreviewOnDevice(String model) {
+    return 'Processed on the phone with $model';
+  }
+
+  @override
+  String get aiPreviewNoCost => 'No cost';
+
+  @override
+  String aiPreviewCompacted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count details were reduced to fit the limit.',
+      one: 'One detail was reduced to fit the limit.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get aiRunOnDeviceAction => 'Run on the phone';
+
+  @override
+  String aiLocalContextUse(String used, String total) {
+    return 'Context: $used of $total tokens';
+  }
+
+  @override
+  String aiLocalContextParts(String input, String output) {
+    return 'data $input · answer $output';
+  }
+
+  @override
+  String get aiLocalCountExact => 'exact count';
+
+  @override
+  String get aiLocalCountEstimated => 'estimate';
+
+  @override
+  String get aiLocalContextTight =>
+      'Nearly full: follow-up questions will have little room.';
+
+  @override
+  String get aiLocalContextOverflow =>
+      'It doesn\'t fit the model\'s context. Try one of these:';
+
+  @override
+  String get aiLocalFixCompact => 'Compact profile';
+
+  @override
+  String get aiLocalFixFewerTransactions => 'Fewer transactions';
+
+  @override
+  String get aiLocalFixShorterAnswer => 'Shorter answer';
+
+  @override
+  String get aiLocalFixLargerContext => 'Larger context';
+
+  @override
+  String aiLocalTimeEstimate(String low, String high) {
+    return 'Estimated time: $low–$high';
+  }
+
+  @override
+  String get aiLocalTimeRough =>
+      'A rough guess: measure the speed in Runtime settings.';
+
+  @override
+  String get aiLocalWarnWarm => 'The phone is warm: it will be slower.';
+
+  @override
+  String get aiLocalWarnBattery => 'Battery below 15%: plug in the charger.';
+
+  @override
+  String get aiLocalWarnMemory =>
+      'Little free memory: close other apps if the analysis stops.';
+
+  @override
+  String get aiLocalKeepOpen =>
+      'The phone is writing. You can leave the app: we\'ll let you know when it is done.';
+
+  @override
+  String aiLocalTokensPerSecond(String value) {
+    return '$value tokens/s';
+  }
+
+  @override
+  String get errorCodeAiLocalDownloadNetwork =>
+      'The download was interrupted by the network: resume when the connection is back.';
+
+  @override
+  String get errorCodeAiLocalDownloadGated =>
+      'Gated model: accept the license on Hugging Face and enter a valid token.';
+
+  @override
+  String get errorCodeAiLocalDownloadNotFound =>
+      'File not found on the server.';
+
+  @override
+  String get errorCodeAiLocalDownloadHttp => 'The server refused the download.';
+
+  @override
+  String get errorCodeAiLocalDownloadNoSpace =>
+      'Not enough space on the phone for this model.';
+
+  @override
+  String get errorCodeAiLocalDownloadChecksum =>
+      'The downloaded file doesn\'t match the expected one and was discarded.';
+
+  @override
+  String get errorCodeAiLocalDownloadInsecureUrl =>
+      'The address must start with https://.';
+
+  @override
+  String get errorCodeAiLocalImportUnknownFormat =>
+      'Unknown format: .gguf or .litertlm files are needed.';
+
+  @override
+  String get aiFeaturesSwitchTitle => 'AI features';
+
+  @override
+  String get aiFeaturesSwitchSubtitle =>
+      'AI assistant, analyses in Reports and History, wallet purposes. Turning them off deletes nothing: analyses, keys and models stay where they are.';
+
+  @override
+  String get aiRunModelLabel => 'Model';
+
+  @override
+  String get aiPendingTitle => 'Unsent answers';
+
+  @override
+  String get aiPendingIntro =>
+      'Reports and answers written on this phone that the server doesn\'t have yet: the network was down when they finished, or the server refused them. They stay here until whoever wrote them sends or deletes them. Anyone using the app on this phone can read them.';
+
+  @override
+  String get aiPendingEmpty => 'Nothing waiting: the server has everything.';
+
+  @override
+  String get aiPendingReport => 'Report';
+
+  @override
+  String get aiPendingAnswer => 'Answer to a question';
+
+  @override
+  String get aiPendingUnknownOwner => 'unknown account';
+
+  @override
+  String get aiPendingWaiting =>
+      'Waiting to be sent: it goes by itself when its author signs in or reopens the app.';
+
+  @override
+  String aiPendingRefused(String reason) {
+    return 'Refused by the server: $reason';
+  }
+
+  @override
+  String get aiPendingResend => 'Send now';
+
+  @override
+  String get aiPendingSent => 'Sent: it is now in the history.';
+
+  @override
+  String get aiPendingRefusedAgain =>
+      'The server still refuses it: you can read it here or delete it.';
+
+  @override
+  String get aiPendingNotOwner => 'Only its author can send it.';
+
+  @override
+  String aiPendingOwnerOnly(String owner) {
+    return 'Only $owner can send or delete it.';
+  }
+
+  @override
+  String get aiPendingDeleteTitle => 'Delete this answer?';
+
+  @override
+  String get aiPendingDeleteMessage =>
+      'The text exists only on this phone: deleting it loses it.';
+
+  @override
+  String aiPendingBanner(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count answers written on the phone are not on the server yet',
+      one: 'One answer written on the phone is not on the server yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get aiLocalFollowUpUnsupported =>
+      'This analysis was written on a phone: continue the questions from an Android phone with a model installed.';
+
+  @override
+  String get aiLocalFollowUpNoModel =>
+      'Answering needs a model on the phone: install one from On-device models.';
+
+  @override
+  String aiLocalFollowUpOtherModel(String report, String current) {
+    return 'The report\'s model ($report) is no longer installed: $current will answer.';
+  }
+
+  @override
+  String get bgWorkTitle => 'On-device AI';
+
+  @override
+  String get bgWorkChannel => 'Work in progress';
+
+  @override
+  String get bgWorkStop => 'Stop';
+
+  @override
+  String bgDownloading(String name, int percent) {
+    return 'Downloading $name · $percent%';
+  }
+
+  @override
+  String bgVerifying(String name) {
+    return 'Checking $name';
+  }
+
+  @override
+  String bgWaitingWifi(String name) {
+    return '$name · waiting for Wi-Fi';
+  }
+
+  @override
+  String bgQueued(String name) {
+    return '$name · queued';
+  }
+
+  @override
+  String get aiNotifyChannel => 'AI analyses';
+
+  @override
+  String get notifyModelReadyTitle => 'Model ready';
+
+  @override
+  String notifyModelReadyBody(String name) {
+    return '$name is installed: you can use it for analyses.';
+  }
+
+  @override
+  String get notifyDownloadFailedTitle => 'Download failed';
+
+  @override
+  String get aiLeaveTitle => 'The analysis is still running';
+
+  @override
+  String get aiLeaveBody =>
+      'The phone is still writing. You can stop it (what was written so far is saved), stay here or let it go on in the background: a notification tells you when it is done.';
+
+  @override
+  String get aiLeaveStop => 'Stop';
+
+  @override
+  String get aiLeaveStay => 'Stay';
+
+  @override
+  String get aiLeaveBackground => 'Continue in background';
+
+  @override
+  String bgWritingReport(int words) {
+    return 'Writing the report · $words words';
+  }
+
+  @override
+  String bgWritingAnswer(int words) {
+    return 'Writing the answer · $words words';
+  }
+
+  @override
+  String get notifyReportReadyTitle => 'Analysis ready';
+
+  @override
+  String get notifyAnswerReadyTitle => 'Answer ready';
+
+  @override
+  String get notifyAnalysisFailedTitle => 'Analysis interrupted';
+
+  @override
+  String get notifyAnalysisFallbackBody => 'Tap to read it.';
 }

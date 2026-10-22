@@ -108,6 +108,18 @@ class AccountScreen extends ConsumerWidget {
                 );
               },
             ),
+            if (ref.watch(aiFeaturesEnabledProvider)) ...[
+              const SizedBox(height: AppSpacing.md),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.auto_awesome_outlined),
+                  title: Text(l10n.aiAssistantMenuTitle),
+                  subtitle: Text(l10n.aiAssistantMenuSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(AppRoutes.aiAssistant),
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
             Card(
               child: Column(

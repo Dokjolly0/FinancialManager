@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/account/presentation/view_models/account_providers.dart';
+import '../../features/ai/data/providers.dart';
+import '../../features/ai/presentation/view_models/ai_draft_controller.dart';
 import '../../features/account/presentation/view_models/linked_accounts_controller.dart';
 import '../../features/account/presentation/view_models/security_controller.dart';
 import '../../features/categories/data/providers.dart';
@@ -52,5 +54,17 @@ void invalidateUserScopedProviders(Ref ref) {
   }
   if (ref.exists(paymentGroupsControllerProvider)) {
     ref.invalidate(paymentGroupsControllerProvider);
+  }
+  if (ref.exists(aiSettingsProvider)) {
+    ref.invalidate(aiSettingsProvider);
+  }
+  if (ref.exists(aiUserContextProvider)) {
+    ref.invalidate(aiUserContextProvider);
+  }
+  if (ref.exists(aiPresetsProvider)) {
+    ref.invalidate(aiPresetsProvider);
+  }
+  if (ref.exists(aiDraftControllerProvider)) {
+    ref.invalidate(aiDraftControllerProvider);
   }
 }

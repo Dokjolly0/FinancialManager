@@ -39,6 +39,36 @@
     }
   },
   "errorCodeUnknownError": "Something went wrong. Please try again.",
+  "errorCodeWalletNotFound": "Wallet not found.",
+  "errorCodeAiDisabled": "AI analysis is not enabled on this server.",
+  "errorCodeAiNotConfigured": "Set up a provider, an API key and a model first.",
+  "errorCodeAiConsentRequired": "Accept the AI analysis notice to continue.",
+  "errorCodeAiDataChanged": "Your data changed after the preview: check it again.",
+  "errorCodeAiStreamInProgress": "Another analysis is in progress: wait for it or stop it.",
+  "errorCodeAiPromptTooLarge": "Too much data for one analysis: choose a shorter period, fewer wallets or fewer transactions.",
+  "errorCodeAiFollowupLimit": "You reached the maximum number of questions for this analysis: start a new one.",
+  "errorCodeAiAnalysisExists": "This analysis was already started: find it in the history.",
+  "errorCodeAiAnalysisNotReady": "Follow-up questions need a completed report.",
+  "errorCodeAiKeyUnreadable": "The saved API key can no longer be read: enter it again.",
+  "errorCodeAiStreamInterrupted": "The analysis stopped before finishing.",
+  "errorCodeAiAnswerTooLong": "The answer was too long and was cut short.",
+  "errorCodeAiProviderError": "The AI provider returned an error.",
+  "errorCodeAiProviderInvalidKey": "The API key is invalid or lacks the required permissions.",
+  "errorCodeAiProviderRateLimited": "The AI provider is limiting requests: try again shortly.",
+  "errorCodeAiProviderQuotaExceeded": "Your AI provider credit or quota is used up: check your account with the provider.",
+  "errorCodeAiProviderContextTooLong": "The model cannot read this much data: shorten the period or include fewer transactions.",
+  "errorCodeAiProviderModelNotFound": "The chosen model does not exist or is not available to your key.",
+  "errorCodeAiProviderContentBlocked": "The AI provider blocked the answer with its safety filters.",
+  "errorCodeAiProviderUnavailable": "The AI provider is temporarily overloaded or unavailable.",
+  "errorCodeAiProviderTimeout": "The AI provider took too long and the analysis was stopped.",
+  "errorCodeAiProviderUnreachable": "The AI provider could not be reached.",
+  "errorCodeAiProviderInvalid": "Unsupported provider.",
+  "errorCodeAiBaseUrlInvalid": "Enter a valid https address, without credentials or parameters.",
+  "errorCodeAiBaseUrlNotAllowed": "This server cannot connect to private or local addresses.",
+  "errorCodeAiTextTooLong": "The text is too long.",
+  "errorCodeValueOutOfRange": "Value out of the allowed range.",
+  "errorCodeInvalidValue": "Invalid value.",
+  "errorCodeAiConsentVersionInvalid": "The notice was updated: read and accept it again.",
 
   "errorCodeValidationError": "Check the highlighted fields.",
   "errorCodeBadRequest": "Malformed request.",
@@ -88,6 +118,7 @@
   "errorCodeInvalidMonth": "Invalid month.",
   "errorCodeInvalidDay": "Invalid day.",
   "errorCodeNotAllowedForWalletType": "Not allowed for this wallet type.",
+  "errorCodePurposeLengthInvalid": "The purpose can be at most 280 characters.",
   "errorCodeLinkTargetNotFound": "The transaction to link to was not found.",
   "errorCodeLinkTargetNotLinkable": "This transaction can't be linked.",
   "errorCodeNotInPaymentGroup": "This transaction isn't linked to any other.",
@@ -150,6 +181,9 @@
   "newWalletScreenTitle": "New wallet",
   "editWalletScreenTitle": "Edit wallet",
   "walletNameLabel": "Name",
+  "walletPurposeLabel": "Purpose (optional)",
+  "walletPurposeHint": "E.g. daily expenses, emergency fund, holiday savings",
+  "walletPurposeHelper": "Helps AI analysis understand what this wallet is for.",
   "walletTypeLabel": "Type",
   "walletTypeCash": "Cash",
   "walletTypeBank": "Bank account",
@@ -246,7 +280,7 @@
   "accountSecurityMenuSubtitle": "Password, active sessions, logout",
   "accountLinkedAccountsMenuTitle": "Linked accounts",
   "accountPreferencesMenuTitle": "Preferences",
-  "accountPreferencesMenuSubtitle": "Theme, timezone, language, balance",
+  "accountPreferencesMenuSubtitle": "Theme, timezone, language, balance, AI features",
   "accountDataMenuTitle": "Data",
   "accountDataMenuSubtitle": "Export or delete your account",
 
@@ -269,7 +303,7 @@
   "currentPasswordOptionalGoogleLabel": "Current password (empty if Google-only)",
   "deleteAccountAction": "Delete account",
   "exportDataSectionTitle": "Export your data",
-  "exportDataDescription": "CSV for transactions, JSON for profile, wallet, categories, templates, and transactions.",
+  "exportDataDescription": "CSV for transactions, JSON for profile, wallet, categories, templates, transactions, and AI analyses.",
   "exportCsvAction": "Export CSV",
   "exportJsonAction": "Export JSON",
   "dangerZoneTitle": "Danger zone",
@@ -447,5 +481,674 @@
   "mediaUploadFailedMessage": "Upload failed. Try again.",
   "mediaRenameDialogTitle": "Rename image",
   "mediaNameLabel": "Name",
-  "mediaRenameFailedMessage": "Unable to rename the image."
+  "mediaRenameFailedMessage": "Unable to rename the image.",
+  "aiAssistantMenuTitle": "AI assistant",
+  "aiAssistantMenuSubtitle": "Analyze your finances with an AI model",
+  "aiAssistantTitle": "AI assistant",
+  "aiUnavailableTitle": "AI analysis unavailable",
+  "aiUnavailableBody": "This server has not enabled AI analysis. Whoever runs the server can enable it by setting AI_KEY_ENCRYPTION_KEY.",
+  "aiSetupTitle": "Get ready for your first analysis",
+  "aiSetupDoneTitle": "All set",
+  "aiSetupProgress": "{done} of {total} steps done",
+  "aiSetupOptional": "optional",
+  "aiSetupStepProvider": "Provider, key and model",
+  "aiSetupStepProviderHint": "Choose the AI service and enter your API key",
+  "aiSetupStepContext": "Personal context",
+  "aiSetupStepContextHint": "Goals and situation, for tailored advice",
+  "aiSetupStepPurposes": "Wallet purposes",
+  "aiSetupStepPurposesHint": "What each wallet is for",
+  "aiSetupStepFirstAnalysis": "First analysis",
+  "aiSetupStepFirstAnalysisHint": "From Reports, AI analysis card",
+  "aiProviderMenuTitle": "Provider and API key",
+  "aiProviderMenuNotConfigured": "Not set up",
+  "aiContextMenuTitle": "Personal context",
+  "aiContextMenuFilled": "Filled in",
+  "aiContextMenuEmpty": "Not filled in yet",
+  "aiWalletPurposesMenuTitle": "Wallet purposes",
+  "aiWalletPurposesProgress": "{done} of {total} wallets with a purpose",
+  "aiConsentMenuTitle": "Privacy and consent",
+  "aiConsentMenuPending": "To accept before the first analysis",
+  "aiConsentMenuAccepted": "Accepted",
+  "aiConsentRevokeAction": "Revoke",
+  "aiConsentRevokeConfirmTitle": "Revoke consent?",
+  "aiConsentRevokeConfirmMessage": "You will not be able to start analyses until you accept it again. Saved analyses stay in the history.",
+  "aiConsentTitle": "Before you start",
+  "aiConsentIntro": "AI analysis sends a summary of your data to the AI provider you choose, with your own API key. Before each send you will see exactly what is sent.",
+  "aiConsentSentTitle": "What is sent",
+  "aiConsentSentAggregates": "Totals, monthly trend, main categories and items of the chosen period",
+  "aiConsentSentWallets": "Name, type, purpose and balance of the included wallets",
+  "aiConsentSentTransactions": "Only if you turn it on: the list of transactions, optionally with anonymized titles",
+  "aiConsentSentContext": "Only if you turn it on: the personal context you wrote",
+  "aiConsentNeverTitle": "What is never sent",
+  "aiConsentNeverBody": "Email, name, username, account identifiers and images",
+  "aiConsentKeyTitle": "Your API key",
+  "aiConsentKeyBody": "It stays encrypted on the server and is never shown again or exported",
+  "aiConsentProviderTitle": "The provider",
+  "aiConsentProviderBody": "It handles the data under its own terms: check how long it keeps requests and whether it uses them for training",
+  "aiConsentRevokeTitle": "You can change your mind",
+  "aiConsentRevokeBody": "Revoke consent and delete analyses at any time from the AI assistant",
+  "aiConsentAccept": "I understand, I accept",
+  "aiConsentDecline": "Not now",
+  "aiProviderLabel": "Provider",
+  "aiProviderCompatible": "OpenAI-compatible (Mistral, Groq, OpenRouter, Ollama…)",
+  "aiProviderHintAnthropic": "Create a key at console.anthropic.com → API keys.",
+  "aiProviderHintOpenai": "Create a key at platform.openai.com → API keys.",
+  "aiProviderHintGemini": "Create a key at aistudio.google.com → Get API key.",
+  "aiProviderHintCompatible": "For any service exposing the OpenAI API: enter its address, usually ending in /v1.",
+  "aiBaseUrlLabel": "Service address (base URL)",
+  "aiBaseUrlHelper": "Private or local addresses (e.g. Ollama at home) only work if whoever runs the server allowed them.",
+  "aiApiKeyLabel": "API key",
+  "aiApiKeyOptionalLabel": "API key (if required)",
+  "aiApiKeyHelper": "It is encrypted on the server: after saving you will only see its last characters.",
+  "aiApiKeyWillBeRemoved": "The saved key will be removed when you save.",
+  "aiApiKeyStored": "Saved key {hint}",
+  "aiApiKeyReplace": "Replace",
+  "aiApiKeyRemove": "Remove",
+  "aiApiKeyShow": "Show key",
+  "aiApiKeyHide": "Hide key",
+  "aiModelLabel": "Model",
+  "aiModelHelper": "Press “Load models” to pick it from the provider's list, or type its name.",
+  "aiModelsLoaded": "{count} models available",
+  "aiModelsNoneFound": "The provider returned no models: type the name by hand.",
+  "aiLoadModels": "Load models",
+  "aiTestConnection": "Test connection",
+  "aiTestOk": "It works: {model} answered in {ms} ms.",
+  "aiTestOkKeyOnly": "Key valid (answered in {ms} ms). Choose a model to test it too.",
+  "aiLastTestOk": "Last test succeeded.",
+  "aiLastTestFailed": "Last test failed.",
+  "aiAdvancedSettings": "Advanced settings",
+  "aiMaxOutputTokensLabel": "Maximum answer length (tokens)",
+  "aiMaxOutputTokensHelper": "Between {min} and {max}. Higher allows longer, costlier reports.",
+  "aiPricesTitle": "Prices (optional)",
+  "aiPricesHelper": "Your model's price per million tokens, in the provider's currency: only used to estimate cost.",
+  "aiInputPriceLabel": "Input",
+  "aiOutputPriceLabel": "Output",
+  "aiDefaultIncludeTransactions": "Include single transactions by default",
+  "aiDefaultIncludeTransactionsHint": "More precise analyses, but more data sent and more tokens.",
+  "aiDefaultAnonymizeTitles": "Anonymize titles by default",
+  "aiDefaultAnonymizeTitlesHint": "Transaction names become “Item 1”, “Item 2”…",
+  "aiSaveSettings": "Save",
+  "aiForgetProviderTitle": "Forget this provider?",
+  "aiForgetProviderMessage": "The saved API key is deleted from the server.",
+  "aiForgetProviderAction": "Delete key and provider",
+  "aiContextIntro": "This helps the AI give advice that fits your situation. Everything is optional and is only sent if you include the personal context in an analysis.",
+  "aiNotSpecified": "Not specified",
+  "aiHouseholdLabel": "People in the household",
+  "aiHouseholdValue": "{count, plural, =1{1 person} other{{count} people}}",
+  "aiHouseholdLess": "One person fewer",
+  "aiHouseholdMore": "One more person",
+  "aiIncomeTypeLabel": "Income type",
+  "aiIncomeEmployee": "Employee",
+  "aiIncomeSelfEmployed": "Self-employed",
+  "aiIncomeStudent": "Student",
+  "aiIncomeRetired": "Retired",
+  "aiIncomeUnemployed": "No work income",
+  "aiIncomeMixed": "Mixed",
+  "aiIncomeOther": "Other",
+  "aiAboutMeLabel": "About me",
+  "aiAboutMeHint": "E.g. I rent in Milan, I own a car, my salary arrives on the 27th",
+  "aiGoalsLabel": "Goals",
+  "aiGoalsHint": "E.g. save €5,000 by June, spend less on eating out",
+  "aiIgnoreLabel": "Things to ignore or interpret",
+  "aiIgnoreHint": "E.g. the transfer to Marco is a loan he pays back; in July I paid the yearly insurance",
+  "aiResponseStyleLabel": "Answer style",
+  "aiStyleDefault": "Standard",
+  "aiStyleConcise": "Concise",
+  "aiStyleDetailed": "Detailed",
+  "aiContextPrivacyNote": "Do not write data such as IBANs, tax codes or passwords here: the analysis does not need them.",
+  "aiSaveContext": "Save",
+  "aiWalletPurposesIntro": "Say what each wallet is for: the AI can then tell you whether you use it as intended and how to organize better.",
+  "aiWalletPurposesEmpty": "You have no active wallets yet.",
+  "aiWalletNoPurpose": "No purpose",
+  "aiPurposeSuggestionDaily": "Daily expenses",
+  "aiPurposeSuggestionSavings": "Savings",
+  "aiPurposeSuggestionEmergency": "Emergency fund",
+  "aiPurposeSuggestionHome": "Home and bills",
+  "aiPurposeSuggestionLeisure": "Leisure and travel",
+  "aiSavePurpose": "Save purpose",
+  "aiNewAnalysisTitle": "New AI analysis",
+  "aiHistoryTitle": "Analysis history",
+  "aiHistoryMenuSubtitle": "Reread, rename or delete analyses",
+  "aiNotReadyTitle": "Set up AI analysis first",
+  "aiNotReadyBody": "Choose a provider, enter the API key and a model.",
+  "aiGoToSetup": "Set up",
+  "aiWhatToAnalyze": "What to analyze",
+  "aiCustomQuestionLabel": "Your question",
+  "aiCustomQuestionHint": "E.g. how much did I spend eating out and how did it change over the months?",
+  "aiPeriodLabel": "Period",
+  "aiPeriodLast30Days": "Last 30 days",
+  "aiPeriodLast12Months": "Last 12 months",
+  "aiPeriodCurrentMonth": "This month",
+  "aiPeriodCurrentYear": "This year",
+  "aiPeriodAllTime": "Whole history",
+  "aiPeriodCustom": "Custom",
+  "aiPeriodUntil": "Up to {date}",
+  "aiWalletsLabel": "Wallets",
+  "aiAllWallets": "All",
+  "aiDataToSend": "Data to send",
+  "aiDataToSendHint": "Period, wallets and totals are always sent. More data means a richer analysis and more tokens.",
+  "aiSectionMonthly": "Monthly trend",
+  "aiSectionCategories": "Categories",
+  "aiSectionTitles": "Top items",
+  "aiSectionTransfers": "Transfers",
+  "aiSectionRecurring": "Recurring expenses",
+  "aiSectionPersonalContext": "Personal context",
+  "aiIncludeTransactions": "Include single transactions",
+  "aiIncludeTransactionsHint": "Useful for anomalies; sends date, amount, title and category of the most recent ones.",
+  "aiMaxTransactionsValue": "max {count}",
+  "aiIncludeAdjustments": "Include balance adjustments",
+  "aiIncludeAdjustmentsHint": "They usually fix bookkeeping mistakes: better left out.",
+  "aiPreviewAction": "Preview",
+  "aiPreviewTitle": "Preview",
+  "aiPreviewMissing": "No preview: go back and prepare one.",
+  "aiPreviewSentTo": "Will be sent to {provider} · {model}",
+  "aiPreviewWallets": "{count, plural, =1{1 wallet} other{{count} wallets}}",
+  "aiPreviewOnlyTotals": "Only period, wallets and totals",
+  "aiPreviewSections": "Sections: {sections}",
+  "aiPreviewNoTransactions": "No single transactions",
+  "aiPreviewTransactions": "{count} single transactions ({omitted} older ones left out)",
+  "aiPreviewAnonymized": "Transaction titles anonymized",
+  "aiPreviewWithContext": "Personal context included",
+  "aiPreviewTokens": "~{tokens} input tokens",
+  "aiPreviewCost": "max cost ~{cost}",
+  "aiInstructionsLabel": "Instructions",
+  "aiInstructionsHint": "You can edit them: they are the only part of the text you decide.",
+  "aiInstructionsRequired": "Write the instructions before sending.",
+  "aiRestoreInstructions": "Restore",
+  "aiSystemPromptLabel": "Rules for the model",
+  "aiSystemPromptHint": "Fixed: report format, correct use of data, safeguards",
+  "aiDataBlockLabel": "Data sent",
+  "aiDataBlockHint": "Generated by the server from your transactions, not editable",
+  "aiSendAction": "Send and analyze",
+  "aiAnalysisTitle": "AI analysis",
+  "aiDataSentTitle": "What was sent",
+  "aiDataSentHint": "Instructions and data exactly as sent",
+  "aiCopyAction": "Copy text",
+  "aiShareAction": "Share",
+  "aiCopied": "Text copied",
+  "aiRefreshPreview": "Refresh preview",
+  "aiTokensUsed": "{input} in / {output} out tokens",
+  "aiCostValue": "cost ~{cost}",
+  "aiThinking": "The model is writing…",
+  "aiAnswerStopped": "Stopped: the text above is partial.",
+  "aiAnswerTruncated": "Answer cut at the token limit: you can raise it in the advanced settings.",
+  "aiWaitForAnswer": "Wait for the answer to finish…",
+  "aiFollowUpUnavailable": "Questions available once the report is done",
+  "aiFollowUpLimitReached": "Question limit reached",
+  "aiAskFollowUpHint": "Ask a question ({left} left)",
+  "aiStopAction": "Stop",
+  "aiAskAction": "Send question",
+  "aiHistoryEmpty": "No analyses yet. Start one from Reports.",
+  "aiDeleteAnalysisTitle": "Delete the analysis?",
+  "aiDeleteAction": "Delete",
+  "aiDeleteAllAction": "Delete all",
+  "aiDeleteAllTitle": "Delete all analyses?",
+  "aiDeleteAllMessage": "Reports and conversations are deleted permanently.",
+  "aiRenameAction": "Rename",
+  "aiRenameTitle": "Rename analysis",
+  "aiCancel": "Cancel",
+  "aiReportsCardTitle": "AI analysis",
+  "aiReportsCardBody": "Have your numbers explained: a personalized report and follow-up questions.",
+  "aiReportsCardSetupBody": "Connect your preferred AI provider to get personalized reports on your finances.",
+  "aiReportsCardStart": "Analyze",
+  "aiHistoryAnalyzeAction": "Analyze the filtered transactions with AI",
+  "aiHistoryAnalyzeAdjustments": "AI analysis looks at income and expenses: remove the \"adjustments\" filter to analyze these transactions.",
+  "aiHistoryAnalyzeTransfers": "Transfers move money between your wallets and are not analyzed: remove the \"transfers\" filter.",
+  "aiPeriodLastMonth": "Last month",
+  "aiPeriodLastQuarter": "Last quarter",
+  "aiDateFrom": "From",
+  "aiDateTo": "To",
+  "aiDateFromEmpty": "The beginning",
+  "aiDateToEmpty": "Today",
+  "aiDateClear": "Clear date",
+  "aiFiltersTitle": "Filters",
+  "aiFiltersFromHistoryTitle": "Filters from History",
+  "aiFiltersHint": "The analysis only covers transactions matching these filters. Balances and transfers are left out.",
+  "aiFilterExpenses": "Expenses only",
+  "aiFilterIncome": "Income only",
+  "aiFilterCategory": "Category: {name}",
+  "aiFilterTitle": "Contains “{text}”",
+  "aiFilterAmountMin": "From {amount}",
+  "aiFilterAmountMax": "Up to {amount}",
+  "aiProviderOnDevice": "On device",
+  "errorCodeAiOnDeviceDisabled": "On-device analysis is not enabled on this server.",
+  "errorCodeAiLocalConsentRequired": "Accept the on-device analysis notice to continue.",
+  "errorCodeAiAnalysisOnDevice": "This analysis was written on the phone: continue it there.",
+  "errorCodeAiAnalysisNotOnDevice": "This analysis was written by a cloud provider.",
+  "errorCodeAiMessageFinished": "This answer was already saved.",
+  "errorCodeAiLocalEngineError": "The on-device model failed.",
+  "errorCodeAiLocalOutOfMemory": "Not enough memory: choose a smaller model or a shorter context.",
+  "errorCodeAiLocalContextTooLong": "The text doesn't fit the model's context: use the compact profile, a larger context or fewer transactions.",
+  "errorCodeAiLocalTimeout": "The phone took too long and generation was stopped.",
+  "errorCodeAiLocalModelMissing": "No model installed on the phone: download one from the AI assistant.",
+  "errorCodeAiLocalInterrupted": "Generation on the phone was interrupted.",
+  "errorCodeAiLocalUnsupported": "This device cannot run models locally.",
+  "errorCodeAiLocalTooHot": "The phone is too hot to run the model. Let it cool down for a few minutes and try again.",
+
+  "aiModeCloud": "Cloud",
+  "aiModeOnDevice": "On device",
+  "aiLocalModeIntro": "The model runs on the phone: your data goes to no outside AI provider. The server prepares the data and keeps reports and questions in the history, as with the cloud.",
+  "aiLocalModelsTitle": "On-device models",
+  "aiLocalRuntimeTitle": "Runtime settings",
+  "aiLocalNoModel": "No active model. Download or import one to use on-device analysis.",
+  "aiLocalNoModelShort": "No model installed",
+  "aiLocalChooseModel": "Choose a model",
+  "aiLocalNotReadyBody": "An on-device analysis needs an installed model. Download one from On-device models.",
+  "aiLocalConsentMenuTitle": "On-device disclosure",
+  "aiLocalConsentIntro": "With on-device analysis the AI model runs on your phone. Before each analysis you see exactly which data it is given.",
+  "aiLocalConsentWhereTitle": "Where the data is processed",
+  "aiLocalConsentWhereBody": "On the phone, with no connection to the model: no outside AI provider receives your data.",
+  "aiLocalConsentStoredTitle": "What the server keeps",
+  "aiLocalConsentStoredBody": "The server prepares the data summary and keeps reports and questions in the history, so you find them on every device.",
+  "aiLocalConsentMistakesTitle": "The model can be wrong",
+  "aiLocalConsentMistakesBody": "Models that run on a phone are small: they can mix up numbers. Check them before deciding.",
+  "aiLocalConsentModelTitle": "The model",
+  "aiLocalConsentModelBody": "You download it from Hugging Face, which sees your IP address. Each model has its own license, shown before the download.",
+  "aiSetupStepLocalModel": "Model on the phone",
+  "aiSetupStepLocalModelHint": "Download a model and accept the on-device disclosure",
+  "aiLocalBackendGpu": "GPU",
+  "aiLocalBackendCpu": "CPU",
+  "aiLocalBackendNpu": "NPU",
+  "aiLocalBackendLabel": "Runs on",
+  "aiLocalBackendGpuHint": "Faster. Recommended.",
+  "aiLocalBackendCpuHint": "Slower and uses more memory; with LiteRT-LM the context goes up to 8k.",
+  "aiLocalContextShort": "{size} context",
+  "@aiLocalContextShort": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalOutputShort": "answer up to {count} tokens",
+  "@aiLocalOutputShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiLocalContextLabel": "Context: {count} tokens",
+  "@aiLocalContextLabel": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalContextHint": "How much text the model keeps in mind: data, report and questions.",
+  "aiLocalContextMemoryWarning": "More context uses more memory. If the app closes during an analysis, lower it.",
+  "aiLocalOutputLabel": "Longest answer: {count} tokens",
+  "@aiLocalOutputLabel": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalOutputHint": "A typical report uses 600–1,000. More room for the answer leaves less for the data.",
+  "aiLocalTemperatureLabel": "Temperature: {value}",
+  "@aiLocalTemperatureLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTemperatureHint": "Low: answers closer to the numbers. High: more varied.",
+  "aiLocalSpeedTitle": "Speed",
+  "aiLocalSpeedValue": "Reading {prefill} tokens/s · writing {decode} tokens/s",
+  "@aiLocalSpeedValue": {
+    "placeholders": {
+      "prefill": {
+        "type": "String"
+      },
+      "decode": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalSpeedMeasured": "Measured on this phone",
+  "aiLocalSpeedCatalog": "Indicative, measured on a Galaxy S26 Ultra",
+  "aiLocalSpeedFallback": "Not measured yet: a cautious guess",
+  "aiLocalMeasure": "Measure speed",
+  "aiLocalMeasuring": "Measuring…",
+  "aiLocalResetDefaults": "Restore defaults",
+  "aiLocalDeviceTitle": "This phone",
+  "aiLocalDeviceRam": "RAM {size}",
+  "@aiLocalDeviceRam": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeviceFree": "{size} free",
+  "@aiLocalDeviceFree": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeviceUnknown": "Memory and storage unknown",
+  "aiLocalWifiOnly": "Download on Wi-Fi only",
+  "aiLocalWifiOnlyHint": "Models weigh a few GB: off Wi-Fi the download waits and resumes by itself.",
+  "aiLocalPickingFile": "Preparing the file…",
+  "aiLocalImporting": "Importing and checking the model…",
+  "aiLocalInstalledTitle": "Installed",
+  "aiLocalInUse": "in use",
+  "aiLocalUnverified": "not verified",
+  "aiLocalUseModel": "Use this model",
+  "aiLocalEngineLitert": "LiteRT-LM",
+  "aiLocalEngineLitertHint": "On the GPU, fast. Models prepared by Google.",
+  "aiLocalEngineLlama": "llama.cpp",
+  "aiLocalEngineLlamaHint": "Any GGUF file and quantization, on the CPU: slower.",
+  "aiLocalRecommended": "Recommended",
+  "aiLocalRamFits": "Enough RAM",
+  "aiLocalRamTight": "RAM tight",
+  "aiLocalRamInsufficient": "Not enough RAM",
+  "aiLocalRamUnknown": "RAM unknown",
+  "aiLocalRamWarningTitle": "Not enough memory",
+  "aiLocalRamWarningMessage": "This phone has less RAM than the model needs: it may not start or may close the app.",
+  "aiLocalDownloadAnyway": "Download anyway",
+  "aiLocalDownload": "Download",
+  "aiLocalProgress": "{done} of {total}",
+  "@aiLocalProgress": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalQueued": "Queued",
+  "aiLocalPaused": "Paused · {progress}",
+  "@aiLocalPaused": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalWaitingForWifi": "Waiting for Wi-Fi",
+  "aiLocalVerifying": "Checking the file…",
+  "aiLocalPause": "Pause",
+  "aiLocalResume": "Resume",
+  "aiLocalRetry": "Retry",
+  "aiLocalCancel": "Cancel",
+  "aiLocalLicenseBody": "The file is {size} and comes from Hugging Face. The model is distributed under the {license} license: by downloading it you accept it.",
+  "@aiLocalLicenseBody": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "license": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalGatedBody": "This model is gated: accept the license on its Hugging Face page and enter a read token.",
+  "aiLocalAcceptAndDownload": "Accept and download",
+  "aiLocalDeleteTitle": "Delete the model?",
+  "aiLocalDeleteMessage": "{name} will be removed from the phone. Analyses already made stay in the history.",
+  "@aiLocalDeleteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalDeleted": "Model deleted: {size} freed",
+  "@aiLocalDeleted": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalImportFile": "Import a file",
+  "aiLocalImportUrl": "Download from URL",
+  "aiLocalImportAction": "Import",
+  "aiLocalUrlLabel": "File https address",
+  "aiLocalNameLabel": "Model name",
+  "aiLocalQuantLabel": "Quantization (e.g. Q4_K_M)",
+  "aiLocalShaLabel": "SHA-256 (optional)",
+  "aiLocalShaHelper": "If you enter it the file is checked; otherwise the model stays \"not verified\".",
+  "aiLocalShaInvalid": "Must be 64 hexadecimal characters.",
+  "aiLocalImported": "{name} imported",
+  "@aiLocalImported": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalImportedUnverified": "{name} imported, not verified",
+  "@aiLocalImportedUnverified": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTokenAction": "Hugging Face token",
+  "aiLocalTokenLabel": "Read token",
+  "aiLocalTokenHelper": "Needed only for gated models. It stays on the phone and is sent only to huggingface.co.",
+  "aiLocalTokenStored": "A token is saved on this phone.",
+  "aiLocalTokenNone": "No token saved.",
+  "aiLocalTokenSaved": "Token saved",
+  "aiLocalTokenRemoved": "Token removed",
+  "aiCompactProfile": "Compact profile",
+  "aiCompactProfileHint": "Less detail and shorter rules: a shorter prompt.",
+  "aiCompactProfileHintLocal": "Recommended on the phone: less detail, shorter rules and a prompt that fits the model's context.",
+  "aiPreviewOnDevice": "Processed on the phone with {model}",
+  "@aiPreviewOnDevice": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPreviewNoCost": "No cost",
+  "aiPreviewCompacted": "{count, plural, =1{One detail was reduced to fit the limit.} other{{count} details were reduced to fit the limit.}}",
+  "@aiPreviewCompacted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiRunOnDeviceAction": "Run on the phone",
+  "aiLocalContextUse": "Context: {used} of {total} tokens",
+  "@aiLocalContextUse": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalContextParts": "data {input} · answer {output}",
+  "@aiLocalContextParts": {
+    "placeholders": {
+      "input": {
+        "type": "String"
+      },
+      "output": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalCountExact": "exact count",
+  "aiLocalCountEstimated": "estimate",
+  "aiLocalContextTight": "Nearly full: follow-up questions will have little room.",
+  "aiLocalContextOverflow": "It doesn't fit the model's context. Try one of these:",
+  "aiLocalFixCompact": "Compact profile",
+  "aiLocalFixFewerTransactions": "Fewer transactions",
+  "aiLocalFixShorterAnswer": "Shorter answer",
+  "aiLocalFixLargerContext": "Larger context",
+  "aiLocalTimeEstimate": "Estimated time: {low}–{high}",
+  "@aiLocalTimeEstimate": {
+    "placeholders": {
+      "low": {
+        "type": "String"
+      },
+      "high": {
+        "type": "String"
+      }
+    }
+  },
+  "aiLocalTimeRough": "A rough guess: measure the speed in Runtime settings.",
+  "aiLocalWarnWarm": "The phone is warm: it will be slower.",
+  "aiLocalWarnBattery": "Battery below 15%: plug in the charger.",
+  "aiLocalWarnMemory": "Little free memory: close other apps if the analysis stops.",
+  "aiLocalKeepOpen": "The phone is writing. You can leave the app: we'll let you know when it is done.",
+  "aiLocalTokensPerSecond": "{value} tokens/s",
+  "@aiLocalTokensPerSecond": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCodeAiLocalDownloadNetwork": "The download was interrupted by the network: resume when the connection is back.",
+  "errorCodeAiLocalDownloadGated": "Gated model: accept the license on Hugging Face and enter a valid token.",
+  "errorCodeAiLocalDownloadNotFound": "File not found on the server.",
+  "errorCodeAiLocalDownloadHttp": "The server refused the download.",
+  "errorCodeAiLocalDownloadNoSpace": "Not enough space on the phone for this model.",
+  "errorCodeAiLocalDownloadChecksum": "The downloaded file doesn't match the expected one and was discarded.",
+  "errorCodeAiLocalDownloadInsecureUrl": "The address must start with https://.",
+  "errorCodeAiLocalImportUnknownFormat": "Unknown format: .gguf or .litertlm files are needed.",
+  "aiFeaturesSwitchTitle": "AI features",
+  "aiFeaturesSwitchSubtitle": "AI assistant, analyses in Reports and History, wallet purposes. Turning them off deletes nothing: analyses, keys and models stay where they are.",
+  "aiRunModelLabel": "Model",
+  "aiPendingTitle": "Unsent answers",
+  "aiPendingIntro": "Reports and answers written on this phone that the server doesn't have yet: the network was down when they finished, or the server refused them. They stay here until whoever wrote them sends or deletes them. Anyone using the app on this phone can read them.",
+  "aiPendingEmpty": "Nothing waiting: the server has everything.",
+  "aiPendingReport": "Report",
+  "aiPendingAnswer": "Answer to a question",
+  "aiPendingUnknownOwner": "unknown account",
+  "aiPendingWaiting": "Waiting to be sent: it goes by itself when its author signs in or reopens the app.",
+  "aiPendingRefused": "Refused by the server: {reason}",
+  "@aiPendingRefused": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPendingResend": "Send now",
+  "aiPendingSent": "Sent: it is now in the history.",
+  "aiPendingRefusedAgain": "The server still refuses it: you can read it here or delete it.",
+  "aiPendingNotOwner": "Only its author can send it.",
+  "aiPendingOwnerOnly": "Only {owner} can send or delete it.",
+  "@aiPendingOwnerOnly": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPendingDeleteTitle": "Delete this answer?",
+  "aiPendingDeleteMessage": "The text exists only on this phone: deleting it loses it.",
+  "aiPendingBanner": "{count, plural, =1{One answer written on the phone is not on the server yet} other{{count} answers written on the phone are not on the server yet}}",
+  "@aiPendingBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiLocalFollowUpUnsupported": "This analysis was written on a phone: continue the questions from an Android phone with a model installed.",
+  "aiLocalFollowUpNoModel": "Answering needs a model on the phone: install one from On-device models.",
+  "aiLocalFollowUpOtherModel": "The report's model ({report}) is no longer installed: {current} will answer.",
+  "@aiLocalFollowUpOtherModel": {
+    "placeholders": {
+      "report": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "bgWorkTitle": "On-device AI",
+  "bgWorkChannel": "Work in progress",
+  "bgWorkStop": "Stop",
+  "bgDownloading": "Downloading {name} · {percent}%",
+  "@bgDownloading": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bgVerifying": "Checking {name}",
+  "@bgVerifying": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bgWaitingWifi": "{name} · waiting for Wi-Fi",
+  "@bgWaitingWifi": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bgQueued": "{name} · queued",
+  "@bgQueued": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiNotifyChannel": "AI analyses",
+  "notifyModelReadyTitle": "Model ready",
+  "notifyModelReadyBody": "{name} is installed: you can use it for analyses.",
+  "@notifyModelReadyBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifyDownloadFailedTitle": "Download failed",
+  "aiLeaveTitle": "The analysis is still running",
+  "aiLeaveBody": "The phone is still writing. You can stop it (what was written so far is saved), stay here or let it go on in the background: a notification tells you when it is done.",
+  "aiLeaveStop": "Stop",
+  "aiLeaveStay": "Stay",
+  "aiLeaveBackground": "Continue in background",
+  "bgWritingReport": "Writing the report · {words} words",
+  "@bgWritingReport": {
+    "placeholders": {
+      "words": {
+        "type": "int"
+      }
+    }
+  },
+  "bgWritingAnswer": "Writing the answer · {words} words",
+  "@bgWritingAnswer": {
+    "placeholders": {
+      "words": {
+        "type": "int"
+      }
+    }
+  },
+  "notifyReportReadyTitle": "Analysis ready",
+  "notifyAnswerReadyTitle": "Answer ready",
+  "notifyAnalysisFailedTitle": "Analysis interrupted",
+  "notifyAnalysisFallbackBody": "Tap to read it."
 }

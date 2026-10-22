@@ -60,6 +60,20 @@ var (
 		Buckets: prometheus.DefBuckets,
 	})
 
+	// AIStreamsTotal and AITokensTotal cover the AI analysis (plan.md
+	// section 32.8): streams by provider and outcome, and the tokens the
+	// providers reported, so cost and failure rates are visible without
+	// ever logging prompts or answers.
+	AIStreamsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "financialmanager_ai_streams_total",
+		Help: "AI analysis streams (reports and follow-ups), by provider and outcome.",
+	}, []string{"provider", "outcome"})
+
+	AITokensTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "financialmanager_ai_tokens_total",
+		Help: "Tokens reported by AI providers, by provider and direction (input/output).",
+	}, []string{"provider", "direction"})
+
 	// JobRunsTotal covers "job falliti" for the worker's periodic jobs
 	// (reconciliation, media cleanup, account purge, backup), labeled by job name
 	// and outcome so both rates and failures are visible.
