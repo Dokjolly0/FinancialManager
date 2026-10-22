@@ -70,7 +70,10 @@ services:
       retries: 10
 
   object-storage:
-    image: minio/minio:latest
+    # MinIO no longer publishes community images (minio/minio is gone from
+    # Docker Hub): this is the last upstream release rebuilt from source in
+    # github.com/Dokjolly0/minio. Pin the -rN tag; see docs/build-deploy.md.
+    image: dokjolly/minio:RELEASE.2025-10-15T17-29-55Z-r1
     networks: [backend_internal]
     command: server /data
     environment:

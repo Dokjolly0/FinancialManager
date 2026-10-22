@@ -8,8 +8,9 @@ idempotency records — never the only copy of any data (plan.md section 20.4/12
 ## Scripts
 
 - `scripts/backup.sh` — runs `pg_dump` (custom format) and mirrors the
-  bucket with a disposable `minio/mc` container (no installation required
-  on the host beyond Docker and `openssl`). If `BACKUP_ENCRYPTION_KEY` is
+  bucket with a disposable `mc` container (`MC_IMAGE`, default
+  `dokjolly/mc`, see "MinIO images" below; no installation required on
+  the host beyond Docker and `openssl`). If `BACKUP_ENCRYPTION_KEY` is
   set, both backups are encrypted (`openssl enc -aes-256-cbc`). Applies
   retention (`RETENTION_DAYS`, default 30), deleting older backups.
 - `scripts/restore.sh <dump-file> [target-db] [compose-files...]` — restores
@@ -21,6 +22,18 @@ idempotency records — never the only copy of any data (plan.md section 20.4/12
   `transactions` against the live source, then drops the test database.
   Implements the "periodic restore test" required by the plan: a backup
   that has never been restored is not a backup.
+
+### MinIO images
+
+MinIO Inc. stopped publishing the community images in October 2025 and
+later removed `minio/minio` and `minio/mc` from Docker Hub. The stack and
+these scripts use the last upstream releases rebuilt from source in
+[github.com/Dokjolly0/minio](https://github.com/Dokjolly0/minio) (mirror
+on git.alexviolatto.dev): `dokjolly/minio:RELEASE.2025-10-15T17-29-55Z-r1`
+for the server, `dokjolly/mc:RELEASE.2025-08-13T08-35-41Z-r1` for the
+client. They read the same data directory as the old `minio/minio`
+image, and the `mc` image has a shell, so `--entrypoint sh` works as
+before. How they are built and updated is in that repository's README.
 
 All scripts must be run from the `financial-manager-backend` folder with
 the Docker stack already up (`docker compose -f compose.yaml -f
@@ -148,7 +161,7 @@ mkdir -p media-restore
 openssl enc -d -aes-256-cbc -pbkdf2 -pass "pass:$BACKUP_ENCRYPTION_KEY" \
   -in fm-media-latest.tar.gz.enc | tar -xz -C media-restore
 docker run --rm --network financial-manager_backend_internal --entrypoint sh \
-  -v "$(pwd)/media-restore:/restore" minio/mc:latest -c "
+  -v "$(pwd)/media-restore:/restore" dokjolly/mc:RELEASE.2025-08-13T08-35-41Z-r1 -c "
     mc alias set dst http://object-storage:9000 '$OBJECT_STORAGE_ACCESS_KEY' '$OBJECT_STORAGE_SECRET_KEY' &&
     mc mirror /restore dst/$OBJECT_STORAGE_BUCKET"
 ```
