@@ -2481,6 +2481,8 @@ object-storage
 reverse-proxy   -- production
 ```
 
+`object-storage` runs `dokjolly/minio:RELEASE.2025-10-15T17-29-55Z-r1`: MinIO stopped publishing community images in October 2025 and removed `minio/minio`/`minio/mc` from Docker Hub, so the last upstream release is rebuilt from source in github.com/Dokjolly0/minio (with `dokjolly/mc` for the backup scripts). It reads the data written by the former `minio/minio` image unchanged. MinIO itself no longer gets fixes; it is only reachable on `backend_internal`, and a maintained S3-compatible store is the long-term option.
+
 ### 21.5 Networks
 
 - `backend_internal`: API, worker, PostgreSQL, Redis, object storage.

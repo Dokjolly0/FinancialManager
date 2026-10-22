@@ -227,6 +227,14 @@ Il compose avvia:
 
 Il servizio `migrate` applica le migrazioni SQL prima dell'avvio dell'API e del worker. Sulla VPS da 1 vCPU la prima build delle immagini richiede alcuni minuti.
 
+**Immagine di MinIO.** `object-storage` usa `dokjolly/minio:RELEASE.2025-10-15T17-29-55Z-r1`, non `minio/minio`. Da ottobre 2025 MinIO Inc. non pubblica più le immagini della versione community; in seguito le ha tolte da Docker Hub (`docker pull minio/minio` risponde "pull access denied") e ha chiuso i download anonimi da quay.io, e il progetto open source è archiviato. Un deploy da zero con `minio/minio:latest` oggi fallisce; funzionava solo dove l'immagine era già in cache.
+
+L'immagine `dokjolly/minio` è l'ultima release di MinIO (2025-10-15) ricompilata dal sorgente nel repository [github.com/Dokjolly0/minio](https://github.com/Dokjolly0/minio) (copia anche su `git.alexviolatto.dev/Dokjolly/minio`), che contiene il sorgente, i Dockerfile e un workflow che pubblica su Docker Hub. Allo stesso modo `dokjolly/mc` sostituisce `minio/mc` negli script di backup. Le immagini usano lo stesso formato dei dati della vecchia `minio/minio:RELEASE.2025-09-07`, lo stesso entrypoint e le stesse variabili: il volume `object_storage_data` si usa così com'è.
+
+- Usare sempre il tag con la revisione (`-r1`, `-r2`, ...): non cambia mai dopo la pubblicazione. `latest` e il tag senza revisione seguono l'ultima build.
+- Per aggiornarla (Go, immagine base, dipendenze con correzioni di sicurezza) si segue il README di quel repository, si pubblica una nuova revisione e si cambia il tag in `compose.yaml` (e `MC_IMAGE` in `scripts/backup.sh` per il client).
+- MinIO non riceverà più correzioni nel proprio codice. Qui è accettabile perché è raggiungibile solo dalla rete interna di Docker; nel lungo periodo si può valutare uno storage compatibile S3 ancora mantenuto (vedi "Cose da sistemare").
+
 ### 5. Verificare il deploy
 
 Controllare i container:
@@ -434,7 +442,7 @@ docker run --rm -v financial-manager_object_storage_data:/data -v ~:/backup alpi
 $C up -d
 ```
 
-`migrate` gira come sempre, ma trova lo schema già all'ultima versione e non fa nulla.
+`migrate` gira come sempre, ma trova lo schema già all'ultima versione e non fa nulla. Il volume di MinIO copiato dalla vecchia VPS (scritto da `minio/minio:RELEASE.2025-09-07`) viene aperto da `dokjolly/minio:RELEASE.2025-10-15…` senza conversioni (sezione 4, "Immagine di MinIO").
 
 **5. Verificare** come nella sezione 5, poi:
 
@@ -685,6 +693,7 @@ Ancora da fare prima di distribuire a utenti reali:
 - Registrare su Google Cloud lo SHA-1 della chiave di firma di Play (alla prima pubblicazione) e il bundle ID iOS se usi Google Sign-In su iOS.
 - Dashboard web: build Flutter web e pubblicazione in `/var/www/financialmanager` (piano separato).
 - Firma in CI (sezione 7 di "Build Flutter").
+- Storage delle immagini: MinIO community non è più mantenuto. Oggi si usa la sua ultima release ricompilata (`dokjolly/minio`, sezione 4); nel lungo periodo valutare uno storage compatibile S3 ancora sviluppato (per esempio Garage o SeaweedFS). Il backend usa un client S3 standard, quindi cambierebbero solo il compose, la copia del bucket e gli script di backup.
 - Non committare mai `.env`, keystore, `key.properties`, password o chiavi.
 
 File da controllare:
