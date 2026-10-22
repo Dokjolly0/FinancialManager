@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../../core/api/api_url.dart';
 import '../../../../core/auth/access_token_provider.dart';
 import '../../../../core/auth/google_sign_in_service.dart';
 import '../../../../core/errors/error_mapper.dart';
@@ -103,8 +104,8 @@ class AccountRepositoryImpl implements AccountRepository {
   }
 
   @override
-  Future<void> linkGoogle(String currentPassword) async {
-    final idToken = await _googleSignIn.signIn();
+  Future<void> linkGoogle(String currentPassword, {String? idToken}) async {
+    idToken ??= await _googleSignIn.signIn();
     try {
       await _api.linkGoogle(idToken: idToken, currentPassword: currentPassword);
     } on DioException catch (e) {
@@ -154,19 +155,8 @@ class AccountRepositoryImpl implements AccountRepository {
   }
 
   @override
-  String resolveDownloadUrl(String relativeUrl) {
-    // relativeUrl already starts with "/v1/..." (it's the backend's own
-    // route path), but Dio's baseUrl also ends in "/v1" — concatenating
-    // them directly would duplicate that segment, so this resolves
-    // against the origin (scheme://host:port) instead.
-    final origin = Uri.parse(_dio.options.baseUrl);
-    return Uri(
-      scheme: origin.scheme,
-      host: origin.host,
-      port: origin.port,
-      path: relativeUrl,
-    ).toString();
-  }
+  String resolveDownloadUrl(String relativeUrl) =>
+      resolveApiPath(_dio.options.baseUrl, relativeUrl);
 
   @override
   Map<String, String> authHeaders() {

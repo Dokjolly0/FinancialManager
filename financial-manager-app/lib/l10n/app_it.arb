@@ -889,6 +889,30 @@
   "errorCodeAiLocalUnsupported": "Questo dispositivo non può eseguire modelli in locale.",
   "errorCodeAiLocalTooHot": "Il telefono è troppo caldo per far girare il modello. Lascialo raffreddare qualche minuto e riprova.",
 
+  "aiCloudOnlyHereNote": "Qui le analisi usano solo i fornitori cloud con la tua chiave API. Il modello sul telefono resta attivo nell'app.",
+  "@aiCloudOnlyHereNote": {
+    "description": "AI provider settings on a device without on-device models (the web dashboard) while the account is in on-device mode."
+  },
+  "googleWebLinkDialogTitle": "Scegli l'account Google da collegare",
+  "@googleWebLinkDialogTitle": {
+    "description": "Web dashboard: dialog with Google's button when linking Google to the account."
+  },
+  "mediaCropRotateLeft": "Ruota a sinistra",
+  "@mediaCropRotateLeft": {
+    "description": "Image crop dialog in the browser: rotate tooltip."
+  },
+  "mediaCropRotateRight": "Ruota a destra",
+  "@mediaCropRotateRight": {
+    "description": "Image crop dialog in the browser: rotate tooltip."
+  },
+  "mediaCropConfirm": "Ritaglia",
+  "@mediaCropConfirm": {
+    "description": "Image crop dialog in the browser: confirm button."
+  },
+  "aiDownloadAction": "Scarica (.md)",
+  "@aiDownloadAction": {
+    "description": "Web dashboard: download the AI report as a Markdown file."
+  },
   "aiModeCloud": "Cloud",
   "aiModeOnDevice": "Sul dispositivo",
   "aiLocalModeIntro": "Il modello gira sul telefono: i tuoi dati non vanno a nessun fornitore AI esterno. Il server prepara i dati e salva report e domande nella cronologia, come per il cloud.",

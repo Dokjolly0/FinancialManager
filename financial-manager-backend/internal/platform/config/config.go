@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/netip"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -26,6 +27,12 @@ type Config struct {
 	// names the real client (TRUSTED_PROXY_CIDRS). Empty: the TCP peer is
 	// the client, as when the API is reached directly.
 	TrustedProxies []netip.Prefix
+
+	// CORSAllowedOrigins are browser origins allowed to call the API from
+	// another origin (CORS_ALLOWED_ORIGINS): only for local development of
+	// the web dashboard. Empty in production, where the dashboard shares
+	// the API's origin.
+	CORSAllowedOrigins []string
 
 	// MetricsAddr is only used by the worker process (the API exposes
 	// /metrics on HTTPAddr itself, alongside its regular routes).
@@ -207,6 +214,7 @@ func Load() (Config, error) {
 
 		HTTPRequestTimeout: optionalDuration("HTTP_REQUEST_TIMEOUT", 30*time.Second),
 		TrustedProxies:     parsePrefixes("TRUSTED_PROXY_CIDRS"),
+		CORSAllowedOrigins: splitList("CORS_ALLOWED_ORIGINS"),
 		MetricsAddr:        optionalString("METRICS_ADDR", ":9101"),
 
 		DatabaseURL: requireString("DATABASE_URL"),
@@ -305,6 +313,13 @@ func Load() (Config, error) {
 
 	if cfg.ImageSearchProvider == "unsplash" && cfg.ImageSearchAPIKey == "" {
 		errs = append(errs, "IMAGE_SEARCH_API_KEY is required when IMAGE_SEARCH_PROVIDER=unsplash")
+	}
+
+	for _, o := range cfg.CORSAllowedOrigins {
+		u, err := url.Parse(o)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || strings.Trim(u.Path, "/") != "" || u.RawQuery != "" {
+			errs = append(errs, fmt.Sprintf("CORS_ALLOWED_ORIGINS: %q is not an origin like http://localhost:5000", o))
+		}
 	}
 
 	if cfg.MaxUploadBytes <= 0 {

@@ -1089,6 +1089,20 @@ Guards:
 - authenticated and complete → app area;
 - refresh failed → controlled local logout.
 
+While the session is being restored the splash keeps the requested location (`/splash?from=/app/history`) and opens it afterwards, so a reload or a bookmark in the browser lands where it pointed.
+
+### 9.9 Web dashboard
+
+The same Flutter app is built for the browser and served at `https://financialmanager.alexviolatto.dev` (the API is on the same origin under `/api`, so production needs no CORS).
+
+- Platform code: `isAndroidApp`/`isIosApp` (`lib/core/platform/platform_info.dart`) instead of `dart:io` `Platform`, which throws on the web; native-only code behind conditional exports (`dart.library.ffi` for the on-device engines, `dart.library.js_interop` for web-only pieces).
+- AI: cloud providers only (section 33 is Android-only); the model management screens and the outbox redirect to the AI settings.
+- Google: Google Identity Services' rendered button (section 15.2).
+- Files: exports and AI reports are browser downloads (`saveOrShareFile`); images are cropped with cropperjs, served from the app.
+- Layout: below 840 px as on phones; from 840 px a `NavigationRail` with "Aggiungi", tab content centered at most 1100 px wide and pushed pages at most 840 px (`lib/app/layout/breakpoints.dart`). Path URL strategy (`/app/history`).
+- Session: the refresh token persists in the browser through `flutter_secure_storage` (WebCrypto-encrypted localStorage); the Content-Security-Policy (section 19.3) limits what scripts can run.
+- Deploy: service `web` in `compose.prod.yaml`, built from `financial-manager-app/Dockerfile` (Flutter pinned to the APK's version, served by Caddy with no-cache revalidation) and proxied by the host's Caddy; `docker compose ... up -d --build` updates it with the backend. Local development uses `CORS_ALLOWED_ORIGINS` (section 19). Details in `docs/build-deploy.md`.
+
 ---
 
 ## 10. Go backend architecture
@@ -1920,6 +1934,8 @@ The client sends the backend an ID token. The backend must verify at least:
 
 Do not use unverified email or IDs supplied by the client as proof of identity.
 
+The apps send an ID token issued for the Web OAuth client: Android through `serverClientId`, the web dashboard through Google Identity Services' button (`google_sign_in` has no programmatic sign-in in the browser), with that same client as `clientId`. One audience in `GOOGLE_CLIENT_IDS` covers both. The Web client lists the dashboard's origin under "Authorized JavaScript origins"; no client secret is used anywhere.
+
 ### 15.3 Linking Google to an existing account
 
 1. User already authenticated.
@@ -2302,6 +2318,8 @@ Do not expose methods that fetch a record by ID and delegate the check to the cl
 
 Implemented: the host's Caddy on the `alex-violatto` VPS terminates TLS for `financialmanager.alexviolatto.dev` with automatic Let's Encrypt certificates, redirects http to https and sends `Strict-Transport-Security: max-age=31536000; includeSubDomains`; it forwards `/api/*` to the API on `127.0.0.1:10003` with the prefix stripped and answers 404 on `/api/metrics` (section 22.1). The site block is `financial-manager-backend/deploy/Caddyfile.example`. Android release builds refuse cleartext traffic: only the debug manifest sets `usesCleartextTraffic`, for the local backend on the emulator. See `docs/build-deploy.md`.
 
+The web dashboard (section 9.9) gets a Content-Security-Policy from Caddy: scripts only from its own origin plus Google's sign-in client, `'wasm-unsafe-eval'` for CanvasKit, inline styles (Flutter needs them) but no inline scripts, fonts from fonts.gstatic.com, `frame-ancestors 'none'`; plus `nosniff`, a referrer policy and a Permissions-Policy. CanvasKit and cropperjs are served from the dashboard, not from CDNs. The API sends CORS headers only to origins in `CORS_ALLOWED_ORIGINS`, empty in production and meant for local development.
+
 ### 19.4 Secrets
 
 - Secret manager in production.
@@ -2478,7 +2496,8 @@ worker
 postgres
 redis
 object-storage
-reverse-proxy   -- production
+web             -- production: the Flutter web dashboard
+reverse-proxy   -- production (Caddy on the host)
 ```
 
 `object-storage` runs `dokjolly/minio:RELEASE.2025-10-15T17-29-55Z-r1`: MinIO stopped publishing community images in October 2025 and removed `minio/minio`/`minio/mc` from Docker Hub, so the last upstream release is rebuilt from source in github.com/Dokjolly0/minio (with `dokjolly/mc` for the backup scripts). It reads the data written by the former `minio/minio` image unchanged. MinIO itself no longer gets fixes; it is only reachable on `backend_internal`, and a maintained S3-compatible store is the long-term option.
@@ -2710,6 +2729,8 @@ Initial targets to validate:
 - Android/iOS build for release branches;
 - signing only in a protected environment;
 - distribution to testers.
+
+Implemented in `mobile-ci.yml`: format, analyze, tests, debug and release APK (with size analysis), unsigned iOS build, and a web release build, so imports that don't compile for the browser fail before the VPS builds the dashboard.
 
 Android signing (implemented): one upload keystore signs release and debug builds on every PC, so Google Sign-In needs a single SHA-1 and APKs built anywhere update each other. `android/app/build.gradle.kts` reads its path and passwords from `android/key.properties` (never committed; `key.properties.example` shows the fields); without it builds fall back to the local debug key, which is what CI does today. For the Play Store the keystore is the upload key of Play App Signing, and the SHA-1 of Google's app signing key gets its own Android OAuth client. Signing in CI from GitHub Secrets is documented as future work in `docs/build-deploy.md`.
 
@@ -3218,7 +3239,7 @@ Error codes: `AI_DISABLED` (503, feature not configured on the server), `AI_NOT_
 
 ## 33. On-device AI analysis (Analisi AI sul dispositivo)
 
-The AI analysis of section 32 can also run its model **on the user's phone**. The server still builds the prompt from the database and keeps the history; only the text generation moves to the device, so no third party ever sees the data. Android only for now (arm64); iOS builds but reports the feature as unavailable. Measurements behind every choice below are in `docs/ai-on-device-spike.md` (prototype on a Galaxy S26 Ultra, two rounds).
+The AI analysis of section 32 can also run its model **on the user's phone**. The server still builds the prompt from the database and keeps the history; only the text generation moves to the device, so no third party ever sees the data. Android only for now (arm64); iOS builds but reports the feature as unavailable, and the web dashboard has no engines at all (section 9.9). Measurements behind every choice below are in `docs/ai-on-device-spike.md` (prototype on a Galaxy S26 Ultra, two rounds).
 
 ### 33.1 Goals and non-goals
 

@@ -95,7 +95,12 @@ class _ModeBodyState extends ConsumerState<_ModeBody> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final settings = widget.settings;
-    final mode = settings.onDeviceAvailable ? settings.mode : AiMode.cloud;
+    // The web dashboard can't run models: cloud only, whatever the
+    // account's mode (set from the phone).
+    final localSupported = ref.watch(localAiSupportedProvider);
+    final mode = settings.onDeviceAvailable && localSupported
+        ? settings.mode
+        : AiMode.cloud;
     final Widget content = mode == AiMode.onDevice
         ? _LocalModeBody(settings: settings)
         : settings.available
@@ -104,7 +109,29 @@ class _ModeBodyState extends ConsumerState<_ModeBody> {
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Text(l10n.aiUnavailableBody),
           );
-    if (!settings.onDeviceAvailable) return content;
+    if (!localSupported &&
+        settings.onDeviceAvailable &&
+        settings.mode == AiMode.onDevice) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              0,
+            ),
+            child: Text(
+              l10n.aiCloudOnlyHereNote,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          Expanded(child: content),
+        ],
+      );
+    }
+    if (!settings.onDeviceAvailable || !localSupported) return content;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

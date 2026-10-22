@@ -27,7 +27,8 @@ class _FakeAuthRepository implements AuthRepository {
       throw UnimplementedError();
 
   @override
-  Future<GoogleSignInOutcome> signInWithGoogle() => throw UnimplementedError();
+  Future<GoogleSignInOutcome> signInWithGoogle({String? idToken}) =>
+      throw UnimplementedError();
 
   @override
   Future<AuthUser> completeGoogleRegistration(GoogleCompletionParams params) =>

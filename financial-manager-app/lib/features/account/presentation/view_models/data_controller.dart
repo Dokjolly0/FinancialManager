@@ -1,12 +1,11 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/api/providers.dart';
 import '../../../../core/errors/app_error.dart';
+import '../../../../core/files/save_file.dart';
 import '../../data/providers.dart';
 import '../../domain/models/export_record.dart';
 
@@ -31,10 +30,10 @@ class DataState {
   }
 }
 
-/// Dati (plan.md section 7.13, 20.2): richiede un export, lo scarica in un
-/// file temporaneo e apre il foglio di condivisione nativo cosi' l'utente
-/// sceglie dove salvarlo (Files/Drive/email/...), senza permessi di
-/// archiviazione su Android.
+/// Dati (plan.md section 7.13, 20.2): richiede un export, lo scarica e lo
+/// consegna con saveOrShareFile: foglio di condivisione nativo sul
+/// telefono (Files/Drive/email/..., senza permessi di archiviazione su
+/// Android), download del browser sul web.
 class DataController extends Notifier<DataState> {
   @override
   DataState build() => const DataState();
@@ -73,12 +72,11 @@ class DataController extends Notifier<DataState> {
         ),
       );
 
-      final dir = await getTemporaryDirectory();
-      final filename = 'export-${record.id}.${record.format}';
-      final file = File('${dir.path}/$filename');
-      await file.writeAsBytes(response.data!);
-
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+      await saveOrShareFile(
+        Uint8List.fromList(response.data!),
+        filename: 'export-${record.id}.${record.format}',
+        mimeType: record.format == 'csv' ? 'text/csv' : 'application/json',
+      );
     } on DioException {
       state = state.copyWith(
         error: const DomainError(code: 'EXPORT_FAILED', message: ''),

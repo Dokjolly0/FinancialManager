@@ -1,0 +1,14 @@
+# Only what `flutter build web` needs goes into the web image's context.
+.dart_tool/
+.idea/
+.vscode/
+build/
+android/
+ios/
+linux/
+macos/
+windows/
+test/
+coverage/
+*.iml
+**/.DS_Store

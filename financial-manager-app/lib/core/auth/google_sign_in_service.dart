@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 /// Thrown when the user dismisses the Google account picker — not a
@@ -19,6 +20,12 @@ class GoogleSignInCancelled implements Exception {
 /// ID for iOS) before the native sign-in flow will succeed; that
 /// registration is a manual Cloud Console step, not something this code
 /// can do.
+///
+/// On the web there is no programmatic sign-in: Google's own button
+/// (GoogleWebSignInButton) starts it, and the ID token arrives on
+/// [webIdTokens]. The same Web client is used as the browser's clientId
+/// (its "Authorized JavaScript origins" must list the dashboard's origin).
+/// No client secret is involved anywhere: only ID tokens.
 class GoogleSignInService {
   GoogleSignInService({
     this.serverClientId =
@@ -30,8 +37,30 @@ class GoogleSignInService {
 
   Future<void> _ensureInitialized() async {
     if (_initialized) return;
-    await GoogleSignIn.instance.initialize(serverClientId: serverClientId);
     _initialized = true;
+    if (kIsWeb) {
+      await GoogleSignIn.instance.initialize(clientId: serverClientId);
+    } else {
+      await GoogleSignIn.instance.initialize(serverClientId: serverClientId);
+    }
+  }
+
+  /// Whether sign-in starts from Google's rendered button instead of
+  /// [signIn] (the web).
+  bool get usesWebButton => kIsWeb;
+
+  /// Loads Google's script so the web button can render. Idempotent.
+  Future<void> prepareWebButton() => _ensureInitialized();
+
+  /// ID tokens from sign-ins started with the web button.
+  Stream<String> get webIdTokens async* {
+    await _ensureInitialized();
+    await for (final event in GoogleSignIn.instance.authenticationEvents) {
+      if (event is GoogleSignInAuthenticationEventSignIn) {
+        final token = event.user.authentication.idToken;
+        if (token != null) yield token;
+      }
+    }
   }
 
   /// Triggers the sign-in UI and returns the Google ID token to send to

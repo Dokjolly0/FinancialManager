@@ -33,12 +33,22 @@ financialmanager.alexviolatto.dev {
 		}
 	}
 
-	# Everything else: the web dashboard's static files (a placeholder page
-	# until the Flutter web build exists). try_files sends unknown paths to
-	# index.html so the app's own routes work on reload.
+	# Everything else: the web dashboard, served by the `web` container
+	# (compose.prod.yaml) on 127.0.0.1:10005, which also sends app routes
+	# such as /app/history to index.html.
 	handle {
-		root * /var/www/financialmanager
-		try_files {path} /index.html
-		file_server
+		# The browser may only load the dashboard's own files, plus Google's
+		# sign-in script/popup (GIS) and the fonts Flutter fetches for glyphs
+		# it doesn't bundle. 'wasm-unsafe-eval' is for CanvasKit (WebAssembly);
+		# 'unsafe-inline' styles because Flutter positions its elements with
+		# style attributes. Images: any https (category pictures from search
+		# providers), data: and blob: (picked files before upload).
+		header {
+			Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://accounts.google.com/gsi/ https://fonts.gstatic.com; frame-src https://accounts.google.com/gsi/; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+			X-Content-Type-Options "nosniff"
+			Referrer-Policy "strict-origin-when-cross-origin"
+			Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		}
+		reverse_proxy 127.0.0.1:10005
 	}
 }

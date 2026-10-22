@@ -78,8 +78,9 @@ abstract class AuthRepository {
   });
 
   /// Runs the native Google sign-in flow and verifies the resulting ID
-  /// token with the backend (plan.md section 8.2).
-  Future<GoogleSignInOutcome> signInWithGoogle();
+  /// token with the backend (plan.md section 8.2). On the web the token
+  /// comes from Google's button and is passed as [idToken].
+  Future<GoogleSignInOutcome> signInWithGoogle({String? idToken});
 
   Future<AuthUser> completeGoogleRegistration(GoogleCompletionParams params);
 

@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/services.dart';
 
 import '../../domain/models/device_capabilities.dart';
+import '../../../../core/platform/platform_info.dart';
 
 /// Reads [DeviceCapabilities] from the platform.
 abstract interface class DeviceCapabilitiesSource {
@@ -20,7 +19,7 @@ class PlatformDeviceCapabilitiesSource implements DeviceCapabilitiesSource {
 
   @override
   Future<DeviceCapabilities?> read() async {
-    if (!Platform.isAndroid) return null;
+    if (!isAndroidApp) return null;
     try {
       final raw = await _channel.invokeMapMethod<String, dynamic>(
         'capabilities',

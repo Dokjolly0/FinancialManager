@@ -3894,6 +3894,42 @@ abstract class AppLocalizations {
   /// **'Il telefono è troppo caldo per far girare il modello. Lascialo raffreddare qualche minuto e riprova.'**
   String get errorCodeAiLocalTooHot;
 
+  /// AI provider settings on a device without on-device models (the web dashboard) while the account is in on-device mode.
+  ///
+  /// In it, this message translates to:
+  /// **'Qui le analisi usano solo i fornitori cloud con la tua chiave API. Il modello sul telefono resta attivo nell\'app.'**
+  String get aiCloudOnlyHereNote;
+
+  /// Web dashboard: dialog with Google's button when linking Google to the account.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli l\'account Google da collegare'**
+  String get googleWebLinkDialogTitle;
+
+  /// Image crop dialog in the browser: rotate tooltip.
+  ///
+  /// In it, this message translates to:
+  /// **'Ruota a sinistra'**
+  String get mediaCropRotateLeft;
+
+  /// Image crop dialog in the browser: rotate tooltip.
+  ///
+  /// In it, this message translates to:
+  /// **'Ruota a destra'**
+  String get mediaCropRotateRight;
+
+  /// Image crop dialog in the browser: confirm button.
+  ///
+  /// In it, this message translates to:
+  /// **'Ritaglia'**
+  String get mediaCropConfirm;
+
+  /// Web dashboard: download the AI report as a Markdown file.
+  ///
+  /// In it, this message translates to:
+  /// **'Scarica (.md)'**
+  String get aiDownloadAction;
+
   /// No description provided for @aiModeCloud.
   ///
   /// In it, this message translates to:

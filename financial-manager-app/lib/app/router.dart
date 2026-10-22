@@ -9,6 +9,7 @@ import '../features/account/presentation/screens/account_profile_screen.dart';
 import '../features/account/presentation/screens/account_screen.dart';
 import '../features/account/presentation/screens/account_security_screen.dart';
 import '../features/account/presentation/view_models/account_providers.dart';
+import '../features/ai/presentation/view_models/local_run_plan.dart';
 import '../features/ai/presentation/screens/ai_analysis_screen.dart';
 import '../features/ai/presentation/screens/ai_analysis_setup_screen.dart';
 import '../features/ai/presentation/screens/ai_assistant_screen.dart';
@@ -33,6 +34,7 @@ import '../features/transactions/presentation/screens/transaction_detail_screen.
 import '../features/wallets/presentation/screens/wallet_form_screen.dart';
 import '../features/wallets/presentation/screens/wallets_screen.dart';
 import 'app_shell.dart';
+import 'layout/breakpoints.dart';
 import 'session/session_controller.dart';
 import 'session/session_status.dart';
 import 'splash_screen.dart';
@@ -118,7 +120,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       switch (status) {
         case SessionStatus.checking:
-          return path == AppRoutes.splash ? null : AppRoutes.splash;
+          // Keep where the user was going (a reload or a link in the
+          // browser), to land there once the session is restored.
+          if (path == AppRoutes.splash) return null;
+          return Uri(
+            path: AppRoutes.splash,
+            queryParameters: {'from': state.uri.toString()},
+          ).toString();
         case SessionStatus.unauthenticated:
           return isAuthRoute && path != AppRoutes.splash
               ? null
@@ -128,7 +136,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ? null
               : AppRoutes.registerGoogleCompletion;
         case SessionStatus.authenticated:
-          if (isAuthRoute) return AppRoutes.home;
+          if (isAuthRoute) {
+            final from = state.uri.queryParameters['from'];
+            return path == AppRoutes.splash &&
+                    from != null &&
+                    from.startsWith('/app/')
+                ? from
+                : AppRoutes.home;
+          }
           // AI features turned off (section 32.10): their screens are
           // gone too, even from a stale link.
           final aiOff =
@@ -138,125 +153,153 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   path.startsWith(AppRoutes.aiAssistant))) {
             return AppRoutes.account;
           }
+          // Model management and the phone's outbox don't exist where
+          // models can't run (the web dashboard).
+          if (!ref.read(localAiSupportedProvider) &&
+              (path == AppRoutes.aiLocalModels ||
+                  path == AppRoutes.aiLocalRuntime ||
+                  path == AppRoutes.aiPending)) {
+            return AppRoutes.aiAssistant;
+          }
           return null;
       }
     },
     routes: [
-      GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),
-      GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
+      GoRoute(
+        path: AppRoutes.splash,
+        builder: (_, _) => const AdaptivePage(child: SplashScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.login,
+        builder: (_, _) => const AdaptivePage(child: LoginScreen()),
+      ),
       GoRoute(
         path: AppRoutes.register,
-        builder: (_, _) => const RegisterScreen(),
+        builder: (_, _) => const AdaptivePage(child: RegisterScreen()),
       ),
       GoRoute(
         path: AppRoutes.forgotPassword,
-        builder: (_, _) => const ForgotPasswordScreen(),
+        builder: (_, _) => const AdaptivePage(child: ForgotPasswordScreen()),
       ),
       GoRoute(
         path: AppRoutes.registerGoogleCompletion,
-        builder: (_, _) => const GoogleRegistrationCompletionScreen(),
+        builder: (_, _) =>
+            const AdaptivePage(child: GoogleRegistrationCompletionScreen()),
       ),
       GoRoute(
         path: AppRoutes.transactionsNew,
-        builder: (_, state) => NewTransactionScreen(
-          linkToTransactionId: state.uri.queryParameters['linkTo'],
+        builder: (_, state) => AdaptivePage(
+          child: NewTransactionScreen(
+            linkToTransactionId: state.uri.queryParameters['linkTo'],
+          ),
         ),
       ),
       GoRoute(
         path: AppRoutes.paymentGroups,
-        builder: (_, _) => const PaymentGroupsScreen(),
+        builder: (_, _) => const AdaptivePage(child: PaymentGroupsScreen()),
       ),
       GoRoute(
         path: '/app/transactions/:id',
-        builder: (_, state) =>
-            TransactionDetailScreen(transactionId: state.pathParameters['id']!),
+        builder: (_, state) => AdaptivePage(
+          child: TransactionDetailScreen(
+            transactionId: state.pathParameters['id']!,
+          ),
+        ),
       ),
       GoRoute(
         path: '/app/transactions/:id/edit',
-        builder: (_, state) =>
-            NewTransactionScreen(editTransactionId: state.pathParameters['id']),
+        builder: (_, state) => AdaptivePage(
+          child: NewTransactionScreen(
+            editTransactionId: state.pathParameters['id'],
+          ),
+        ),
       ),
       GoRoute(
         path: AppRoutes.accountProfile,
-        builder: (_, _) => const AccountProfileScreen(),
+        builder: (_, _) => const AdaptivePage(child: AccountProfileScreen()),
       ),
       GoRoute(
         path: AppRoutes.accountSecurity,
-        builder: (_, _) => const AccountSecurityScreen(),
+        builder: (_, _) => const AdaptivePage(child: AccountSecurityScreen()),
       ),
       GoRoute(
         path: AppRoutes.accountLinkedAccounts,
-        builder: (_, _) => const AccountLinkedAccountsScreen(),
+        builder: (_, _) =>
+            const AdaptivePage(child: AccountLinkedAccountsScreen()),
       ),
       GoRoute(
         path: AppRoutes.accountPreferences,
-        builder: (_, _) => const AccountPreferencesScreen(),
+        builder: (_, _) =>
+            const AdaptivePage(child: AccountPreferencesScreen()),
       ),
       GoRoute(
         path: AppRoutes.accountData,
-        builder: (_, _) => const AccountDataScreen(),
+        builder: (_, _) => const AdaptivePage(child: AccountDataScreen()),
       ),
       GoRoute(
         path: AppRoutes.wallets,
-        builder: (_, _) => const WalletsScreen(),
+        builder: (_, _) => const AdaptivePage(child: WalletsScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiAssistant,
-        builder: (_, _) => const AiAssistantScreen(),
+        builder: (_, _) => const AdaptivePage(child: AiAssistantScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiProvider,
-        builder: (_, _) => const AiProviderSettingsScreen(),
+        builder: (_, _) =>
+            const AdaptivePage(child: AiProviderSettingsScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiContext,
-        builder: (_, _) => const AiPersonalContextScreen(),
+        builder: (_, _) => const AdaptivePage(child: AiPersonalContextScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiWalletPurposes,
-        builder: (_, _) => const AiWalletPurposesScreen(),
+        builder: (_, _) => const AdaptivePage(child: AiWalletPurposesScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiLocalModels,
-        builder: (_, _) => const AiLocalModelsScreen(),
+        builder: (_, _) => const AdaptivePage(child: AiLocalModelsScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiLocalRuntime,
-        builder: (_, _) => const AiLocalRuntimeScreen(),
+        builder: (_, _) => const AdaptivePage(child: AiLocalRuntimeScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiNew,
-        builder: (_, _) => const AiAnalysisSetupScreen(),
+        builder: (_, _) => const AdaptivePage(child: AiAnalysisSetupScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiPreview,
-        builder: (_, _) => const AiPromptPreviewScreen(),
+        builder: (_, _) => const AdaptivePage(child: AiPromptPreviewScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiRun,
-        builder: (_, _) => const AiAnalysisScreen(),
+        builder: (_, _) => const AdaptivePage(child: AiAnalysisScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiPending,
-        builder: (_, _) => const AiPendingResultsScreen(),
+        builder: (_, _) => const AdaptivePage(child: AiPendingResultsScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiHistory,
-        builder: (_, _) => const AiHistoryScreen(),
+        builder: (_, _) => const AdaptivePage(child: AiHistoryScreen()),
       ),
       GoRoute(
         path: '/app/ai/analyses/:id',
-        builder: (_, state) =>
-            AiAnalysisScreen(analysisId: state.pathParameters['id']),
+        builder: (_, state) => AdaptivePage(
+          child: AiAnalysisScreen(analysisId: state.pathParameters['id']),
+        ),
       ),
       GoRoute(
         path: AppRoutes.walletsNew,
-        builder: (_, _) => const WalletFormScreen(),
+        builder: (_, _) => const AdaptivePage(child: WalletFormScreen()),
       ),
       GoRoute(
         path: '/app/account/wallets/:id/edit',
-        builder: (_, state) =>
-            WalletFormScreen(editWalletId: state.pathParameters['id']),
+        builder: (_, state) => AdaptivePage(
+          child: WalletFormScreen(editWalletId: state.pathParameters['id']),
+        ),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
