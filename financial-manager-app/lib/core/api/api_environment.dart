@@ -25,7 +25,8 @@ enum ApiEnvironment {
     // --dart-define=API_ENVIRONMENT=local or API_BASE_URL to override.
     ApiEnvironment.local => 'http://10.0.2.2:10003/v1',
     ApiEnvironment.staging => 'https://staging.example.invalid/v1',
-    ApiEnvironment.production => 'http://83.228.246.84:10003/v1',
+    ApiEnvironment.production =>
+      'https://financialmanager.alexviolatto.dev/api/v1',
   };
 
   /// Resolves the base URL for the current build: an explicit
