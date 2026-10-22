@@ -2322,7 +2322,7 @@ Scopes:
 
 Apply stricter limits to login, password reset, email verification, and the Google exchange.
 
-Client IP behind the reverse proxy: chi's `RealIP` is not used, because it trusts `X-Forwarded-For`/`X-Real-IP` from anyone. `httpserver.RealIP` reads `X-Forwarded-For` only when the TCP peer is inside `TRUSTED_PROXY_CIDRS` (in production `172.16.0.0/12`, the Docker bridge Caddy connects through) and takes the rightmost untrusted address; with the variable empty the TCP peer is the client. The session's client IP hash uses that address, without the port.
+Client IP behind the reverse proxy: chi's `RealIP` is not used, because it trusts `X-Forwarded-For`/`X-Real-IP` from anyone. `httpserver.RealIP` reads `X-Forwarded-For` only when the TCP peer is inside `TRUSTED_PROXY_CIDRS` (in production `172.16.0.0/12`, the Docker bridge Caddy connects through) and takes the rightmost untrusted address; with the variable empty the TCP peer is the client. Nothing stores the address yet: the password login computes `clientIPHash` (host only, without the port) but does not persist it, and `sessions.ip_hash` stays NULL; recording it, and doing so for the Google exchange too, is open work.
 
 ### 19.6 Upload
 
