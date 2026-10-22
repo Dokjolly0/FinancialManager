@@ -3906,6 +3906,30 @@ abstract class AppLocalizations {
   /// **'Scegli l\'account Google da collegare'**
   String get googleWebLinkDialogTitle;
 
+  /// Image crop dialog in the browser: rotate tooltip.
+  ///
+  /// In it, this message translates to:
+  /// **'Ruota a sinistra'**
+  String get mediaCropRotateLeft;
+
+  /// Image crop dialog in the browser: rotate tooltip.
+  ///
+  /// In it, this message translates to:
+  /// **'Ruota a destra'**
+  String get mediaCropRotateRight;
+
+  /// Image crop dialog in the browser: confirm button.
+  ///
+  /// In it, this message translates to:
+  /// **'Ritaglia'**
+  String get mediaCropConfirm;
+
+  /// Web dashboard: download the AI report as a Markdown file.
+  ///
+  /// In it, this message translates to:
+  /// **'Scarica (.md)'**
+  String get aiDownloadAction;
+
   /// No description provided for @aiModeCloud.
   ///
   /// In it, this message translates to:

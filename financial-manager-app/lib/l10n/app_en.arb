@@ -733,6 +733,22 @@
   "@googleWebLinkDialogTitle": {
     "description": "Web dashboard: dialog with Google's button when linking Google to the account."
   },
+  "mediaCropRotateLeft": "Rotate left",
+  "@mediaCropRotateLeft": {
+    "description": "Image crop dialog in the browser: rotate tooltip."
+  },
+  "mediaCropRotateRight": "Rotate right",
+  "@mediaCropRotateRight": {
+    "description": "Image crop dialog in the browser: rotate tooltip."
+  },
+  "mediaCropConfirm": "Crop",
+  "@mediaCropConfirm": {
+    "description": "Image crop dialog in the browser: confirm button."
+  },
+  "aiDownloadAction": "Download (.md)",
+  "@aiDownloadAction": {
+    "description": "Web dashboard: download the AI report as a Markdown file."
+  },
   "aiModeCloud": "Cloud",
   "aiModeOnDevice": "On device",
   "aiLocalModeIntro": "The model runs on the phone: your data goes to no outside AI provider. The server prepares the data and keeps reports and questions in the history, as with the cloud.",

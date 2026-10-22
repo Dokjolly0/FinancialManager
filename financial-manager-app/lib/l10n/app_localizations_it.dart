@@ -2174,6 +2174,18 @@ class AppLocalizationsIt extends AppLocalizations {
       'Scegli l\'account Google da collegare';
 
   @override
+  String get mediaCropRotateLeft => 'Ruota a sinistra';
+
+  @override
+  String get mediaCropRotateRight => 'Ruota a destra';
+
+  @override
+  String get mediaCropConfirm => 'Ritaglia';
+
+  @override
+  String get aiDownloadAction => 'Scarica (.md)';
+
+  @override
   String get aiModeCloud => 'Cloud';
 
   @override

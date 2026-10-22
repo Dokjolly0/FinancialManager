@@ -2161,6 +2161,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get googleWebLinkDialogTitle => 'Choose the Google account to link';
 
   @override
+  String get mediaCropRotateLeft => 'Rotate left';
+
+  @override
+  String get mediaCropRotateRight => 'Rotate right';
+
+  @override
+  String get mediaCropConfirm => 'Crop';
+
+  @override
+  String get aiDownloadAction => 'Download (.md)';
+
+  @override
   String get aiModeCloud => 'Cloud';
 
   @override
