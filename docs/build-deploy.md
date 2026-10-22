@@ -327,6 +327,13 @@ financial-manager-app/build/app/outputs/flutter-apk/app-release.apk
 - le build debug includono tutte le ABI e pesano circa 300 MB;
 - la prima build dopo `flutter clean` è lenta (5–15 minuti) perché gli hook compilano le librerie native.
 
+**Lavoro in background.** Download dei modelli e analisi sul dispositivo continuano con l'app chiusa grazie a un servizio in primo piano (`flutter_foreground_task`):
+
+- il manifest dichiara i permessi `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC`, `FOREGROUND_SERVICE_SPECIAL_USE`, `POST_NOTIFICATIONS` e `WAKE_LOCK`, e il servizio con i tipi `dataSync|specialUse`. Per una pubblicazione su Play Store il tipo `specialUse` va motivato nella console (la motivazione è già nella `property` del manifest);
+- il motore Flutter parte in `FinancialManagerApplication` e resta in cache, così il lavoro sopravvive alla chiusura dell'app dalle recenti;
+- `flutter_local_notifications` richiede il desugaring delle librerie Java (`isCoreLibraryDesugaringEnabled` e `desugar_jdk_libs` in `android/app/build.gradle.kts`);
+- da Android 15 i servizi `dataSync` hanno un tetto di 6 ore al giorno: oltre, i download vanno in pausa e riprendono riaprendo l'app.
+
 Controllo rapido che Vulkan non sia finito nell'APK:
 
 ```bash

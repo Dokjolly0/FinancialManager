@@ -58,6 +58,8 @@ In alternativa a un fornitore cloud puoi far girare il modello AI **direttamente
 
 **Cosa resta sul telefono.** I modelli scaricati, le impostazioni di esecuzione e le velocità misurate sono salvati nella memoria privata dell'app, esclusi dal backup di Android, e restano sul telefono anche se cambi account. Se il telefono è offline quando finisce un'analisi, il report (o la risposta a una domanda) viene conservato sul telefono, legato al tuo account, finché il server non lo riceve: viene inviato in automatico al successivo accesso con il tuo account, quando riapri l'app o prima dell'analisi seguente. Non scade e resta anche se esci dall'account; se il server lo rifiuta (per esempio perché nel frattempo hai eliminato l'analisi) resta comunque sul telefono. **Chiunque usi l'app su quel telefono può leggerlo** in **Cronologia → Risposte non inviate**; solo tu puoi reinviarlo o eliminarlo. Se condividi il telefono, eliminali quando non ti servono più. Per cancellare i modelli usa **Modelli sul dispositivo → Elimina**, oppure disinstalla l'app.
 
+**Notifiche.** Download e analisi sul telefono possono continuare con l'app chiusa: in quel caso una notifica mostra l'avanzamento e un'altra avvisa quando hanno finito. Le notifiche riportano solo il titolo dell'analisi o il nome del modello, mai il contenuto del report. Il permesso per le notifiche è facoltativo: se lo neghi tutto funziona lo stesso, senza avvisi.
+
 **Il modello può sbagliare.** I modelli che girano su un telefono sono piccoli e possono confondere i numeri: controllali prima di prendere decisioni. Ogni modello è distribuito con la sua licenza, che l'app ti mostra prima del download.
 
 ## Servizi di Google
