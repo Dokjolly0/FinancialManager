@@ -30,16 +30,18 @@ services:
     restart: unless-stopped
 
   # The web dashboard: the Flutter app built for the browser and served by
-  # Caddy (financial-manager-app/Dockerfile). Defined only here so the dev
-  # stack doesn't compile Flutter; `up -d --build` rebuilds it with the
-  # backend. It talks to the API through the browser, not over Docker
-  # networks: it is on compose's default network only, never on
-  # backend_internal.
+  # Caddy (financial-manager-app/Dockerfile). Never built here: CI publishes
+  # the image to Docker Hub (job build-web in .github/workflows/mobile-ci.yml)
+  # because compiling Flutter needs more memory than the VPS has. With
+  # pull_policy: always, every `up` fetches the newest image, so
+  # `docker compose ... up -d` also updates the dashboard (unchanged images
+  # are not downloaded again). WEB_IMAGE_TAG=sha-<commit> pins a version
+  # for a rollback. Defined only here so the dev stack doesn't need it. It
+  # talks to the API through the browser, not over Docker networks: it is
+  # on compose's default network only, never on backend_internal.
   web:
-    build:
-      context: ../financial-manager-app
-      args:
-        API_BASE_URL: ${WEB_API_BASE_URL:-https://financialmanager.alexviolatto.dev/api/v1}
+    image: dokjolly/financial-manager-web:${WEB_IMAGE_TAG:-latest}
+    pull_policy: always
     ports:
       - "127.0.0.1:${WEB_HOST_PORT:-10005}:8080"
     restart: unless-stopped
