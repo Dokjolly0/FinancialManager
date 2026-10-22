@@ -91,6 +91,7 @@ void main() {
     host: h ?? host,
     outbox: outbox,
     currentUserId: () => 'u1',
+    currentUserName: () => 'Ada Rossi (@ada)',
     appVersion: '1.4.0',
   );
 
@@ -213,6 +214,9 @@ void main() {
       final pending = await outbox.pending();
       expect(pending.single.userId, 'u1');
       expect(pending.single.result.content, 'Ciao mondo');
+      expect(pending.single.ownerName, 'Ada Rossi (@ada)');
+      expect(pending.single.modelLabel, 'Qwen3 4B · Q4_K_M');
+      expect(pending.single.isReport, isTrue);
 
       repo.submitError = null;
       await outbox.flush(repo, 'someone-else');
@@ -227,30 +231,43 @@ void main() {
     },
   );
 
-  test('the outbox drops refused and expired items', () async {
-    var now = DateTime(2026, 10, 20);
-    final box = MemoryLocalResultOutbox(now: () => now);
-    PendingLocalResult item(String id) => PendingLocalResult(
-      userId: 'u1',
-      analysisId: 'a1',
-      messageId: id,
-      result: const AiLocalResult(content: 'x', status: 'COMPLETED'),
-      createdAt: now,
-    );
+  test('refused items stay for their owner; nothing expires', () async {
+    final box = MemoryLocalResultOutbox();
+    PendingLocalResult item(String id, {String user = 'u1'}) =>
+        PendingLocalResult(
+          userId: user,
+          analysisId: 'a1',
+          messageId: id,
+          result: const AiLocalResult(content: 'x', status: 'COMPLETED'),
+          createdAt: DateTime(2020),
+          ownerName: 'Ada (@ada)',
+        );
     await box.add(item('m1'));
+    await box.add(item('m2', user: 'u2'));
     repo.submitError = const DomainError(
       code: 'AI_MESSAGE_FINISHED',
       message: 'saved',
     );
     await box.flush(repo, 'u1');
-    expect(
-      await box.pending(),
-      isEmpty,
-      reason: "a domain refusal won't change on retry",
-    );
+    var pending = await box.pending();
+    expect(pending, hasLength(2), reason: 'years old, still there');
+    expect(pending.first.refusedCode, 'AI_MESSAGE_FINISHED');
+    expect(pending.first.ownerName, 'Ada (@ada)');
 
-    await box.add(item('m2'));
-    now = now.add(const Duration(days: 8));
+    // A refused item isn't retried by itself...
+    repo.submitError = null;
+    await box.flush(repo, 'u1');
+    expect(repo.submitted, isEmpty);
+    // ...its owner resends it, nobody else can.
+    expect(await box.resend(repo, 'u2', 'm1'), LocalResendOutcome.notOwner);
+    expect(await box.resend(repo, 'u1', 'm1'), LocalResendOutcome.sent);
+    expect(repo.submitted, hasLength(1));
+    pending = await box.pending();
+    expect(pending.single.messageId, 'm2');
+
+    // Only the owner deletes.
+    expect(await box.remove('u1', 'm2'), isFalse);
+    expect(await box.remove('u2', 'm2'), isTrue);
     expect(await box.pending(), isEmpty);
   });
 
@@ -273,6 +290,13 @@ void main() {
     await second.flush(repo, 'u1');
     expect(repo.submitted.single.$3.content, 'salvato');
     expect(await file.exists(), isFalse);
+  });
+
+  test("a follow-up asks the host for the report's model", () async {
+    await runner().askFollowUp('a1', 'perché?', localModelId: 'gemma').toList();
+    expect(host.requested, ['gemma']);
+    await run().drain<void>();
+    expect(host.requested.last, isNull, reason: 'a report uses the active');
   });
 
   test('follow-ups drop the oldest Q/A pairs to fit the context', () async {

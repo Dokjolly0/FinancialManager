@@ -2661,4 +2661,82 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get aiRunModelLabel => 'Modello';
+
+  @override
+  String get aiPendingTitle => 'Risposte non inviate';
+
+  @override
+  String get aiPendingIntro =>
+      'Report e risposte scritti su questo telefono che il server non ha ancora: la rete mancava quando sono finiti, oppure il server li ha rifiutati. Restano qui finché chi li ha scritti non li invia o li elimina. Chiunque usi l\'app su questo telefono può leggerli.';
+
+  @override
+  String get aiPendingEmpty =>
+      'Nessuna risposta in attesa: il server ha tutto.';
+
+  @override
+  String get aiPendingReport => 'Report';
+
+  @override
+  String get aiPendingAnswer => 'Risposta a una domanda';
+
+  @override
+  String get aiPendingUnknownOwner => 'account sconosciuto';
+
+  @override
+  String get aiPendingWaiting =>
+      'In attesa di invio: parte da sola quando l\'autore accede o riapre l\'app.';
+
+  @override
+  String aiPendingRefused(String reason) {
+    return 'Rifiutato dal server: $reason';
+  }
+
+  @override
+  String get aiPendingResend => 'Invia ora';
+
+  @override
+  String get aiPendingSent => 'Inviato: ora è nella cronologia.';
+
+  @override
+  String get aiPendingRefusedAgain =>
+      'Il server lo rifiuta ancora: puoi leggerlo qui o eliminarlo.';
+
+  @override
+  String get aiPendingNotOwner => 'Solo chi lo ha scritto può inviarlo.';
+
+  @override
+  String aiPendingOwnerOnly(String owner) {
+    return 'Solo $owner può inviarlo o eliminarlo.';
+  }
+
+  @override
+  String get aiPendingDeleteTitle => 'Eliminare questa risposta?';
+
+  @override
+  String get aiPendingDeleteMessage =>
+      'Il testo esiste solo su questo telefono: eliminandolo va perso.';
+
+  @override
+  String aiPendingBanner(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count risposte scritte sul telefono non sono ancora sul server',
+      one: 'Una risposta scritta sul telefono non è ancora sul server',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get aiLocalFollowUpUnsupported =>
+      'Questa analisi è stata scritta sul telefono: continua le domande da un telefono Android con un modello installato.';
+
+  @override
+  String get aiLocalFollowUpNoModel =>
+      'Per rispondere serve un modello sul telefono: installane uno da Modelli sul dispositivo.';
+
+  @override
+  String aiLocalFollowUpOtherModel(String report, String current) {
+    return 'Il modello del report ($report) non è più installato: risponderà $current.';
+  }
 }

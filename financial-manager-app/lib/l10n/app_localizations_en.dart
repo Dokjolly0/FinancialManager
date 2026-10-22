@@ -2648,4 +2648,81 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiRunModelLabel => 'Model';
+
+  @override
+  String get aiPendingTitle => 'Unsent answers';
+
+  @override
+  String get aiPendingIntro =>
+      'Reports and answers written on this phone that the server doesn\'t have yet: the network was down when they finished, or the server refused them. They stay here until whoever wrote them sends or deletes them. Anyone using the app on this phone can read them.';
+
+  @override
+  String get aiPendingEmpty => 'Nothing waiting: the server has everything.';
+
+  @override
+  String get aiPendingReport => 'Report';
+
+  @override
+  String get aiPendingAnswer => 'Answer to a question';
+
+  @override
+  String get aiPendingUnknownOwner => 'unknown account';
+
+  @override
+  String get aiPendingWaiting =>
+      'Waiting to be sent: it goes by itself when its author signs in or reopens the app.';
+
+  @override
+  String aiPendingRefused(String reason) {
+    return 'Refused by the server: $reason';
+  }
+
+  @override
+  String get aiPendingResend => 'Send now';
+
+  @override
+  String get aiPendingSent => 'Sent: it is now in the history.';
+
+  @override
+  String get aiPendingRefusedAgain =>
+      'The server still refuses it: you can read it here or delete it.';
+
+  @override
+  String get aiPendingNotOwner => 'Only its author can send it.';
+
+  @override
+  String aiPendingOwnerOnly(String owner) {
+    return 'Only $owner can send or delete it.';
+  }
+
+  @override
+  String get aiPendingDeleteTitle => 'Delete this answer?';
+
+  @override
+  String get aiPendingDeleteMessage =>
+      'The text exists only on this phone: deleting it loses it.';
+
+  @override
+  String aiPendingBanner(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count answers written on the phone are not on the server yet',
+      one: 'One answer written on the phone is not on the server yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get aiLocalFollowUpUnsupported =>
+      'This analysis was written on a phone: continue the questions from an Android phone with a model installed.';
+
+  @override
+  String get aiLocalFollowUpNoModel =>
+      'Answering needs a model on the phone: install one from On-device models.';
+
+  @override
+  String aiLocalFollowUpOtherModel(String report, String current) {
+    return 'The report\'s model ($report) is no longer installed: $current will answer.';
+  }
 }

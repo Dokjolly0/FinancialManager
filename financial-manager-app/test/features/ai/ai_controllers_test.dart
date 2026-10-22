@@ -100,6 +100,7 @@ class _FakeRepo implements AiRepository {
     String analysisId,
     String question, {
     CancelToken? cancelToken,
+    String? localModelId,
   }) {
     lastQuestion = question;
     return _open(cancelToken);

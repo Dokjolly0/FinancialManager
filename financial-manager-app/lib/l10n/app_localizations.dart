@@ -4715,6 +4715,120 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Modello'**
   String get aiRunModelLabel;
+
+  /// No description provided for @aiPendingTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Risposte non inviate'**
+  String get aiPendingTitle;
+
+  /// No description provided for @aiPendingIntro.
+  ///
+  /// In it, this message translates to:
+  /// **'Report e risposte scritti su questo telefono che il server non ha ancora: la rete mancava quando sono finiti, oppure il server li ha rifiutati. Restano qui finché chi li ha scritti non li invia o li elimina. Chiunque usi l\'app su questo telefono può leggerli.'**
+  String get aiPendingIntro;
+
+  /// No description provided for @aiPendingEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna risposta in attesa: il server ha tutto.'**
+  String get aiPendingEmpty;
+
+  /// No description provided for @aiPendingReport.
+  ///
+  /// In it, this message translates to:
+  /// **'Report'**
+  String get aiPendingReport;
+
+  /// No description provided for @aiPendingAnswer.
+  ///
+  /// In it, this message translates to:
+  /// **'Risposta a una domanda'**
+  String get aiPendingAnswer;
+
+  /// No description provided for @aiPendingUnknownOwner.
+  ///
+  /// In it, this message translates to:
+  /// **'account sconosciuto'**
+  String get aiPendingUnknownOwner;
+
+  /// No description provided for @aiPendingWaiting.
+  ///
+  /// In it, this message translates to:
+  /// **'In attesa di invio: parte da sola quando l\'autore accede o riapre l\'app.'**
+  String get aiPendingWaiting;
+
+  /// No description provided for @aiPendingRefused.
+  ///
+  /// In it, this message translates to:
+  /// **'Rifiutato dal server: {reason}'**
+  String aiPendingRefused(String reason);
+
+  /// No description provided for @aiPendingResend.
+  ///
+  /// In it, this message translates to:
+  /// **'Invia ora'**
+  String get aiPendingResend;
+
+  /// No description provided for @aiPendingSent.
+  ///
+  /// In it, this message translates to:
+  /// **'Inviato: ora è nella cronologia.'**
+  String get aiPendingSent;
+
+  /// No description provided for @aiPendingRefusedAgain.
+  ///
+  /// In it, this message translates to:
+  /// **'Il server lo rifiuta ancora: puoi leggerlo qui o eliminarlo.'**
+  String get aiPendingRefusedAgain;
+
+  /// No description provided for @aiPendingNotOwner.
+  ///
+  /// In it, this message translates to:
+  /// **'Solo chi lo ha scritto può inviarlo.'**
+  String get aiPendingNotOwner;
+
+  /// No description provided for @aiPendingOwnerOnly.
+  ///
+  /// In it, this message translates to:
+  /// **'Solo {owner} può inviarlo o eliminarlo.'**
+  String aiPendingOwnerOnly(String owner);
+
+  /// No description provided for @aiPendingDeleteTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Eliminare questa risposta?'**
+  String get aiPendingDeleteTitle;
+
+  /// No description provided for @aiPendingDeleteMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Il testo esiste solo su questo telefono: eliminandolo va perso.'**
+  String get aiPendingDeleteMessage;
+
+  /// No description provided for @aiPendingBanner.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Una risposta scritta sul telefono non è ancora sul server} other{{count} risposte scritte sul telefono non sono ancora sul server}}'**
+  String aiPendingBanner(int count);
+
+  /// No description provided for @aiLocalFollowUpUnsupported.
+  ///
+  /// In it, this message translates to:
+  /// **'Questa analisi è stata scritta sul telefono: continua le domande da un telefono Android con un modello installato.'**
+  String get aiLocalFollowUpUnsupported;
+
+  /// No description provided for @aiLocalFollowUpNoModel.
+  ///
+  /// In it, this message translates to:
+  /// **'Per rispondere serve un modello sul telefono: installane uno da Modelli sul dispositivo.'**
+  String get aiLocalFollowUpNoModel;
+
+  /// No description provided for @aiLocalFollowUpOtherModel.
+  ///
+  /// In it, this message translates to:
+  /// **'Il modello del report ({report}) non è più installato: risponderà {current}.'**
+  String aiLocalFollowUpOtherModel(String report, String current);
 }
 
 class _AppLocalizationsDelegate

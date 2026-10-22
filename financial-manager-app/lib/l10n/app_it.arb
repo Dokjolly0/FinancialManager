@@ -1190,5 +1190,55 @@
   "errorCodeAiLocalImportUnknownFormat": "Formato non riconosciuto: servono file .gguf o .litertlm.",
   "aiFeaturesSwitchTitle": "Funzioni AI",
   "aiFeaturesSwitchSubtitle": "Assistente AI, analisi nei Report e in Cronologia, scopo dei portafogli. Spegnendole non si cancella nulla: analisi, chiavi e modelli restano dove sono.",
-  "aiRunModelLabel": "Modello"
+  "aiRunModelLabel": "Modello",
+  "aiPendingTitle": "Risposte non inviate",
+  "aiPendingIntro": "Report e risposte scritti su questo telefono che il server non ha ancora: la rete mancava quando sono finiti, oppure il server li ha rifiutati. Restano qui finché chi li ha scritti non li invia o li elimina. Chiunque usi l'app su questo telefono può leggerli.",
+  "aiPendingEmpty": "Nessuna risposta in attesa: il server ha tutto.",
+  "aiPendingReport": "Report",
+  "aiPendingAnswer": "Risposta a una domanda",
+  "aiPendingUnknownOwner": "account sconosciuto",
+  "aiPendingWaiting": "In attesa di invio: parte da sola quando l'autore accede o riapre l'app.",
+  "aiPendingRefused": "Rifiutato dal server: {reason}",
+  "@aiPendingRefused": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPendingResend": "Invia ora",
+  "aiPendingSent": "Inviato: ora è nella cronologia.",
+  "aiPendingRefusedAgain": "Il server lo rifiuta ancora: puoi leggerlo qui o eliminarlo.",
+  "aiPendingNotOwner": "Solo chi lo ha scritto può inviarlo.",
+  "aiPendingOwnerOnly": "Solo {owner} può inviarlo o eliminarlo.",
+  "@aiPendingOwnerOnly": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "aiPendingDeleteTitle": "Eliminare questa risposta?",
+  "aiPendingDeleteMessage": "Il testo esiste solo su questo telefono: eliminandolo va perso.",
+  "aiPendingBanner": "{count, plural, =1{Una risposta scritta sul telefono non è ancora sul server} other{{count} risposte scritte sul telefono non sono ancora sul server}}",
+  "@aiPendingBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiLocalFollowUpUnsupported": "Questa analisi è stata scritta sul telefono: continua le domande da un telefono Android con un modello installato.",
+  "aiLocalFollowUpNoModel": "Per rispondere serve un modello sul telefono: installane uno da Modelli sul dispositivo.",
+  "aiLocalFollowUpOtherModel": "Il modello del report ({report}) non è più installato: risponderà {current}.",
+  "@aiLocalFollowUpOtherModel": {
+    "placeholders": {
+      "report": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
+    }
+  }
 }

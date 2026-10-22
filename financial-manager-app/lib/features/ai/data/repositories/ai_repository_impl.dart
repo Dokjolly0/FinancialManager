@@ -160,6 +160,7 @@ class AiRepositoryImpl implements AiRepository {
     String analysisId,
     String question, {
     CancelToken? cancelToken,
+    String? localModelId,
   }) => _api
       .askFollowUp(analysisId, question, cancelToken: cancelToken)
       .map(AiStreamEvent.fromSse)

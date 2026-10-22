@@ -112,7 +112,8 @@ final localOutboxFlusherProvider = Provider<void>((ref) {
     ref
         .read(localResultOutboxProvider)
         .flush(ref.read(aiRepositoryProvider), userId)
-        .catchError((_) {});
+        .catchError((_) {})
+        .whenComplete(() => ref.invalidate(localPendingResultsProvider));
   }
 
   ref.listen(
@@ -136,6 +137,13 @@ class _ResumeObserver with WidgetsBindingObserver {
   }
 }
 
+/// Every result waiting on this phone, of any account (they are readable
+/// by whoever uses the app here). Invalidated after a flush.
+final localPendingResultsProvider =
+    FutureProvider.autoDispose<List<PendingLocalResult>>(
+      (ref) => ref.watch(localResultOutboxProvider).pending(),
+    );
+
 /// Not auto-disposed: a run must finish and submit its result even when
 /// the screen that started it is gone.
 final localAiRunnerProvider = Provider<LocalAiRunner>(
@@ -144,6 +152,10 @@ final localAiRunnerProvider = Provider<LocalAiRunner>(
     host: ref.watch(localModelHostProvider),
     outbox: ref.watch(localResultOutboxProvider),
     currentUserId: () => ref.read(currentUserProvider)?.id,
+    currentUserName: () {
+      final u = ref.read(currentUserProvider);
+      return u == null ? null : '${u.firstName} ${u.lastName} (@${u.username})';
+    },
   ),
 );
 

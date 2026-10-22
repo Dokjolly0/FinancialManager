@@ -17,10 +17,13 @@ abstract interface class AiTurnSource {
     CancelToken? cancelToken,
   });
 
+  /// [localModelId]: on the phone, the model the report was written with
+  /// (used when still installed); ignored in the cloud.
   Stream<AiStreamEvent> askFollowUp(
     String analysisId,
     String question, {
     CancelToken? cancelToken,
+    String? localModelId,
   });
 }
 
@@ -80,6 +83,7 @@ abstract class AiRepository implements AiTurnSource {
     String analysisId,
     String question, {
     CancelToken? cancelToken,
+    String? localModelId,
   });
 
   Future<AiHistoryPage> listAnalyses({String? cursor, int limit = 20});

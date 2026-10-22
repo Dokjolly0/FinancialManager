@@ -14,6 +14,7 @@ import '../../../../core/widgets/skeleton_list.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/ai_analysis.dart';
 import '../view_models/ai_history_controller.dart';
+import 'ai_pending_results_screen.dart';
 
 /// Saved analyses (plan.md section 32.7): open, rename, delete.
 class AiHistoryScreen extends ConsumerWidget {
@@ -108,93 +109,110 @@ class AiHistoryScreen extends ConsumerWidget {
         icon: const Icon(Icons.auto_awesome),
         label: Text(l10n.aiNewAnalysisTitle),
       ),
-      body: state.isLoading
-          ? const SkeletonList()
-          : state.error != null && state.items.isEmpty
-          ? Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: InlineError(
-                message: presentError(state.error!, l10n).message,
-                onRetry: controller.refresh,
-              ),
-            )
-          : state.items.isEmpty
-          ? EmptyState(
-              icon: Icons.auto_awesome_outlined,
-              message: l10n.aiHistoryEmpty,
-            )
-          : RefreshIndicator(
-              onRefresh: controller.refresh,
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (n) {
-                  if (n.metrics.extentAfter < 300) controller.loadMore();
-                  return false;
-                },
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 96),
-                  itemCount: state.items.length + (state.hasMore ? 1 : 0),
-                  itemBuilder: (context, i) {
-                    if (i == state.items.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(AppSpacing.md),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    final a = state.items[i];
-                    return Dismissible(
-                      key: ValueKey(a.id),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        color: Theme.of(context).colorScheme.errorContainer,
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: AppSpacing.lg),
-                        child: const Icon(Icons.delete_outline),
-                      ),
-                      confirmDismiss: (_) => _confirmDelete(context),
-                      onDismissed: (_) async {
-                        final error = await controller.delete(a.id);
-                        if (context.mounted) _showError(context, error);
+      body: Column(
+        children: [
+          // Results written on this phone that the server doesn't have.
+          AiPendingResultsBanner(
+            onOpen: () => context.push(AppRoutes.aiPending),
+          ),
+          Expanded(
+            child: state.isLoading
+                ? const SkeletonList()
+                : state.error != null && state.items.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: InlineError(
+                      message: presentError(state.error!, l10n).message,
+                      onRetry: controller.refresh,
+                    ),
+                  )
+                : state.items.isEmpty
+                ? EmptyState(
+                    icon: Icons.auto_awesome_outlined,
+                    message: l10n.aiHistoryEmpty,
+                  )
+                : RefreshIndicator(
+                    onRefresh: controller.refresh,
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (n) {
+                        if (n.metrics.extentAfter < 300) controller.loadMore();
+                        return false;
                       },
-                      child: ListTile(
-                        leading: _StatusIcon(
-                          status: a.status,
-                          onDevice: a.isOnDevice,
-                        ),
-                        title: Text(
-                          a.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          '${dates.format(a.createdAt.toLocal())} · ${a.model}',
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (action) async {
-                            if (action == 'rename') {
-                              await _rename(context, ref, a);
-                            } else if (await _confirmDelete(context)) {
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 96),
+                        itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                        itemBuilder: (context, i) {
+                          if (i == state.items.length) {
+                            return const Padding(
+                              padding: EdgeInsets.all(AppSpacing.md),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          final a = state.items[i];
+                          return Dismissible(
+                            key: ValueKey(a.id),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.errorContainer,
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(
+                                right: AppSpacing.lg,
+                              ),
+                              child: const Icon(Icons.delete_outline),
+                            ),
+                            confirmDismiss: (_) => _confirmDelete(context),
+                            onDismissed: (_) async {
                               final error = await controller.delete(a.id);
                               if (context.mounted) _showError(context, error);
-                            }
-                          },
-                          itemBuilder: (_) => [
-                            PopupMenuItem(
-                              value: 'rename',
-                              child: Text(l10n.aiRenameAction),
+                            },
+                            child: ListTile(
+                              leading: _StatusIcon(
+                                status: a.status,
+                                onDevice: a.isOnDevice,
+                              ),
+                              title: Text(
+                                a.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                '${dates.format(a.createdAt.toLocal())} · ${a.model}',
+                              ),
+                              trailing: PopupMenuButton<String>(
+                                onSelected: (action) async {
+                                  if (action == 'rename') {
+                                    await _rename(context, ref, a);
+                                  } else if (await _confirmDelete(context)) {
+                                    final error = await controller.delete(a.id);
+                                    if (context.mounted) {
+                                      _showError(context, error);
+                                    }
+                                  }
+                                },
+                                itemBuilder: (_) => [
+                                  PopupMenuItem(
+                                    value: 'rename',
+                                    child: Text(l10n.aiRenameAction),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text(l10n.aiDeleteAction),
+                                  ),
+                                ],
+                              ),
+                              onTap: () =>
+                                  context.push(AppRoutes.aiAnalysis(a.id)),
                             ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Text(l10n.aiDeleteAction),
-                            ),
-                          ],
-                        ),
-                        onTap: () => context.push(AppRoutes.aiAnalysis(a.id)),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-              ),
-            ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

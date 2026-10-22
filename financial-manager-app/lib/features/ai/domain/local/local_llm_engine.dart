@@ -118,7 +118,9 @@ class LocalSession {
 /// manager; [acquire] throws [LocalEngineException] with
 /// [LocalErrorCodes.modelMissing] when no usable model is installed.
 abstract interface class LocalModelHost {
-  Future<LocalSession> acquire();
+  /// Loads [modelId] when given and still installed (a follow-up continues
+  /// with its report's model), otherwise the active model.
+  Future<LocalSession> acquire({String? modelId});
 
   /// Measured speed of a finished generation, to improve time estimates.
   void recordSpeed(LocalSession session, LocalGenStats stats);

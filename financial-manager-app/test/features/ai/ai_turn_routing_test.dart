@@ -40,6 +40,7 @@ class _Source implements AiTurnSource {
     String analysisId,
     String question, {
     CancelToken? cancelToken,
+    String? localModelId,
   }) {
     log.add('$name:ask');
     return _done();

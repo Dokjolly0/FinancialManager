@@ -17,6 +17,8 @@ import '../../domain/models/ai_analysis.dart';
 import '../../domain/models/ai_settings.dart';
 import '../view_models/ai_conversation_controller.dart';
 import '../view_models/ai_draft_controller.dart';
+import '../view_models/local_models_controller.dart';
+import '../view_models/local_run_plan.dart';
 import '../widgets/local_context_card.dart';
 import '../widgets/local_model_labels.dart';
 import 'ai_prompt_preview_screen.dart';
@@ -87,6 +89,40 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
     if (ok && mounted) context.pushReplacement(AppRoutes.aiPreview);
   }
 
+  /// Whether this phone can continue an on-device analysis, and with which
+  /// model: questions are answered on a phone with an engine and a model,
+  /// by the report's model when it is still installed.
+  ({String? blocked, String? note}) _localFollowUp(
+    AppLocalizations l10n,
+    AiAnalysisDetail? detail,
+  ) {
+    if (detail == null || !detail.summary.isOnDevice) {
+      return (blocked: null, note: null);
+    }
+    if (!ref.watch(localAiSupportedProvider)) {
+      return (blocked: l10n.aiLocalFollowUpUnsupported, note: null);
+    }
+    final models = ref.watch(localModelsControllerProvider);
+    if (models.isLoading) return (blocked: null, note: null);
+    if (models.installed.isEmpty) {
+      return (blocked: l10n.aiLocalFollowUpNoModel, note: null);
+    }
+    final runtime = detail.summary.runtime;
+    if (runtime == null || models.installedById(runtime.modelId) != null) {
+      return (blocked: null, note: null);
+    }
+    final active = models.activeModelId == null
+        ? null
+        : models.installedById(models.activeModelId!);
+    return (
+      blocked: null,
+      note: l10n.aiLocalFollowUpOtherModel(
+        '${runtime.displayName} · ${runtime.quantization}',
+        active?.label ?? models.installed.first.label,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -154,6 +190,7 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
             state: state,
             onSend: _ask,
             onStop: controller.stop,
+            local: _localFollowUp(l10n, detail),
           ),
         ],
       ),
@@ -472,12 +509,17 @@ class _InputBar extends StatelessWidget {
     required this.state,
     required this.onSend,
     required this.onStop,
+    this.local = (blocked: null, note: null),
   });
 
   final TextEditingController controller;
   final AiConversationState state;
   final VoidCallback onSend;
   final VoidCallback onStop;
+
+  /// On-device analyses: why this phone can't answer ([blocked]), or that a
+  /// different model will ([note]).
+  final ({String? blocked, String? note}) local;
 
   @override
   Widget build(BuildContext context) {
@@ -492,9 +534,12 @@ class _InputBar extends StatelessWidget {
       hint = detail.followUpsLeft == 0
           ? l10n.aiFollowUpLimitReached
           : l10n.aiFollowUpUnavailable;
+    } else if (local.blocked != null) {
+      hint = local.blocked!;
     } else {
       hint = l10n.aiAskFollowUpHint(detail.followUpsLeft);
     }
+    final canAsk = state.canAsk && local.blocked == null;
     return SafeArea(
       top: false,
       child: Padding(
@@ -504,36 +549,50 @@ class _InputBar extends StatelessWidget {
           AppSpacing.sm,
           AppSpacing.sm,
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                enabled: state.canAsk,
-                minLines: 1,
-                maxLines: 4,
-                maxLength: 2000,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  hintText: hint,
-                  counterText: '',
-                  border: const OutlineInputBorder(),
+            if (local.note != null && canAsk)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: Text(
+                  local.note!,
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
-                onSubmitted: (_) => onSend(),
               ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            state.isStreaming
-                ? IconButton.filledTonal(
-                    tooltip: l10n.aiStopAction,
-                    icon: const Icon(Icons.stop),
-                    onPressed: onStop,
-                  )
-                : IconButton.filled(
-                    tooltip: l10n.aiAskAction,
-                    icon: const Icon(Icons.send),
-                    onPressed: state.canAsk ? onSend : null,
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    enabled: canAsk,
+                    minLines: 1,
+                    maxLines: 4,
+                    maxLength: 2000,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: hint,
+                      counterText: '',
+                      border: const OutlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => onSend(),
                   ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                state.isStreaming
+                    ? IconButton.filledTonal(
+                        tooltip: l10n.aiStopAction,
+                        icon: const Icon(Icons.stop),
+                        onPressed: onStop,
+                      )
+                    : IconButton.filled(
+                        tooltip: l10n.aiAskAction,
+                        icon: const Icon(Icons.send),
+                        onPressed: canAsk ? onSend : null,
+                      ),
+              ],
+            ),
           ],
         ),
       ),

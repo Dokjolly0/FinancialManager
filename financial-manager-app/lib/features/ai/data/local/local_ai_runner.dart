@@ -26,12 +26,14 @@ class LocalAiRunner implements AiTurnSource {
     required LocalModelHost host,
     required LocalResultOutbox outbox,
     required String? Function() currentUserId,
+    String? Function()? currentUserName,
     DateTime Function()? now,
     String? appVersion,
   }) : _repo = repo,
        _host = host,
        _outbox = outbox,
        _currentUserId = currentUserId,
+       _currentUserName = currentUserName ?? (() => null),
        _now = now ?? DateTime.now,
        _appVersion = appVersion;
 
@@ -39,6 +41,7 @@ class LocalAiRunner implements AiTurnSource {
   final LocalModelHost _host;
   final LocalResultOutbox _outbox;
   final String? Function() _currentUserId;
+  final String? Function() _currentUserName;
   final DateTime Function() _now;
   final String? _appVersion;
 
@@ -67,17 +70,20 @@ class LocalAiRunner implements AiTurnSource {
     String analysisId,
     String question, {
     CancelToken? cancelToken,
+    String? localModelId,
   }) => _turn(
     (_) => _repo.prepareLocalFollowUp(analysisId, question),
     cancelToken,
+    modelId: localModelId,
   );
 
   Stream<AiStreamEvent> _turn(
     Future<AiLocalTurn> Function(LocalSession) prepare,
-    CancelToken? cancelToken,
-  ) {
+    CancelToken? cancelToken, {
+    String? modelId,
+  }) {
     final out = StreamController<AiStreamEvent>();
-    out.onListen = () => _run(out, prepare, cancelToken);
+    out.onListen = () => _run(out, prepare, cancelToken, modelId);
     return out.stream;
   }
 
@@ -85,6 +91,7 @@ class LocalAiRunner implements AiTurnSource {
     StreamController<AiStreamEvent> out,
     Future<AiLocalTurn> Function(LocalSession) prepare,
     CancelToken? cancelToken,
+    String? modelId,
   ) async {
     final LocalSession session;
     final AiLocalTurn turn;
@@ -92,7 +99,7 @@ class LocalAiRunner implements AiTurnSource {
     final userId = _currentUserId();
     if (userId != null) unawaited(_outbox.flush(_repo, userId));
     try {
-      session = await _host.acquire();
+      session = await _host.acquire(modelId: modelId);
       turn = await prepare(session);
     } on LocalEngineException catch (e) {
       out.addError(DomainError(code: e.code, message: e.message ?? e.code));
@@ -218,6 +225,9 @@ class LocalAiRunner implements AiTurnSource {
             messageId: turn.messageId,
             result: result,
             createdAt: _now(),
+            ownerName: _currentUserName(),
+            modelLabel: session.model.label,
+            isReport: turn.isReport,
           ),
         );
       }

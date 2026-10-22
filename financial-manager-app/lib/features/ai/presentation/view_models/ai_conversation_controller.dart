@@ -152,7 +152,12 @@ class AiConversationController extends Notifier<AiConversationState> {
     final text = question.trim();
     if (id == null || text.isEmpty || !state.canAsk) return;
     _stream(
-      (token) => _followUpSource.askFollowUp(id, text, cancelToken: token),
+      (token) => _followUpSource.askFollowUp(
+        id,
+        text,
+        cancelToken: token,
+        localModelId: state.detail?.summary.runtime?.modelId,
+      ),
       question: text,
     );
   }

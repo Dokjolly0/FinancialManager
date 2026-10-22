@@ -69,14 +69,18 @@ class EngineModelHost implements LocalModelHost {
   }
 
   @override
-  Future<LocalSession> acquire() => _serial(() async {
+  Future<LocalSession> acquire({String? modelId}) => _serial(() async {
     final caps = await _device.read();
     if (caps?.isHot ?? false) {
       throw const LocalEngineException(LocalErrorCodes.tooHot);
     }
-    final id = await _store.activeModelId;
-    final record = id == null ? null : await _store.get(id);
-    final path = record == null ? null : await _store.pathOf(record);
+    var record = modelId == null ? null : await _store.get(modelId);
+    var path = record == null ? null : await _store.pathOf(record);
+    if (path == null) {
+      final id = await _store.activeModelId;
+      record = id == null ? null : await _store.get(id);
+      path = record == null ? null : await _store.pathOf(record);
+    }
     if (record == null || path == null) {
       throw const LocalEngineException(LocalErrorCodes.modelMissing);
     }

@@ -15,6 +15,7 @@ import '../features/ai/presentation/screens/ai_assistant_screen.dart';
 import '../features/ai/presentation/screens/ai_history_screen.dart';
 import '../features/ai/presentation/screens/ai_local_models_screen.dart';
 import '../features/ai/presentation/screens/ai_local_runtime_screen.dart';
+import '../features/ai/presentation/screens/ai_pending_results_screen.dart';
 import '../features/ai/presentation/screens/ai_prompt_preview_screen.dart';
 import '../features/ai/presentation/screens/ai_personal_context_screen.dart';
 import '../features/ai/presentation/screens/ai_provider_settings_screen.dart';
@@ -75,6 +76,7 @@ abstract final class AppRoutes {
   static const aiPreview = '/app/ai/preview';
   static const aiRun = '/app/ai/run';
   static const aiHistory = '/app/ai/analyses';
+  static const aiPending = '/app/ai/pending';
   static String aiAnalysis(String id) => '/app/ai/analyses/$id';
 
   static String transactionDetail(String id) => '/app/transactions/$id';
@@ -233,6 +235,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.aiRun,
         builder: (_, _) => const AiAnalysisScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiPending,
+        builder: (_, _) => const AiPendingResultsScreen(),
       ),
       GoRoute(
         path: AppRoutes.aiHistory,

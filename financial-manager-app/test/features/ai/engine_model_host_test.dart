@@ -215,6 +215,26 @@ void main() {
       expect(s4.engine, same(llama));
     });
 
+    test(
+      'a requested model is used while installed, else the active',
+      () async {
+        await install(_record('a'));
+        await install(
+          _record(
+            'b',
+            engine: LocalEngineKind.llamaCpp,
+            backends: const [LocalBackend.cpu],
+          ),
+        );
+        await store.setActiveModel('a');
+        final h = host();
+        expect((await h.acquire(modelId: 'b')).model.id, 'b');
+        expect(llama.loads, hasLength(1));
+        expect((await h.acquire(modelId: 'gone')).model.id, 'a');
+        expect((await h.acquire()).model.id, 'a');
+      },
+    );
+
     test('the session reports where the model really runs', () async {
       await install(_record('a'));
       await store.setActiveModel('a');

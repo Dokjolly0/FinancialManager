@@ -3343,8 +3343,16 @@ Error codes: `AI_ON_DEVICE_DISABLED` (503), `AI_LOCAL_CONSENT_REQUIRED` (403), `
 3. trims follow-up history to the context: the oldest question/answer pairs go first, the data message and the report never;
 4. streams deltas to the screen; answers are capped at 200 KB (truncated);
 5. Stop or leaving the screen cancels the engine and the partial text is kept as `CANCELLED`; the deadline (`deadline_at` minus 2 minutes) stops it as `AI_LOCAL_TIMEOUT`;
-6. submits the result; if the network fails the result goes to the **outbox** (`<app support>/ai_local/outbox.json`, items tied to their account, kept 7 days), sent again before each run, at sign-in and whenever the app returns to the foreground;
+6. submits the result; if the network fails the result goes to the **outbox** (`<app support>/ai_local/outbox.json`), sent again before each run, at sign-in and whenever the app returns to the foreground;
 7. records the measured speed for later estimates.
+
+**Outbox rules.** Each item records its account, the author's name, the model and whether it is a report or an answer. Items never expire and survive a sign-out: they stay until the server accepts them or their author deletes them.
+
+- Only the author's session sends an item, automatically or with "Invia ora"; signing in again with the same account sends what is waiting.
+- A result the server refuses for good (the analysis was deleted meanwhile, the answer was saved differently) stays, marked with the server's error code, and is no longer retried by itself: its author resends or deletes it.
+- **Anyone using the app on the phone can read the items** in Cronologia → "Risposte non inviate" (a banner shows while any exist); only the author can send or delete them.
+
+**Follow-ups on the phone** continue with the report's model when it is still installed (`acquire(modelId:)`), otherwise with the active model, and the question bar says which model will answer. On a device that can't run them (iOS, no engines, no model installed) the bar is disabled with an explanation instead of failing after sending.
 
 **Time estimate** shown in the preview, ±30%: `load (5 s LiteRT-LM, 8 s llama.cpp, 0 if loaded) + input tokens / reading speed + min(max output, 900) / writing speed`. Speeds come from the phone's own measurements, else the catalog, else 50/8 tokens/s. "Misura velocità" runs about 1 000 tokens in and 128 out with the active model and records the result like a real run.
 
@@ -3360,7 +3368,8 @@ Error codes: `AI_ON_DEVICE_DISABLED` (503), `AI_LOCAL_CONSENT_REQUIRED` (403), `
 - **Setup**: on device the compact profile is on by default (60 transactions, at most 100); the request carries target, budget and device limits; the on-device disclosure is asked instead of the cloud one; no model installed or an unsupported phone shows what to do.
 - **Preview**: "processed on the phone with …", no cost, compaction note, context bar with time estimate and warnings; the model loads while the user reads and the estimate becomes an exact count; quick fixes when tight or full (compact profile, fewer transactions, shorter answer, larger context); a prompt that doesn't fit cannot be run.
 - **Analysis**: header "Sul dispositivo · model · quantization · backend · tokens/s · duration"; a "keep the app open" banner while the phone writes.
-- **History**: a phone icon on on-device analyses. **Assistant hub**: on device the checklist's first step is an installed model plus the on-device disclosure.
+- **History**: a phone icon on on-device analyses; a banner leads to **Risposte non inviate** (`/app/ai/pending`), where results waiting on the phone are listed with author, date, model and status, readable by anyone and sent or deleted by their author.
+- **Follow-ups on a phone analysis**: disabled with an explanation where the phone can't answer; a note when a different model than the report's will answer. **Assistant hub**: on device the checklist's first step is an installed model plus the on-device disclosure.
 - **Disclosure** (on-device scope): where the data is processed (the phone, no outside provider), what the server keeps (the data summary and the history), the model can be wrong, models come from Hugging Face with their own license, how to revoke.
 
 ### 33.11 Android build
@@ -3382,7 +3391,7 @@ Error codes: `AI_ON_DEVICE_DISABLED` (503), `AI_LOCAL_CONSENT_REQUIRED` (403), `
 ### 33.13 Tests
 
 - Backend (`internal/ai/local_integration_test.go`, harness without the secretbox): full path without a cloud credential, missing local consent → 403, fingerprint mismatch → 409, prepare idempotency, result over 200 KB → 422, result sent twice (same → 200, different → 409), result on a cloud analysis → 409, local follow-ups and their limit, cloud follow-up on a local analysis → 409, expiry window with a fake clock, rate limit, mode version conflict, unknown error codes normalized. Compact golden files it/en, collector limits, budget determinism, preview/run fingerprint equality.
-- App, with fake engines and servers: runner (event order, submitted content, stop, out of memory, context too long, outbox, history trimming), turn routing, downloader (resume, restart, 416, changed ETag, wrong checksum, Wi-Fi lost, no space, gated), store, catalog validation (unique ids, pinned URLs and SHA-256, engine/format coherence, RAM and context bounds, licenses, notes in both languages), model host (params, reloads, idle unload, thermal refusal, speeds, benchmark), run plan (budget, context levels, estimate, speed sources), outbox flush on sign-in and resume; widget tests for the preview's context states and quick fixes, the models screen (progress, pause, failure, license, gated token), the on-device disclosure and the mode switch.
+- App, with fake engines and servers: runner (event order, submitted content, stop, out of memory, context too long, outbox, history trimming), turn routing, downloader (resume, restart, 416, changed ETag, wrong checksum, Wi-Fi lost, no space, gated), store, catalog validation (unique ids, pinned URLs and SHA-256, engine/format coherence, RAM and context bounds, licenses, notes in both languages), model host (params, reloads, idle unload, thermal refusal, speeds, benchmark), run plan (budget, context levels, estimate, speed sources), outbox flush on sign-in and resume, outbox rules (no expiry, refused items kept and not retried, send and delete by the author only), follow-ups asking for the report's model and the host's fallback to the active model; widget tests for the preview's context states and quick fixes, the models screen (progress, pause, failure, license, gated token), the on-device disclosure, the mode switch and the unsent results screen (readable by anyone, actions for the author only).
 - Manual protocol on the S26 Ultra: download with Wi-Fi lost and resumed, corrupted file, GGUF import, benchmark, standard and compact check-ups on CPU and GPU, follow-ups, stop, app killed mid-run, airplane mode after prepare, heat after repeated runs, model deletion, history on a second device. First field result: a full report on three months and 150 transactions in 40–60 s with Gemma 4 E2B on the GPU.
 
 ### 32.10 AI features switch

@@ -7,7 +7,7 @@ class UnavailableLocalModelHost implements LocalModelHost {
   const UnavailableLocalModelHost();
 
   @override
-  Future<LocalSession> acquire() async =>
+  Future<LocalSession> acquire({String? modelId}) async =>
       throw const LocalEngineException(LocalErrorCodes.modelMissing);
 
   @override

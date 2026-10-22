@@ -121,6 +121,9 @@ class FakeModelHost implements LocalModelHost {
   final bool missing;
   final List<LocalGenStats> speeds = [];
 
+  /// The model ids asked for, one per acquire.
+  final List<String?> requested = [];
+
   static const model = InstalledLocalModel(
     id: 'qwen3-4b-q4_k_m',
     engine: LocalEngineKind.llamaCpp,
@@ -132,7 +135,8 @@ class FakeModelHost implements LocalModelHost {
   );
 
   @override
-  Future<LocalSession> acquire() async {
+  Future<LocalSession> acquire({String? modelId}) async {
+    requested.add(modelId);
     if (missing) throw const LocalEngineException(LocalErrorCodes.modelMissing);
     return LocalSession(
       engine: engine,
