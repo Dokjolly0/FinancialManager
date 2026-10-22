@@ -44,11 +44,14 @@ type User struct {
 	Theme                 string
 	BalanceHiddenDefault  bool
 	FirstDayOfWeek        string
-	Status                string
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
-	DeletedAt             *time.Time
-	Version               int64
+	// AIEnabled shows the AI analysis features in the app (plan.md
+	// section 32.10); off hides them, nothing is deleted.
+	AIEnabled bool
+	Status    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
+	Version   int64
 }
 
 func (u User) EmailVerified() bool { return u.EmailVerifiedAt != nil }

@@ -117,3 +117,36 @@ func TestPurge_AnonymizesAndBlocksFutureLookup(t *testing.T) {
 		t.Error("the original email must no longer resolve to any account after purge")
 	}
 }
+
+// TestUpdateProfile_AIEnabled: the AI switch is on for new accounts, and an
+// update that doesn't mention it (an older app) keeps it as it was.
+func TestUpdateProfile_AIEnabled(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+	u := createTestUser(t, repo)
+	if !u.AIEnabled {
+		t.Fatal("new account: AI should be on")
+	}
+	fields := users.UpdateProfileFields{
+		FirstName: u.FirstName, LastName: u.LastName, Timezone: u.Timezone, Locale: u.Locale,
+		Theme: "system", FirstDayOfWeek: users.FirstDayOfWeekMonday,
+	}
+	off := false
+	fields.AIEnabled = &off
+	updated, err := repo.UpdateProfile(ctx, u.ID, u.Version, fields)
+	if err != nil {
+		t.Fatalf("turn off: %v", err)
+	}
+	if updated.AIEnabled {
+		t.Fatal("AI still on after turning it off")
+	}
+	fields.AIEnabled = nil
+	fields.Theme = "dark"
+	updated, err = repo.UpdateProfile(ctx, u.ID, updated.Version, fields)
+	if err != nil {
+		t.Fatalf("update without the switch: %v", err)
+	}
+	if updated.AIEnabled || updated.Theme != "dark" {
+		t.Fatalf("after an update without ai_enabled: ai=%v theme=%s", updated.AIEnabled, updated.Theme)
+	}
+}

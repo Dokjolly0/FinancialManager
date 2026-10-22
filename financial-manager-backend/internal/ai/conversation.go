@@ -89,7 +89,7 @@ func (s *Service) lockStream(ctx context.Context, userID uuid.UUID) (func(), err
 // PrepareAnalysis validates a run, checks that the data still matches the
 // preview, takes the stream lock and stores the analysis.
 func (s *Service) PrepareAnalysis(ctx context.Context, userID uuid.UUID, req RunRequest) (Turn, error) {
-	if _, _, err := s.requireReady(ctx, userID); err != nil {
+	if _, _, err := s.requireReady(ctx, userID, req.CredentialID); err != nil {
 		return Turn{}, err
 	}
 	clientRequestID, err := uuid.Parse(req.ClientRequestID)
@@ -107,7 +107,7 @@ func (s *Service) PrepareAnalysis(ctx context.Context, userID uuid.UUID, req Run
 	if req.DataFingerprint != bp.prompt.Fingerprint {
 		return Turn{}, ErrDataChanged
 	}
-	rp, settings, err := s.activeProvider(ctx, userID)
+	rp, settings, err := s.providerFor(ctx, userID, req.CredentialID)
 	if err != nil {
 		return Turn{}, err
 	}
@@ -123,6 +123,7 @@ func (s *Service) PrepareAnalysis(ctx context.Context, userID uuid.UUID, req Run
 		PeriodFrom: bp.period.From, PeriodTo: bp.period.To, Timezone: bp.loc.String(), WalletIDs: bp.walletIDs,
 		Options: bp.options, Provider: string(rp.kind), Model: rp.model, PromptVersion: bp.prompt.Version,
 		SystemPrompt: bp.prompt.System, DataFingerprint: bp.prompt.Fingerprint, ClientRequestID: clientRequestID,
+		CredentialID: &rp.credential.ID,
 	}
 	userMessage := bp.userMessage()
 
@@ -213,7 +214,7 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 	if err := s.checkRateLimit(ctx, "run", userID, s.limits.RunsPerHour, runWindow); err != nil {
 		return Turn{}, err
 	}
-	rp, settings, err := s.activeProvider(ctx, userID)
+	rp, settings, err := s.followUpProvider(ctx, userID, analysis)
 	if err != nil {
 		return Turn{}, err
 	}

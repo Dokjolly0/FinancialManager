@@ -86,6 +86,9 @@ type AnalysisRequest struct {
 	// Target is "cloud" or "on_device"; empty uses the saved mode.
 	Target string        `json:"target,omitempty"`
 	Device *DeviceParams `json:"device,omitempty"`
+	// CredentialID picks the stored provider account of a cloud run;
+	// empty uses the active one.
+	CredentialID string `json:"credential_id,omitempty"`
 
 	Preset       string          `json:"preset"`
 	Period       AnalysisPeriod  `json:"period"`
@@ -406,8 +409,9 @@ func (s *Service) selectWallets(ctx context.Context, userID uuid.UUID, raw []str
 }
 
 // requireReady checks everything an analysis needs before any data is
-// read: the feature, the consent and a configured provider.
-func (s *Service) requireReady(ctx context.Context, userID uuid.UUID) (Credential, Settings, error) {
+// read: the feature, the consent and a configured provider (credentialID,
+// or the active one when empty).
+func (s *Service) requireReady(ctx context.Context, userID uuid.UUID, credentialID string) (Credential, Settings, error) {
 	if err := s.requireAvailable(); err != nil {
 		return Credential{}, Settings{}, err
 	}
@@ -418,7 +422,7 @@ func (s *Service) requireReady(ctx context.Context, userID uuid.UUID) (Credentia
 	if !settings.HasCurrentConsent() {
 		return Credential{}, Settings{}, ErrConsentRequired
 	}
-	cred, err := s.activeCredential(ctx, userID, settings)
+	cred, err := s.credentialFor(ctx, userID, settings, credentialID)
 	if err != nil {
 		return Credential{}, Settings{}, err
 	}
@@ -543,7 +547,7 @@ func (s *Service) Preview(ctx context.Context, userID uuid.UUID, req AnalysisReq
 	if target == ModeOnDevice {
 		return s.previewOnDevice(ctx, userID, req)
 	}
-	cred, settings, err := s.requireReady(ctx, userID)
+	cred, settings, err := s.requireReady(ctx, userID, req.CredentialID)
 	if err != nil {
 		return previewResponse{}, err
 	}

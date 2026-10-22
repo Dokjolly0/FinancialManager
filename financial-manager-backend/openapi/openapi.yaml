@@ -1109,6 +1109,14 @@ components:
           type: string
           enum: [cloud, on_device]
           description: Defaults to the saved mode. on_device needs the on-device consent instead of a cloud provider.
+        credential_id:
+          type: string
+          format: uuid
+          description: >-
+            Cloud only: which stored provider account runs the analysis (any of the
+            user's credentials with a model and, when needed, a key). Defaults to the
+            active one. Follow-ups keep using it; if it is removed they fall back to
+            the active one.
         device:
           type: object
           description: On-device preview only; adds context_fit.

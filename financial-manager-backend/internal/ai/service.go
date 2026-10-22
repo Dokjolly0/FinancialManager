@@ -655,9 +655,39 @@ func (s *Service) activeCredential(ctx context.Context, userID uuid.UUID, settin
 	if settings.ActiveCredentialID == nil {
 		return Credential{}, ErrNotConfigured
 	}
-	cred, err := s.repo.GetCredential(ctx, userID, *settings.ActiveCredentialID)
+	cred, err := s.completeCredential(ctx, userID, *settings.ActiveCredentialID)
 	if errors.Is(err, ErrNotFound) {
 		return Credential{}, ErrNotConfigured
+	}
+	return cred, err
+}
+
+// credentialFor returns the credential an analysis asked for (any of the
+// user's stored ones, plan.md section 32.4), or the active one when id is
+// empty. An id that isn't one of the user's credentials is a validation
+// error; an incomplete one is ErrNotConfigured.
+func (s *Service) credentialFor(ctx context.Context, userID uuid.UUID, settings Settings, id string) (Credential, error) {
+	if id == "" {
+		return s.activeCredential(ctx, userID, settings)
+	}
+	credID, err := uuid.Parse(id)
+	if err != nil {
+		return Credential{}, apierror.NewValidation(map[string]string{"credential_id": apierror.FieldInvalidUUID})
+	}
+	cred, err := s.completeCredential(ctx, userID, credID)
+	if errors.Is(err, ErrNotFound) {
+		return Credential{}, apierror.NewValidation(map[string]string{"credential_id": FieldInvalidValue})
+	}
+	return cred, err
+}
+
+// completeCredential loads one of the user's credentials and checks that
+// it can run: ErrNotFound when it isn't theirs, ErrNotConfigured when the
+// model or a required key is missing.
+func (s *Service) completeCredential(ctx context.Context, userID, id uuid.UUID) (Credential, error) {
+	cred, err := s.repo.GetCredential(ctx, userID, id)
+	if errors.Is(err, ErrNotFound) {
+		return Credential{}, ErrNotFound
 	}
 	if err != nil {
 		return Credential{}, err
@@ -670,11 +700,32 @@ func (s *Service) activeCredential(ctx context.Context, userID uuid.UUID, settin
 
 // activeProvider resolves the user's saved configuration for an analysis.
 func (s *Service) activeProvider(ctx context.Context, userID uuid.UUID) (resolvedProvider, Settings, error) {
+	return s.providerFor(ctx, userID, "")
+}
+
+// followUpProvider continues an analysis with the credential it ran with,
+// or the active one when that is gone or no longer complete.
+func (s *Service) followUpProvider(ctx context.Context, userID uuid.UUID, a Analysis) (resolvedProvider, Settings, error) {
+	if a.CredentialID != nil {
+		_, err := s.completeCredential(ctx, userID, *a.CredentialID)
+		if err == nil {
+			return s.providerFor(ctx, userID, a.CredentialID.String())
+		}
+		if !errors.Is(err, ErrNotFound) && !errors.Is(err, ErrNotConfigured) {
+			return resolvedProvider{}, Settings{}, err
+		}
+	}
+	return s.activeProvider(ctx, userID)
+}
+
+// providerFor resolves the provider of credentialID (empty: the active
+// credential) with its decrypted key.
+func (s *Service) providerFor(ctx context.Context, userID uuid.UUID, credentialID string) (resolvedProvider, Settings, error) {
 	settings, err := s.repo.GetSettings(ctx, userID)
 	if err != nil {
 		return resolvedProvider{}, Settings{}, err
 	}
-	cred, err := s.activeCredential(ctx, userID, settings)
+	cred, err := s.credentialFor(ctx, userID, settings, credentialID)
 	if err != nil {
 		return resolvedProvider{}, settings, err
 	}

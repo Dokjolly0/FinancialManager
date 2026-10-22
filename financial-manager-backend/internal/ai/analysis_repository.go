@@ -50,6 +50,9 @@ type Analysis struct {
 	UpdatedAt         time.Time
 	// Runtime describes how an on-device analysis ran; nil for cloud.
 	Runtime *LocalRuntime
+	// CredentialID is the provider account a cloud analysis ran with;
+	// nil for on-device ones, older rows or a credential since removed.
+	CredentialID *uuid.UUID
 }
 
 type Message struct {
@@ -73,14 +76,15 @@ type Message struct {
 const analysisColumns = `
 	id, user_id, title, preset, period_from, period_to, timezone, wallet_ids, options, provider, model,
 	prompt_version, system_prompt, data_fingerprint, status, error_code, input_tokens_total,
-	output_tokens_total, client_request_id, created_at, updated_at, runtime
+	output_tokens_total, client_request_id, created_at, updated_at, runtime, credential_id
 `
 
 func scanAnalysis(row pgx.Row) (Analysis, error) {
 	var a Analysis
 	err := row.Scan(&a.ID, &a.UserID, &a.Title, &a.Preset, &a.PeriodFrom, &a.PeriodTo, &a.Timezone, &a.WalletIDs,
 		&a.Options, &a.Provider, &a.Model, &a.PromptVersion, &a.SystemPrompt, &a.DataFingerprint, &a.Status,
-		&a.ErrorCode, &a.InputTokensTotal, &a.OutputTokensTotal, &a.ClientRequestID, &a.CreatedAt, &a.UpdatedAt, &a.Runtime)
+		&a.ErrorCode, &a.InputTokensTotal, &a.OutputTokensTotal, &a.ClientRequestID, &a.CreatedAt, &a.UpdatedAt, &a.Runtime,
+		&a.CredentialID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Analysis{}, ErrNotFound
 	}
@@ -117,11 +121,13 @@ var ErrDuplicateRequest = errors.New("ai: duplicate client request id")
 func (r *Repository) CreateAnalysis(ctx context.Context, a Analysis, userMessage string) (Analysis, Message, error) {
 	created, err := scanAnalysis(r.db.QueryRow(ctx, `
 		INSERT INTO ai_analyses (user_id, title, preset, period_from, period_to, timezone, wallet_ids, options,
-			provider, model, prompt_version, system_prompt, data_fingerprint, status, client_request_id, runtime)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+			provider, model, prompt_version, system_prompt, data_fingerprint, status, client_request_id, runtime,
+			credential_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		RETURNING `+analysisColumns,
 		a.UserID, a.Title, a.Preset, a.PeriodFrom, a.PeriodTo, a.Timezone, a.WalletIDs, a.Options,
-		a.Provider, a.Model, a.PromptVersion, a.SystemPrompt, a.DataFingerprint, StatusStreaming, a.ClientRequestID, a.Runtime))
+		a.Provider, a.Model, a.PromptVersion, a.SystemPrompt, a.DataFingerprint, StatusStreaming, a.ClientRequestID, a.Runtime,
+		a.CredentialID))
 	if isUniqueViolation(err) {
 		return Analysis{}, Message{}, ErrDuplicateRequest
 	}
