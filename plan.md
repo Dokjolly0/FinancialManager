@@ -2390,7 +2390,8 @@ JSON format:
 - custom categories;
 - templates;
 - transactions;
-- image references or a separate archive.
+- image references or a separate archive;
+- the AI personal context (`contesto_analisi_ai`) and the AI analysis history (`analisi_ai`, sections 32 and 33): every analysis with its period, wallets, options, provider and model (and how it ran, for on-device ones), status and tokens, and its whole conversation (the data that was sent, the report, the questions and the answers). Never the system prompt or API keys. A pending row past its window is exported as failed, as the app shows it. Results still waiting on a phone (section 33.9) are not on the server and so not in the export.
 
 ### 20.3 Account deletion
 

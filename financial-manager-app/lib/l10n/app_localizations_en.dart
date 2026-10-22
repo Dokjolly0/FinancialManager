@@ -847,7 +847,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exportDataDescription =>
-      'CSV for transactions, JSON for profile, wallet, categories, templates, and transactions.';
+      'CSV for transactions, JSON for profile, wallet, categories, templates, transactions, and AI analyses.';
 
   @override
   String get exportCsvAction => 'Export CSV';

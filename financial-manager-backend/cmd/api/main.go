@@ -217,7 +217,7 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	exportService := export.NewService(export.Deps{
 		Repo: export.NewRepository(dbPool), Store: objectStore, Users: usersRepo, Wallets: walletsRepo,
 		Categories: categoriesRepo, Templates: templatesRepo, Transactions: transactionsRepo,
-		AI: ai.NewRepository(dbPool),
+		AI: ai.NewRepository(dbPool), AIStreamWindow: cfg.AIStreamMaxDuration, AILocalWindow: cfg.AILocalMaxDuration,
 	})
 	exportHandler := export.NewHandler(exportService)
 

@@ -255,6 +255,59 @@ type AnalysisCursor struct {
 	ID        uuid.UUID
 }
 
+// AnalysisWithMessages is one analysis and its messages in order, for
+// the data export.
+type AnalysisWithMessages struct {
+	Analysis Analysis
+	Messages []Message
+}
+
+// ListAnalysesForExport returns every analysis of the user, oldest first,
+// with all its messages: two queries, whatever the history's size.
+func (r *Repository) ListAnalysesForExport(ctx context.Context, userID uuid.UUID) ([]AnalysisWithMessages, error) {
+	rows, err := r.db.Query(ctx, `SELECT `+analysisColumns+` FROM ai_analyses
+		WHERE user_id = $1 ORDER BY created_at, id`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list ai analyses for export: %w", err)
+	}
+	var out []AnalysisWithMessages
+	index := map[uuid.UUID]int{}
+	ids := []uuid.UUID{}
+	for rows.Next() {
+		a, err := scanAnalysis(rows)
+		if err != nil {
+			rows.Close()
+			return nil, err
+		}
+		index[a.ID] = len(out)
+		ids = append(ids, a.ID)
+		out = append(out, AnalysisWithMessages{Analysis: a})
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return out, nil
+	}
+
+	msgRows, err := r.db.Query(ctx, `SELECT `+messageColumns+` FROM ai_messages
+		WHERE analysis_id = ANY($1) ORDER BY analysis_id, seq`, ids)
+	if err != nil {
+		return nil, fmt.Errorf("list ai messages for export: %w", err)
+	}
+	defer msgRows.Close()
+	for msgRows.Next() {
+		m, err := scanMessage(msgRows)
+		if err != nil {
+			return nil, err
+		}
+		i := index[m.AnalysisID]
+		out[i].Messages = append(out[i].Messages, m)
+	}
+	return out, msgRows.Err()
+}
+
 // ListAnalyses returns a page of the user's analyses, newest first.
 func (r *Repository) ListAnalyses(ctx context.Context, userID uuid.UUID, after *AnalysisCursor, limit int) ([]Analysis, error) {
 	var createdAt *time.Time

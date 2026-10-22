@@ -853,7 +853,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get exportDataDescription =>
-      'CSV per le operazioni, JSON per profilo, portafoglio, categorie, modelli e operazioni.';
+      'CSV per le operazioni, JSON per profilo, portafoglio, categorie, modelli, operazioni e analisi AI.';
 
   @override
   String get exportCsvAction => 'Esporta CSV';

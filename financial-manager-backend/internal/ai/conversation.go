@@ -299,6 +299,13 @@ func (s *Service) effectiveStatus(status string, updatedAt, now time.Time, analy
 	if analysisProvider == ProviderOnDevice {
 		window = s.limits.LocalMaxDuration
 	}
+	return EffectiveStatus(status, updatedAt, now, window)
+}
+
+// EffectiveStatus is a stored status as the user should see it: a
+// STREAMING row older than window (the longest a stream or a phone may
+// take) is FAILED. Shared with the data export.
+func EffectiveStatus(status string, updatedAt, now time.Time, window time.Duration) string {
 	if status == StatusStreaming && now.Sub(updatedAt) > window+staleStreamGrace {
 		return StatusFailed
 	}

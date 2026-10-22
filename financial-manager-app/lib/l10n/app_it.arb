@@ -285,7 +285,7 @@
   "currentPasswordOptionalGoogleLabel": "Password attuale (vuota se solo Google)",
   "deleteAccountAction": "Elimina account",
   "exportDataSectionTitle": "Esporta i tuoi dati",
-  "exportDataDescription": "CSV per le operazioni, JSON per profilo, portafoglio, categorie, modelli e operazioni.",
+  "exportDataDescription": "CSV per le operazioni, JSON per profilo, portafoglio, categorie, modelli, operazioni e analisi AI.",
   "exportCsvAction": "Esporta CSV",
   "exportJsonAction": "Esporta JSON",
   "dangerZoneTitle": "Zona pericolosa",

@@ -303,7 +303,7 @@
   "currentPasswordOptionalGoogleLabel": "Current password (empty if Google-only)",
   "deleteAccountAction": "Delete account",
   "exportDataSectionTitle": "Export your data",
-  "exportDataDescription": "CSV for transactions, JSON for profile, wallet, categories, templates, and transactions.",
+  "exportDataDescription": "CSV for transactions, JSON for profile, wallet, categories, templates, transactions, and AI analyses.",
   "exportCsvAction": "Export CSV",
   "exportJsonAction": "Export JSON",
   "dangerZoneTitle": "Danger zone",

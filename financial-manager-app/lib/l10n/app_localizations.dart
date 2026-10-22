@@ -1583,7 +1583,7 @@ abstract class AppLocalizations {
   /// No description provided for @exportDataDescription.
   ///
   /// In it, this message translates to:
-  /// **'CSV per le operazioni, JSON per profilo, portafoglio, categorie, modelli e operazioni.'**
+  /// **'CSV per le operazioni, JSON per profilo, portafoglio, categorie, modelli, operazioni e analisi AI.'**
   String get exportDataDescription;
 
   /// No description provided for @exportCsvAction.

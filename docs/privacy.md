@@ -42,7 +42,7 @@ Prima dell'invio l'app ti mostra esattamente il testo che verrà inviato.
 
 **Il fornitore** tratta i dati secondo le sue condizioni e la sua informativa, legate al tuo account presso di lui: controlla per quanto tempo conserva le richieste e se le usa per addestrare i modelli. FinancialManager non ha alcun accordo con i fornitori e non riceve nulla da loro.
 
-**Cosa resta nell'app**: ogni analisi viene salvata nella cronologia con il testo inviato, il report, le domande e le risposte, così puoi rileggerla. Puoi eliminare una singola analisi o tutta la cronologia in qualsiasi momento, e tutto viene eliminato insieme all'account. L'export dei dati include il contesto personale, mai le chiavi API.
+**Cosa resta nell'app**: ogni analisi viene salvata nella cronologia con il testo inviato, il report, le domande e le risposte, così puoi rileggerla. Puoi eliminare una singola analisi o tutta la cronologia in qualsiasi momento, e tutto viene eliminato insieme all'account. L'export dei dati in JSON include il contesto personale e tutta la cronologia delle analisi (dati inviati, report, domande e risposte), mai le chiavi API; le risposte non ancora inviate dal telefono non sono sul server e quindi non sono nell'export.
 
 ## Analisi AI sul dispositivo (facoltativa, Android)
 
