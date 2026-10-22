@@ -16,6 +16,7 @@ import '../domain/models/ai_settings.dart';
 import '../domain/models/ai_user_context.dart';
 import '../domain/models/local_model_catalog.dart';
 import '../domain/repositories/ai_repository.dart';
+import 'local/ai_last_choice_store.dart';
 import 'local/device_capabilities_source.dart';
 import 'local/engine_model_host.dart';
 import 'local/engines/edge_ai_engine.dart';
@@ -166,6 +167,18 @@ final aiTurnSourceProvider = Provider.family<AiTurnSource, AiMode>(
       ? ref.watch(localAiRunnerProvider)
       : ref.watch(aiRepositoryProvider),
 );
+
+final aiLastChoiceStoreProvider = Provider<AiLastChoiceStore>(
+  (ref) => const SharedPrefsAiLastChoiceStore(),
+);
+
+/// The model the signed-in account last ran an analysis with on this
+/// phone (an AiRunChoice key), or null.
+final aiLastChoiceProvider = FutureProvider.autoDispose<String?>((ref) async {
+  final userId = ref.watch(currentUserProvider.select((u) => u?.id));
+  if (userId == null) return null;
+  return ref.watch(aiLastChoiceStoreProvider).read(userId);
+});
 
 /// The bundled catalog of downloadable models.
 final localModelCatalogProvider = FutureProvider<LocalModelCatalog>((

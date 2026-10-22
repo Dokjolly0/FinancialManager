@@ -55,12 +55,15 @@ List<AiRunChoice> aiRunChoices(
     for (final r in installed) AiLocalChoice(r),
 ];
 
-/// What the picker starts on: the saved mode's model (the phone's active
-/// model on device, the active account in the cloud), else the first one.
+/// What the picker starts on: the model this account last ran with
+/// ([lastKey]) while it is still available, else the saved mode's model
+/// (the phone's active model on device, the active account in the cloud),
+/// else the first one.
 AiRunChoice? defaultAiRunChoice(
   List<AiRunChoice> choices,
   AiSettings settings, {
   String? activeLocalModelId,
+  String? lastKey,
 }) {
   if (choices.isEmpty) return null;
   AiRunChoice? find(bool Function(AiRunChoice) test) {
@@ -69,6 +72,9 @@ AiRunChoice? defaultAiRunChoice(
     }
     return null;
   }
+
+  final last = lastKey == null ? null : find((c) => c.key == lastKey);
+  if (last != null) return last;
 
   final local = find(
     (c) => c is AiLocalChoice && c.record.id == activeLocalModelId,

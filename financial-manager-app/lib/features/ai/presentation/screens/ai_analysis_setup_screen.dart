@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/router.dart';
+import '../../../../app/session/current_user_provider.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/app_error.dart';
 import '../../../../core/errors/error_presentation.dart';
@@ -153,6 +156,7 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
     List<AiRunChoice> choices,
     AiSettings settings,
     String? activeLocalModelId,
+    String? lastKey,
   ) {
     for (final c in choices) {
       if (c.key == _choiceKey) return c;
@@ -161,6 +165,7 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
       choices,
       settings,
       activeLocalModelId: activeLocalModelId,
+      lastKey: lastKey,
     );
   }
 
@@ -242,7 +247,18 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
     final ok = await ref
         .read(aiDraftControllerProvider.notifier)
         .preview(request);
-    if (ok && mounted) context.push(AppRoutes.aiPreview);
+    if (!ok) return;
+    // Remembered once used, not when merely touched in the picker.
+    final userId = ref.read(currentUserProvider)?.id;
+    if (userId != null) {
+      unawaited(
+        ref
+            .read(aiLastChoiceStoreProvider)
+            .write(userId, choice.key)
+            .catchError((_) {}),
+      );
+    }
+    if (mounted) context.push(AppRoutes.aiPreview);
   }
 
   @override
@@ -294,7 +310,8 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
     final models = settings.onDeviceAvailable && supported
         ? ref.watch(localModelsControllerProvider)
         : null;
-    if (models != null && models.isLoading) {
+    final lastAsync = ref.watch(aiLastChoiceProvider);
+    if ((models != null && models.isLoading) || lastAsync.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
     final choices = aiRunChoices(
@@ -302,7 +319,12 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
       localSupported: supported,
       installed: models?.installed ?? const [],
     );
-    final choice = _choiceFor(choices, settings, models?.activeModelId);
+    final choice = _choiceFor(
+      choices,
+      settings,
+      models?.activeModelId,
+      lastAsync.value,
+    );
     if (choice == null) {
       final localFirst =
           settings.onDeviceAvailable &&
@@ -338,6 +360,17 @@ class _AiAnalysisSetupScreenState extends ConsumerState<AiAnalysisSetupScreen> {
     final onDevice = choice.isOnDevice;
     LocalRunPlan? plan;
     if (choice is AiLocalChoice) {
+      // Starting on a remembered phone model that isn't the active one:
+      // make it active, the engine loads the active model.
+      if (models?.activeModelId != choice.record.id) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref
+                .read(localModelsControllerProvider.notifier)
+                .setActive(choice.record.id);
+          }
+        });
+      }
       plan = ref.watch(localRunPlanProvider).value;
       // Still loading, or the picked model is becoming the active one.
       if (plan == null || plan.record.id != choice.record.id) {

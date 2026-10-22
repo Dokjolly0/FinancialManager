@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:financialmanager/features/account/domain/models/user_profile.dart';
 import 'package:financialmanager/features/account/presentation/view_models/account_providers.dart';
+import 'package:financialmanager/features/ai/data/local/ai_last_choice_store.dart';
 import 'package:financialmanager/features/ai/data/providers.dart';
 import 'package:financialmanager/features/ai/domain/models/ai_analysis_request.dart';
 import 'package:financialmanager/features/ai/domain/models/ai_settings.dart';
@@ -140,6 +142,44 @@ void main() {
         'cloud:openai',
       );
       expect(defaultAiRunChoice(const [], cloud), isNull);
+    });
+
+    test('the last model used comes first while it is still there', () {
+      final s = _settings(mode: AiMode.onDevice);
+      final choices = aiRunChoices(
+        s,
+        localSupported: true,
+        installed: [_local('g1')],
+      );
+      expect(
+        defaultAiRunChoice(
+          choices,
+          s,
+          activeLocalModelId: 'g1',
+          lastKey: 'cloud:openai',
+        )!.key,
+        'cloud:openai',
+      );
+      expect(
+        defaultAiRunChoice(
+          choices,
+          s,
+          activeLocalModelId: 'g1',
+          lastKey: 'cloud:removed',
+        )!.key,
+        'local:g1',
+        reason: 'gone: back to the saved mode',
+      );
+    });
+
+    test('the last model is kept per account', () async {
+      SharedPreferences.setMockInitialValues({});
+      const store = SharedPrefsAiLastChoiceStore();
+      await store.write('u1', 'cloud:gemini');
+      await store.write('u2', 'local:g1');
+      expect(await store.read('u1'), 'cloud:gemini');
+      expect(await store.read('u2'), 'local:g1');
+      expect(await store.read('u3'), isNull);
     });
 
     test('a cloud choice sends its account with the request', () {
