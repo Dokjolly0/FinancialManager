@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:financialmanager/features/ai/data/local/background_work.dart';
 import 'package:financialmanager/features/ai/data/local/device_capabilities_source.dart';
 import 'package:financialmanager/features/ai/data/local/model_downloader.dart';
 import 'package:financialmanager/features/ai/data/local/model_importer.dart';
@@ -13,6 +14,7 @@ import 'package:financialmanager/features/ai/domain/models/local_model_catalog.d
 import 'package:financialmanager/features/ai/domain/models/local_model_record.dart';
 import 'package:financialmanager/features/ai/presentation/view_models/local_models_controller.dart';
 
+import 'fakes/fake_background.dart';
 import 'fakes/fake_model_server.dart';
 
 class _FakeCapabilities implements DeviceCapabilitiesSource {
@@ -55,6 +57,9 @@ void main() {
   late FakeNetworkStatus network;
   late ProviderContainer container;
   late ModelStore store;
+  late FakeBackgroundWork background;
+  late FakeAiNotifier notifier;
+  var foreground = true;
   final bytes = fakeModelBytes(8000);
 
   ProviderContainer make() {
@@ -82,6 +87,9 @@ void main() {
         modelImporterProvider.overrideWithValue(
           ModelImporter(store: store, freeBytes: (_) async => null),
         ),
+        backgroundWorkProvider.overrideWithValue(background),
+        aiNotifierProvider.overrideWithValue(notifier),
+        appInForegroundProvider.overrideWithValue(() => foreground),
       ],
     );
   }
@@ -107,6 +115,9 @@ void main() {
     root = await Directory.systemTemp.createTemp('fm_ctl_');
     server = FakeModelServer(bytes);
     network = FakeNetworkStatus();
+    background = FakeBackgroundWork();
+    notifier = FakeAiNotifier();
+    foreground = true;
     container = make();
   });
 
@@ -255,4 +266,55 @@ void main() {
       );
     },
   );
+
+  test('the work notification follows the queue', () async {
+    await loaded();
+    ctl().download('alpha');
+    await until(() => state().installedById('alpha') != null);
+    expect(background.log.first, startsWith('begin downloads: '));
+    expect(background.log.any((l) => l.contains('%')), isTrue);
+    expect(background.log.last, 'end downloads');
+    expect(background.active, isEmpty);
+    expect(notifier.shown, isEmpty, reason: 'the user was looking');
+
+    // Off Wi-Fi the service stays up, so the download resumes by itself
+    // with the app in the background.
+    network.unmetered = false;
+    ctl().download('beta');
+    await until(
+      () =>
+          state().tasks['beta']?.status == LocalModelTaskStatus.waitingForWifi,
+    );
+    expect(background.active['downloads']!.text, contains('Wi-Fi'));
+    foreground = false;
+    network.set(true);
+    await until(() => state().installedById('beta') != null);
+    expect(background.active, isEmpty);
+    expect(
+      notifier.shown.single.title,
+      isIn(['Modello pronto', 'Model ready']),
+    );
+    expect(notifier.shown.single.route, '/app/account/ai/local-models');
+  });
+
+  test('Pausa in the notification pauses; a system timeout too', () async {
+    await loaded();
+    server.onChunk = (n) {
+      if (n == 2) background.press(BackgroundButtons.pause);
+    };
+    ctl().download('alpha');
+    await until(
+      () => state().tasks['alpha']?.status == LocalModelTaskStatus.paused,
+    );
+    expect(background.active, isEmpty);
+
+    server.onChunk = (n) {
+      if (n == 5) background.timeout();
+    };
+    ctl().resume('alpha');
+    await until(
+      () => state().tasks['alpha']?.status == LocalModelTaskStatus.paused,
+    );
+    expect(state().tasks['alpha']!.receivedBytes, greaterThan(0));
+  });
 }

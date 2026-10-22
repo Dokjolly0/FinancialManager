@@ -4,6 +4,9 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/router.dart';
+import '../../../../core/errors/error_code_localizations.dart';
+import '../../data/local/background_work.dart';
 import '../../data/local/model_downloader.dart';
 import '../../data/local/model_importer.dart';
 import '../../data/providers.dart';
@@ -156,6 +159,13 @@ class LocalModelsController extends Notifier<LocalModelsState> {
   /// Ids queued again once their download has stopped (a rule changed).
   final _resumeAfterStop = <String>{};
   StreamSubscription<bool>? _network;
+  StreamSubscription<String>? _buttons;
+  StreamSubscription<void>? _timeouts;
+
+  /// Whether the downloads' line is in the work notification.
+  bool _inBackground = false;
+
+  static const _backgroundJobId = 'downloads';
 
   @override
   LocalModelsState build() {
@@ -164,9 +174,19 @@ class LocalModelsController extends Notifier<LocalModelsState> {
     ) {
       if (unmetered) _requeue(LocalModelTaskStatus.waitingForWifi);
     });
+    final background = ref.read(backgroundWorkProvider);
+    _buttons = background.buttonPresses.listen((id) {
+      if (id == BackgroundButtons.pause) _pauseAll();
+    });
+    // The system ended the service (Android's daily dataSync limit):
+    // pause, the user resumes from the app.
+    _timeouts = background.timeouts.listen((_) => _pauseAll());
     ref.onDispose(() {
       _network?.cancel();
+      _buttons?.cancel();
+      _timeouts?.cancel();
       _runningToken?.cancel('disposed');
+      if (_inBackground) unawaited(background.end(_backgroundJobId));
     });
     Future.microtask(_load);
     return const LocalModelsState();
@@ -455,6 +475,7 @@ class LocalModelsController extends Notifier<LocalModelsState> {
       final installed = await store.list();
       if (!ref.mounted) return;
       state = state.copyWith(installed: installed);
+      _notifyFinished(id);
       // The first model installed is the one runs use.
       if (state.activeModelId == null) await setActive(id);
     } on ModelDownloadPaused catch (p) {
@@ -495,6 +516,7 @@ class LocalModelsController extends Notifier<LocalModelsState> {
     if (!ref.mounted) return;
     final current = state.tasks[id];
     if (current == null) return;
+    _notifyFinished(id, errorCode: code);
     _setTask(
       current.copyWith(status: LocalModelTaskStatus.failed, errorCode: code),
     );
@@ -503,11 +525,104 @@ class LocalModelsController extends Notifier<LocalModelsState> {
   void _setTask(LocalModelTask task) {
     if (!ref.mounted) return;
     state = state.copyWith(tasks: {...state.tasks, task.id: task});
+    _syncBackground();
   }
 
   void _removeTask(String id) {
     if (!ref.mounted) return;
     state = state.copyWith(tasks: {...state.tasks}..remove(id));
+    _syncBackground();
+  }
+
+  void _pauseAll() {
+    for (final t in state.tasks.values) {
+      if (t.status != LocalModelTaskStatus.paused &&
+          t.status != LocalModelTaskStatus.failed) {
+        pause(t.id);
+      }
+    }
+  }
+
+  String _labelOf(LocalModelTask t) =>
+      t.urlImport?.metadata.displayName ??
+      state.catalog?.byId(t.id)?.label ??
+      t.id;
+
+  /// Keeps the work notification in step with the queue (plan.md section
+  /// 33.9): the service runs while anything is queued, downloading,
+  /// verifying or waiting for Wi-Fi, so a download also resumes by itself
+  /// with the app in the background (Android doesn't let an app start a
+  /// foreground service from there).
+  void _syncBackground() {
+    final background = ref.read(backgroundWorkProvider);
+    final active = state.tasks.values
+        .where(
+          (t) =>
+              t.status != LocalModelTaskStatus.paused &&
+              t.status != LocalModelTaskStatus.failed,
+        )
+        .toList();
+    if (active.isEmpty) {
+      if (_inBackground) {
+        _inBackground = false;
+        unawaited(background.end(_backgroundJobId));
+      }
+      return;
+    }
+    final l10n = ref.read(appL10nProvider);
+    final t = active.firstWhere((t) => t.isActive, orElse: () => active.first);
+    final label = _labelOf(t);
+    var text = switch (t.status) {
+      LocalModelTaskStatus.downloading => l10n.bgDownloading(
+        label,
+        ((t.progress ?? 0) * 100).floor(),
+      ),
+      LocalModelTaskStatus.verifying => l10n.bgVerifying(label),
+      LocalModelTaskStatus.waitingForWifi => l10n.bgWaitingWifi(label),
+      _ => l10n.bgQueued(label),
+    };
+    if (active.length > 1) text = '$text (+${active.length - 1})';
+    if (_inBackground) {
+      background.update(_backgroundJobId, text);
+    } else {
+      _inBackground = true;
+      unawaited(
+        background.begin(
+          BackgroundJob(
+            id: _backgroundJobId,
+            kind: BackgroundJobKind.download,
+            text: text,
+          ),
+        ),
+      );
+    }
+  }
+
+  /// "Modello pronto" or "Download non riuscito" when nobody is looking.
+  void _notifyFinished(String id, {String? errorCode}) {
+    if (!ref.mounted || ref.read(appInForegroundProvider)()) return;
+    final l10n = ref.read(appL10nProvider);
+    final task = state.tasks[id];
+    final label = task == null
+        ? (state.catalog?.byId(id)?.label ??
+              state.installedById(id)?.label ??
+              id)
+        : _labelOf(task);
+    unawaited(
+      ref
+          .read(aiNotifierProvider)
+          .show(
+            id: id.hashCode & 0x7fffffff,
+            title: errorCode == null
+                ? l10n.notifyModelReadyTitle
+                : l10n.notifyDownloadFailedTitle,
+            body: errorCode == null
+                ? l10n.notifyModelReadyBody(label)
+                : '$label: ${localizeErrorCode(l10n, errorCode)}',
+            route: AppRoutes.aiLocalModels,
+          )
+          .catchError((_) {}),
+    );
   }
 }
 

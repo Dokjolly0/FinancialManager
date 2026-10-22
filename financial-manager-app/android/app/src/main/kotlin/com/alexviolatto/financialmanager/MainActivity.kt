@@ -13,6 +13,11 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    // The engine lives in FinancialManagerApplication, not in the activity.
+    override fun getCachedEngineId(): String = FinancialManagerApplication.ENGINE_ID
+
+    override fun shouldDestroyEngineWithHost(): Boolean = false
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         // On-device AI (plan.md section 33): memory, storage, heat and
@@ -22,7 +27,7 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "capabilities" ->
                         try {
-                            result.success(capabilities())
+                            result.success(capabilities(applicationContext))
                         } catch (e: Exception) {
                             result.error("DEVICE", e.toString(), null)
                         }
@@ -31,11 +36,13 @@ class MainActivity : FlutterActivity() {
             }
     }
 
-    private fun capabilities(): Map<String, Any?> {
-        val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    // The application context: the engine (and this handler) can outlive
+    // the activity that registered it.
+    private fun capabilities(context: Context): Map<String, Any?> {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val mi = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        val battery = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        val battery = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level = battery?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = battery?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
         val plugged = battery?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
@@ -43,7 +50,7 @@ class MainActivity : FlutterActivity() {
             "total_mem" to mi.totalMem,
             "avail_mem" to mi.availMem,
             "low_memory" to mi.lowMemory,
-            "free_storage" to StatFs(filesDir.path).availableBytes,
+            "free_storage" to StatFs(context.filesDir.path).availableBytes,
             "thermal_status" to if (Build.VERSION.SDK_INT >= 29) pm.currentThermalStatus else null,
             "battery_pct" to if (level >= 0 && scale > 0) level * 100 / scale else null,
             "charging" to (plugged != 0),

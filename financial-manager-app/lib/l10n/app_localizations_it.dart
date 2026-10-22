@@ -2739,4 +2739,47 @@ class AppLocalizationsIt extends AppLocalizations {
   String aiLocalFollowUpOtherModel(String report, String current) {
     return 'Il modello del report ($report) non è più installato: risponderà $current.';
   }
+
+  @override
+  String get bgWorkTitle => 'Analisi AI sul dispositivo';
+
+  @override
+  String get bgWorkChannel => 'Attività in corso';
+
+  @override
+  String get bgWorkStop => 'Interrompi';
+
+  @override
+  String bgDownloading(String name, int percent) {
+    return 'Download $name · $percent%';
+  }
+
+  @override
+  String bgVerifying(String name) {
+    return 'Verifica di $name';
+  }
+
+  @override
+  String bgWaitingWifi(String name) {
+    return '$name · in attesa del Wi-Fi';
+  }
+
+  @override
+  String bgQueued(String name) {
+    return '$name · in coda';
+  }
+
+  @override
+  String get aiNotifyChannel => 'Analisi AI';
+
+  @override
+  String get notifyModelReadyTitle => 'Modello pronto';
+
+  @override
+  String notifyModelReadyBody(String name) {
+    return '$name è installato: puoi usarlo per le analisi.';
+  }
+
+  @override
+  String get notifyDownloadFailedTitle => 'Download non riuscito';
 }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/account/presentation/view_models/account_providers.dart';
 import '../features/ai/data/providers.dart';
 import '../l10n/app_localizations.dart';
+import 'ai_notification_routing.dart';
 import 'router.dart';
 import 'session/session_controller.dart';
 import 'session/session_status.dart';
@@ -23,6 +24,8 @@ class FinancialManagerApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
     // On-device AI reports written offline go out at sign-in and resume.
     ref.watch(localOutboxFlusherProvider);
+    // A tapped "Analisi pronta" / "Modello pronto" opens its screen.
+    ref.watch(aiNotificationRoutingProvider);
     final isAuthenticated =
         ref.watch(sessionControllerProvider) == SessionStatus.authenticated;
     final profile = isAuthenticated

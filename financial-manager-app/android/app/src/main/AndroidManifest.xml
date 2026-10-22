@@ -1,9 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- On-device AI (plan.md section 33.9): model downloads and analyses
+         keep going in the background in a foreground service, with a
+         notification; another notification says when they are done. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <application
         android:label="Financial Manager"
-        android:name="${applicationName}"
+        android:name=".FinancialManagerApplication"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
         android:fullBackupContent="@xml/backup_rules"
@@ -35,6 +43,19 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- flutter_foreground_task's service (the name must not change):
+             dataSync for model downloads, specialUse for text generation
+             on the phone. It stops with the work, not with the task. -->
+        <service
+            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+            android:foregroundServiceType="dataSync|specialUse"
+            android:stopWithTask="false"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="On-device AI text generation the user started: a report or an answer written by a local language model, which takes from tens of seconds to minutes."/>
+        </service>
 
         <!-- Required by image_cropper (plan.md section 7.8 crop UI). -->
         <activity

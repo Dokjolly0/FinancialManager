@@ -1240,5 +1240,54 @@
         "type": "String"
       }
     }
-  }
+  },
+  "bgWorkTitle": "Analisi AI sul dispositivo",
+  "bgWorkChannel": "Attività in corso",
+  "bgWorkStop": "Interrompi",
+  "bgDownloading": "Download {name} · {percent}%",
+  "@bgDownloading": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bgVerifying": "Verifica di {name}",
+  "@bgVerifying": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bgWaitingWifi": "{name} · in attesa del Wi-Fi",
+  "@bgWaitingWifi": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bgQueued": "{name} · in coda",
+  "@bgQueued": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiNotifyChannel": "Analisi AI",
+  "notifyModelReadyTitle": "Modello pronto",
+  "notifyModelReadyBody": "{name} è installato: puoi usarlo per le analisi.",
+  "@notifyModelReadyBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifyDownloadFailedTitle": "Download non riuscito"
 }

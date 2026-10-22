@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../app/session/current_user_provider.dart';
 import '../../../core/api/providers.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../account/presentation/view_models/account_providers.dart';
 import '../domain/local/local_llm_engine.dart';
 import '../domain/models/local_model.dart';
 import '../domain/models/ai_analysis_request.dart';
@@ -17,6 +20,8 @@ import '../domain/models/ai_user_context.dart';
 import '../domain/models/local_model_catalog.dart';
 import '../domain/repositories/ai_repository.dart';
 import 'local/ai_last_choice_store.dart';
+import 'local/ai_notifier.dart';
+import 'local/background_work.dart';
 import 'local/device_capabilities_source.dart';
 import 'local/engine_model_host.dart';
 import 'local/engines/edge_ai_engine.dart';
@@ -166,6 +171,53 @@ final aiTurnSourceProvider = Provider.family<AiTurnSource, AiMode>(
   (ref, mode) => mode == AiMode.onDevice
       ? ref.watch(localAiRunnerProvider)
       : ref.watch(aiRepositoryProvider),
+);
+
+/// Texts for code that runs without a BuildContext (notifications): the
+/// account's language when its profile is already loaded, else the
+/// phone's, else Italian. Computed on each read, without loading the
+/// profile.
+final appL10nProvider = Provider.autoDispose<AppLocalizations>((ref) {
+  String? tag;
+  if (ref.exists(accountProfileProvider)) {
+    try {
+      tag = ref.read(accountProfileProvider).value?.locale;
+    } catch (_) {}
+  }
+  tag ??= ui.PlatformDispatcher.instance.locale.toLanguageTag();
+  final code = tag.split(RegExp('[-_]')).first;
+  return lookupAppLocalizations(
+    Locale(
+      AppLocalizations.supportedLocales.any((l) => l.languageCode == code)
+          ? code
+          : 'it',
+    ),
+  );
+});
+
+/// The foreground service that keeps downloads and on-device analyses
+/// going in the background (Android only).
+final backgroundWorkProvider = Provider<BackgroundWork>((ref) {
+  if (!Platform.isAndroid) return const NoopBackgroundWork();
+  return ForegroundTaskBackgroundWork(() {
+    final l10n = ref.read(appL10nProvider);
+    return BackgroundTexts(
+      title: l10n.bgWorkTitle,
+      channel: l10n.bgWorkChannel,
+      pause: l10n.aiLocalPause,
+      stop: l10n.bgWorkStop,
+    );
+  });
+});
+
+/// "Analisi pronta", "Modello pronto" (Android only).
+final aiNotifierProvider = Provider<AiNotifier>(
+  (ref) => Platform.isAndroid ? LocalAiNotifier() : const NoopAiNotifier(),
+);
+
+/// Whether the app is on screen; overridden in tests.
+final appInForegroundProvider = Provider<bool Function()>(
+  (ref) => appInForeground,
 );
 
 final aiLastChoiceStoreProvider = Provider<AiLastChoiceStore>(

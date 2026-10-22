@@ -2725,4 +2725,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String aiLocalFollowUpOtherModel(String report, String current) {
     return 'The report\'s model ($report) is no longer installed: $current will answer.';
   }
+
+  @override
+  String get bgWorkTitle => 'On-device AI';
+
+  @override
+  String get bgWorkChannel => 'Work in progress';
+
+  @override
+  String get bgWorkStop => 'Stop';
+
+  @override
+  String bgDownloading(String name, int percent) {
+    return 'Downloading $name · $percent%';
+  }
+
+  @override
+  String bgVerifying(String name) {
+    return 'Checking $name';
+  }
+
+  @override
+  String bgWaitingWifi(String name) {
+    return '$name · waiting for Wi-Fi';
+  }
+
+  @override
+  String bgQueued(String name) {
+    return '$name · queued';
+  }
+
+  @override
+  String get aiNotifyChannel => 'AI analyses';
+
+  @override
+  String get notifyModelReadyTitle => 'Model ready';
+
+  @override
+  String notifyModelReadyBody(String name) {
+    return '$name is installed: you can use it for analyses.';
+  }
+
+  @override
+  String get notifyDownloadFailedTitle => 'Download failed';
 }

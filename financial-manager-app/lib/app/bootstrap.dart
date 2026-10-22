@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -18,6 +20,9 @@ Future<void> bootstrap(Widget Function() appBuilder) async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
       await initializeDateFormatting('it_IT');
+      // The foreground service's notification buttons reach the main
+      // isolate through this port (plan.md section 33.9).
+      if (Platform.isAndroid) FlutterForegroundTask.initCommunicationPort();
 
       FlutterError.onError = (details) {
         logger.error(

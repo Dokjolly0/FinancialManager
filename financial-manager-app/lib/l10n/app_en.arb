@@ -1076,5 +1076,54 @@
         "type": "String"
       }
     }
-  }
+  },
+  "bgWorkTitle": "On-device AI",
+  "bgWorkChannel": "Work in progress",
+  "bgWorkStop": "Stop",
+  "bgDownloading": "Downloading {name} · {percent}%",
+  "@bgDownloading": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bgVerifying": "Checking {name}",
+  "@bgVerifying": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bgWaitingWifi": "{name} · waiting for Wi-Fi",
+  "@bgWaitingWifi": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bgQueued": "{name} · queued",
+  "@bgQueued": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiNotifyChannel": "AI analyses",
+  "notifyModelReadyTitle": "Model ready",
+  "notifyModelReadyBody": "{name} is installed: you can use it for analyses.",
+  "@notifyModelReadyBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifyDownloadFailedTitle": "Download failed"
 }

@@ -4829,6 +4829,72 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Il modello del report ({report}) non è più installato: risponderà {current}.'**
   String aiLocalFollowUpOtherModel(String report, String current);
+
+  /// No description provided for @bgWorkTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Analisi AI sul dispositivo'**
+  String get bgWorkTitle;
+
+  /// No description provided for @bgWorkChannel.
+  ///
+  /// In it, this message translates to:
+  /// **'Attività in corso'**
+  String get bgWorkChannel;
+
+  /// No description provided for @bgWorkStop.
+  ///
+  /// In it, this message translates to:
+  /// **'Interrompi'**
+  String get bgWorkStop;
+
+  /// No description provided for @bgDownloading.
+  ///
+  /// In it, this message translates to:
+  /// **'Download {name} · {percent}%'**
+  String bgDownloading(String name, int percent);
+
+  /// No description provided for @bgVerifying.
+  ///
+  /// In it, this message translates to:
+  /// **'Verifica di {name}'**
+  String bgVerifying(String name);
+
+  /// No description provided for @bgWaitingWifi.
+  ///
+  /// In it, this message translates to:
+  /// **'{name} · in attesa del Wi-Fi'**
+  String bgWaitingWifi(String name);
+
+  /// No description provided for @bgQueued.
+  ///
+  /// In it, this message translates to:
+  /// **'{name} · in coda'**
+  String bgQueued(String name);
+
+  /// No description provided for @aiNotifyChannel.
+  ///
+  /// In it, this message translates to:
+  /// **'Analisi AI'**
+  String get aiNotifyChannel;
+
+  /// No description provided for @notifyModelReadyTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Modello pronto'**
+  String get notifyModelReadyTitle;
+
+  /// No description provided for @notifyModelReadyBody.
+  ///
+  /// In it, this message translates to:
+  /// **'{name} è installato: puoi usarlo per le analisi.'**
+  String notifyModelReadyBody(String name);
+
+  /// No description provided for @notifyDownloadFailedTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Download non riuscito'**
+  String get notifyDownloadFailedTitle;
 }
 
 class _AppLocalizationsDelegate
