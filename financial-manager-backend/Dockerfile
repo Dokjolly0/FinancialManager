@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.25-alpine AS build
+FROM golang:1.27-alpine3.24 AS build
 WORKDIR /src
 
 RUN apk add --no-cache git
@@ -13,7 +13,7 @@ COPY . .
 ARG TARGET=api
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/app ./cmd/${TARGET}
 
-FROM alpine:3.20 AS runtime
+FROM alpine:3.24 AS runtime
 ARG TARGET=api
 # tzdata is required for time.LoadLocation to resolve IANA zone names like
 # "Europe/Rome" (plan.md section 18.1/18.7 reports, 4.5 user timezones) —

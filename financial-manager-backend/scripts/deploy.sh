@@ -19,9 +19,11 @@ if [ "${1:-}" != "--no-pull" ]; then
   git -C .. pull --ff-only
 fi
 
+# --pull: fetch newer base images (golang, alpine) so a rebuild picks up
+# their security fixes.
 for service in migrate api worker; do
   echo "==> build $service"
-  $C build "$service"
+  $C build --pull "$service"
 done
 
 echo "==> pull web"
