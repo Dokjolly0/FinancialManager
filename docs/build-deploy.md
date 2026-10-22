@@ -17,7 +17,8 @@ Guida operativa per pubblicare il backend e la dashboard web su una VPS e compil
                                        │                          │
                               127.0.0.1:10003            127.0.0.1:10005
                               container api              container web
-                                       │                 (dashboard Flutter web)
+                                       │                 (dashboard Flutter web,
+                                       │                  immagine da Docker Hub)
                          rete Docker backend_internal
                postgres · redis · object-storage (MinIO) · worker
 ```
@@ -25,7 +26,8 @@ Guida operativa per pubblicare il backend e la dashboard web su una VPS e compil
 - Il progetto è in `/projects/FinancialManager` sulla VPS `alex-violatto`. Fino a ottobre 2026 il backend girava sulla VPS `remote-viewer` (`http://83.228.246.84:10003`), che ora resta dedicata a RemoteViewer: lo spostamento è descritto nella sezione 10.
 - Su Internet è esposto solo Caddy. L'API è pubblicata sull'host solo su `127.0.0.1:10003`; PostgreSQL, Redis e MinIO sono raggiungibili solo sulla rete interna di Docker.
 - L'app usa `https://financialmanager.alexviolatto.dev/api/v1`: Caddy toglie il prefisso `/api`, quindi il backend continua a esporre `/v1/...` e `/health/...` come in locale.
-- La dashboard web (il sottodominio senza `/api`) è la stessa app Flutter compilata per il browser, servita dal container `web` (sezione 11). Sta sullo stesso dominio dell'API, quindi in produzione non serve CORS. `docker compose ... up -d --build` aggiorna backend e dashboard insieme.
+- La dashboard web (il sottodominio senza `/api`) è la stessa app Flutter compilata per il browser, servita dal container `web` (sezione 11). Sta sullo stesso dominio dell'API, quindi in produzione non serve CORS.
+- La VPS compila solo le immagini Go (api, worker, migrate), una alla volta. La dashboard la compila GitHub Actions a ogni push su `main` e la pubblica su Docker Hub come `dokjolly/financial-manager-web`; la VPS la scarica e basta (sezione 11, che spiega anche perché). L'aggiornamento completo è un comando: `./scripts/deploy.sh` (sezione 6).
 
 ## Backend su VPS
 
@@ -36,7 +38,8 @@ Il backend e' un'app Go eseguita via Docker Compose con PostgreSQL, Redis e MinI
 - `financial-manager-backend/.env.example`
 - `financial-manager-backend/Dockerfile`
 - `financial-manager-backend/deploy/Caddyfile.example` (il blocco del sito per Caddy)
-- `financial-manager-app/Dockerfile` (la dashboard web, servizio `web` di `compose.prod.yaml`)
+- `financial-manager-backend/scripts/deploy.sh` (l'aggiornamento della produzione in un comando, sezione 6)
+- `financial-manager-app/Dockerfile` (l'immagine della dashboard web: la compila la CI, `.github/workflows/mobile-ci.yml`, non la VPS; sezione 11)
 
 ### 1. Preparare la VPS
 
@@ -61,7 +64,7 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 sudo usermod -aG docker "$USER"   # poi uscire e rientrare in SSH
 ```
 
-La VPS ha 2 GB di RAM e nessuna swap di serie: la build delle immagini Go e lo stack completo (PostgreSQL, Redis, MinIO, api, worker) ci stanno stretti. Aggiungere una swap da 2 GB:
+La VPS ha 1 vCPU, 2 GB di RAM e nessuna swap di serie: la build delle immagini Go e lo stack completo (PostgreSQL, Redis, MinIO, api, worker, web) ci stanno stretti. Per questo sulla VPS si compilano solo le immagini Go e una alla volta (`scripts/deploy.sh`), mai la dashboard Flutter (sezione 11, "Perché la VPS non compila la dashboard"). Aggiungere comunque una swap da 2 GB:
 
 ```bash
 sudo fallocate -l 2G /swapfile
@@ -216,8 +219,13 @@ Appena il DNS punta alla VPS, Caddy ottiene il certificato Let's Encrypt e lo ri
 Dalla cartella `financial-manager-backend`:
 
 ```bash
-docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+cd /projects/FinancialManager/financial-manager-backend
+./scripts/deploy.sh --no-pull
 ```
+
+Lo script (descritto nella sezione 6) compila le immagini Go una alla volta, scarica da Docker Hub l'immagine della dashboard e avvia tutto con `docker compose -f compose.yaml -f compose.prod.yaml up -d`. `--no-pull` salta il `git pull`, inutile subito dopo il clone. La prima volta l'immagine `dokjolly/financial-manager-web` deve già esistere su Docker Hub, cioè la CI deve averla pubblicata almeno una volta (sezione 11, "Pubblicazione").
+
+**Non usare `up -d --build`** sulla VPS: compose compila tutte le immagini in parallelo, e su 1 vCPU con 2 GB di RAM tre build insieme bastano a saturare la memoria (sezione 11).
 
 Il compose avvia:
 
@@ -227,9 +235,9 @@ Il compose avvia:
 - `migrate`
 - `api`
 - `worker`
-- `web` (la dashboard, solo in production: sezione 11)
+- `web` (la dashboard, solo in production, immagine scaricata da Docker Hub: sezione 11)
 
-Il servizio `migrate` applica le migrazioni SQL prima dell'avvio dell'API e del worker. Sulla VPS da 1 vCPU la prima build delle immagini richiede alcuni minuti; quella di `web` è la più lunga (sezione 11).
+Il servizio `migrate` applica le migrazioni SQL prima dell'avvio dell'API e del worker. Sulla VPS da 1 vCPU le immagini Go richiedono circa 2 minuti ciascuna per `api` e `worker` e pochi secondi per `migrate` (riusa gli strati già compilati); l'immagine di `web` si scarica (circa 45 MB compressi).
 
 **Immagine di MinIO.** `object-storage` usa `dokjolly/minio:RELEASE.2025-10-15T17-29-55Z-r1`, non `minio/minio`. Da ottobre 2025 MinIO Inc. non pubblica più le immagini della versione community; in seguito le ha tolte da Docker Hub (`docker pull minio/minio` risponde "pull access denied") e ha chiuso i download anonimi da quay.io, e il progetto open source è archiviato. Un deploy da zero con `minio/minio:latest` oggi fallisce; funzionava solo dove l'immagine era già in cache.
 
@@ -291,18 +299,40 @@ https://financialmanager.alexviolatto.dev/api/v1
 Sulla VPS:
 
 ```bash
-cd /projects/FinancialManager
-git pull
-cd financial-manager-backend
-docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+cd /projects/FinancialManager/financial-manager-backend
+./scripts/deploy.sh
 ```
 
-Se vuoi forzare il rebuild senza cache:
+`scripts/deploy.sh` fa, in ordine:
+
+1. `git pull --ff-only` del repository (si salta con `--no-pull`; se il pull non è un fast-forward lo script si ferma senza toccare nulla);
+2. `docker compose ... build migrate`, poi `api`, poi `worker`: una build alla volta, così sulla VPS non ci sono mai due compilazioni Go insieme;
+3. `docker compose ... pull web`: l'ultima immagine della dashboard da Docker Hub (sezione 11);
+4. `docker compose ... up -d`: ricrea solo i container la cui immagine o configurazione è cambiata; `migrate` applica le migrazioni nuove prima di `api` e `worker`;
+5. `docker image prune -f`: elimina le immagini vecchie rimaste senza tag;
+6. attende fino a 60 secondi che `http://127.0.0.1:10003/health/ready` risponda; se non succede esce con errore e suggerisce di guardare `docker compose ... logs api`. Alla fine stampa `docker compose ... ps` e `deploy ok`.
+
+Se sono cambiati file in `financial-manager-app`, prima di lanciare lo script aspettare che su GitHub il job `build-web` del workflow `mobile-ci` sia verde (tab *Actions*, qualche minuto dopo il push): finché non ha finito, Docker Hub ha ancora la dashboard precedente e lo script la lascia com'è. Si può rilanciare lo script in qualsiasi momento: se nulla è cambiato non ricrea nessun container.
+
+Gli stessi passi a mano:
 
 ```bash
-docker compose -f compose.yaml -f compose.prod.yaml build --no-cache
-docker compose -f compose.yaml -f compose.prod.yaml up -d
+cd /projects/FinancialManager && git pull
+cd financial-manager-backend
+C="docker compose -f compose.yaml -f compose.prod.yaml"
+for s in migrate api worker; do $C build "$s"; done
+$C pull web
+$C up -d
 ```
+
+Per ricompilare senza cache, sempre un servizio alla volta:
+
+```bash
+for s in migrate api worker; do $C build --no-cache "$s"; done
+$C up -d
+```
+
+**Mai `up -d --build` né un `build` senza servizio**: compose compilerebbe tutte le immagini Go in parallelo. La dashboard non si può comunque più compilare sulla VPS (`web` in `compose.prod.yaml` non ha una sezione `build`).
 
 Le migrazioni nuove vengono applicate dal servizio `migrate` a ogni `up`. Caddy non va toccato, salvo modifiche a `deploy/Caddyfile.example` da riportare a mano in `/etc/caddy/Caddyfile` (poi `sudo systemctl reload caddy`).
 
@@ -408,12 +438,14 @@ rm fm.env
 
 Sulla nuova cambiare solo `API_HOST_BIND=127.0.0.1` e aggiungere `TRUSTED_PROXY_CIDRS=172.16.0.0/12`. Tutti i segreti (`JWT_SIGNING_KEY`, `AI_KEY_ENCRYPTION_KEY`, `BACKUP_ENCRYPTION_KEY`, credenziali MinIO e `GDRIVE_*`) restano uguali: così le sessioni restano valide, le chiavi API degli utenti si decifrano e il worker continua a usare la stessa cartella di backup su Drive.
 
-Costruire le immagini e avviare solo i servizi dati (vuoti):
+Costruire le immagini (una alla volta, sezione 6), scaricare la dashboard e avviare solo i servizi dati (vuoti):
 
 ```bash
 cd /projects/FinancialManager/financial-manager-backend
-docker compose -f compose.yaml -f compose.prod.yaml build
-docker compose -f compose.yaml -f compose.prod.yaml up -d postgres redis object-storage
+C="docker compose -f compose.yaml -f compose.prod.yaml"
+for s in migrate api worker; do $C build "$s"; done
+$C pull web
+$C up -d postgres redis object-storage
 ```
 
 **2. Fermare la vecchia istanza ed esportare i dati** (da qui inizia il fermo):
@@ -485,35 +517,96 @@ rm ~/fm-migration.dump ~/fm-media.tar.gz
 
 La dashboard su `https://financialmanager.alexviolatto.dev` è l'app Flutter compilata per il browser: stesse schermate e stesse API dell'app Android, con un layout per schermi larghi.
 
-**Come viene costruita e servita.**
+**Da dove arriva.**
 
-- `financial-manager-app/Dockerfile`, usato dal servizio `web` di `compose.prod.yaml`:
-  1. stage di build: Debian `trixie-slim`, Flutter clonato al tag della release (`FLUTTER_VERSION`, oggi `3.47.2`, la stessa usata per l'APK), solo gli artefatti web, poi `flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_URL=…`;
-  2. stage finale: `caddy:2.11.7-alpine` con `financial-manager-app/docker/Caddyfile.web`, che serve i file su `:8080`, comprime con zstd/gzip, rimanda le route dell'app a `index.html` e manda `Cache-Control: no-cache` su tutto. I nomi dei file di Flutter (`main.dart.js`, `canvaskit/…`) non contengono un hash, quindi i browser devono sempre rivalidare (con ETag, risposte 304 leggere), altrimenti dopo un deploy terrebbero la versione vecchia.
-- Il container è pubblicato solo su `127.0.0.1:${WEB_HOST_PORT:-10005}`; il Caddy di sistema lo raggiunge da lì (sezione 3) e aggiunge HTTPS e gli header di sicurezza. Non è collegato alla rete `backend_internal`: parla con l'API come qualsiasi browser, via `https://…/api/v1`.
-- `--no-web-resources-cdn` fa servire CanvasKit dal container invece che dal CDN di Google.
-- `web` esiste solo in `compose.prod.yaml`: lo stack di sviluppo non compila Flutter.
-
-**Aggiornare la dashboard.** Con il comando di sempre:
-
-```bash
-cd /projects/FinancialManager && git pull
-cd financial-manager-backend
-docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+```text
+git push su main (file in financial-manager-app/)
+        │
+GitHub Actions, workflow mobile-ci
+  analyze-and-test ──► build-web: docker build di financial-manager-app/Dockerfile
+                                   │  (linux/amd64, cache degli strati su GitHub)
+                                   ▼
+            Docker Hub: dokjolly/financial-manager-web:latest
+                        dokjolly/financial-manager-web:sha-<commit>
+                                   │
+VPS: scripts/deploy.sh ──► docker compose pull web + up -d
+                                   │
+            container web su 127.0.0.1:10005 ◄── Caddy di sistema (HTTPS)
 ```
 
-Compose ricostruisce `web` solo se è cambiato qualcosa in `financial-manager-app`. Per ricostruire solo la dashboard: `docker compose -f compose.yaml -f compose.prod.yaml up -d --build web`. Per controllare che i browser vedano la nuova versione: `curl -s https://financialmanager.alexviolatto.dev/version.json` (riporta `version` e `build_number` di `pubspec.yaml`).
+**Come viene costruita e servita.**
 
-**Tempi e risorse.** La prima build scarica Flutter e le dipendenze: sul PC circa 4,5 minuti, sulla VPS da 1 vCPU di più. Le successive riusano lo strato con Flutter e la cache di pub (mount di BuildKit) e rifanno solo `flutter build web`. La compilazione usa molta RAM: sulla VPS da 2 GB serve la swap della sezione 1. Il risultato è un'immagine di circa 165 MB; `main.dart.js` pesa circa 8,7 MB, 3,4 MB compresso.
+- `financial-manager-app/Dockerfile`, compilato dalla CI (job `build-web`):
+  1. stage di build: Debian `trixie-slim`, Flutter clonato al tag della release (`FLUTTER_VERSION`, oggi `3.47.2`, la stessa usata per l'APK), solo gli artefatti web, poi `flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_URL=…`. L'URL dell'API è il default del Dockerfile, `https://financialmanager.alexviolatto.dev/api/v1`, e resta compilato nell'immagine;
+  2. stage finale: `caddy:2.11.7-alpine` con `financial-manager-app/docker/Caddyfile.web`, che serve i file su `:8080`, comprime con zstd/gzip, rimanda le route dell'app a `index.html` e manda `Cache-Control: no-cache` su tutto. I nomi dei file di Flutter (`main.dart.js`, `canvaskit/…`) non contengono un hash, quindi i browser devono sempre rivalidare (con ETag, risposte 304 leggere), altrimenti dopo un deploy terrebbero la versione vecchia.
+- Servizio `web` di `compose.prod.yaml`: `image: dokjolly/financial-manager-web:${WEB_IMAGE_TAG:-latest}` con `pull_policy: always`. Ogni `docker compose ... up` controlla su Docker Hub se c'è un'immagine più recente: se sì la scarica e ricrea il container, se no non scarica nulla. Quindi anche un semplice `up -d` aggiorna la dashboard. Non c'è una sezione `build`: sulla VPS la dashboard non si può compilare nemmeno per errore.
+- Il container è pubblicato solo su `127.0.0.1:${WEB_HOST_PORT:-10005}`; il Caddy di sistema lo raggiunge da lì (sezione 3) e aggiunge HTTPS e gli header di sicurezza. Non è collegato alla rete `backend_internal`: parla con l'API come qualsiasi browser, via `https://…/api/v1`.
+- `--no-web-resources-cdn` fa servire CanvasKit dal container invece che dal CDN di Google.
+- `web` esiste solo in `compose.prod.yaml`: lo stack di sviluppo non lo usa (in locale si lavora con `flutter run -d chrome`, sezione 8 di "Build Flutter").
 
-**Variabili** (nel `.env`, tutte facoltative):
+**Perché la VPS non compila la dashboard.** All'inizio il servizio `web` aveva una sezione `build` e `up -d --build` compilava la dashboard sulla VPS insieme alle immagini Go. Al primo deploy, il 22 ottobre 2026, compose ha avviato in parallelo la build di `api`, `worker` e `migrate` e la preparazione di Flutter (`flutter precache`). La memoria impegnata è salita a circa 6,5 GB, il 160% di RAM più swap (`sar -r`). Il kernel non ha terminato nessun processo: la macchina è rimasta bloccata a spostare pagine tra RAM e swap per quasi due ore, senza rispondere a SSH e a Caddy (API, dashboard e `git.alexviolatto.dev` irraggiungibili) e senza eseguire il controllo orario del backup. Si è sbloccata solo con un riavvio dal pannello del provider; i container sono ripartiti da soli e i dati non hanno subito danni. La fase più pesante, la compilazione di `main.dart.js` (dart2js), non era ancora iniziata. Per questo:
+
+- la dashboard la compila GitHub Actions, i cui runner hanno molta più memoria, e la VPS la scarica;
+- le immagini Go, molto più leggere, si compilano ancora sulla VPS, ma una alla volta (`scripts/deploy.sh`): così ognuna sta nei 2 GB (misurato: swap usata sotto i 130 MB).
+
+Se il server non risponde più durante un deploy: riavviarlo dal pannello del provider; poi `free -m`, `sudo journalctl -b -1 -k | grep -i oom` e `sar -r -f /var/log/sysstat/saGG` (GG = giorno del mese) mostrano se è stata la memoria.
+
+**Pubblicazione: GitHub Actions e Docker Hub.**
+
+Il job `build-web` di `.github/workflows/mobile-ci.yml`:
+
+- parte quando cambia qualcosa in `financial-manager-app/` (o il workflow stesso), dopo che `analyze-and-test` è passato;
+- compila sempre l'immagine, anche nelle pull request: un import che non compila per il browser fa fallire la CI;
+- la pubblica solo su `main` (push, oppure avvio manuale con *Run workflow*, grazie a `workflow_dispatch`), con due tag:
+  - `latest`: quello che usa la VPS di default;
+  - `sha-<commit>` (hash completo del commit): non cambia più dopo la pubblicazione, serve per tornare indietro;
+- riusa tra un'esecuzione e l'altra gli strati già compilati (cache di GitHub Actions, `scope=web`), quindi di solito ricompila solo `flutter build web`.
+
+Configurazione, da fare una volta:
+
+1. Su Docker Hub (utente `dokjolly`): *Account settings → Personal access tokens → Generate new token*, permessi **Read & Write**. Si può riusare il token creato per il repository di MinIO, se lo si è conservato; altrimenti generarne uno nuovo.
+2. Su GitHub, repository `Dokjolly0/FinancialManager`: *Settings → Secrets and variables → Actions → New repository secret*:
+   - `DOCKERHUB_USERNAME` = `dokjolly`
+   - `DOCKERHUB_TOKEN` = il token del punto 1.
+
+   I secrets valgono per un solo repository: quelli di `Dokjolly0/minio` qui non si vedono.
+3. Il repository `dokjolly/financial-manager-web` su Docker Hub viene creato dal primo push, pubblico. Contiene solo la dashboard compilata, che è comunque pubblica (chiunque la scarica aprendo il sito): niente segreti, solo l'URL dell'API. Le immagini pubbliche su Docker Hub sono gratuite e la VPS le scarica senza login.
+4. Per la prima pubblicazione: push su `main` di una modifica in `financial-manager-app/`, oppure su GitHub *Actions → mobile-ci → Run workflow* sul branch `main`.
+
+Il repository self-hosted (`git.alexviolatto.dev`) riceve gli stessi commit ma non esegue la CI: la pubblicazione passa solo da GitHub.
+
+**Aggiornare la dashboard.**
+
+1. Push su `main` (su GitHub).
+2. Attendere il job `build-web` verde.
+3. Sulla VPS: `./scripts/deploy.sh` (sezione 6). Se è cambiata solo l'app basta anche `docker compose -f compose.yaml -f compose.prod.yaml up -d web`, che scarica l'immagine nuova e ricrea il solo container `web`.
+4. Controllo: `curl -s https://financialmanager.alexviolatto.dev/version.json` riporta `version` e `build_number` di `pubspec.yaml`; `docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' financial-manager-web-1` il commit da cui è stata compilata l'immagine in esecuzione.
+
+**Tornare a una versione precedente.** Nel `.env` della VPS `WEB_IMAGE_TAG=sha-<commit>` (l'hash completo di un commit di `main` già pubblicato; l'elenco è su Docker Hub, nella pagina *Tags* del repository), poi `docker compose -f compose.yaml -f compose.prod.yaml up -d web`. Per tornare agli aggiornamenti automatici: togliere la riga (o `WEB_IMAGE_TAG=latest`) e ripetere `up -d web`.
+
+**Deploy di emergenza senza CI** (GitHub o Docker Hub non disponibili, o una prova urgente da un branch): compilare l'immagine sul PC, con Docker Desktop, e copiarla sulla VPS.
+
+```bash
+cd financial-manager-app
+docker build --platform linux/amd64 -t dokjolly/financial-manager-web:latest .
+docker save dokjolly/financial-manager-web:latest | gzip -1 | ssh alex-violatto 'gunzip | docker load'
+ssh alex-violatto 'cd /projects/FinancialManager/financial-manager-backend && docker compose -f compose.yaml -f compose.prod.yaml up -d --pull never web'
+```
+
+`--pull never` ignora `pull_policy: always` per quel comando, altrimenti compose rimpiazzerebbe subito l'immagine copiata con quella di Docker Hub. Il successivo `deploy.sh` o `up -d` torna all'immagine pubblicata dalla CI. Sul PC la build richiede circa 1,5 minuti con la cache e 4–5 minuti la prima volta; si trasferiscono circa 45 MB.
+
+**Tempi e risorse.** Sulla CI la build parte da zero solo la prima volta (Flutter e dipendenze) e poi riusa la cache. L'immagine pesa circa 165 MB su disco (45 MB compressi su Docker Hub). `main.dart.js` pesa circa 8,7 MB (3,6 MB compresso) e CanvasKit 7,3 MB (3 MB compresso): il primo accesso al sito scarica circa 6,6 MB; dopo, grazie agli ETag, il browser riceve solo risposte 304 fino al deploy successivo.
+
+**Variabili** (nel `.env` della VPS, tutte facoltative):
 
 | Variabile | Default | Significato |
 |---|---|---|
 | `WEB_HOST_PORT` | `10005` | Porta su `127.0.0.1` a cui Caddy inoltra la dashboard |
-| `WEB_API_BASE_URL` | `https://financialmanager.alexviolatto.dev/api/v1` | URL dell'API compilato nella dashboard |
+| `WEB_IMAGE_TAG` | `latest` | Tag di `dokjolly/financial-manager-web` da usare; `sha-<commit>` per fissare una versione |
 
-**Aggiornare Flutter.** Cambiare `FLUTTER_VERSION` in `financial-manager-app/Dockerfile` insieme alla versione installata sul PC con cui si compila l'APK (`flutter --version`), così web e Android escono dallo stesso SDK.
+L'URL dell'API non si configura più sulla VPS: lo compila la CI (default del Dockerfile). Per un'installazione con un altro dominio serve un'immagine compilata con `--build-arg API_BASE_URL=https://altro-dominio/api/v1` (sul PC, come nel deploy di emergenza, o aggiungendo `build-args` al job).
+
+**Aggiornare Flutter.** Cambiare `FLUTTER_VERSION` in `financial-manager-app/Dockerfile` insieme alla versione installata sul PC con cui si compila l'APK (`flutter --version`), così web e Android escono dallo stesso SDK. Il cambio invalida la cache della CI: la build successiva riparte da zero e dura di più.
 
 **Cosa cambia rispetto all'app.**
 
@@ -526,7 +619,7 @@ Compose ricostruisce `web` solo se è cambiato qualcosa in `financial-manager-ap
 
 ## Build Flutter
 
-La stessa app si compila per Android (APK/AAB), iOS e il web. La build web per la produzione la fa compose (sezione 11); questa parte riguarda soprattutto Android, e la sezione 8 lo sviluppo della dashboard.
+La stessa app si compila per Android (APK/AAB), iOS e il web. La build web per la produzione la fa GitHub Actions, che la pubblica su Docker Hub (sezione 11); questa parte riguarda soprattutto Android, e la sezione 8 lo sviluppo della dashboard.
 
 L'app Flutter legge l'URL API da `--dart-define`.
 
@@ -750,7 +843,7 @@ Il backend di sviluppo gira su `http://localhost:10003`, la dashboard di `flutte
    ```
 3. Per provare la build di produzione senza Docker: `flutter build web --release --no-web-resources-cdn` e servire `build/web` con un server statico che rimandi a `index.html` i percorsi sconosciuti.
 
-Per provare l'immagine esattamente come sulla VPS:
+Per provare l'immagine esattamente come la compila la CI:
 
 ```bash
 cd financial-manager-app
@@ -773,13 +866,15 @@ Già fatto:
 - firma release Android con una keystore unica (sezione "Firma Android");
 - API in HTTPS dietro Caddy, porta `10003` solo su loopback;
 - `android:usesCleartextTraffic` tolto dalle build release.
-- dashboard web su `https://financialmanager.alexviolatto.dev`, costruita e aggiornata da compose (sezione 11).
+- dashboard web su `https://financialmanager.alexviolatto.dev`, compilata da GitHub Actions, pubblicata su Docker Hub e scaricata da compose (sezione 11);
+- aggiornamento della produzione in un comando, senza build parallele sulla VPS (`scripts/deploy.sh`, sezione 6).
 
 Ancora da fare prima di distribuire a utenti reali:
 
 - Registrare su Google Cloud lo SHA-1 della chiave di firma di Play (alla prima pubblicazione) e il bundle ID iOS se usi Google Sign-In su iOS.
 - Dashboard web: le analisi AI sul dispositivo non esistono nel browser (solo fornitori cloud); il layout desktop copre navigazione e larghezza delle pagine, non schermate pensate apposta per il desktop.
 - Firma in CI (sezione 7 di "Build Flutter").
+- Immagini Go dalla CI: `api`, `worker` e `migrate` si compilano ancora sulla VPS (una alla volta). Pubblicarle su Docker Hub come la dashboard lascerebbe alla VPS solo `pull` e `up`, con deploy più rapidi e un rollback per tag anche per il backend; servono un job di pubblicazione in `backend-ci.yml` e `image:` al posto di `build:` in `compose.prod.yaml`.
 - Storage delle immagini: MinIO community non è più mantenuto. Oggi si usa la sua ultima release ricompilata (`dokjolly/minio`, sezione 4); nel lungo periodo valutare uno storage compatibile S3 ancora sviluppato (per esempio Garage o SeaweedFS). Il backend usa un client S3 standard, quindi cambierebbero solo il compose, la copia del bucket e gli script di backup.
 - Non committare mai `.env`, keystore, `key.properties`, password o chiavi.
 
@@ -791,6 +886,9 @@ financial-manager-app/android/app/src/main/AndroidManifest.xml
 financial-manager-app/android/app/src/debug/AndroidManifest.xml
 financial-manager-backend/deploy/Caddyfile.example
 financial-manager-app/Dockerfile
+financial-manager-backend/compose.prod.yaml
+financial-manager-backend/scripts/deploy.sh
+.github/workflows/mobile-ci.yml
 ```
 
 ## Checklist veloce
@@ -798,11 +896,11 @@ financial-manager-app/Dockerfile
 Backend (sulla VPS `alex-violatto`):
 
 ```bash
-cd /projects/FinancialManager
-git pull
-cd financial-manager-backend
-docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+# se è cambiata l'app: prima il job build-web verde su GitHub
+cd /projects/FinancialManager/financial-manager-backend
+./scripts/deploy.sh
 curl https://financialmanager.alexviolatto.dev/api/health/ready
+curl -s https://financialmanager.alexviolatto.dev/version.json
 ```
 
 Flutter APK (con `android/key.properties` configurato):

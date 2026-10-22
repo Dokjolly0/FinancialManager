@@ -14,7 +14,7 @@ The API base URL comes from `--dart-define` (`lib/core/api/api_environment.dart`
 
 ## Web
 
-The same code builds for the browser (`flutter build web --release --no-web-resources-cdn`); in production compose builds and serves it (`Dockerfile`, `docker/Caddyfile.web`). Locally: `flutter run -d chrome --web-port 5000 --dart-define=API_BASE_URL=http://localhost:10003/v1`, with `CORS_ALLOWED_ORIGINS=http://localhost:5000` in the backend's `.env`.
+The same code builds for the browser (`flutter build web --release --no-web-resources-cdn`); in production CI builds the image (`Dockerfile`, `docker/Caddyfile.web`, job `build-web` in `.github/workflows/mobile-ci.yml`), publishes it to Docker Hub as `dokjolly/financial-manager-web` on every push to `main`, and the VPS pulls it. Locally: `flutter run -d chrome --web-port 5000 --dart-define=API_BASE_URL=http://localhost:10003/v1`, with `CORS_ALLOWED_ORIGINS=http://localhost:5000` in the backend's `.env`.
 
 What differs in the browser:
 
@@ -23,7 +23,7 @@ What differs in the browser:
 - Files (export, AI report) are browser downloads via `saveOrShareFile` (`lib/core/files/save_file.dart`); image cropping uses cropperjs, vendored in `web/cropperjs`.
 - From 840 px the shell shows a side rail and pages are centered (`lib/app/layout/breakpoints.dart`); URLs use the path strategy.
 
-To keep the web build working: no `dart:io` `Platform`/`File` outside `_io`/`_ffi` files (use `isAndroidApp`/`isIosApp` from `lib/core/platform/platform_info.dart` or `kIsWeb`), native-only code behind a conditional export. CI runs `flutter build web` on every push. Details: [`../docs/build-deploy.md`](../docs/build-deploy.md), "Dashboard web" and "Web in locale".
+To keep the web build working: no `dart:io` `Platform`/`File` outside `_io`/`_ffi` files (use `isAndroidApp`/`isIosApp` from `lib/core/platform/platform_info.dart` or `kIsWeb`), native-only code behind a conditional export. CI builds the web image on every push and pull request. Details: [`../docs/build-deploy.md`](../docs/build-deploy.md), "Dashboard web" and "Web in locale".
 
 ## Signing
 

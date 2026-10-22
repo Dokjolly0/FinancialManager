@@ -1101,7 +1101,7 @@ The same Flutter app is built for the browser and served at `https://financialma
 - Files: exports and AI reports are browser downloads (`saveOrShareFile`); images are cropped with cropperjs, served from the app.
 - Layout: below 840 px as on phones; from 840 px a `NavigationRail` with "Aggiungi", tab content centered at most 1100 px wide and pushed pages at most 840 px (`lib/app/layout/breakpoints.dart`). Path URL strategy (`/app/history`).
 - Session: the refresh token persists in the browser through `flutter_secure_storage` (WebCrypto-encrypted localStorage); the Content-Security-Policy (section 19.3) limits what scripts can run.
-- Deploy: service `web` in `compose.prod.yaml`, built from `financial-manager-app/Dockerfile` (Flutter pinned to the APK's version, served by Caddy with no-cache revalidation) and proxied by the host's Caddy; `docker compose ... up -d --build` updates it with the backend. Local development uses `CORS_ALLOWED_ORIGINS` (section 19). Details in `docs/build-deploy.md`.
+- Deploy: `financial-manager-app/Dockerfile` (Flutter pinned to the APK's version, served by Caddy with no-cache revalidation) is built by CI and published to Docker Hub as `dokjolly/financial-manager-web` (`latest` and `sha-<commit>`); service `web` in `compose.prod.yaml` pulls it (`pull_policy: always`, `WEB_IMAGE_TAG` for a rollback) and the host's Caddy proxies it. The VPS never compiles Flutter: on 1 vCPU / 2 GB it exhausted memory (October 2026). `scripts/deploy.sh` updates backend and dashboard together. Local development uses `CORS_ALLOWED_ORIGINS` (section 19). Details in `docs/build-deploy.md`.
 
 ---
 
@@ -2496,7 +2496,7 @@ worker
 postgres
 redis
 object-storage
-web             -- production: the Flutter web dashboard
+web             -- production: the Flutter web dashboard (image from Docker Hub, built by CI)
 reverse-proxy   -- production (Caddy on the host)
 ```
 
@@ -2730,7 +2730,7 @@ Initial targets to validate:
 - signing only in a protected environment;
 - distribution to testers.
 
-Implemented in `mobile-ci.yml`: format, analyze, tests, debug and release APK (with size analysis), unsigned iOS build, and a web release build, so imports that don't compile for the browser fail before the VPS builds the dashboard.
+Implemented in `mobile-ci.yml`: format, analyze, tests, debug and release APK (with size analysis), unsigned iOS build, and the web dashboard image (`financial-manager-app/Dockerfile`): built on every run, so imports that don't compile for the browser fail CI, and published to Docker Hub (`dokjolly/financial-manager-web:latest` and `:sha-<commit>`) on `main`, with the `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets.
 
 Android signing (implemented): one upload keystore signs release and debug builds on every PC, so Google Sign-In needs a single SHA-1 and APKs built anywhere update each other. `android/app/build.gradle.kts` reads its path and passwords from `android/key.properties` (never committed; `key.properties.example` shows the fields); without it builds fall back to the local debug key, which is what CI does today. For the Play Store the keystore is the upload key of Play App Signing, and the SHA-1 of Google's app signing key gets its own Android OAuth client. Signing in CI from GitHub Secrets is documented as future work in `docs/build-deploy.md`.
 
@@ -2749,7 +2749,7 @@ Android signing (implemented): one upload keystore signs release and debug build
 
 ### 24.3 Deploy
 
-Production runs on the `alex-violatto` VPS (`/projects/FinancialManager`, Docker Compose behind the host's Caddy); `docs/build-deploy.md` has the procedure, including moving the stack to another VPS (database dump plus the MinIO volume, same `.env`).
+Production runs on the `alex-violatto` VPS (`/projects/FinancialManager`, Docker Compose behind the host's Caddy); `docs/build-deploy.md` has the procedure, including moving the stack to another VPS (database dump plus the MinIO volume, same `.env`). Updates run with `financial-manager-backend/scripts/deploy.sh`: `git pull`, Go images built one at a time on the VPS, the dashboard image pulled from Docker Hub, `up -d` (migrations first), readiness check.
 
 1. Backup or verification of a recent backup.
 2. Running compatible migrations.

@@ -26,7 +26,7 @@ cp .env.example .env
 docker compose -f compose.yaml -f compose.dev.yaml up --build
 ```
 
-Default host ports: PostgreSQL `10001`, Redis `10002`, API `10003`, MinIO `10004`. In production the backend runs on the `alex-violatto` VPS behind Caddy, and clients use `https://financialmanager.alexviolatto.dev/api/v1` (the API is published only on `127.0.0.1:10003`); ports are configurable through the backend `.env` file. The production compose also builds and serves the web dashboard (service `web`, on `127.0.0.1:10005` behind the same Caddy). See [`docs/build-deploy.md`](docs/build-deploy.md) for deploy, HTTPS, the web dashboard and Android release signing. See [`financial-manager-backend/README.md`](financial-manager-backend/README.md) for running without Docker, migrations, and health checks.
+Default host ports: PostgreSQL `10001`, Redis `10002`, API `10003`, MinIO `10004`. In production the backend runs on the `alex-violatto` VPS behind Caddy, and clients use `https://financialmanager.alexviolatto.dev/api/v1` (the API is published only on `127.0.0.1:10003`); ports are configurable through the backend `.env` file. The production compose also serves the web dashboard (service `web`, on `127.0.0.1:10005` behind the same Caddy): GitHub Actions builds its image and publishes it to Docker Hub (`dokjolly/financial-manager-web`), the VPS only pulls it. Production updates run with `financial-manager-backend/scripts/deploy.sh`. See [`docs/build-deploy.md`](docs/build-deploy.md) for deploy, HTTPS, the web dashboard and Android release signing. See [`financial-manager-backend/README.md`](financial-manager-backend/README.md) for running without Docker, migrations, and health checks.
 
 ### App
 

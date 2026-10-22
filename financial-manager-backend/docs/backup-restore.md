@@ -57,8 +57,10 @@ compose.dev.yaml up -d`, or the staging/production equivalent).
 
 The worker (`cmd/worker`) uploads encrypted backups to a Google Drive
 folder. It is on by default under `compose.prod.yaml` and off elsewhere
-(`BACKUP_ENABLED`), so the normal deploy command is all it takes:
-`docker compose -f compose.yaml -f compose.prod.yaml up -d --build`.
+(`BACKUP_ENABLED`), so the normal deploy is all it takes:
+`./scripts/deploy.sh` (it builds the Go images one at a time and runs
+`docker compose -f compose.yaml -f compose.prod.yaml up -d`; see
+`../docs/build-deploy.md`, section 6).
 
 What is uploaded, and how long it is kept:
 
