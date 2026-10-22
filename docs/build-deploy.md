@@ -170,10 +170,9 @@ Il dominio `.dev` è nella lista HSTS precaricata dei browser, quindi si raggiun
 financialmanager.alexviolatto.dev {
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
-	@metrics path /api/metrics /api/metrics/*
-	respond @metrics 404
-
 	handle_path /api/* {
+		respond /metrics* 404
+
 		reverse_proxy 127.0.0.1:10003 {
 			flush_interval -1
 		}
@@ -190,7 +189,7 @@ financialmanager.alexviolatto.dev {
 Cosa fa ogni parte:
 
 - `Strict-Transport-Security`: i client ricordano per un anno di usare solo HTTPS (plan.md sezione 19.3);
-- `/api/metrics` risponde 404: il backend espone le metriche Prometheus su `/metrics` senza autenticazione e non devono essere pubbliche (plan.md sezione 22.1);
+- `/api/metrics` risponde 404: il backend espone le metriche Prometheus su `/metrics` senza autenticazione e non devono essere pubbliche (plan.md sezione 22.1). La regola sta **dentro** `handle_path`, dove il prefisso `/api` è già stato tolto (quindi `/metrics*`): Caddy esegue `handle_path` prima di `respond`, e un `respond` messo fuori dal blocco non verrebbe mai applicato;
 - `handle_path /api/*` inoltra all'API togliendo `/api` (`/api/v1/me` → `/v1/me`, `/api/health/ready` → `/health/ready`) e aggiunge `X-Forwarded-For`. `flush_interval -1` serve allo streaming delle analisi AI (sezione 8);
 - `handle` serve i file statici della dashboard; `try_files` rimanda a `index.html` i percorsi che non sono file, così le route dell'app web funzioneranno anche ricaricando la pagina.
 

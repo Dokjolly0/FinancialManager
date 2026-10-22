@@ -11,11 +11,6 @@ financialmanager.alexviolatto.dev {
 	# HSTS-preloaded anyway.
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
-	# The API serves Prometheus metrics on /metrics without auth: they must
-	# stay off the public internet (plan.md section 22.1).
-	@metrics path /api/metrics /api/metrics/*
-	respond @metrics 404
-
 	# The API, published by compose.prod.yaml on 127.0.0.1:10003
 	# (API_HOST_BIND=127.0.0.1). handle_path strips /api, so the backend keeps
 	# its own routes (/v1/..., /health/...): the app's base URL is
@@ -23,6 +18,13 @@ financialmanager.alexviolatto.dev {
 	# Caddy sets X-Forwarded-For; the API trusts it only from
 	# TRUSTED_PROXY_CIDRS.
 	handle_path /api/* {
+		# The API serves Prometheus metrics on /metrics without auth: they
+		# must stay off the public internet (plan.md section 22.1). Inside
+		# handle_path the /api prefix is already gone, and respond runs
+		# before reverse_proxy. (A respond outside this block would never
+		# run: Caddy orders handle_path before respond.)
+		respond /metrics* 404
+
 		reverse_proxy 127.0.0.1:10003 {
 			# AI analyses stream as Server-Sent Events: send every chunk at
 			# once. Caddy has no read timeout by default, so streams up to
