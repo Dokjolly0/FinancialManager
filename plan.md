@@ -2747,6 +2747,8 @@ Android signing (implemented): one upload keystore signs release and debug build
 - SBOM;
 - registry push.
 
+Implemented in `backend-ci.yml`: gofmt, `go vet`, `go test -race`, govulncheck (fails on vulnerabilities the code reaches), Redocly lint of the OpenAPI contract, then the API and worker image builds scanned by Trivy (HIGH/CRITICAL with a fix fail the build). The Go release comes from go.mod's `toolchain` directive (latest patch, for the standard library's security fixes); images build on `golang:1.27-alpine3.24` and run on `alpine:3.24`. Both workflows run on `ubuntu-26.04` with actions on Node 24; third-party actions that had their tags moved (`trivy-action`) are pinned to a commit. Registry push and SBOM are not done for the Go images (they build on the VPS); the web dashboard image is pushed by `mobile-ci.yml` (section 24.1).
+
 ### 24.3 Deploy
 
 Production runs on the `alex-violatto` VPS (`/projects/FinancialManager`, Docker Compose behind the host's Caddy); `docs/build-deploy.md` has the procedure, including moving the stack to another VPS (database dump plus the MinIO volume, same `.env`). Updates run with `financial-manager-backend/scripts/deploy.sh`: `git pull`, Go images built one at a time on the VPS, the dashboard image pulled from Docker Hub, `up -d` (migrations first), readiness check.

@@ -14,9 +14,9 @@ cp .env.example .env
 docker compose -f compose.yaml -f compose.dev.yaml up --build
 ```
 
-Default dev host ports (loopback-only, configurable in `.env`): PostgreSQL `10001`, Redis `10002`, API `10003`, MinIO `10004`. In production, only the API and the web dashboard (service `web`, `127.0.0.1:10005`, defined in `compose.prod.yaml`) are published, the API on `API_HOST_BIND:API_HOST_PORT` (`127.0.0.1:10003` on the live VPS): the host's Caddy terminates HTTPS and forwards `https://financialmanager.alexviolatto.dev/api/*` to it with the `/api` prefix stripped, so clients use `https://financialmanager.alexviolatto.dev/api/v1`. `TRUSTED_PROXY_CIDRS` lets the API read the real client IP from Caddy's `X-Forwarded-For`. `CORS_ALLOWED_ORIGINS` is for developing the dashboard locally only. The site block is in [`deploy/Caddyfile.example`](deploy/Caddyfile.example); the full procedure is in [`../docs/build-deploy.md`](../docs/build-deploy.md).
+Default dev host ports (loopback-only, configurable in `.env`): PostgreSQL `10001`, Redis `10002`, API `10003`, MinIO `10004`. In production, only the API and the web dashboard (service `web`, `127.0.0.1:10005`, defined in `compose.prod.yaml`) are published, the API on `API_HOST_BIND:API_HOST_PORT` (`127.0.0.1:10003` on the live VPS): the host's Caddy terminates HTTPS and forwards `https://financialmanager.alexviolatto.dev/api/*` to it with the `/api` prefix stripped, so clients use `https://financialmanager.alexviolatto.dev/api/v1`. `TRUSTED_PROXY_CIDRS` lets the API read the real client IP from Caddy's `X-Forwarded-For`. `CORS_ALLOWED_ORIGINS` is for developing the dashboard locally only. The site block is in [`deploy/Caddyfile.example`](deploy/Caddyfile.example); the full procedure is in [`../docs/build-deploy.md`](../docs/build-deploy.md). Worker metrics stay internal on `9101`.
 
-Production updates go through `./scripts/deploy.sh` on the VPS: `git pull`, then the Go images built one at a time (never `up -d --build`, which builds them in parallel and strains the 2 GB VPS), the dashboard image pulled, `up -d` and a readiness check. The dashboard is never built on the VPS: CI publishes it to Docker Hub as `dokjolly/financial-manager-web` (`latest` and `sha-<commit>`; `WEB_IMAGE_TAG` pins one for a rollback) and `compose.prod.yaml` runs it with `pull_policy: always`. Worker metrics stay internal on `9101`.
+Production updates go through `./scripts/deploy.sh` on the VPS: `git pull`, then the Go images built one at a time with `--pull` (so a rebuild picks up the base images' security fixes) (never `up -d --build`, which builds them in parallel and strains the 2 GB VPS), the dashboard image pulled, `up -d` and a readiness check. The dashboard is never built on the VPS: CI publishes it to Docker Hub as `dokjolly/financial-manager-web` (`latest` and `sha-<commit>`; `WEB_IMAGE_TAG` pins one for a rollback) and `compose.prod.yaml` runs it with `pull_policy: always`.
 
 Run migrations manually against the dev stack:
 
@@ -25,6 +25,38 @@ docker compose -f compose.yaml -f compose.dev.yaml run --rm migrate
 ```
 
 Health checks: `GET /health/live`, `GET /health/ready`.
+
+## Go version
+
+`go.mod` has two lines that matter:
+
+- `go 1.26.0`: the minimum language version (raised by dependencies, e.g. `golang.org/x/net`);
+- `toolchain go1.27.3`: the release actually used. CI's `actions/setup-go` installs this one, and a local `go` older than it downloads it automatically (`GOTOOLCHAIN=auto`, the default). It is pinned to the latest patch release because the standard library's security fixes (`net/http`, `crypto/tls`, `crypto/x509`, ...) only arrive in patch releases, and govulncheck reports them.
+
+The Docker images build with `golang:1.27-alpine3.24` and run on `alpine:3.24`; the minor-version tags follow patch releases, and `scripts/deploy.sh` builds with `--pull` to fetch them.
+
+Go supports only the two latest major releases: when a new one comes out (every February and August), move to it.
+
+Updating:
+
+```bash
+go mod edit -toolchain=go1.27.4     # new patch release
+go get golang.org/x/net@latest      # a dependency flagged by govulncheck
+go mod tidy
+go build ./... && go vet ./... && go test ./...
+go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+```
+
+For a new major release also change the `golang:` tag in `Dockerfile`. Then rebuild the images and scan them like CI does: `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --severity HIGH,CRITICAL --ignore-unfixed financial-manager-api:ci`.
+
+## CI
+
+`.github/workflows/backend-ci.yml`, on pushes to `main` and pull requests that touch this folder:
+
+- `lint-and-test`: `gofmt`, `go vet`, `go test -race`, govulncheck and the OpenAPI lint (Redocly). govulncheck fails only on vulnerabilities the code can actually reach; the others are listed as informational (today one, `golang.org/x/crypto/openpgp`, which has no fix and is not imported).
+- `docker-build`: builds the API and worker images and scans them with Trivy, failing on HIGH/CRITICAL findings that have a fix, in both the Alpine packages and the Go binaries.
+
+Runners are pinned to `ubuntu-26.04` (not `ubuntu-latest`, which moves to a new Ubuntu every two years), actions are on releases that run on Node 24, and `trivy-action` is pinned to a commit rather than a tag. `setup-go` caches modules keyed on `go.sum` (`cache-dependency-path`, needed because `go.sum` is not at the repository root).
 
 ## Running without Docker
 

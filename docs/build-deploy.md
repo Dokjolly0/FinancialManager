@@ -306,7 +306,7 @@ cd /projects/FinancialManager/financial-manager-backend
 `scripts/deploy.sh` fa, in ordine:
 
 1. `git pull --ff-only` del repository (si salta con `--no-pull`; se il pull non è un fast-forward lo script si ferma senza toccare nulla);
-2. `docker compose ... build migrate`, poi `api`, poi `worker`: una build alla volta, così sulla VPS non ci sono mai due compilazioni Go insieme;
+2. `docker compose ... build --pull migrate`, poi `api`, poi `worker`: una build alla volta, così sulla VPS non ci sono mai due compilazioni Go insieme. `--pull` scarica le versioni più recenti delle immagini base (`golang:1.27-alpine3.24`, `alpine:3.24`), così ogni rebuild prende le loro correzioni di sicurezza;
 3. `docker compose ... pull web`: l'ultima immagine della dashboard da Docker Hub (sezione 11);
 4. `docker compose ... up -d`: ricrea solo i container la cui immagine o configurazione è cambiata; `migrate` applica le migrazioni nuove prima di `api` e `worker`;
 5. `docker image prune -f`: elimina le immagini vecchie rimaste senza tag;
@@ -320,7 +320,7 @@ Gli stessi passi a mano:
 cd /projects/FinancialManager && git pull
 cd financial-manager-backend
 C="docker compose -f compose.yaml -f compose.prod.yaml"
-for s in migrate api worker; do $C build "$s"; done
+for s in migrate api worker; do $C build --pull "$s"; done
 $C pull web
 $C up -d
 ```
