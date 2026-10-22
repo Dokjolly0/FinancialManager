@@ -1,9 +1,11 @@
 # syntax=docker/dockerfile:1
 #
 # The web dashboard (plan.md section 9, docs/build-deploy.md "Dashboard
-# web"): Flutter web build served by Caddy on :8080. Built by
-# financial-manager-backend/compose.prod.yaml (service `web`), so
-# `docker compose ... up -d --build` on the VPS also updates the dashboard.
+# web"): Flutter web build served by Caddy on :8080. Built by CI (job
+# build-web in .github/workflows/mobile-ci.yml) and published as
+# dokjolly/financial-manager-web; the VPS pulls it (service `web` of
+# financial-manager-backend/compose.prod.yaml) and never builds it: the
+# compile needs more memory than the VPS has.
 #
 # Build args:
 #   FLUTTER_VERSION  Flutter release used to compile; keep it equal to the
