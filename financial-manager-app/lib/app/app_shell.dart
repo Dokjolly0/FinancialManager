@@ -9,6 +9,7 @@ import '../features/wallets/presentation/widgets/transfer_sheet.dart';
 import '../features/wallets/presentation/widgets/voucher_credit_sheet.dart';
 import '../features/wallets/presentation/widgets/voucher_expense_sheet.dart';
 import '../features/wallets/presentation/widgets/wallet_picker_sheet.dart';
+import 'layout/breakpoints.dart';
 import 'router.dart';
 
 /// The persistent bottom navigation (plan.md section 5.1): four
@@ -17,13 +18,25 @@ import 'router.dart';
 /// transfer, or a meal-voucher expense — instead of being a fifth tab.
 /// The transfer and voucher entries were previously buried in the
 /// Account → Portafogli app bar; here they're one tap from every tab.
+///
+/// On wide windows (the web dashboard, tablets) the same destinations and
+/// "Aggiungi" sit in a side rail, labelled from 1200 px, and the tab
+/// content is centered at most [Breakpoints.shellMaxWidth] wide.
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
+  static const _destinations = [
+    (Icons.home_outlined, Icons.home, 'Home'),
+    (Icons.history_outlined, Icons.history, 'Cronologia'),
+    (Icons.bar_chart_outlined, Icons.bar_chart, 'Report'),
+    (Icons.person_outline, Icons.person, 'Account'),
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (Breakpoints.isWide(context)) return _wide(context, ref);
     return Scaffold(
       body: navigationShell,
       floatingActionButton: FloatingActionButton(
@@ -68,6 +81,55 @@ class AppShell extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+extension on AppShell {
+  Widget _wide(BuildContext context, WidgetRef ref) {
+    final extended = Breakpoints.isExpanded(context);
+    return Scaffold(
+      body: Row(
+        children: [
+          NavigationRail(
+            extended: extended,
+            labelType: extended
+                ? NavigationRailLabelType.none
+                : NavigationRailLabelType.all,
+            selectedIndex: navigationShell.currentIndex,
+            onDestinationSelected: navigationShell.goBranch,
+            leading: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: extended
+                  ? FloatingActionButton.extended(
+                      onPressed: () => _showAddMenu(context, ref),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Aggiungi'),
+                    )
+                  : FloatingActionButton(
+                      onPressed: () => _showAddMenu(context, ref),
+                      tooltip: 'Aggiungi operazione',
+                      child: const Icon(Icons.add),
+                    ),
+            ),
+            destinations: [
+              for (final (icon, selectedIcon, label) in AppShell._destinations)
+                NavigationRailDestination(
+                  icon: Icon(icon),
+                  selectedIcon: Icon(selectedIcon),
+                  label: Text(label),
+                ),
+            ],
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(
+            child: AdaptivePage(
+              maxWidth: Breakpoints.shellMaxWidth,
+              child: navigationShell,
+            ),
+          ),
+        ],
       ),
     );
   }

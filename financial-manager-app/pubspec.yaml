@@ -12,6 +12,9 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  # usePathUrlStrategy: clean URLs (/app/home) in the web dashboard.
+  flutter_web_plugins:
+    sdk: flutter
 
   cupertino_icons: ^1.0.8
 
