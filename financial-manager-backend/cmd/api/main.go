@@ -89,7 +89,7 @@ func run() error {
 		Redis:    func(ctx context.Context) error { return redisClient.Ping(ctx).Err() },
 	}
 
-	router := httpserver.New(logger, checks, cfg.HTTPRequestTimeout, cfg.TrustedProxies)
+	router := httpserver.New(logger, checks, cfg.HTTPRequestTimeout, cfg.TrustedProxies, cfg.CORSAllowedOrigins)
 	if err := mountRoutes(router, dbPool, redisClient, objectStore, cfg, logger); err != nil {
 		return err
 	}

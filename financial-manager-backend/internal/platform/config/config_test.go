@@ -17,7 +17,7 @@ func clearEnv(t *testing.T) {
 		"BACKUP_ENABLED", "BACKUP_ENCRYPTION_KEY", "BACKUP_INTERVAL", "BACKUP_RETENTION_DAYS",
 		"BACKUP_RETENTION_MONTHS", "BACKUP_INCLUDE_MEDIA", "BACKUP_GDRIVE_FOLDER_NAME",
 		"GDRIVE_CLIENT_ID", "GDRIVE_CLIENT_SECRET", "GDRIVE_REFRESH_TOKEN",
-		"HTTP_REQUEST_TIMEOUT", "TRUSTED_PROXY_CIDRS", "AI_KEY_ENCRYPTION_KEY", "AI_KEY_ENCRYPTION_KEY_PREVIOUS",
+		"HTTP_REQUEST_TIMEOUT", "TRUSTED_PROXY_CIDRS", "CORS_ALLOWED_ORIGINS", "AI_KEY_ENCRYPTION_KEY", "AI_KEY_ENCRYPTION_KEY_PREVIOUS",
 		"AI_ALLOW_PRIVATE_BASE_URLS", "AI_ALLOWED_BASE_URL_HOSTS", "AI_STREAM_MAX_DURATION",
 		"AI_STREAM_IDLE_TIMEOUT", "AI_MAX_PROMPT_TOKENS", "AI_RUNS_PER_HOUR",
 		"AI_ON_DEVICE_ENABLED", "AI_LOCAL_RUNS_PER_HOUR", "AI_LOCAL_MAX_DURATION",
@@ -267,5 +267,26 @@ func TestLoad_TrustedProxies(t *testing.T) {
 	t.Setenv("TRUSTED_PROXY_CIDRS", "not-an-ip")
 	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "TRUSTED_PROXY_CIDRS") {
 		t.Fatalf("expected a TRUSTED_PROXY_CIDRS error, got %v", err)
+	}
+}
+
+func TestLoad_CORSAllowedOrigins(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("DATABASE_URL", "postgres://localhost/test")
+	t.Setenv("CORS_ALLOWED_ORIGINS", "http://localhost:5000, http://127.0.0.1:5000/")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(cfg.CORSAllowedOrigins) != 2 {
+		t.Fatalf("CORSAllowedOrigins = %v", cfg.CORSAllowedOrigins)
+	}
+
+	for _, bad := range []string{"localhost:5000", "http://localhost:5000/app", "*"} {
+		t.Setenv("CORS_ALLOWED_ORIGINS", bad)
+		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "CORS_ALLOWED_ORIGINS") {
+			t.Fatalf("%q: expected a CORS_ALLOWED_ORIGINS error, got %v", bad, err)
+		}
 	}
 }

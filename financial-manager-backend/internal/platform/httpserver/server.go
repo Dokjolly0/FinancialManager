@@ -25,7 +25,7 @@ import (
 // streaming routes (the AI analysis, plan.md section 32.4) would be cut
 // off mid-response. Callers wrap every other route group in
 // Timeout(requestTimeout) instead, as done here for the health endpoints.
-func New(logger *slog.Logger, checks HealthChecks, requestTimeout time.Duration, trustedProxies []netip.Prefix) chi.Router {
+func New(logger *slog.Logger, checks HealthChecks, requestTimeout time.Duration, trustedProxies []netip.Prefix, corsOrigins []string) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(chimiddleware.RequestID)
@@ -34,6 +34,7 @@ func New(logger *slog.Logger, checks HealthChecks, requestTimeout time.Duration,
 	// 19.5). Ours only reads the header when the peer is the reverse proxy
 	// named in TRUSTED_PROXY_CIDRS.
 	r.Use(RealIP(trustedProxies))
+	r.Use(CORS(corsOrigins))
 	r.Use(RequestLogger(logger))
 	r.Use(MetricsMiddleware)
 	r.Use(chimiddleware.Recoverer)
