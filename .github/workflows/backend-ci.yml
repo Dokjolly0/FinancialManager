@@ -17,13 +17,17 @@ defaults:
 
 jobs:
   lint-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      # Uses go.mod's toolchain directive (the latest patch release, with
+      # the standard library's security fixes), not the go directive,
+      # which is only the minimum version.
+      - uses: actions/setup-go@v7
         with:
           go-version-file: financial-manager-backend/go.mod
+          cache-dependency-path: financial-manager-backend/go.sum
 
       - name: gofmt check
         run: |
@@ -49,10 +53,10 @@ jobs:
         run: npx --yes @redocly/cli@latest lint openapi/openapi.yaml
 
   docker-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: lint-and-test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build API image
         run: docker build --build-arg TARGET=api -t financial-manager-api:ci .
@@ -62,11 +66,14 @@ jobs:
         run: docker build --build-arg TARGET=worker -t financial-manager-worker:ci .
         working-directory: financial-manager-backend
 
+      # trivy-action is pinned to a commit, not a tag: a tag can be moved to
+      # other code (it happened to this action's tags in 2026), a commit
+      # can't.
       # plan.md section 19.8: "Scansione vulnerabilità... immagini Docker".
       # Fails the build on HIGH/CRITICAL findings; a base-image CVE isn't
       # something app code can wait out until the next unrelated release.
       - name: Scan API image (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: financial-manager-api:ci
           severity: HIGH,CRITICAL
@@ -74,7 +81,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Scan worker image (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: financial-manager-worker:ci
           severity: HIGH,CRITICAL

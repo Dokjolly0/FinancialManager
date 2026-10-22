@@ -20,9 +20,9 @@ defaults:
 
 jobs:
   analyze-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
@@ -40,10 +40,10 @@ jobs:
         run: flutter test
 
   build-android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: analyze-and-test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
@@ -71,17 +71,17 @@ jobs:
   # Secrets: DOCKERHUB_USERNAME and DOCKERHUB_TOKEN (Docker Hub access
   # token with Read & Write permission).
   build-web:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: analyze-and-test
     env:
       IMAGE: dokjolly/financial-manager-web
       PUBLISH: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         if: env.PUBLISH == 'true'
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -89,7 +89,7 @@ jobs:
 
       # The VPS is amd64; the API URL is the Dockerfile's default
       # (https://financialmanager.alexviolatto.dev/api/v1).
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: financial-manager-app
           platforms: linux/amd64
@@ -107,7 +107,7 @@ jobs:
     runs-on: macos-latest
     needs: analyze-and-test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
