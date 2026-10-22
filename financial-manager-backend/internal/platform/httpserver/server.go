@@ -7,6 +7,7 @@ package httpserver
 import (
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"time"
 
@@ -24,15 +25,15 @@ import (
 // streaming routes (the AI analysis, plan.md section 32.4) would be cut
 // off mid-response. Callers wrap every other route group in
 // Timeout(requestTimeout) instead, as done here for the health endpoints.
-func New(logger *slog.Logger, checks HealthChecks, requestTimeout time.Duration) chi.Router {
+func New(logger *slog.Logger, checks HealthChecks, requestTimeout time.Duration, trustedProxies []netip.Prefix) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(chimiddleware.RequestID)
-	// Intentionally no chi RealIP middleware: it blindly trusts
-	// X-Forwarded-For/X-Real-IP, which lets a direct caller spoof its IP and
-	// defeat per-IP rate limiting (plan.md section 19.5). Real-client-IP
-	// resolution is added once the reverse proxy is in place, scoped to only
-	// trust headers set by that specific proxy.
+	// Not chi's RealIP middleware: it blindly trusts X-Forwarded-For/
+	// X-Real-IP, which lets a direct caller spoof its IP (plan.md section
+	// 19.5). Ours only reads the header when the peer is the reverse proxy
+	// named in TRUSTED_PROXY_CIDRS.
+	r.Use(RealIP(trustedProxies))
 	r.Use(RequestLogger(logger))
 	r.Use(MetricsMiddleware)
 	r.Use(chimiddleware.Recoverer)

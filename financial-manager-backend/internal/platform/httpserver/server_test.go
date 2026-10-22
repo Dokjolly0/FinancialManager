@@ -32,7 +32,7 @@ func TestNew_TimeoutAppliesOnlyToOptInGroups(t *testing.T) {
 		Database: func(context.Context) error { return nil },
 		Redis:    func(context.Context) error { return nil },
 	}
-	router := New(slog.New(slog.NewTextHandler(io.Discard, nil)), checks, timeout)
+	router := New(slog.New(slog.NewTextHandler(io.Discard, nil)), checks, timeout, nil)
 
 	router.Group(func(r chi.Router) {
 		r.Use(Timeout(timeout))

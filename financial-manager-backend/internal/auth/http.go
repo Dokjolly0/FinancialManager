@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -42,8 +43,15 @@ func (h *Handler) MountProtected(r chi.Router) {
 	r.Delete("/v1/me", h.deleteAccount)
 }
 
+// clientIPHash hashes the client's address without the port, which changes
+// on every connection. Behind the reverse proxy RemoteAddr already holds
+// the real client (httpserver.RealIP).
 func clientIPHash(r *http.Request) []byte {
-	sum := sha256.Sum256([]byte(r.RemoteAddr))
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	sum := sha256.Sum256([]byte(host))
 	return sum[:]
 }
 
