@@ -2614,7 +2614,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get aiLocalKeepOpen =>
-      'Il telefono sta scrivendo: tieni l\'app aperta finché non ha finito.';
+      'Il telefono sta scrivendo. Puoi uscire dall\'app: ti avvisiamo quando ha finito.';
 
   @override
   String aiLocalTokensPerSecond(String value) {
@@ -2782,4 +2782,42 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get notifyDownloadFailedTitle => 'Download non riuscito';
+
+  @override
+  String get aiLeaveTitle => 'L\'analisi è ancora in corso';
+
+  @override
+  String get aiLeaveBody =>
+      'Il telefono sta ancora scrivendo. Puoi interromperla (il testo scritto finora viene salvato), restare qui o lasciarla continuare in background: ti avvisiamo con una notifica quando ha finito.';
+
+  @override
+  String get aiLeaveStop => 'Interrompi';
+
+  @override
+  String get aiLeaveStay => 'Resta';
+
+  @override
+  String get aiLeaveBackground => 'Continua in background';
+
+  @override
+  String bgWritingReport(int words) {
+    return 'Scrittura del report · $words parole';
+  }
+
+  @override
+  String bgWritingAnswer(int words) {
+    return 'Scrittura della risposta · $words parole';
+  }
+
+  @override
+  String get notifyReportReadyTitle => 'Analisi pronta';
+
+  @override
+  String get notifyAnswerReadyTitle => 'Risposta pronta';
+
+  @override
+  String get notifyAnalysisFailedTitle => 'Analisi interrotta';
+
+  @override
+  String get notifyAnalysisFallbackBody => 'Tocca per leggerla.';
 }

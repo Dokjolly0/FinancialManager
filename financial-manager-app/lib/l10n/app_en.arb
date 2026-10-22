@@ -1007,7 +1007,7 @@
   "aiLocalWarnWarm": "The phone is warm: it will be slower.",
   "aiLocalWarnBattery": "Battery below 15%: plug in the charger.",
   "aiLocalWarnMemory": "Little free memory: close other apps if the analysis stops.",
-  "aiLocalKeepOpen": "The phone is writing: keep the app open until it finishes.",
+  "aiLocalKeepOpen": "The phone is writing. You can leave the app: we'll let you know when it is done.",
   "aiLocalTokensPerSecond": "{value} tokens/s",
   "@aiLocalTokensPerSecond": {
     "placeholders": {
@@ -1125,5 +1125,30 @@
       }
     }
   },
-  "notifyDownloadFailedTitle": "Download failed"
+  "notifyDownloadFailedTitle": "Download failed",
+  "aiLeaveTitle": "The analysis is still running",
+  "aiLeaveBody": "The phone is still writing. You can stop it (what was written so far is saved), stay here or let it go on in the background: a notification tells you when it is done.",
+  "aiLeaveStop": "Stop",
+  "aiLeaveStay": "Stay",
+  "aiLeaveBackground": "Continue in background",
+  "bgWritingReport": "Writing the report · {words} words",
+  "@bgWritingReport": {
+    "placeholders": {
+      "words": {
+        "type": "int"
+      }
+    }
+  },
+  "bgWritingAnswer": "Writing the answer · {words} words",
+  "@bgWritingAnswer": {
+    "placeholders": {
+      "words": {
+        "type": "int"
+      }
+    }
+  },
+  "notifyReportReadyTitle": "Analysis ready",
+  "notifyAnswerReadyTitle": "Answer ready",
+  "notifyAnalysisFailedTitle": "Analysis interrupted",
+  "notifyAnalysisFallbackBody": "Tap to read it."
 }

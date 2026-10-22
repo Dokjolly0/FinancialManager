@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../app/session/current_user_provider.dart';
 import '../../../core/api/providers.dart';
+import '../../../core/errors/error_code_localizations.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../account/presentation/view_models/account_providers.dart';
 import '../domain/local/local_llm_engine.dart';
@@ -152,8 +153,8 @@ final localPendingResultsProvider =
 
 /// Not auto-disposed: a run must finish and submit its result even when
 /// the screen that started it is gone.
-final localAiRunnerProvider = Provider<LocalAiRunner>(
-  (ref) => LocalAiRunner(
+final localAiRunnerProvider = Provider<LocalAiRunner>((ref) {
+  final runner = LocalAiRunner(
     repo: ref.watch(aiRepositoryProvider),
     host: ref.watch(localModelHostProvider),
     outbox: ref.watch(localResultOutboxProvider),
@@ -162,8 +163,51 @@ final localAiRunnerProvider = Provider<LocalAiRunner>(
       final u = ref.read(currentUserProvider);
       return u == null ? null : '${u.firstName} ${u.lastName} (@${u.username})';
     },
-  ),
+    background: ref.watch(backgroundWorkProvider),
+    notifier: ref.watch(aiNotifierProvider),
+    texts: () {
+      final l10n = ref.read(appL10nProvider);
+      return LocalRunTexts(
+        writingReport: l10n.bgWritingReport,
+        writingAnswer: l10n.bgWritingAnswer,
+        reportReadyTitle: l10n.notifyReportReadyTitle,
+        answerReadyTitle: l10n.notifyAnswerReadyTitle,
+        failedTitle: l10n.notifyAnalysisFailedTitle,
+        fallbackBody: l10n.notifyAnalysisFallbackBody,
+        describeError: (code) => localizeErrorCode(l10n, code),
+      );
+    },
+    shouldNotify: () {
+      // Off screen, or on screen but elsewhere; never with AI turned off.
+      final profile = ref.exists(accountProfileProvider)
+          ? ref.read(accountProfileProvider).value
+          : null;
+      return profile?.aiEnabled ?? true;
+    },
+    visibleAnalysisId: () => ref.read(appInForegroundProvider)()
+        ? ref.read(aiVisibleAnalysisProvider)
+        : null,
+  );
+  ref.onDispose(runner.dispose);
+  return runner;
+});
+
+/// The analysis on screen now, set by the analysis screen: its runs don't
+/// notify while the user reads them.
+final aiVisibleAnalysisProvider = NotifierProvider<AiVisibleAnalysis, String?>(
+  AiVisibleAnalysis.new,
 );
+
+class AiVisibleAnalysis extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void show(String? id) => state = id;
+
+  void hide(String? id) {
+    if (state == id) state = null;
+  }
+}
 
 /// Where the text of a turn comes from: the server streaming a cloud
 /// provider, or the phone.

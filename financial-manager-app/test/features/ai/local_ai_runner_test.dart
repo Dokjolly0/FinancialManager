@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:financialmanager/core/errors/app_error.dart';
+import 'package:financialmanager/features/ai/data/local/background_work.dart';
 import 'package:financialmanager/features/ai/data/local/local_ai_runner.dart';
 import 'package:financialmanager/features/ai/data/local/local_result_outbox.dart';
 import 'package:financialmanager/features/ai/domain/local/local_llm_engine.dart';
@@ -14,6 +15,7 @@ import 'package:financialmanager/features/ai/domain/models/ai_stream_event.dart'
 import 'package:financialmanager/features/ai/domain/models/local_model.dart';
 import 'package:financialmanager/features/ai/domain/repositories/ai_repository.dart';
 
+import 'fakes/fake_background.dart';
 import 'fakes/fake_local_engine.dart';
 
 class _FakeRepo implements AiRepository {
@@ -334,22 +336,114 @@ void main() {
     expect(repo.submitted.last.$3.status, 'FAILED');
   });
 
-  test('the engine stops when the screen goes away', () async {
-    engine
-      ..deltas = List.filled(20, 'x')
-      ..delay = const Duration(milliseconds: 20);
-    final gotDelta = Completer<void>();
-    final sub = run().listen((e) {
-      if (e is AiStreamDelta && !gotDelta.isCompleted) gotDelta.complete();
-    });
-    await gotDelta.future;
-    await sub.cancel();
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    expect(engine.cancelled, isTrue);
-    expect(
-      repo.submitted.single.$3.status,
-      'CANCELLED',
-      reason: 'the partial text is still saved',
+  group('in the background', () {
+    late FakeBackgroundWork background;
+    late FakeAiNotifier notifier;
+    var notify = true;
+    String? visible;
+
+    LocalAiRunner bgRunner() => LocalAiRunner(
+      repo: repo,
+      host: host,
+      outbox: outbox,
+      currentUserId: () => 'u1',
+      background: background,
+      notifier: notifier,
+      texts: () => LocalRunTexts(
+        writingReport: (w) => 'report $w',
+        writingAnswer: (w) => 'answer $w',
+        reportReadyTitle: 'Analisi pronta',
+        answerReadyTitle: 'Risposta pronta',
+        failedTitle: 'Analisi interrotta',
+        fallbackBody: 'Tocca per leggerla.',
+        describeError: (c) => c,
+      ),
+      shouldNotify: () => notify,
+      visibleAnalysisId: () => visible,
     );
+
+    setUp(() {
+      background = FakeBackgroundWork();
+      notifier = FakeAiNotifier();
+      notify = true;
+      visible = null;
+    });
+
+    test('the turn goes on when nobody listens, then notifies', () async {
+      engine
+        ..deltas = List.filled(10, 'parola ')
+        ..delay = const Duration(milliseconds: 10);
+      final r = bgRunner();
+      final texts = <String>[];
+      r.live.addListener(() => texts.add(r.live.value?.text ?? '<end>'));
+      final gotDelta = Completer<void>();
+      final sub = r
+          .runAnalysis(
+            const AiAnalysisRequest(preset: 'SAVINGS'),
+            dataFingerprint: 'f' * 64,
+            clientRequestId: 'req-1',
+          )
+          .listen((e) {
+            if (e is AiStreamDelta && !gotDelta.isCompleted) {
+              gotDelta.complete();
+            }
+          });
+      await gotDelta.future;
+      await sub.cancel();
+      expect(background.active.keys.single, startsWith('generation:'));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+
+      expect(engine.cancelled, isFalse, reason: 'leaving no longer stops it');
+      expect(repo.submitted.single.$3.status, 'COMPLETED');
+      expect(repo.submitted.single.$3.content, 'parola ' * 10);
+      expect(background.active, isEmpty);
+      expect(background.log.any((l) => l.contains('report 5')), isTrue);
+      expect(texts.last, '<end>');
+      expect(texts.contains('parola parola '), isTrue);
+      expect(notifier.shown.single.title, 'Analisi pronta');
+      expect(notifier.shown.single.route, '/app/ai/analyses/a1');
+    });
+
+    test('Interrompi stops it as CANCELLED, without a notification', () async {
+      engine
+        ..deltas = List.filled(30, 'x')
+        ..delay = const Duration(milliseconds: 10);
+      final r = bgRunner();
+      final done = r
+          .runAnalysis(
+            const AiAnalysisRequest(preset: 'SAVINGS'),
+            dataFingerprint: 'f' * 64,
+            clientRequestId: 'req-1',
+          )
+          .toList();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      background.press(BackgroundButtons.stop);
+      await done;
+      expect(engine.cancelled, isTrue);
+      expect(repo.submitted.single.$3.status, 'CANCELLED');
+      expect(notifier.shown, isEmpty);
+    });
+
+    test('no notification while the user reads that analysis', () async {
+      visible = 'a1';
+      await bgRunner()
+          .runAnalysis(
+            const AiAnalysisRequest(preset: 'SAVINGS'),
+            dataFingerprint: 'f' * 64,
+            clientRequestId: 'req-1',
+          )
+          .toList();
+      expect(notifier.shown, isEmpty);
+      visible = null;
+      notify = false;
+      await bgRunner()
+          .runAnalysis(
+            const AiAnalysisRequest(preset: 'SAVINGS'),
+            dataFingerprint: 'f' * 64,
+            clientRequestId: 'req-2',
+          )
+          .toList();
+      expect(notifier.shown, isEmpty, reason: 'AI features off');
+    });
   });
 }

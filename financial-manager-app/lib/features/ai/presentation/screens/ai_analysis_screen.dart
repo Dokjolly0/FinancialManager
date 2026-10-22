@@ -13,6 +13,7 @@ import '../../../../core/errors/error_code_localizations.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../data/providers.dart';
 import '../../domain/models/ai_analysis.dart';
 import '../../domain/models/ai_settings.dart';
 import '../view_models/ai_conversation_controller.dart';
@@ -40,9 +41,25 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
 
   String get _key => widget.analysisId ?? aiNewRunKey;
 
+  /// Tells the runner which analysis is on screen: its runs don't notify.
+  late final AiVisibleAnalysis _visible;
+  String? _visibleId;
+
+  void _setVisible(String? id) {
+    if (id == _visibleId) return;
+    final previous = _visibleId;
+    _visibleId = id;
+    Future.microtask(() {
+      _visible.hide(previous);
+      if (id != null) _visible.show(id);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    _visible = ref.read(aiVisibleAnalysisProvider.notifier);
+    _setVisible(widget.analysisId);
     if (widget.analysisId == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final draft = ref.read(aiDraftControllerProvider);
@@ -61,9 +78,52 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
 
   @override
   void dispose() {
+    final id = _visibleId;
+    Future.microtask(() => _visible.hide(id));
     _question.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  bool _onDevice(AiConversationState state) =>
+      state.detail?.summary.isOnDevice ??
+      ref.read(aiDraftControllerProvider).preview?.target == AiMode.onDevice;
+
+  /// Leaving while the phone writes: stop it, stay, or let it go on in the
+  /// background (plan.md section 33.9).
+  Future<void> _confirmLeave() async {
+    final l10n = AppLocalizations.of(context);
+    final controller = ref.read(
+      aiConversationControllerProvider(_key).notifier,
+    );
+    final choice = await showDialog<_LeaveChoice>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.aiLeaveTitle),
+        content: Text(l10n.aiLeaveBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_LeaveChoice.stop),
+            child: Text(l10n.aiLeaveStop),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_LeaveChoice.stay),
+            child: Text(l10n.aiLeaveStay),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(_LeaveChoice.background),
+            child: Text(l10n.aiLeaveBackground),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || choice == null || choice == _LeaveChoice.stay) return;
+    if (choice == _LeaveChoice.stop) {
+      controller.stop();
+    } else {
+      controller.continueInBackground();
+    }
+    if (mounted) context.pop();
   }
 
   void _ask() {
@@ -131,6 +191,8 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
       aiConversationControllerProvider(_key).notifier,
     );
     final detail = state.detail;
+    _setVisible(state.analysisId ?? widget.analysisId);
+    final writingOnPhone = state.isStreaming && _onDevice(state);
 
     // Keep the newest text in view while streaming.
     ref.listen(aiConversationControllerProvider(_key), (prev, next) {
@@ -145,54 +207,63 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          detail?.summary.title ?? l10n.aiAnalysisTitle,
-          overflow: TextOverflow.ellipsis,
-        ),
-        actions: [
-          if (detail != null)
-            IconButton(
-              tooltip: l10n.aiDataSentTitle,
-              icon: const Icon(Icons.dataset_outlined),
-              onPressed: () => showAiSentDataSheet(context, detail),
-            ),
-          if (state.messages.any((m) => m.content.isNotEmpty))
-            PopupMenuButton<String>(
-              onSelected: (action) async {
-                final text = _reportText(state);
-                if (action == 'copy') {
-                  await Clipboard.setData(ClipboardData(text: text));
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(l10n.aiCopied)));
-                  }
-                } else {
-                  await SharePlus.instance.share(
-                    ShareParams(text: text, subject: detail?.summary.title),
-                  );
-                }
-              },
-              itemBuilder: (_) => [
-                PopupMenuItem(value: 'copy', child: Text(l10n.aiCopyAction)),
-                PopupMenuItem(value: 'share', child: Text(l10n.aiShareAction)),
-              ],
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(child: _content(context, state, controller)),
-          _InputBar(
-            controller: _question,
-            state: state,
-            onSend: _ask,
-            onStop: controller.stop,
-            local: _localFollowUp(l10n, detail),
+    return PopScope(
+      canPop: !writingOnPhone,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeave();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            detail?.summary.title ?? l10n.aiAnalysisTitle,
+            overflow: TextOverflow.ellipsis,
           ),
-        ],
+          actions: [
+            if (detail != null)
+              IconButton(
+                tooltip: l10n.aiDataSentTitle,
+                icon: const Icon(Icons.dataset_outlined),
+                onPressed: () => showAiSentDataSheet(context, detail),
+              ),
+            if (state.messages.any((m) => m.content.isNotEmpty))
+              PopupMenuButton<String>(
+                onSelected: (action) async {
+                  final text = _reportText(state);
+                  if (action == 'copy') {
+                    await Clipboard.setData(ClipboardData(text: text));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(l10n.aiCopied)));
+                    }
+                  } else {
+                    await SharePlus.instance.share(
+                      ShareParams(text: text, subject: detail?.summary.title),
+                    );
+                  }
+                },
+                itemBuilder: (_) => [
+                  PopupMenuItem(value: 'copy', child: Text(l10n.aiCopyAction)),
+                  PopupMenuItem(
+                    value: 'share',
+                    child: Text(l10n.aiShareAction),
+                  ),
+                ],
+              ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(child: _content(context, state, controller)),
+            _InputBar(
+              controller: _question,
+              state: state,
+              onSend: _ask,
+              onStop: controller.stop,
+              local: _localFollowUp(l10n, detail),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -346,7 +417,9 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// The phone writes the text: leaving the app can stop it.
+enum _LeaveChoice { stop, stay, background }
+
+/// The phone writes the text: the user may leave, it notifies at the end.
 class _KeepOpenBanner extends StatelessWidget {
   const _KeepOpenBanner();
 

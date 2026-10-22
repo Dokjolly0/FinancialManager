@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show KeepAliveLink;
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/errors/app_error.dart';
+import '../../data/local/local_ai_runner.dart';
 import '../../data/providers.dart';
 import '../../domain/models/ai_analysis.dart';
 import '../../domain/models/ai_analysis_request.dart';
@@ -86,6 +89,15 @@ class AiConversationController extends Notifier<AiConversationState> {
   StreamSubscription<AiStreamEvent>? _subscription;
   bool _stopRequested = false;
 
+  /// Held while a turn goes on with the screen gone ("continue in
+  /// background"): the provider is auto-disposed otherwise.
+  KeepAliveLink? _keepAlive;
+
+  /// Following a turn the phone is writing for a screen opened after it
+  /// started (from the history or a notification).
+  LocalAiRunner? _following;
+  VoidCallback? _onLive;
+
   AiRepository get _repo => ref.read(aiRepositoryProvider);
 
   /// Follow-ups continue where the report was written.
@@ -100,6 +112,7 @@ class AiConversationController extends Notifier<AiConversationState> {
     ref.onDispose(() {
       _subscription?.cancel();
       _cancelToken?.cancel('disposed');
+      _unfollow();
     });
     if (arg == aiNewRunKey) return const AiConversationState();
     Future.microtask(load);
@@ -112,6 +125,7 @@ class AiConversationController extends Notifier<AiConversationState> {
     state = state.copyWith(isLoading: true);
     try {
       final detail = await _repo.getAnalysis(id);
+      if (!ref.mounted) return;
       state = state.copyWith(
         detail: detail,
         messages: detail.messages
@@ -119,6 +133,7 @@ class AiConversationController extends Notifier<AiConversationState> {
             .toList(),
         isLoading: false,
       );
+      if (detail.summary.isOnDevice && !state.isStreaming) _follow(id);
     } on AppError catch (e) {
       state = state.copyWith(isLoading: false, loadError: e);
     }
@@ -166,7 +181,60 @@ class AiConversationController extends Notifier<AiConversationState> {
   void stop() {
     if (!state.isStreaming) return;
     _stopRequested = true;
+    if (_following != null) {
+      unawaited(_following!.cancelActive());
+      return;
+    }
     _cancelToken?.cancel('stopped by user');
+  }
+
+  /// Lets an on-device turn go on after the screen is left (plan.md
+  /// section 33.9): this controller stays alive until the turn ends, and
+  /// the phone notifies when it is done.
+  void continueInBackground() {
+    if (!state.isStreaming) return;
+    _keepAlive ??= ref.keepAlive();
+  }
+
+  /// Shows the text of a turn the phone is writing for this analysis, if
+  /// any, and reloads the stored analysis when it ends.
+  void _follow(String analysisId) {
+    final runner = ref.read(localAiRunnerProvider);
+    final live = runner.live.value;
+    if (live == null || live.analysisId != analysisId) return;
+    final messageId = live.messageId;
+    if (!state.messages.any((m) => m.id == messageId)) return;
+    _following = runner;
+    void onLive() {
+      final now = runner.live.value;
+      if (now == null || now.messageId != messageId) {
+        _unfollow();
+        state = state.copyWith(isStreaming: false);
+        unawaited(load());
+        return;
+      }
+      state = state.copyWith(
+        messages: [
+          for (final m in state.messages)
+            m.id == messageId ? m.copyWith(content: now.text) : m,
+        ],
+      );
+    }
+
+    _onLive = onLive;
+    runner.live.addListener(onLive);
+    state = state.copyWith(isStreaming: true);
+    onLive();
+  }
+
+  void _unfollow() {
+    final runner = _following;
+    final listener = _onLive;
+    if (runner != null && listener != null) {
+      runner.live.removeListener(listener);
+    }
+    _following = null;
+    _onLive = null;
   }
 
   void _stream(
@@ -271,6 +339,8 @@ class AiConversationController extends Notifier<AiConversationState> {
     state = state.copyWith(isStreaming: false);
     _subscription = null;
     _cancelToken = null;
+    _keepAlive?.close();
+    _keepAlive = null;
     // A new analysis changes the setup checklist; the stored detail has
     // the real ids, follow-ups left and token totals.
     ref.invalidate(aiSettingsProvider);

@@ -4641,7 +4641,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiLocalKeepOpen.
   ///
   /// In it, this message translates to:
-  /// **'Il telefono sta scrivendo: tieni l\'app aperta finché non ha finito.'**
+  /// **'Il telefono sta scrivendo. Puoi uscire dall\'app: ti avvisiamo quando ha finito.'**
   String get aiLocalKeepOpen;
 
   /// No description provided for @aiLocalTokensPerSecond.
@@ -4895,6 +4895,72 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Download non riuscito'**
   String get notifyDownloadFailedTitle;
+
+  /// No description provided for @aiLeaveTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'L\'analisi è ancora in corso'**
+  String get aiLeaveTitle;
+
+  /// No description provided for @aiLeaveBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Il telefono sta ancora scrivendo. Puoi interromperla (il testo scritto finora viene salvato), restare qui o lasciarla continuare in background: ti avvisiamo con una notifica quando ha finito.'**
+  String get aiLeaveBody;
+
+  /// No description provided for @aiLeaveStop.
+  ///
+  /// In it, this message translates to:
+  /// **'Interrompi'**
+  String get aiLeaveStop;
+
+  /// No description provided for @aiLeaveStay.
+  ///
+  /// In it, this message translates to:
+  /// **'Resta'**
+  String get aiLeaveStay;
+
+  /// No description provided for @aiLeaveBackground.
+  ///
+  /// In it, this message translates to:
+  /// **'Continua in background'**
+  String get aiLeaveBackground;
+
+  /// No description provided for @bgWritingReport.
+  ///
+  /// In it, this message translates to:
+  /// **'Scrittura del report · {words} parole'**
+  String bgWritingReport(int words);
+
+  /// No description provided for @bgWritingAnswer.
+  ///
+  /// In it, this message translates to:
+  /// **'Scrittura della risposta · {words} parole'**
+  String bgWritingAnswer(int words);
+
+  /// No description provided for @notifyReportReadyTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Analisi pronta'**
+  String get notifyReportReadyTitle;
+
+  /// No description provided for @notifyAnswerReadyTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Risposta pronta'**
+  String get notifyAnswerReadyTitle;
+
+  /// No description provided for @notifyAnalysisFailedTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Analisi interrotta'**
+  String get notifyAnalysisFailedTitle;
+
+  /// No description provided for @notifyAnalysisFallbackBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Tocca per leggerla.'**
+  String get notifyAnalysisFallbackBody;
 }
 
 class _AppLocalizationsDelegate
