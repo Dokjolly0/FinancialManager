@@ -52,3 +52,7 @@ cd financial-manager-app && flutter test
 
 - [`plan.md`](plan.md) — full specification.
 - [`financial-manager-backend/docs/backup-restore.md`](financial-manager-backend/docs/backup-restore.md) — backup and restore procedures.
+- [`docs/build-deploy.md`](docs/build-deploy.md) — VPS deployment and app builds (Italian).
+- [`docs/privacy.md`](docs/privacy.md) — privacy notice, including the AI analysis in the cloud and on the device (Italian).
+- [`docs/ai-on-device-spike.md`](docs/ai-on-device-spike.md) — on-device AI prototype: engines, models and measurements (Italian).
+- [`financial-manager-app/README.md`](financial-manager-app/README.md) — app structure and the AI analysis modules.

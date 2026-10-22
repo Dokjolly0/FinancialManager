@@ -3162,6 +3162,8 @@ Streaming events: `meta` (analysis and message ids), `delta` (text, coalesced ab
 
 Preview and run share the same request body. The preview returns a `data_fingerprint` (SHA-256 of the rendered data block and prompt version). The run sends it back; if the data changed in between the server answers `409 AI_DATA_CHANGED` and the app previews again. The server always rebuilds the data block from the database: the client can only edit the instructions.
 
+On-device analyses (section 33) add `PUT /v1/ai/mode`, a `scope` on the consent routes, `target` and `device` on the preview, and the JSON routes under `/v1/ai/local/` plus `PUT /v1/ai/analyses/{id}/messages/{messageId}/result`; see section 33.8.
+
 Error codes: `AI_DISABLED` (503, feature not configured on the server), `AI_NOT_CONFIGURED`, `AI_CONSENT_REQUIRED`, `AI_DATA_CHANGED`, `AI_STREAM_IN_PROGRESS`, `AI_PROMPT_TOO_LARGE`, `AI_FOLLOWUP_LIMIT`, and the provider failures `AI_PROVIDER_INVALID_KEY`, `AI_PROVIDER_RATE_LIMITED`, `AI_PROVIDER_QUOTA_EXCEEDED`, `AI_PROVIDER_CONTEXT_TOO_LONG`, `AI_PROVIDER_MODEL_NOT_FOUND`, `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_TIMEOUT`.
 
 ### 32.5 Providers and outbound requests
@@ -3198,6 +3200,188 @@ Error codes: `AI_DISABLED` (503, feature not configured on the server), `AI_NOT_
 - Prompt golden files per preset and language; totals in the data block match the reports endpoints.
 - Integration tests with a scripted provider: event order, saved content equals the streamed text, disconnect → `CANCELLED`, fingerprint mismatch → 409, concurrent stream → 409, streams outlive the normal request timeout, the key never appears in any response.
 - Flutter: SSE decoder with chunk boundaries splitting lines and UTF-8 characters, controllers with fake repositories, widget tests for the preview and the consent sheet.
+
+## 33. On-device AI analysis (Analisi AI sul dispositivo)
+
+The AI analysis of section 32 can also run its model **on the user's phone**. The server still builds the prompt from the database and keeps the history; only the text generation moves to the device, so no third party ever sees the data. Android only for now (arm64); iOS builds but reports the feature as unavailable. Measurements behind every choice below are in `docs/ai-on-device-spike.md` (prototype on a Galaxy S26 Ultra, two rounds).
+
+### 33.1 Goals and non-goals
+
+Goals:
+
+- privacy: no provider, no API key, nothing leaves the user's own server and phone;
+- the user picks the model and its quantization, from a curated catalog or from any compatible file;
+- the same flow and history as cloud analyses: setup → preview → report → follow-ups, stored server-side and visible on every device;
+- honest expectations before running: how much of the model's context the prompt takes and how long it should last.
+
+Non-goals:
+
+- no model bundled in the app: models are downloaded (2.4–3.4 GB) or imported after installation;
+- no background generation: the app must stay open while the phone writes (a foreground service is deferred);
+- no GPU path for llama.cpp: its Vulkan backend crashed on the reference Adreno GPU and is excluded from the build;
+- no iOS engine yet.
+
+### 33.2 Architecture
+
+```
+app: setup ──preview(target=on_device, profile, budget, device)──▶ server builds prompt, fingerprint
+app: load model, count tokens exactly (while the user reads the preview)
+app: ──POST /v1/ai/local/analyses (fingerprint, runtime)──▶ server stores analysis + STREAMING report,
+                                                          returns system prompt, messages, deadline
+app: engine generates on the phone, text streamed into the screen
+app: ──PUT …/messages/{id}/result──▶ server stores the report (or the app keeps it in its outbox)
+follow-up: ──POST /v1/ai/local/analyses/{id}/messages──▶ server stores the question, returns the
+           stored conversation to replay; the phone answers and submits like a report
+```
+
+The data block is always rebuilt by the server from the database, exactly as for a cloud run; the phone can only edit the instructions. The conversation controller does not know where text comes from: `AiTurnSource` is implemented both by the repository (cloud SSE) and by `LocalAiRunner` (phone), which emits the same `meta` / `delta` / `usage` / `error` / `done` events.
+
+### 33.3 Engines
+
+Both engines are reached through one package, `flutter_edge_ai` 2.5.0, with `flutter_edge_ai_litertlm` 1.16.0 and `flutter_edge_ai_llama` 0.0.2 (llamadart 0.15.0), behind `LocalLlmEngine` (`lib/features/ai/domain/local/local_llm_engine.dart`; implementation `EdgeAiEngine`).
+
+| Engine | Files | Backends | Notes |
+|---|---|---|---|
+| LiteRT-LM | `.litertlm` bundles prepared by Google | GPU (default), CPU | GPU activations forced to **float32**: the float16 default writes wrong digits from about 3k prompt tokens (LiteRT-LM issues #2814/#3012). On the CPU the context is capped at 8k (16k is killed for memory). |
+| llama.cpp | any GGUF, any quantization | CPU | 4–5× slower to read the prompt than LiteRT-LM on the GPU. Vulkan excluded (`hooks.user_defines.llamadart`: `llama_cpp` runtime, `cpu` backend only). |
+
+- Initialization once per process, `backendFallback: false`: a GPU failure is an error, not a silent switch to the CPU. The backend actually used is recorded in the runtime.
+- The package joins all message chunks into one user turn, so earlier turns are flattened into a tagged transcript (`chatTranscript`: `<previous_turn role="…">…</previous_turn>`, the new question last).
+- Exact token counts come from the engine's tokenizer (`sizeInTokens`). Real tokens are 1.56–1.75× the server's estimate (characters / 3.5), hence each model's `token_factor`.
+- Errors map to `AI_LOCAL_OUT_OF_MEMORY`, `AI_LOCAL_CONTEXT_TOO_LONG`, `AI_LOCAL_ENGINE_ERROR`.
+- The screen stays on while generating (`wakelock_plus`).
+
+**Model host** (`EngineModelHost`): one model loaded at a time; reloaded when the model, context or backend changes, reused when only the output limit or temperature does; unloaded after 5 minutes idle (never while generating), on memory pressure, when the model is deleted, and on request. It refuses to load when the phone is thermally SEVERE or worse (`AI_LOCAL_TOO_HOT`). Runtime parameters (`paramsFor`): backend from the model's list (default the first), context clamped to 2048..max (CPU max for LiteRT-LM), output 256..context/2 (default 1024), temperature 0..1 (default 0.2).
+
+### 33.4 Catalog
+
+`assets/ai/local_models.json` (`schema_version` 1, `catalog_version` 1). Every entry is pinned to a Hugging Face commit (40-hex revision in the URL) with its SHA-256 and size, and carries RAM thresholds, default and maximum context (and CPU maximum), backends, GPU activation type, `token_factor`, indicative speeds per backend, it/en notes and the license.
+
+| Id | Model | Engine · quantization | Size | Context | Backends | Speed (read/write t/s) |
+|---|---|---|---|---|---|---|
+| `gemma4-e2b-litert` (recommended) | Gemma 4 E2B | LiteRT-LM · int4/int8 | 2.41 GiB | 16k (CPU 8k) | GPU, CPU | GPU 600/30, CPU 200/23 |
+| `gemma4-e4b-litert` | Gemma 4 E4B | LiteRT-LM · int4/int8 | 3.41 GiB | 16k | GPU | 350/14 |
+| `qwen35-4b-q4km-gguf` | Qwen3.5 4B | llama.cpp · Q4_K_M | 2.55 GiB | 8k (max 16k) | CPU | 48/10 |
+| `gemma4-e2b-q4km-gguf` | Gemma 4 E2B | llama.cpp · Q4_K_M | 2.89 GiB | 8k (max 16k) | CPU | 49/12 |
+
+All four are Apache-2.0 and not gated. RAM fit (`ramFitForSpec`): at or above the recommended RAM "fits", at or above the minimum "tight", otherwise "insufficient" (thresholds in MiB, slightly below nominal RAM because phones report less). Files outside the catalog are estimated with `file + context × 256 KB + 400 MB` against 50% / 70% of the RAM.
+
+### 33.5 Download and import
+
+- **Store** (`ModelStore`): `<app support>/ai_models/<id>/`, excluded from Android backups (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`). `registry.json` (written atomically, writes serialized) holds the installed models, the active model, per-model runtime choices, measured speeds (moving average 0.7/0.3) and the Wi-Fi rule. Models belong to the phone, not to the account.
+- **Downloader** (`ModelDownloader`, its own Dio without the app's session headers):
+  - resumable: `.part` file plus a `.part.json` validator (ETag, size), `Range` + `If-Range`;
+  - redirects followed by hand (max 8), checking Hugging Face's `X-Linked-ETag` and `X-Linked-Size`;
+  - 206 continues, 200 restarts from zero, 416 reads the total from `Content-Range: */N` and goes to verification, an inconsistent 206 restarts once;
+  - 401/403 → `AI_LOCAL_DOWNLOAD_GATED`, 404 → `…_NOT_FOUND`, other statuses → `…_HTTP`, network errors → `…_NETWORK`;
+  - free space checked first with a 512 MB margin (`…_NO_SPACE`);
+  - SHA-256 in an isolate, 4 MB chunks; a mismatch deletes the file (`…_CHECKSUM`);
+  - optional Hugging Face token (Keystore, `flutter_secure_storage`) sent only to `huggingface.co`;
+  - only `https` URLs (`…_INSECURE_URL`).
+- **Queue** (`LocalModelsController`): one download at a time; states queued, downloading, paused, waiting for Wi-Fi, verifying, failed. With "Wi-Fi only" (default on) a download waits off Wi-Fi and resumes by itself; partial files found at start show as paused. The first installed model becomes the active one.
+- **Import from file** (`file_picker` 13.1.0): Android copies the picked file into the app cache first, then it is copied into the store, its header checked (`GGUF` or `LITERTLM` magic, otherwise `AI_LOCAL_IMPORT_UNKNOWN_FORMAT`) and hashed; the cache copy is cleared afterwards. Name and quantization are guessed from the file name. Without an expected SHA-256 the model is installed as **not verified**. Engine and backends follow the header (LiteRT-LM: GPU then CPU; GGUF: CPU).
+- **Import from URL**: an https URL outside the catalog goes through the same queue and checks, optional SHA-256.
+- **Device capabilities**: `MethodChannel financialmanager/device` (`MainActivity.kt`) returns total and available RAM, low-memory flag, free storage, thermal status, battery and charging, SoC and SDK.
+
+### 33.6 Compact profile and token budget
+
+Useful for cloud runs too, on by default on the phone.
+
+- `options.profile`: `standard` (default) or `compact`. Compact uses `system_compact.tmpl` (shorter rules, a word limit, a stronger "only use numbers present in the data" rule) and caps the data block (`prompt.LimitsFor`):
+
+| Part | standard | compact |
+|---|---|---|
+| rows per category list | collected (25) | 8 |
+| rows per title list | collected (25) | 10 |
+| months | all | last 12, older ones summed in one row |
+| recurring candidates | collected (20) | 8 |
+| transfer flows | collected (20) | 5 |
+| transactions | up to 500 (default 200) | up to 100 (default 60) |
+| text in tables | full | titles/categories/wallets 40 chars, purposes 80, each context field 300 |
+
+- `options.budget_tokens` (0, or 1 000..32 000, in the server's estimated tokens): when set, the server gives up detail one step at a time until the prompt fits: `transactions_30`, `transactions_0`, `credit_titles`, `groups_5`, `months_6`, `transfers`, `recurring_4`, `context_150`; still too large → `422 AI_PROMPT_TOO_LARGE`. Deterministic, so a run rebuilds exactly its preview's fingerprint. The steps applied are returned in `disclosure.compaction_steps`.
+- The app sets the budget to `(context − max output − 256) / token_factor` (generic factor 1.75 for imports).
+- `prompt.Version` stays `v1`: the standard output is byte for byte unchanged.
+
+### 33.7 Data model
+
+Migration `0034_ai_on_device`:
+
+- `ai_settings`: `mode` (`cloud` / `on_device`, CHECK), `local_model` (label of the phone's active model, informational, max 200), `local_consent_version` and `local_consent_accepted_at` (both set or both NULL).
+- `ai_analyses`: `runtime JSONB` (engine, model id, display name, quantization, backend, context, max output, app version; NULL for cloud) and a provider CHECK that includes `on_device`. On-device analyses store `provider = on_device` and `model = "<name> · <quantization> · <engine>"`.
+- `ai_messages.duration_ms`: how long the phone took.
+
+### 33.8 API
+
+All routes require authentication and keep the normal request timeout (no streaming: the phone streams to itself).
+
+| Method and path | Purpose |
+|---|---|
+| `PUT /v1/ai/mode` | `{mode, local_model?, version}`; no cloud credential needed; optimistic lock on `version` |
+| `PUT` / `DELETE /v1/ai/consent` | gain `scope` (`cloud` default, `on_device`); the on-device disclosure has its own version (`ai.LocalConsentVersion`, 1) |
+| `POST /v1/ai/analyses/preview` | gains `target` (`cloud` / `on_device`, empty = saved mode) and `device {context_tokens, max_output_tokens}`; on device returns provider `on_device`, no cost, `context_fit` and `disclosure.profile` / `compaction_steps` |
+| `POST /v1/ai/local/analyses` | run request + `runtime`; checks local consent, fingerprint (`409 AI_DATA_CHANGED`), rate limit, runtime bounds and that estimate + output fit the context (`422 AI_LOCAL_CONTEXT_TOO_LONG`); stores the analysis and returns `{analysis_id, message_id, kind, system_prompt, messages, max_output_tokens, deadline_at}`. Idempotent on `client_request_id` while the report is still `STREAMING` (a crashed phone resumes). No Redis lock. |
+| `POST /v1/ai/local/analyses/{id}/messages` | follow-up on an on-device analysis: stores the question and returns the replayed history plus the question, and `question_id` |
+| `PUT /v1/ai/analyses/{id}/messages/{messageId}/result` | `{content, status, error_code, input_tokens, output_tokens, truncated, duration_ms}`; body up to 512 KB, content up to 200 KB (`422 AI_ANSWER_TOO_LONG`); the same submission again is accepted (outbox retries), a different one for a saved message is `409 AI_MESSAGE_FINISHED`; `error_code` limited to the `AI_LOCAL_*` list, anything else stored as `AI_LOCAL_ENGINE_ERROR` |
+
+`GET /v1/ai/settings` returns `on_device_available`, `mode`, `local_model` and `consent.on_device`; it no longer answers `available: false` early when only the on-device path is enabled. History and detail responses carry `runtime` and per-message `duration_ms`.
+
+Availability is split: `requireFeature` (cloud **or** on-device enabled) guards history, context, presets, consent and preview; the cloud requirements (`AI_KEY_ENCRYPTION_KEY`, an active credential) guard only keys, tests, model lists and cloud runs. Changes to the existing code: `effectiveStatus` uses `AI_LOCAL_MAX_DURATION` for on-device rows instead of the cloud stream window; a cloud follow-up on an on-device analysis answers `409 AI_ANALYSIS_ON_DEVICE` (and a local follow-up or result on a cloud one `409 AI_ANALYSIS_NOT_ON_DEVICE`); cost is `null` for on-device analyses.
+
+Configuration: `AI_ON_DEVICE_ENABLED` (default `true`; works without `AI_KEY_ENCRYPTION_KEY`), `AI_LOCAL_RUNS_PER_HOUR` (30, reports and follow-ups together), `AI_LOCAL_MAX_DURATION` (30m: the deadline given to the phone and after which a pending message shows as interrupted). Follow-ups are capped at 20 per analysis, as in the cloud.
+
+Error codes: `AI_ON_DEVICE_DISABLED` (503), `AI_LOCAL_CONSENT_REQUIRED` (403), `AI_ANALYSIS_ON_DEVICE`, `AI_ANALYSIS_NOT_ON_DEVICE`, `AI_MESSAGE_FINISHED` (409), `AI_LOCAL_CONTEXT_TOO_LONG`, `AI_ANSWER_TOO_LONG` (422). Codes reported by the phone: `AI_LOCAL_ENGINE_ERROR`, `AI_LOCAL_OUT_OF_MEMORY`, `AI_LOCAL_CONTEXT_TOO_LONG`, `AI_LOCAL_TIMEOUT`, `AI_LOCAL_MODEL_MISSING`, `AI_LOCAL_INTERRUPTED`. App-only codes: `AI_LOCAL_UNSUPPORTED`, `AI_LOCAL_TOO_HOT`, `AI_LOCAL_DOWNLOAD_NETWORK`, `…_GATED`, `…_NOT_FOUND`, `…_HTTP`, `…_NO_SPACE`, `…_CHECKSUM`, `…_INSECURE_URL`, `AI_LOCAL_IMPORT_UNKNOWN_FORMAT`.
+
+### 33.9 Running on the phone
+
+`LocalAiRunner` (`lib/features/ai/data/local/local_ai_runner.dart`), held by a provider that outlives the screens:
+
+1. flushes the outbox (best effort) and acquires the engine;
+2. prepares the turn on the server;
+3. trims follow-up history to the context: the oldest question/answer pairs go first, the data message and the report never;
+4. streams deltas to the screen; answers are capped at 200 KB (truncated);
+5. Stop or leaving the screen cancels the engine and the partial text is kept as `CANCELLED`; the deadline (`deadline_at` minus 2 minutes) stops it as `AI_LOCAL_TIMEOUT`;
+6. submits the result; if the network fails the result goes to the **outbox** (`<app support>/ai_local/outbox.json`, items tied to their account, kept 7 days), sent again before each run, at sign-in and whenever the app returns to the foreground;
+7. records the measured speed for later estimates.
+
+**Time estimate** shown in the preview, ±30%: `load (5 s LiteRT-LM, 8 s llama.cpp, 0 if loaded) + input tokens / reading speed + min(max output, 900) / writing speed`. Speeds come from the phone's own measurements, else the catalog, else 50/8 tokens/s. "Misura velocità" runs about 1 000 tokens in and 128 out with the active model and records the result like a real run.
+
+**Context use** is computed by the app in real tokens (exact once the engine counted the prompt, otherwise the server estimate × `token_factor`), plus the reserved output and 256 tokens of template: green, amber above 85%, red when it doesn't fit. The server's own `context_fit` counts estimated tokens and is not used for the bar.
+
+**Warnings**: thermal MODERATE ("the phone is warm"), battery below 15% and not charging, Android low-memory flag. SEVERE refuses the run.
+
+### 33.10 App UX
+
+- **Fornitore e chiave API**: a Cloud / Sul dispositivo switch when the server offers on-device runs (saves the mode and the active model's label). On device: active model, runtime settings, on-device disclosure with revoke; on a phone without engines, a notice.
+- **Modelli sul dispositivo** (`/app/account/ai/local-models`): RAM and free space, "Solo Wi-Fi"; installed models (use, delete with space freed; "non verificato" badge); the catalog by engine with "Consigliato", RAM fit, size, context, backends and license; download / pause / resume / retry / cancel with progress; a license dialog before every download and, for gated repositories, the model page and token; import from file or URL; Hugging Face token. The server-side label follows whatever makes a model active.
+- **Impostazioni di esecuzione** (`/app/account/ai/local-runtime`): backend, context (memory warning above the model's default), answer length, temperature, reset; "Misura velocità" with the speed's source.
+- **Setup**: on device the compact profile is on by default (60 transactions, at most 100); the request carries target, budget and device limits; the on-device disclosure is asked instead of the cloud one; no model installed or an unsupported phone shows what to do.
+- **Preview**: "processed on the phone with …", no cost, compaction note, context bar with time estimate and warnings; the model loads while the user reads and the estimate becomes an exact count; quick fixes when tight or full (compact profile, fewer transactions, shorter answer, larger context); a prompt that doesn't fit cannot be run.
+- **Analysis**: header "Sul dispositivo · model · quantization · backend · tokens/s · duration"; a "keep the app open" banner while the phone writes.
+- **History**: a phone icon on on-device analyses. **Assistant hub**: on device the checklist's first step is an installed model plus the on-device disclosure.
+- **Disclosure** (on-device scope): where the data is processed (the phone, no outside provider), what the server keeps (the data summary and the history), the model can be wrong, models come from Hugging Face with their own license, how to revoke.
+
+### 33.11 Android build
+
+- `minSdk` 30 (`maxOf(flutter.minSdkVersion, 30)`); iOS deployment target 15.0 (required by `flutter_edge_ai`).
+- Release APKs ship `arm64-v8a` only (`androidComponents` packaging excludes for `armeabi-v7a`, `x86`, `x86_64`): about 92 MB. Debug builds keep every ABI.
+- R8 keep rules for `io.flutter.plugins.sharedpreferences.**` and the `jni` / `jni_flutter` bridges (`proguard-rules.pro`), after a JNI method stripped by R8 crashed the prototype.
+- CI builds the arm64 release with `--analyze-size`.
+
+### 33.12 Limits and known gaps
+
+- The app must stay in the foreground while generating; Android may kill it in the background.
+- Small models can mix up numbers: the disclosure says so and the compact prompt insists on quoting only the data. In the prototype no model found a deliberately duplicated charge.
+- Thread count and GPU layers from the original plan are not offered: `flutter_edge_ai` exposes neither, and llama.cpp runs on the CPU only.
+- The setup checklist counts an imported, not verified model as installed.
+- Picking a file temporarily needs twice its size (the picker's cache copy).
+- No iOS engine; NPU bundles (SoC-specific) are not in the catalog.
+
+### 33.13 Tests
+
+- Backend (`internal/ai/local_integration_test.go`, harness without the secretbox): full path without a cloud credential, missing local consent → 403, fingerprint mismatch → 409, prepare idempotency, result over 200 KB → 422, result sent twice (same → 200, different → 409), result on a cloud analysis → 409, local follow-ups and their limit, cloud follow-up on a local analysis → 409, expiry window with a fake clock, rate limit, mode version conflict, unknown error codes normalized. Compact golden files it/en, collector limits, budget determinism, preview/run fingerprint equality.
+- App, with fake engines and servers: runner (event order, submitted content, stop, out of memory, context too long, outbox, history trimming), turn routing, downloader (resume, restart, 416, changed ETag, wrong checksum, Wi-Fi lost, no space, gated), store, catalog validation (unique ids, pinned URLs and SHA-256, engine/format coherence, RAM and context bounds, licenses, notes in both languages), model host (params, reloads, idle unload, thermal refusal, speeds, benchmark), run plan (budget, context levels, estimate, speed sources), outbox flush on sign-in and resume; widget tests for the preview's context states and quick fixes, the models screen (progress, pause, failure, license, gated token), the on-device disclosure and the mode switch.
+- Manual protocol on the S26 Ultra: download with Wi-Fi lost and resumed, corrupted file, GGUF import, benchmark, standard and compact check-ups on CPU and GPU, follow-ups, stop, app killed mid-run, airplane mode after prepare, heat after repeated runs, model deletion, history on a second device. First field result: a full report on three months and 150 transactions in 40–60 s with Gemma 4 E2B on the GPU.
 
 ---
 

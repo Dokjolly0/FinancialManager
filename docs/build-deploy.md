@@ -64,8 +64,10 @@ GDRIVE_CLIENT_ID=xxxxxxxx.apps.googleusercontent.com
 GDRIVE_CLIENT_SECRET=CAMBIA
 GDRIVE_REFRESH_TOKEN=CAMBIA
 
-# Facoltativo: abilita l'Analisi AI (vedi sezione 8)
+# Facoltativo: abilita l'Analisi AI con fornitori cloud (vedi sezione 8)
 AI_KEY_ENCRYPTION_KEY=CAMBIA_CON_OPENSSL_RAND_BASE64_32
+# Analisi AI sul dispositivo (vedi sezione 9): attiva di default
+AI_ON_DEVICE_ENABLED=true
 ```
 
 Generare `JWT_SIGNING_KEY` e `BACKUP_ENCRYPTION_KEY` (due valori diversi) con:
@@ -228,6 +230,35 @@ In alternativa, `AI_ALLOWED_BASE_URL_HOSTS` accetta solo gli host indicati (per 
 
 Altri limiti configurabili sono descritti in `.env.example`: `AI_STREAM_MAX_DURATION`, `AI_STREAM_IDLE_TIMEOUT`, `AI_MAX_PROMPT_TOKENS` e `AI_RUNS_PER_HOUR`.
 
+Riepilogo delle variabili dell'Analisi AI (tutte hanno un default in `compose.yaml`):
+
+| Variabile | Default | Significato |
+|---|---|---|
+| `HTTP_REQUEST_TIMEOUT` | `30s` | Timeout di ogni richiesta, esclusi gli stream AI |
+| `AI_KEY_ENCRYPTION_KEY` | vuota | Chiave AES-256 (32 byte in base64) per le chiavi API degli utenti; vuota = cloud disattivato |
+| `AI_KEY_ENCRYPTION_KEY_PREVIOUS` | vuota | Chiave precedente, solo durante la rotazione |
+| `AI_ALLOW_PRIVATE_BASE_URLS` | `false` | Ammette base URL privati/`http` per i servizi compatibili OpenAI |
+| `AI_ALLOWED_BASE_URL_HOSTS` | vuota | Elenco di host ammessi, separati da virgola |
+| `AI_STREAM_MAX_DURATION` | `5m` | Durata massima di uno stream cloud |
+| `AI_STREAM_IDLE_TIMEOUT` | `90s` | Chiusura di uno stream cloud fermo |
+| `AI_MAX_PROMPT_TOKENS` | `60000` | Dimensione massima stimata del prompt |
+| `AI_RUNS_PER_HOUR` | `20` | Analisi cloud per utente all'ora |
+| `AI_ON_DEVICE_ENABLED` | `true` | Analisi sul dispositivo |
+| `AI_LOCAL_RUNS_PER_HOUR` | `30` | Report e domande sul dispositivo per utente all'ora |
+| `AI_LOCAL_MAX_DURATION` | `30m` | Tempo concesso al telefono per finire un messaggio |
+
+### 9. Analisi AI sul dispositivo
+
+Con l'analisi sul dispositivo (plan.md sezione 33) il modello gira sul telefono dell'utente: il server costruisce il prompt dai dati e salva la cronologia, ma non chiama nessun fornitore. Non servono chiavi né traffico in uscita dal server, e funziona anche senza `AI_KEY_ENCRYPTION_KEY`: se il cloud non è configurato, l'app offre solo questa modalità.
+
+- `AI_ON_DEVICE_ENABLED=false` la disattiva: l'app non mostra il selettore "Sul dispositivo" e le route `/v1/ai/local/…` rispondono `503 AI_ON_DEVICE_DISABLED`.
+- `AI_LOCAL_RUNS_PER_HOUR` limita report e domande sul dispositivo per utente.
+- `AI_LOCAL_MAX_DURATION` è la scadenza data al telefono per finire un messaggio; dopo, un messaggio ancora in attesa compare come interrotto.
+- Le route locali sono JSON normali (niente streaming): il reverse proxy non ha bisogno di configurazioni particolari. L'invio del risultato accetta corpi fino a 512 KB.
+- I modelli si scaricano dal telefono direttamente da Hugging Face: il server non li ospita e non li vede.
+
+La migrazione `0034_ai_on_device` (applicata dal servizio `migrate` al riavvio) aggiunge a `ai_settings` la modalità, il modello locale e il consenso dedicato, a `ai_analyses` la colonna `runtime` e a `ai_messages` la durata. Il file `.down.sql` rimuove colonne e vincoli ma lascia le analisi `on_device` già salvate, che una versione precedente del backend non sa mostrare correttamente: prima di un rollback conviene eliminarle.
+
 ## Build Flutter
 
 L'app Flutter legge l'URL API da `--dart-define`.
@@ -282,6 +313,26 @@ Output tipico:
 financial-manager-app/build/app/outputs/flutter-apk/app-release.apk
 ```
 
+**Motori AI sul dispositivo.** L'app include LiteRT-LM e llama.cpp (plan.md sezione 33.11), che occupano la maggior parte del codice nativo:
+
+- la release contiene solo `arm64-v8a` (le altre ABI sono escluse in `android/app/build.gradle.kts`): l'APK pesa circa 92 MB. Per una release di dimensione minima:
+  ```bash
+  flutter build apk --release --target-platform android-arm64 --analyze-size \
+    --dart-define=API_ENVIRONMENT=production \
+    --dart-define=API_BASE_URL=https://api.tuodominio.it/v1
+  ```
+  `--analyze-size` scrive il dettaglio della dimensione in `build/`; la CI lo esegue a ogni build;
+- `minSdk` è 30 (Android 11): i telefoni più vecchi non possono installare l'app;
+- llama.cpp viene compilato solo con il backend CPU (`hooks.user_defines.llamadart` in `pubspec.yaml`): il backend Vulkan andava in crash sulle GPU Adreno e da solo aggiungeva 26 MB;
+- le build debug includono tutte le ABI e pesano circa 300 MB;
+- la prima build dopo `flutter clean` è lenta (5–15 minuti) perché gli hook compilano le librerie native.
+
+Controllo rapido che Vulkan non sia finito nell'APK:
+
+```bash
+unzip -l build/app/outputs/flutter-apk/app-release.apk | grep -i vulkan   # nessun risultato
+```
+
 ### 4. Build Android App Bundle
 
 Per Play Store usare preferibilmente `.aab`:
@@ -301,6 +352,8 @@ financial-manager-app/build/app/outputs/bundle/release/app-release.aab
 ### 5. Build iOS
 
 iOS richiede macOS con Xcode. Non si compila su una VPS Linux standard.
+
+Il target minimo è iOS 15 (richiesto da `flutter_edge_ai`). L'analisi sul dispositivo su iOS non è ancora disponibile: l'app la mostra come non supportata.
 
 Su macOS:
 

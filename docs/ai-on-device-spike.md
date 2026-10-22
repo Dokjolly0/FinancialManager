@@ -11,6 +11,11 @@ Fase 0 serviva a misurare i motori e i modelli candidati sul telefono di
 riferimento prima di scrivere il codice di prodotto (Fasi 4–6). Le scelte qui
 sotto valgono come specifica per quelle fasi.
 
+> **Stato (22 ottobre 2026):** le Fasi 1–7 sono implementate; la descrizione
+> completa dell'implementazione è in `plan.md`, sezione 33. Primo risultato sul
+> campo nell'app vera: report completo su 3 mesi e 150 movimenti in 40–60 s con
+> Gemma 4 E2B sulla GPU.
+
 L'app di misura è usa e getta e sta fuori dal repository
 (`FinancialManager-ai-spike`, repository git locale). I JSON completi delle
 due sessioni sono in `results/round1-s26ultra.json` e

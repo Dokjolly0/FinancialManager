@@ -4,7 +4,7 @@ title: Informativa sulla privacy — FinancialManager
 
 # Informativa sulla privacy
 
-_Ultimo aggiornamento: 20 ottobre 2026_
+_Ultimo aggiornamento: 22 ottobre 2026_
 
 FinancialManager è un'app personale per la gestione delle finanze. Questa pagina descrive quali dati tratta e come.
 
@@ -16,7 +16,7 @@ FinancialManager è un'app personale per la gestione delle finanze. Questa pagin
 
 ## Come vengono usati
 
-I dati servono esclusivamente a far funzionare l'app. Non vengono venduti, non vengono usati per pubblicità e non vengono condivisi con terzi, salvo quando usi tu stesso l'Analisi AI descritta qui sotto.
+I dati servono esclusivamente a far funzionare l'app. Non vengono venduti, non vengono usati per pubblicità e non vengono condivisi con terzi, salvo quando usi tu stesso l'Analisi AI con un fornitore cloud, descritta qui sotto. L'Analisi AI sul dispositivo non coinvolge nessun fornitore.
 
 ## Dove sono conservati
 
@@ -43,6 +43,22 @@ Prima dell'invio l'app ti mostra esattamente il testo che verrà inviato.
 **Il fornitore** tratta i dati secondo le sue condizioni e la sua informativa, legate al tuo account presso di lui: controlla per quanto tempo conserva le richieste e se le usa per addestrare i modelli. FinancialManager non ha alcun accordo con i fornitori e non riceve nulla da loro.
 
 **Cosa resta nell'app**: ogni analisi viene salvata nella cronologia con il testo inviato, il report, le domande e le risposte, così puoi rileggerla. Puoi eliminare una singola analisi o tutta la cronologia in qualsiasi momento, e tutto viene eliminato insieme all'account. L'export dei dati include il contesto personale, mai le chiavi API.
+
+## Analisi AI sul dispositivo (facoltativa, Android)
+
+In alternativa a un fornitore cloud puoi far girare il modello AI **direttamente sul tuo telefono**. La scegli da **Account → Assistente AI → Fornitore e chiave API → Sul dispositivo**, e prima della prima analisi l'app ti chiede di accettare un'informativa dedicata, che puoi revocare dalla stessa schermata.
+
+**Dove vengono elaborati i dati.** Il server prepara lo stesso riepilogo descritto sopra (con le stesse scelte su movimenti, pseudonimi e contesto personale) e lo passa all'app, che lo dà al modello installato sul telefono. Il testo viene scritto sul telefono, senza connessione al modello: **nessun fornitore AI esterno riceve i tuoi dati** e non serve nessuna chiave API.
+
+**Cosa resta sul server.** Come per le analisi cloud, ogni analisi viene salvata nella cronologia con il testo dato al modello, il report, le domande e le risposte, così la ritrovi su ogni dispositivo. Vengono salvate anche alcune informazioni tecniche sull'esecuzione: il nome del modello e la sua quantizzazione, il motore (LiteRT-LM o llama.cpp), se ha usato GPU o CPU, la dimensione del contesto, i token e la durata. Nel tuo profilo AI resta anche il nome del modello attivo sul telefono. Eliminazione e cancellazione dell'account funzionano come per le analisi cloud.
+
+**Il download dei modelli.** I modelli (da 2 a 4 GB circa) si scaricano da **Hugging Face** (huggingface.co), con link fissati a una versione precisa e verificati con un'impronta SHA-256. Hugging Face, e la rete di distribuzione che usa, vedono il tuo indirizzo IP e il file richiesto, come per qualsiasi download; non ricevono nessun dato finanziario. Puoi anche importare un modello da un file o da un indirizzo https a tua scelta: in quel caso il download va al sito che indichi.
+
+**Il token Hugging Face** serve solo per i modelli riservati, se un giorno li userai. Resta cifrato nell'archivio sicuro del telefono (Android Keystore), non arriva mai al server dell'app e viene inviato soltanto a huggingface.co.
+
+**Cosa resta sul telefono.** I modelli scaricati, le impostazioni di esecuzione e le velocità misurate sono salvati nella memoria privata dell'app, esclusi dal backup di Android, e restano sul telefono anche se cambi account. Se il telefono è offline quando finisce un'analisi, il report viene conservato sul telefono, legato al tuo account, finché il server non lo riceve: viene inviato al successivo accesso, quando riapri l'app o prima dell'analisi seguente, ed è eliminato comunque dopo 7 giorni. Per cancellare i modelli usa **Modelli sul dispositivo → Elimina**, oppure disinstalla l'app.
+
+**Il modello può sbagliare.** I modelli che girano su un telefono sono piccoli e possono confondere i numeri: controllali prima di prendere decisioni. Ogni modello è distribuito con la sua licenza, che l'app ti mostra prima del download.
 
 ## Servizi di Google
 
