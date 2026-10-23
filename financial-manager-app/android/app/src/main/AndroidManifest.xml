@@ -36,6 +36,21 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Android App Links: the links in emails (password reset, email
+                 verification) open the app instead of the browser. Android
+                 verifies the domain against
+                 https://financialmanager.alexviolatto.dev/.well-known/assetlinks.json,
+                 which lists the signing key's SHA-256 (docs/build-deploy.md,
+                 "App Links"). Flutter hands the URL to go_router. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"/>
+                <data android:host="financialmanager.alexviolatto.dev"/>
+                <data android:path="/reset-password"/>
+                <data android:path="/verify-email"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

@@ -46,6 +46,9 @@ FROM caddy:2.11.7-alpine
 
 COPY docker/Caddyfile.web /etc/caddy/Caddyfile
 COPY --from=build /app/build/web /srv
+# Android App Links: lets the app open the links in emails
+# (docs/build-deploy.md, "App Links").
+COPY docker/assetlinks.json /srv/.well-known/assetlinks.json
 
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

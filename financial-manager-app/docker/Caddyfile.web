@@ -15,6 +15,11 @@
 	# or they would keep the old dashboard after a deploy.
 	header Cache-Control "no-cache"
 
+	# Android verifies App Links against this file: it must be JSON,
+	# served as is (never index.html) and without redirects.
+	@assetlinks path /.well-known/assetlinks.json
+	header @assetlinks Content-Type "application/json"
+
 	# App routes (/app/history, ...) are not files: index.html handles
 	# them (usePathUrlStrategy).
 	try_files {path} /index.html
