@@ -33,5 +33,16 @@
   "webHaveAccount": "Already have an account?",
   "webStepOf": "Step {current} of {total}",
   "webAvatarPreview": "Avatar preview",
-  "webGoogleUnavailable": "Google sign-in is not available right now."
+  "webGoogleUnavailable": "Google sign-in is not available right now.",
+  "webShowBalance": "Show balance",
+  "webHideBalance": "Hide balance",
+  "webThisMonth": "This month",
+  "webRecentOperations": "Latest operations",
+  "webSeeAll": "See all",
+  "webNoOperationsYet": "No operations recorded yet.",
+  "webSaved": "Saved",
+  "webAmountLabel": "Amount",
+  "webNewBalanceLabel": "Actual balance",
+  "webTotal": "Total",
+  "webWalletCount": "{count, plural, =1{1 wallet} other{{count} wallets}}"
 }

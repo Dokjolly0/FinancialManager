@@ -55,6 +55,31 @@ export const routes: Routes = [
         path: 'home',
         loadComponent: () => import('./features/home/home-page').then((m) => m.HomePage),
       },
+      {
+        path: 'account/wallets',
+        loadComponent: () => import('./features/wallets/wallets-page').then((m) => m.WalletsPage),
+      },
+      {
+        path: 'account/wallets/new',
+        loadComponent: () =>
+          import('./features/wallets/wallet-form-page').then((m) => m.WalletFormPage),
+      },
+      {
+        path: 'account/wallets/:id/edit',
+        loadComponent: () =>
+          import('./features/wallets/wallet-form-page').then((m) => m.WalletFormPage),
+      },
+      // Pushed without a URL in the app; here they get one.
+      {
+        path: 'account/wallets/:id/denominations',
+        loadComponent: () =>
+          import('./features/wallets/denominations-page').then((m) => m.DenominationsPage),
+      },
+      {
+        path: 'account/wallets/:id/voucher-lots',
+        loadComponent: () =>
+          import('./features/wallets/voucher-lots-page').then((m) => m.VoucherLotsPage),
+      },
     ],
   },
   { path: '**', redirectTo: 'app/home' },

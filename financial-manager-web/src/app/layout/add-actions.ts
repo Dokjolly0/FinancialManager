@@ -1,8 +1,9 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import type { IconNode } from 'lucide';
-import { ArrowUpDown } from 'lucide';
+import { ArrowLeftRight, ArrowUpDown, TicketPlus } from 'lucide';
 
+import { WalletDialogs } from '../features/wallets/wallet-dialogs';
 import { WalletsStore } from '../features/wallets/wallets.store';
 
 export interface AddAction {
@@ -22,26 +23,39 @@ export interface AddAction {
 export class AddActions {
   private readonly router = inject(Router);
   private readonly wallets = inject(WalletsStore);
+  private readonly dialogs = inject(WalletDialogs);
 
-  /** Extra entries registered by features that own their dialogs. */
-  private readonly extra = signal<((wallets: WalletsStore) => AddAction[])[]>([]);
-
-  readonly actions = computed<AddAction[]>(() => {
-    const standard: AddAction = {
+  readonly actions = computed<AddAction[]>(() => [
+    {
       id: 'standard',
       labelKey: 'webAddIncomeExpense',
       icon: ArrowUpDown,
       run: () => void this.router.navigateByUrl('/app/transactions/new'),
-    };
-    return [standard, ...this.extra().flatMap((provide) => provide(this.wallets))];
-  });
+    },
+    ...(this.wallets.hasMultipleWallets()
+      ? [
+          {
+            id: 'transfer',
+            labelKey: 'webAddTransfer',
+            icon: ArrowLeftRight,
+            run: () => void this.dialogs.transfer(),
+          },
+        ]
+      : []),
+    ...(this.wallets.hasVoucherWallet()
+      ? [
+          {
+            id: 'voucher-credit',
+            labelKey: 'webAddVoucherCredit',
+            icon: TicketPlus,
+            run: () => void this.dialogs.voucherCredit(true),
+          },
+        ]
+      : []),
+  ]);
 
   /** True when the button should open the form without a menu. */
   readonly direct = computed(() => this.actions().length === 1);
-
-  register(provide: (wallets: WalletsStore) => AddAction[]): void {
-    this.extra.update((list) => [...list, provide]);
-  }
 
   runDefault(): void {
     this.actions()[0].run();

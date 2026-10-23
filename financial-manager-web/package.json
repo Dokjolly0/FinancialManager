@@ -4,8 +4,7 @@
   "scripts": {
     "ng": "ng",
     "i18n": "node scripts/arb-to-json.mjs",
-    "prestart": "npm run i18n",
-    "start": "ng serve",
+    "start": "node scripts/dev.mjs",
     "prebuild": "npm run i18n",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",

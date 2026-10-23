@@ -32,9 +32,13 @@ export interface ErrorPresentation {
 export class ErrorText {
   private readonly transloco = inject(TranslocoService);
 
-  /** Localized text of a code; unknown codes give the generic message. */
+  /**
+   * Localized text of a code; unknown codes give the generic message. A
+   * camelCase value is taken as an ARB key, for client-side checks whose
+   * text isn't an error code (e.g. "transferSameWalletError").
+   */
   code(code: string): string {
-    const key = errorCodeKey(code);
+    const key = /^[a-z]/.test(code) ? code : errorCodeKey(code);
     const translation = this.transloco.getTranslation(this.transloco.getActiveLang());
     return key in translation
       ? this.transloco.translate(key)

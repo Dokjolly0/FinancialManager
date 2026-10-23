@@ -11,9 +11,12 @@
 // misses a key of the template (it) or a placeholder differs, and when a
 // web key shadows an ARB key.
 //
-// Usage: node scripts/arb-to-json.mjs [--arb-dir <dir>]
+// Usage: node scripts/arb-to-json.mjs [--arb-dir <dir>] [--watch]
+//
+// --watch rebuilds whenever an ARB or web file changes (npm start uses it
+// through scripts/dev.mjs); an inconsistency is then reported, not fatal.
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, watch, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -73,12 +76,14 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
-function main() {
+function arbDirectory() {
   const flag = process.argv.indexOf('--arb-dir');
-  const arbDir =
-    flag > 0
-      ? resolve(process.argv[flag + 1])
-      : join(root, '..', 'financial-manager-app', 'lib', 'l10n');
+  return flag > 0
+    ? resolve(process.argv[flag + 1])
+    : join(root, '..', 'financial-manager-app', 'lib', 'l10n');
+}
+
+function build(arbDir) {
   const arbByLang = {};
   const webByLang = {};
   for (const lang of LANGUAGES) {
@@ -92,6 +97,30 @@ function main() {
     writeFileSync(join(outDir, `${lang}.json`), JSON.stringify(messages));
   }
   console.log(`i18n: wrote ${LANGUAGES.map((l) => `${l}.json`).join(', ')} to public/i18n`);
+}
+
+function main() {
+  const arbDir = arbDirectory();
+  if (!process.argv.includes('--watch')) {
+    build(arbDir);
+    return;
+  }
+  const rebuild = () => {
+    try {
+      build(arbDir);
+    } catch (error) {
+      console.error(`i18n: ${error.message}`);
+    }
+  };
+  rebuild();
+  let timer;
+  const schedule = () => {
+    clearTimeout(timer);
+    timer = setTimeout(rebuild, 150);
+  };
+  watch(arbDir, schedule);
+  watch(join(root, 'src', 'i18n'), schedule);
+  console.log('i18n: watching the ARB and web string files');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

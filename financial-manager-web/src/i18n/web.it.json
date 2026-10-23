@@ -33,5 +33,16 @@
   "webHaveAccount": "Hai già un account?",
   "webStepOf": "Passo {current} di {total}",
   "webAvatarPreview": "Anteprima avatar",
-  "webGoogleUnavailable": "Accesso con Google non disponibile in questo momento."
+  "webGoogleUnavailable": "Accesso con Google non disponibile in questo momento.",
+  "webShowBalance": "Mostra saldo",
+  "webHideBalance": "Nascondi saldo",
+  "webThisMonth": "Questo mese",
+  "webRecentOperations": "Ultime operazioni",
+  "webSeeAll": "Vedi tutte",
+  "webNoOperationsYet": "Nessuna operazione ancora registrata.",
+  "webSaved": "Salvato",
+  "webAmountLabel": "Importo",
+  "webNewBalanceLabel": "Saldo reale",
+  "webTotal": "Totale",
+  "webWalletCount": "{count, plural, =1{1 portafoglio} other{{count} portafogli}}"
 }

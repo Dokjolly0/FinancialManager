@@ -212,18 +212,18 @@
 }
 
 /* Dialogs and drawers opened through ui/overlay.ts (CDK Dialog panels). */
-.fm-dialog-panel {
+.cdk-overlay-pane.fm-dialog-panel {
   @apply w-[calc(100vw-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl border border-border bg-surface shadow-pop animate-fade-in;
 }
-.fm-dialog-panel.fm-wide {
+.cdk-overlay-pane.fm-dialog-panel.fm-wide {
   @apply max-w-2xl;
 }
 /* Side drawer on wide screens, bottom sheet on phones. */
-.fm-drawer-panel {
+.cdk-overlay-pane.fm-drawer-panel {
   @apply fixed! right-0 top-0 h-dvh w-full max-w-xl overflow-hidden border-l border-border bg-surface shadow-pop animate-slide-in-right;
 }
 @media (width < 40rem) {
-  .fm-drawer-panel {
+  .cdk-overlay-pane.fm-drawer-panel {
     @apply top-auto! bottom-0 h-auto max-h-[92dvh] rounded-t-2xl border-l-0 border-t animate-slide-in-up;
   }
 }
