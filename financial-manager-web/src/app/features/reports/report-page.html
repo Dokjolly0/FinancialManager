@@ -1,0 +1,340 @@
+<app-page-header [title]="'webNavReports' | transloco" />
+
+<!-- Period, wallet, adjustments: one row above the charts -->
+<section class="mb-6 space-y-3">
+  <div
+    class="flex flex-wrap items-center gap-2"
+    role="group"
+    [attr.aria-label]="'webPeriod' | transloco"
+  >
+    @for (preset of presets; track preset) {
+      <button
+        type="button"
+        class="chip"
+        [class.chip-active]="filter().preset === preset"
+        [attr.aria-pressed]="filter().preset === preset"
+        (click)="setPreset(preset)"
+      >
+        {{ presetKeys[preset] | transloco }}
+      </button>
+    }
+  </div>
+  <div class="flex flex-wrap items-end gap-3">
+    @if (filter().preset === 'custom') {
+      <div>
+        <label class="hint mb-1 mt-0 block" for="rp-from">{{ 'startDateLabel' | transloco }}</label>
+        <input
+          id="rp-from"
+          type="date"
+          class="input h-10 w-44"
+          [value]="filter().from ?? ''"
+          (change)="update({ from: $any($event.target).value || null })"
+        />
+      </div>
+      <div>
+        <label class="hint mb-1 mt-0 block" for="rp-to">{{ 'endDateLabel' | transloco }}</label>
+        <input
+          id="rp-to"
+          type="date"
+          class="input h-10 w-44"
+          [value]="filter().to ?? ''"
+          [min]="filter().from ?? ''"
+          (change)="update({ to: $any($event.target).value || null })"
+        />
+      </div>
+    }
+    @if (wallets.wallets().length > 1) {
+      <div>
+        <label class="hint mb-1 mt-0 block" for="rp-wallet">{{ 'walletLabel' | transloco }}</label>
+        <select
+          id="rp-wallet"
+          class="input h-10 w-56"
+          [value]="filter().walletId ?? ''"
+          (change)="update({ walletId: $any($event.target).value || null })"
+        >
+          <option value="">{{ 'allWalletsLabel' | transloco }}</option>
+          @for (wallet of wallets.wallets(); track wallet.id) {
+            <option [value]="wallet.id" [selected]="filter().walletId === wallet.id">
+              {{ wallet.name }}
+            </option>
+          }
+        </select>
+      </div>
+    }
+    <label class="flex h-10 cursor-pointer items-center gap-2 text-sm text-fg">
+      <input
+        type="checkbox"
+        class="checkbox"
+        [checked]="filter().includeAdjustments"
+        (change)="update({ includeAdjustments: $any($event.target).checked })"
+      />
+      {{ 'webIncludeAdjustments' | transloco }}
+    </label>
+  </div>
+</section>
+
+@if (filter().preset === 'custom' && !data.value() && !data.isLoading()) {
+  <div class="card">
+    <app-empty-state [message]="'webPickRange' | transloco" [icon]="icons.ChartColumn" />
+  </div>
+} @else if (data.error()) {
+  <div class="card">
+    <app-inline-error [message]="errorText.message(data.error())" (retry)="data.reload()" />
+  </div>
+} @else {
+  @let summary = data.value()?.summary;
+  <!-- Summary -->
+  <section class="grid grid-cols-2 gap-3 md:grid-cols-5">
+    @for (
+      tile of [
+        { key: 'webOpeningBalance', value: summary?.opening_balance_minor, tone: 'text-fg' },
+        { key: 'creditsColumnLabel', value: summary?.total_credits_minor, tone: 'text-credit' },
+        { key: 'debitsColumnLabel', value: summary?.total_debits_minor, tone: 'text-debit' },
+        {
+          key: 'webNetResult',
+          value: summary?.net_minor,
+          tone: (summary?.net_minor ?? 0) >= 0 ? 'text-credit' : 'text-debit',
+        },
+        { key: 'webClosingBalance', value: summary?.closing_balance_minor, tone: 'text-fg' },
+      ];
+      track tile.key;
+      let last = $last
+    ) {
+      <div class="card p-4" [class.col-span-2]="last" [class.md:col-span-1]="last">
+        <p class="text-xs font-medium text-fg-muted">{{ tile.key | transloco }}</p>
+        @if (data.isLoading() && !data.hasValue()) {
+          <div class="skeleton mt-2 h-7 w-24"></div>
+        } @else {
+          <p class="tabular mt-1.5 text-xl font-bold" [class]="tile.tone">
+            {{ tile.value ?? 0 | money: currency() }}
+          </p>
+        }
+      </div>
+    }
+  </section>
+  @if (summary) {
+    <p class="mt-3 text-xs text-fg-muted">
+      {{ 'webOperationCount' | transloco: { count: summary.transaction_count } }}
+      @if (summary.savings_rate_percent !== null && summary.savings_rate_percent !== undefined) {
+        · {{ 'webSavingsRate' | transloco: { rate: (summary.savings_rate_percent | percent) } }}
+      }
+    </p>
+  }
+
+  <div class="mt-6 grid gap-6 xl:grid-cols-5">
+    <!-- Trend -->
+    <section class="card card-pad xl:col-span-3">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-fg">{{ 'reportTrendTitle' | transloco }}</h2>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          [attr.aria-pressed]="trendAsTable()"
+          (click)="trendAsTable.set(!trendAsTable())"
+        >
+          <app-icon [icon]="trendAsTable() ? icons.ChartColumn : icons.Table" [size]="16" />
+          {{ (trendAsTable() ? 'showChartTooltip' : 'showTableTooltip') | transloco }}
+        </button>
+      </div>
+      @if (data.isLoading() && !data.hasValue()) {
+        <div class="skeleton h-64 w-full"></div>
+      } @else if (points().length === 0) {
+        <app-empty-state [message]="'noDataForPeriod' | transloco" />
+      } @else if (trendAsTable()) {
+        <div class="max-h-80 overflow-auto">
+          <table class="w-full text-sm">
+            <thead class="sticky top-0 bg-surface text-left text-xs text-fg-muted">
+              <tr>
+                <th class="py-2 font-medium">{{ 'periodColumnLabel' | transloco }}</th>
+                <th class="py-2 text-right font-medium">{{ 'creditsColumnLabel' | transloco }}</th>
+                <th class="py-2 text-right font-medium">{{ 'debitsColumnLabel' | transloco }}</th>
+                <th class="py-2 text-right font-medium">{{ 'balanceColumnLabel' | transloco }}</th>
+              </tr>
+            </thead>
+            <tbody class="tabular divide-y divide-border">
+              @for (p of points(); track p.period_start) {
+                <tr>
+                  <td class="py-2">
+                    {{
+                      p.period_start
+                        | appDate
+                          : (data.value()?.timeseries?.granularity === 'day' ? 'date' : 'monthYear')
+                    }}
+                  </td>
+                  <td class="py-2 text-right">{{ p.credits_minor | money: currency() }}</td>
+                  <td class="py-2 text-right">{{ p.debits_minor | money: currency() }}</td>
+                  <td class="py-2 text-right font-semibold">
+                    {{ p.balance_minor | money: currency() }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div
+          echarts
+          class="h-72 w-full"
+          [options]="trendOptions()"
+          [autoResize]="true"
+          role="img"
+          [attr.aria-label]="'reportTrendTitle' | transloco"
+        ></div>
+      }
+    </section>
+
+    <!-- Breakdown -->
+    <section class="card card-pad xl:col-span-2">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-sm font-semibold text-fg">{{ 'reportBreakdownTitle' | transloco }}</h2>
+        <div class="inline-flex rounded-lg bg-surface-2 p-0.5 text-xs font-medium">
+          @for (
+            option of [
+              { v: 'category', k: 'groupByCategoryOption' },
+              { v: 'title', k: 'groupByTitleOption' },
+            ];
+            track option.v
+          ) {
+            <button
+              type="button"
+              class="rounded-md px-2.5 py-1"
+              [class]="
+                filter().groupBy === option.v ? 'bg-surface text-fg shadow-sm' : 'text-fg-muted'
+              "
+              (click)="update({ groupBy: $any(option.v) })"
+            >
+              {{ option.k | transloco }}
+            </button>
+          }
+        </div>
+      </div>
+      <div class="mb-4 flex gap-2">
+        <button
+          type="button"
+          class="chip"
+          [class.chip-active]="breakdownTab() === 'debits'"
+          (click)="breakdownTab.set('debits')"
+        >
+          {{ 'debitsColumnLabel' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="chip"
+          [class.chip-active]="breakdownTab() === 'credits'"
+          (click)="breakdownTab.set('credits')"
+        >
+          {{ 'creditsColumnLabel' | transloco }}
+        </button>
+      </div>
+      @if (breakdown.isLoading() && !breakdown.hasValue()) {
+        <div class="space-y-3">
+          @for (i of [1, 2, 3, 4]; track i) {
+            <div class="skeleton h-9 w-full"></div>
+          }
+        </div>
+      } @else if (breakdownItems().length === 0) {
+        <app-empty-state [message]="'noTransactionsForView' | transloco" />
+      } @else {
+        <ul
+          class="max-h-96 space-y-3.5 overflow-y-auto pr-1"
+          [class.opacity-60]="breakdown.isLoading()"
+        >
+          @for (item of breakdownItems(); track item.key) {
+            <li>
+              <div class="flex items-baseline justify-between gap-3 text-sm">
+                <span class="truncate font-medium text-fg">{{ item.label }}</span>
+                <span class="tabular shrink-0 text-fg">{{
+                  item.amount_minor | money: currency()
+                }}</span>
+              </div>
+              <div class="mt-1.5 flex items-center gap-3">
+                <div class="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
+                  <div
+                    class="h-full rounded-full"
+                    [class]="breakdownTab() === 'debits' ? 'bg-chart-out' : 'bg-chart-in'"
+                    [style.width.%]="item.percentage"
+                  ></div>
+                </div>
+                <span class="tabular w-12 text-right text-xs text-fg-muted">{{
+                  item.percentage | percent
+                }}</span>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  </div>
+
+  <!-- Monthly comparison: only for periods spanning more than one month (section 18.8) -->
+  @if (data.value()?.monthly?.spans_multiple_months) {
+    <section class="card card-pad mt-6">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-fg">{{ 'monthlyComparisonTitle' | transloco }}</h2>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          [attr.aria-pressed]="monthlyAsTable()"
+          (click)="monthlyAsTable.set(!monthlyAsTable())"
+        >
+          <app-icon [icon]="monthlyAsTable() ? icons.ChartColumn : icons.Table" [size]="16" />
+          {{ (monthlyAsTable() ? 'showChartTooltip' : 'showTableTooltip') | transloco }}
+        </button>
+      </div>
+      @if (months().length === 0) {
+        <app-empty-state [message]="'noDataForPeriod' | transloco" />
+      } @else if (monthlyAsTable()) {
+        <table class="w-full text-sm">
+          <thead class="text-left text-xs text-fg-muted">
+            <tr>
+              <th class="py-2 font-medium">{{ 'monthColumnLabel' | transloco }}</th>
+              <th class="py-2 text-right font-medium">{{ 'creditsColumnLabel' | transloco }}</th>
+              <th class="py-2 text-right font-medium">{{ 'debitsColumnLabel' | transloco }}</th>
+              <th class="py-2 text-right font-medium">{{ 'netColumnLabel' | transloco }}</th>
+            </tr>
+          </thead>
+          <tbody class="tabular divide-y divide-border">
+            @for (m of months(); track m.month) {
+              <tr>
+                <td class="py-2 capitalize">{{ m.month | appDate: 'monthYear' }}</td>
+                <td class="py-2 text-right">{{ m.credits_minor | money: currency() }}</td>
+                <td class="py-2 text-right">{{ m.debits_minor | money: currency() }}</td>
+                <td class="py-2 text-right font-semibold">
+                  {{ m.net_minor | money: currency() : { signed: true } }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <div
+          echarts
+          class="h-72 w-full"
+          [options]="monthlyOptions()"
+          [autoResize]="true"
+          role="img"
+          [attr.aria-label]="'monthlyComparisonTitle' | transloco"
+        ></div>
+      }
+    </section>
+  }
+
+  <!-- AI -->
+  @if (session.aiEnabled()) {
+    <section
+      class="card card-pad mt-6 flex flex-wrap items-center gap-4 bg-gradient-to-r from-primary-soft to-surface"
+    >
+      <span class="grid h-11 w-11 place-items-center rounded-xl bg-primary text-primary-fg">
+        <app-icon [icon]="icons.Sparkles" />
+      </span>
+      <div class="min-w-0 flex-1">
+        <h2 class="font-semibold text-fg">{{ 'aiReportsCardTitle' | transloco }}</h2>
+        <p class="text-sm text-fg-muted">{{ 'aiReportsCardBody' | transloco }}</p>
+      </div>
+      <a routerLink="/app/ai/analyses" class="btn btn-ghost">
+        <app-icon [icon]="icons.History" [size]="16" /> {{ 'aiHistoryTitle' | transloco }}
+      </a>
+      <a routerLink="/app/ai/new" class="btn btn-primary">{{ 'aiReportsCardStart' | transloco }}</a>
+    </section>
+  }
+}

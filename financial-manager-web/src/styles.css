@@ -25,6 +25,10 @@
   --c-warning: #b54708;
   --c-info: #175cd3;
   --c-overlay: rgb(14 21 19 / 0.45);
+  /* Chart series (income, expenses): blue/orange, validated for colour-blind
+     separation on both surfaces; red/green fails it in dark mode. */
+  --c-chart-in: #2a78d6;
+  --c-chart-out: #eb6834;
   color-scheme: light;
 }
 
@@ -43,6 +47,8 @@
   --c-warning: #f0a15d;
   --c-info: #6fa8f5;
   --c-overlay: rgb(0 0 0 / 0.6);
+  --c-chart-in: #3987e5;
+  --c-chart-out: #d95926;
   color-scheme: dark;
 }
 
@@ -63,6 +69,8 @@
   --color-warning: var(--c-warning);
   --color-info: var(--c-info);
   --color-overlay: var(--c-overlay);
+  --color-chart-in: var(--c-chart-in);
+  --color-chart-out: var(--c-chart-out);
 
   --radius-card: 1rem;
   --shadow-card: 0 1px 2px rgb(16 24 20 / 0.04), 0 4px 16px rgb(16 24 20 / 0.04);

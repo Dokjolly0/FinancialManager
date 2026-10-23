@@ -60,6 +60,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/history/history-page').then((m) => m.HistoryPage),
       },
       {
+        path: 'reports',
+        loadComponent: () => import('./features/reports/report-page').then((m) => m.ReportPage),
+      },
+      {
         path: 'transactions/new',
         loadComponent: () =>
           import('./features/transactions/transaction-form-page').then(

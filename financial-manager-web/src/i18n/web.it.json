@@ -69,5 +69,19 @@
   "webLoadMore": "Carica altre",
   "webRemoveFilter": "Rimuovi filtro",
   "webAnalyzeWithAi": "Analizza con AI",
-  "webEndBeforeStart": "La data finale è prima di quella iniziale."
+  "webEndBeforeStart": "La data finale è prima di quella iniziale.",
+  "webPresetLast30Days": "Ultimi 30 giorni",
+  "webPresetCurrentMonth": "Mese corrente",
+  "webPresetLast12Months": "Ultimi 12 mesi",
+  "webPresetCurrentYear": "Anno corrente",
+  "webPresetAllTime": "Intera cronologia",
+  "webPresetCustom": "Personalizzato",
+  "webPeriod": "Periodo",
+  "webIncludeAdjustments": "Includi rettifiche",
+  "webPickRange": "Scegli la data iniziale e quella finale.",
+  "webOpeningBalance": "Saldo iniziale",
+  "webClosingBalance": "Saldo finale",
+  "webNetResult": "Risultato netto",
+  "webOperationCount": "{count, plural, =1{1 operazione} other{{count} operazioni}}",
+  "webSavingsRate": "Risparmio: {rate}"
 }

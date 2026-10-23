@@ -40,3 +40,18 @@ export class JoinPartsPipe implements PipeTransform {
     return parts.filter((part) => !!part && part.trim() !== '').join(separator);
   }
 }
+
+/** `{{ 73.12 | percent }}` → "73,1%" in Italian: a percentage (0-100) in the active locale. */
+@Pipe({ name: 'percent', pure: false })
+export class PercentPipe implements PipeTransform {
+  private readonly locale = inject(LocaleService);
+
+  transform(value: number | null | undefined, digits = 1): string {
+    if (value === null || value === undefined) return '';
+    return new Intl.NumberFormat(this.locale.intl(), {
+      style: 'percent',
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(value / 100);
+  }
+}
