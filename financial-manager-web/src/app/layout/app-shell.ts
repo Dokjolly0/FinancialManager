@@ -20,6 +20,7 @@ import {
 } from 'lucide';
 
 import { SessionService } from '../core/session/session.service';
+import { AccountApi } from '../features/account/account.api';
 import { ThemeService } from '../core/theme/theme.service';
 import { Avatar } from '../shared/ui/avatar';
 import { Icon } from '../shared/ui/icon';
@@ -66,6 +67,7 @@ export class AppShell {
   protected readonly add = inject(AddActions);
   private readonly overlay = inject(Overlay);
   private readonly transloco = inject(TranslocoService);
+  private readonly account = inject(AccountApi);
 
   protected readonly collapsed = signal(readCollapsed());
 
@@ -92,8 +94,11 @@ export class AppShell {
     }
   }
 
+  /** Switches theme at once and saves it in the profile (best effort). */
   protected toggleTheme(): void {
-    this.theme.preference.set(this.theme.dark() ? 'light' : 'dark');
+    const theme = this.theme.dark() ? 'light' : 'dark';
+    this.theme.preference.set(theme);
+    this.account.updateProfile({ theme }).catch(() => undefined);
   }
 
   protected openPalette(): void {

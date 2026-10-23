@@ -9,7 +9,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
   imports: [ReactiveFormsModule, TranslocoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <form class="p-6" (ngSubmit)="save()">
+    <form class="p-6" (submit)="$event.preventDefault(); save()">
       <h2 class="text-lg font-semibold text-fg">{{ 'mediaRenameDialogTitle' | transloco }}</h2>
       <label class="label mt-4" for="media-name">{{ 'mediaNameLabel' | transloco }}</label>
       <input id="media-name" class="input" [formControl]="name" cdkFocusInitial />

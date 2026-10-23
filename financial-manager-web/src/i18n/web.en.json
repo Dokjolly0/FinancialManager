@@ -83,5 +83,18 @@
   "webClosingBalance": "Closing balance",
   "webNetResult": "Net result",
   "webOperationCount": "{count, plural, =1{1 operation} other{{count} operations}}",
-  "webSavingsRate": "Savings: {rate}"
+  "webSavingsRate": "Savings: {rate}",
+  "webLinkedAccountsSubtitle": "Also sign in with Google",
+  "webEmailNotVerified": "Email not verified.",
+  "webChangePassword": "Change password",
+  "webConfirmNewPassword": "Confirm new password",
+  "webUpdatePassword": "Update password",
+  "webPasswordUpdated": "Password updated.",
+  "webActiveSessions": "Active sessions",
+  "webThisDevice": "This device",
+  "webUnknownDevice": "Unknown device",
+  "webLastAccess": "Last access: {date}",
+  "webEndSession": "End session",
+  "webEndSessionTitle": "End this session?",
+  "webSaving": "Saving…"
 }

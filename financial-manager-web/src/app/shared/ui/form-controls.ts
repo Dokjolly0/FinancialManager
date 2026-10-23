@@ -8,19 +8,22 @@ import {
   signal,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 import { LocaleService } from '../../core/formatting/locale.service';
 import { minorToInput, parseMinorUnits } from '../../core/formatting/money';
 
 export interface SegmentOption<T> {
   value: T;
-  label: string;
+  /** ARB key, translated in the template so a language switch relabels it. */
+  labelKey: string;
 }
 
 /** A row of mutually exclusive options (the app's SegmentedButton). */
 @Component({
   selector: 'app-segmented',
   host: { class: 'block' },
+  imports: [TranslocoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => Segmented), multi: true },
@@ -46,7 +49,7 @@ export interface SegmentOption<T> {
           [disabled]="disabled()"
           (click)="select(option.value)"
         >
-          {{ option.label }}
+          {{ option.labelKey | transloco }}
         </button>
       }
     </div>

@@ -90,6 +90,32 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'account',
+        loadComponent: () => import('./features/account/account-page').then((m) => m.AccountPage),
+      },
+      {
+        path: 'account/profile',
+        loadComponent: () => import('./features/account/profile-page').then((m) => m.ProfilePage),
+      },
+      {
+        path: 'account/security',
+        loadComponent: () => import('./features/account/security-page').then((m) => m.SecurityPage),
+      },
+      {
+        path: 'account/linked-accounts',
+        loadComponent: () =>
+          import('./features/account/linked-accounts-page').then((m) => m.LinkedAccountsPage),
+      },
+      {
+        path: 'account/preferences',
+        loadComponent: () =>
+          import('./features/account/preferences-page').then((m) => m.PreferencesPage),
+      },
+      {
+        path: 'account/data',
+        loadComponent: () => import('./features/account/data-page').then((m) => m.DataPage),
+      },
+      {
         path: 'account/wallets',
         loadComponent: () => import('./features/wallets/wallets-page').then((m) => m.WalletsPage),
       },

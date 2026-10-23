@@ -132,10 +132,7 @@ export class WalletFormPage implements OnInit {
     const allowed = existing
       ? all.filter((type) => (type === 'MEAL_VOUCHER') === (existing.type === 'MEAL_VOUCHER'))
       : all;
-    return allowed.map((value) => ({
-      value,
-      label: this.transloco.translate(WALLET_TYPE_KEYS[value]),
-    }));
+    return allowed.map((value) => ({ value, labelKey: WALLET_TYPE_KEYS[value] }));
   });
 
   protected readonly months = computed(() => {

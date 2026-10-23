@@ -20,7 +20,7 @@ import { fromDateTimeInput, toDateTimeInput } from '../../core/formatting/dates'
 import { CategorySelect } from '../categories/category-select';
 import { CategoriesStore } from '../categories/categories.store';
 import { ImageField } from '../media/image-field';
-import { AmountInput, Segmented, Switch } from '../../shared/ui/form-controls';
+import { AmountInput, SegmentOption, Segmented, Switch } from '../../shared/ui/form-controls';
 import { PageHeader } from '../../shared/ui/page-header';
 import { InlineError, Spinner } from '../../shared/ui/states';
 import { Toasts } from '../../shared/ui/toast';
@@ -94,10 +94,10 @@ export class TransactionFormPage implements OnInit {
     initialValue: this.form.getRawValue(),
   });
 
-  protected readonly directionOptions = computed(() => [
-    { value: 'DEBIT' as Direction, label: this.transloco.translate('debitsColumnLabel') },
-    { value: 'CREDIT' as Direction, label: this.transloco.translate('creditsColumnLabel') },
-  ]);
+  protected readonly directionOptions: SegmentOption<Direction>[] = [
+    { value: 'DEBIT', labelKey: 'debitsColumnLabel' },
+    { value: 'CREDIT', labelKey: 'creditsColumnLabel' },
+  ];
 
   protected readonly loading = signal(false);
   protected readonly loadError = signal<string | null>(null);

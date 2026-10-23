@@ -76,6 +76,9 @@ export class ReportPage {
   protected readonly presets = PRESETS;
   protected readonly presetKeys = PRESET_KEYS;
 
+  /** Emits once a language is loaded: chart labels recompute with it. */
+  private readonly translation = toSignal(this.transloco.selectTranslation());
+
   private readonly queryParams = toSignal(this.route.queryParams, { initialValue: {} });
   protected readonly filter = computed(() => reportFilterFromParams(this.queryParams()));
   private readonly params = computed(() => reportParams(this.filter()));
@@ -179,6 +182,7 @@ export class ReportPage {
 
   protected readonly monthlyOptions = computed<EChartsCoreOption>(() => {
     this.theme.dark();
+    this.translation();
     const colors = chartColors();
     const locale = this.locale.intl();
     const money = (minor: number) => formatMoney(minor, this.currency(), locale);
