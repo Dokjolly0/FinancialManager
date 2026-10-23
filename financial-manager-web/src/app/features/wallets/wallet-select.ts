@@ -22,6 +22,7 @@ import { WalletsStore } from './wallets.store';
  */
 @Component({
   selector: 'app-wallet-select',
+  host: { class: 'block' },
   imports: [MoneyPipe, TranslocoPipe, WalletBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [

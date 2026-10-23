@@ -8,6 +8,7 @@ import { Icon } from './icon';
 /** Password field with show/hide (the app's PasswordField). */
 @Component({
   selector: 'app-password-input',
+  host: { class: 'block' },
   imports: [Icon, TranslocoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [

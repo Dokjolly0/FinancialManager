@@ -56,6 +56,32 @@ export const routes: Routes = [
         loadComponent: () => import('./features/home/home-page').then((m) => m.HomePage),
       },
       {
+        path: 'transactions/new',
+        loadComponent: () =>
+          import('./features/transactions/transaction-form-page').then(
+            (m) => m.TransactionFormPage,
+          ),
+      },
+      {
+        path: 'transactions/payment-groups',
+        loadComponent: () =>
+          import('./features/transactions/payment-groups-page').then((m) => m.PaymentGroupsPage),
+      },
+      {
+        path: 'transactions/:id',
+        loadComponent: () =>
+          import('./features/transactions/transaction-detail-page').then(
+            (m) => m.TransactionDetailPage,
+          ),
+      },
+      {
+        path: 'transactions/:id/edit',
+        loadComponent: () =>
+          import('./features/transactions/transaction-form-page').then(
+            (m) => m.TransactionFormPage,
+          ),
+      },
+      {
         path: 'account/wallets',
         loadComponent: () => import('./features/wallets/wallets-page').then((m) => m.WalletsPage),
       },

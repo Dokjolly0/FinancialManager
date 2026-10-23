@@ -1,7 +1,7 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import type { IconNode } from 'lucide';
-import { ArrowLeftRight, ArrowUpDown, TicketPlus } from 'lucide';
+import { ArrowLeftRight, ArrowUpDown, TicketPlus, Utensils } from 'lucide';
 
 import { WalletDialogs } from '../features/wallets/wallet-dialogs';
 import { WalletsStore } from '../features/wallets/wallets.store';
@@ -49,6 +49,12 @@ export class AddActions {
             labelKey: 'webAddVoucherCredit',
             icon: TicketPlus,
             run: () => void this.dialogs.voucherCredit(true),
+          },
+          {
+            id: 'voucher-expense',
+            labelKey: 'webAddVoucherExpense',
+            icon: Utensils,
+            run: () => void this.dialogs.voucherExpense(),
           },
         ]
       : []),

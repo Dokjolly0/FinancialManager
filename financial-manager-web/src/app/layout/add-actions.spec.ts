@@ -56,8 +56,8 @@ describe('AddActions', () => {
 
   it('offers voucher loads with a meal-voucher wallet', () => {
     wallets.set([wallet('MEAL_VOUCHER')]);
-    expect(ids()).toEqual(['standard', 'voucher-credit']);
+    expect(ids()).toEqual(['standard', 'voucher-credit', 'voucher-expense']);
     wallets.set([wallet('BANK'), wallet('MEAL_VOUCHER')]);
-    expect(ids()).toEqual(['standard', 'transfer', 'voucher-credit']);
+    expect(ids()).toEqual(['standard', 'transfer', 'voucher-credit', 'voucher-expense']);
   });
 });

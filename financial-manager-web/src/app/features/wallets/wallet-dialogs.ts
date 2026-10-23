@@ -6,6 +6,9 @@ import { Toasts } from '../../shared/ui/toast';
 import type { AmountDateData } from '../transactions/dialogs/amount-date-dialog';
 import { Transaction } from '../transactions/transaction.model';
 import type { VoucherCreditData } from './dialogs/voucher-credit-dialog';
+import type { VoucherExpenseData } from './dialogs/voucher-expense-dialog';
+import { WalletsStore } from './wallets.store';
+import { TransactionsApi } from '../transactions/transactions.api';
 import { Wallet } from './wallet.model';
 
 /**
@@ -18,6 +21,8 @@ export class WalletDialogs {
   private readonly overlay = inject(Overlay);
   private readonly toasts = inject(Toasts);
   private readonly transloco = inject(TranslocoService);
+  private readonly wallets = inject(WalletsStore);
+  private readonly transactions = inject(TransactionsApi);
 
   async transfer(): Promise<boolean> {
     const { TransferDialog } = await import('./dialogs/transfer-dialog');
@@ -41,6 +46,33 @@ export class WalletDialogs {
         variant: 'drawer',
         data: { addition, wallet },
       }),
+    );
+  }
+
+  async voucherExpense(data: VoucherExpenseData = {}): Promise<boolean> {
+    const { VoucherExpenseDialog } = await import('./dialogs/voucher-expense-dialog');
+    return this.saved(
+      this.overlay.result<boolean, VoucherExpenseData>(VoucherExpenseDialog, {
+        variant: 'drawer',
+        data,
+      }),
+    );
+  }
+
+  /**
+   * Edits a meal-voucher expense from either of its legs (the app's
+   * TransactionDetailScreen): the voucher-wallet leg, and the shortfall leg
+   * when there is one, linked to each other.
+   */
+  async editVoucherExpense(transaction: Transaction): Promise<boolean> {
+    const onVoucherWallet = this.wallets.byId(transaction.wallet_id)?.type === 'MEAL_VOUCHER';
+    const linked = transaction.linked_transaction_id
+      ? await this.transactions.get(transaction.linked_transaction_id)
+      : null;
+    return this.voucherExpense(
+      onVoucherWallet
+        ? { voucherTransaction: transaction, otherTransaction: linked }
+        : { voucherTransaction: linked ?? transaction, otherTransaction: transaction },
     );
   }
 

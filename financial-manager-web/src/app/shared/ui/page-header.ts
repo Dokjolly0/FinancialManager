@@ -23,7 +23,7 @@ import { Icon } from './icon';
           <app-icon [icon]="ArrowLeft" />
         </a>
       }
-      <div class="min-w-0 flex-1">
+      <div class="min-w-0 flex-[1_1_16rem]">
         <h1 class="truncate text-2xl font-bold tracking-tight text-fg">{{ title() }}</h1>
         @if (subtitle()) {
           <p class="mt-1 text-sm text-fg-muted">{{ subtitle() }}</p>

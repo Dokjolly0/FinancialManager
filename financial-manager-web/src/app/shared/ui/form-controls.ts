@@ -20,6 +20,7 @@ export interface SegmentOption<T> {
 /** A row of mutually exclusive options (the app's SegmentedButton). */
 @Component({
   selector: 'app-segmented',
+  host: { class: 'block' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => Segmented), multi: true },
@@ -90,6 +91,7 @@ export class Segmented<T> implements ControlValueAccessor {
 /** On/off switch with label and description (the app's SwitchListTile). */
 @Component({
   selector: 'app-switch',
+  host: { class: 'block' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => Switch), multi: true }],
   template: `
@@ -158,6 +160,7 @@ export class Switch implements ControlValueAccessor {
  */
 @Component({
   selector: 'app-amount-input',
+  host: { class: 'block' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => AmountInput), multi: true },

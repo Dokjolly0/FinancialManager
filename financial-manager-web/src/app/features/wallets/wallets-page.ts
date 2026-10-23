@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ArrowLeftRight, ChevronRight, Plus, TicketPlus, TriangleAlert } from 'lucide';
+import { ArrowLeftRight, ChevronRight, Plus, TicketPlus, TriangleAlert, Utensils } from 'lucide';
 
 import { MoneyPipe } from '../../core/formatting/pipes';
 import { Icon } from '../../shared/ui/icon';
@@ -38,6 +38,10 @@ import { WalletsStore } from './wallets.store';
       [subtitle]="'accountWalletsMenuSubtitle' | transloco"
     >
       @if (store.hasVoucherWallet()) {
+        <button type="button" class="btn btn-outline" (click)="dialogs.voucherExpense()">
+          <app-icon [icon]="icons.Utensils" [size]="18" />
+          <span class="max-sm:hidden">{{ 'voucherExpenseAction' | transloco }}</span>
+        </button>
         <button type="button" class="btn btn-outline" (click)="dialogs.voucherCredit(true)">
           <app-icon [icon]="icons.TicketPlus" [size]="18" />
           <span class="max-sm:hidden">{{ 'webAddVoucherCredit' | transloco }}</span>
@@ -118,7 +122,14 @@ export class WalletsPage {
   protected readonly store = inject(WalletsStore);
   protected readonly dialogs = inject(WalletDialogs);
   protected readonly privacy = inject(BalancePrivacy);
-  protected readonly icons = { ArrowLeftRight, ChevronRight, Plus, TicketPlus, TriangleAlert };
+  protected readonly icons = {
+    ArrowLeftRight,
+    ChevronRight,
+    Plus,
+    TicketPlus,
+    TriangleAlert,
+    Utensils,
+  };
   protected readonly isMealVoucher = isMealVoucher;
 
   protected typeKey(type: string): string {

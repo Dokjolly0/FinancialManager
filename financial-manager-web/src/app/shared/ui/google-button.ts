@@ -22,6 +22,7 @@ import { Spinner } from './states';
  */
 @Component({
   selector: 'app-google-button',
+  host: { class: 'block' },
   imports: [Spinner, TranslocoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
