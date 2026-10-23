@@ -32,3 +32,11 @@ export class AppDatePipe implements PipeTransform {
     return formatDate(value, style, this.locale.intl());
   }
 }
+
+/** `{{ [a, b, c] | joinParts }}` → "a · c" when b is empty. */
+@Pipe({ name: 'joinParts' })
+export class JoinPartsPipe implements PipeTransform {
+  transform(parts: (string | null | undefined)[], separator = ' · '): string {
+    return parts.filter((part) => !!part && part.trim() !== '').join(separator);
+  }
+}

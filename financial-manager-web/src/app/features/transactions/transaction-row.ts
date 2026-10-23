@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, SlidersHorizontal } from 'lucide';
 
-import { AppDatePipe, MoneyPipe } from '../../core/formatting/pipes';
+import { AppDatePipe, JoinPartsPipe, MoneyPipe } from '../../core/formatting/pipes';
 import { Icon } from '../../shared/ui/icon';
 import { MediaSrc } from '../../shared/ui/media-src';
 import { CategoriesStore } from '../categories/categories.store';
@@ -18,7 +18,7 @@ import { Transaction, isCredit, kindLabelKey } from './transaction.model';
  */
 @Component({
   selector: 'app-transaction-row',
-  imports: [AppDatePipe, Icon, MediaSrc, MoneyPipe, RouterLink, TranslocoPipe],
+  imports: [AppDatePipe, Icon, JoinPartsPipe, MediaSrc, MoneyPipe, RouterLink, TranslocoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a
@@ -44,15 +44,14 @@ import { Transaction, isCredit, kindLabelKey } from './transaction.model';
       <span class="min-w-0 flex-1">
         <span class="block truncate text-sm font-medium text-fg">{{ transaction().title }}</span>
         <span class="mt-0.5 block truncate text-xs text-fg-muted">
-          @if (kindKey(); as key) {
-            {{ key | transloco }}
-          } @else if (category()) {
-            {{ category() }}
-          }
-          @if (showWallet() && wallet()) {
-            · {{ wallet() }}
-          }
-          · {{ transaction().occurred_at | appDate: (showDate() ? 'dateTime' : 'time') }}
+          @let kind = kindKey();
+          {{
+            [
+              kind ? (kind | transloco) : category(),
+              showWallet() ? wallet() : null,
+              transaction().occurred_at | appDate: (showDate() ? 'dateTime' : 'time'),
+            ] | joinParts
+          }}
         </span>
       </span>
       <span

@@ -62,5 +62,12 @@
   "webDeleted": "Eliminato",
   "webUnlinkPaymentAction": "Scollega dal gruppo",
   "webUnlinkPaymentTitle": "Scollegare questo pagamento?",
-  "webUnlinkPaymentMessage": "L'operazione resta com'è, esce solo dal gruppo dei pagamenti collegati."
+  "webUnlinkPaymentMessage": "L'operazione resta com'è, esce solo dal gruppo dei pagamenti collegati.",
+  "webToday": "Oggi",
+  "webYesterday": "Ieri",
+  "webNoOperationsForFilters": "Nessuna operazione corrisponde ai filtri.",
+  "webLoadMore": "Carica altre",
+  "webRemoveFilter": "Rimuovi filtro",
+  "webAnalyzeWithAi": "Analizza con AI",
+  "webEndBeforeStart": "La data finale è prima di quella iniziale."
 }

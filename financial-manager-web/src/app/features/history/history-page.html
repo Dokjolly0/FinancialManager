@@ -1,0 +1,150 @@
+<app-page-header [title]="'webNavHistory' | transloco">
+  @if (session.aiEnabled()) {
+    <button
+      type="button"
+      class="btn btn-outline"
+      [title]="'aiHistoryAnalyzeAction' | transloco"
+      (click)="analyzeWithAi()"
+    >
+      <app-icon [icon]="icons.Sparkles" [size]="18" />
+      <span class="max-md:hidden">{{ 'webAnalyzeWithAi' | transloco }}</span>
+    </button>
+  }
+  <a
+    routerLink="/app/transactions/payment-groups"
+    class="btn btn-outline"
+    [title]="'linkedPaymentsSectionTitle' | transloco"
+  >
+    <app-icon [icon]="icons.Link" [size]="18" />
+    <span class="max-md:hidden">{{ 'linkedPaymentsSectionTitle' | transloco }}</span>
+  </a>
+</app-page-header>
+
+<!-- Search, type and filters -->
+<div
+  class="sticky top-16 z-20 -mx-4 mb-6 space-y-3 bg-bg/90 px-4 pb-3 pt-1 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+>
+  <div class="flex gap-2">
+    <label class="relative block flex-1">
+      <app-icon
+        [icon]="icons.Search"
+        [size]="18"
+        class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-muted"
+      />
+      <input
+        class="input pl-10"
+        type="search"
+        [placeholder]="'historySearchHint' | transloco"
+        [attr.aria-label]="'historySearchHint' | transloco"
+        [value]="filter().title"
+        (input)="onSearch($any($event.target).value)"
+      />
+    </label>
+    <button type="button" class="btn btn-outline relative" (click)="openFilters()">
+      <app-icon [icon]="icons.SlidersHorizontal" [size]="18" />
+      <span class="max-sm:hidden">{{ 'filtersTitle' | transloco }}</span>
+      @if (active() > 0) {
+        <span
+          class="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-fg"
+        >
+          {{ active() }}
+        </span>
+      }
+    </button>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    @for (type of types; track type) {
+      <button
+        type="button"
+        class="chip"
+        [class.chip-active]="filter().type === type"
+        [attr.aria-pressed]="filter().type === type"
+        (click)="setType(type)"
+      >
+        {{ typeKeys[type] | transloco }}
+      </button>
+    }
+    @for (chip of chips(); track chip.key) {
+      <span class="chip chip-active cursor-default">
+        {{ chip.label }}
+        <button
+          type="button"
+          class="-mr-1 rounded-full p-0.5 hover:bg-primary/15"
+          [attr.aria-label]="'webRemoveFilter' | transloco"
+          (click)="removeChip(chip.key)"
+        >
+          <app-icon [icon]="icons.X" [size]="12" />
+        </button>
+      </span>
+    }
+    @if (active() > 0) {
+      <button
+        type="button"
+        class="text-xs font-semibold text-primary hover:underline"
+        (click)="clearAll()"
+      >
+        {{ 'resetAction' | transloco }}
+      </button>
+    }
+  </div>
+</div>
+
+@if (loading()) {
+  <div class="card overflow-hidden"><app-skeleton-list [rows]="8" /></div>
+} @else if (error()) {
+  <div class="card"><app-inline-error [message]="error()!" (retry)="retry()" /></div>
+} @else {
+  @for (group of days(); track group.day) {
+    <section class="mb-5">
+      <header class="mb-2 flex items-baseline justify-between px-1">
+        <h2 class="text-sm font-semibold capitalize text-fg">
+          @if (group.day === today) {
+            {{ 'webToday' | transloco }}
+          } @else if (group.day === yesterday) {
+            {{ 'webYesterday' | transloco }}
+          } @else {
+            {{ group.day + 'T12:00:00' | appDate: 'dayHeader' }}
+          }
+        </h2>
+        <span
+          class="tabular text-xs font-semibold"
+          [class]="group.netMinor >= 0 ? 'text-credit' : 'text-fg-muted'"
+        >
+          {{ group.netMinor | money: 'EUR' : { signed: true } }}
+        </span>
+      </header>
+      <div class="card divide-y divide-border overflow-hidden">
+        @for (transaction of group.transactions; track transaction.id) {
+          <app-transaction-row
+            [transaction]="transaction"
+            [showWallet]="wallets.hasMultipleWallets()"
+          />
+        }
+      </div>
+    </section>
+  } @empty {
+    <div class="card">
+      <app-empty-state
+        [icon]="icons.History"
+        [message]="(active() > 0 ? 'webNoOperationsForFilters' : 'webNoOperationsYet') | transloco"
+      >
+        @if (active() > 0) {
+          <button type="button" class="btn btn-outline btn-sm" (click)="clearAll()">
+            {{ 'resetAction' | transloco }}
+          </button>
+        }
+      </app-empty-state>
+    </div>
+  }
+  @if (hasMore()) {
+    <div class="flex justify-center py-6" (appInView)="loadMore()">
+      @if (loadingMore()) {
+        <app-spinner [size]="22" class="text-primary" />
+      } @else {
+        <button type="button" class="btn btn-ghost btn-sm" (click)="loadMore()">
+          {{ 'webLoadMore' | transloco }}
+        </button>
+      }
+    </div>
+  }
+}
