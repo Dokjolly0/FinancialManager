@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router.dart';
 import '../../../../app/session/pending_google_registration_provider.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../core/errors/error_code_localizations.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/widgets/generated_avatar.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -70,7 +69,7 @@ class _GoogleRegistrationCompletionScreenState
     final l10n = AppLocalizations.of(context);
     String? fieldError(String key) {
       final code = state.fieldErrors[key];
-      return code == null ? null : localizeErrorCode(l10n, code);
+      return code == null ? null : localizeFieldError(l10n, code, state.error);
     }
 
     if (ticket == null) {

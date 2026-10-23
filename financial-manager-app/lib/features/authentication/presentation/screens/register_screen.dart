@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../core/errors/error_code_localizations.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../core/formatting/money.dart';
 import '../../../../core/widgets/generated_avatar.dart';
@@ -86,7 +85,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final l10n = AppLocalizations.of(context);
     String? fieldError(String key) {
       final code = state.fieldErrors[key];
-      return code == null ? null : localizeErrorCode(l10n, code);
+      return code == null ? null : localizeFieldError(l10n, code, state.error);
     }
 
     return Scaffold(

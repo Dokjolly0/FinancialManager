@@ -784,12 +784,15 @@ func sha256Sum(b []byte) []byte {
 	return sum[:]
 }
 
+// conflictWithField attaches base to the field that caused it. The field
+// error is the code (USERNAME_IN_USE), never the English message: clients
+// localize field errors by code, like the validation ones.
 func conflictWithField(base *apierror.Error, field string) *apierror.Error {
 	return &apierror.Error{
 		Status:      base.Status,
 		Code:        base.Code,
 		Message:     base.Message,
-		FieldErrors: map[string]string{field: base.Message},
+		FieldErrors: map[string]string{field: base.Code},
 	}
 }
 

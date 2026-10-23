@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+
+	"financial-manager-backend/internal/platform/apierror"
 )
 
 func validRegisterInput() RegisterInput {
@@ -87,5 +89,20 @@ func TestValidateRegisterInput_RejectsShortPassword(t *testing.T) {
 	errs := validateRegisterInput(in)
 	if _, ok := errs["password"]; !ok {
 		t.Error("expected a password field error")
+	}
+}
+
+func TestConflictWithField_UsesTheCodeAsFieldError(t *testing.T) {
+	for field, base := range map[string]*apierror.Error{
+		"username": apierror.ErrUsernameInUse,
+		"email":    apierror.ErrEmailInUse,
+	} {
+		got := conflictWithField(base, field)
+		if got.Status != base.Status || got.Code != base.Code {
+			t.Errorf("%s: status/code = %d/%s, want %d/%s", field, got.Status, got.Code, base.Status, base.Code)
+		}
+		if got.FieldErrors[field] != base.Code {
+			t.Errorf("%s: field error = %q, want the code %q (clients localize by code)", field, got.FieldErrors[field], base.Code)
+		}
 	}
 }
