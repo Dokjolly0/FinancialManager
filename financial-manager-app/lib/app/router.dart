@@ -22,6 +22,8 @@ import '../features/ai/presentation/screens/ai_personal_context_screen.dart';
 import '../features/ai/presentation/screens/ai_provider_settings_screen.dart';
 import '../features/ai/presentation/screens/ai_wallet_purposes_screen.dart';
 import '../features/authentication/presentation/screens/forgot_password_screen.dart';
+import '../features/authentication/presentation/screens/reset_password_screen.dart';
+import '../features/authentication/presentation/screens/verify_email_screen.dart';
 import '../features/authentication/presentation/screens/google_registration_completion_screen.dart';
 import '../features/authentication/presentation/screens/login_screen.dart';
 import '../features/authentication/presentation/screens/register_screen.dart';
@@ -48,6 +50,11 @@ abstract final class AppRoutes {
   static const register = '/register';
   static const registerGoogleCompletion = '/register/google-completion';
   static const forgotPassword = '/forgot-password';
+
+  // Links in emails (`?token=...`): open on the web dashboard and, through
+  // Android App Links, in the app. Reachable signed in or not.
+  static const resetPassword = '/reset-password';
+  static const verifyEmail = '/verify-email';
 
   static const home = '/app/home';
   static const transactionsNew = '/app/transactions/new';
@@ -117,6 +124,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path == AppRoutes.register ||
           path == AppRoutes.registerGoogleCompletion ||
           path == AppRoutes.forgotPassword;
+      final isEmailLink = _isEmailLinkPath(path);
+      // Where the splash was asked to go back to after restoring the session.
+      final from = path == AppRoutes.splash
+          ? state.uri.queryParameters['from']
+          : null;
 
       switch (status) {
         case SessionStatus.checking:
@@ -128,19 +140,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             queryParameters: {'from': state.uri.toString()},
           ).toString();
         case SessionStatus.unauthenticated:
+          if (isEmailLink) return null;
+          if (from != null && _isEmailLinkPath(Uri.parse(from).path)) {
+            return from;
+          }
           return isAuthRoute && path != AppRoutes.splash
               ? null
               : AppRoutes.login;
         case SessionStatus.profileIncomplete:
-          return path == AppRoutes.registerGoogleCompletion
+          return path == AppRoutes.registerGoogleCompletion || isEmailLink
               ? null
               : AppRoutes.registerGoogleCompletion;
         case SessionStatus.authenticated:
+          if (isEmailLink) return null;
           if (isAuthRoute) {
-            final from = state.uri.queryParameters['from'];
-            return path == AppRoutes.splash &&
-                    from != null &&
-                    from.startsWith('/app/')
+            return from != null &&
+                    (from.startsWith('/app/') ||
+                        _isEmailLinkPath(Uri.parse(from).path))
                 ? from
                 : AppRoutes.home;
           }
@@ -180,6 +196,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.forgotPassword,
         builder: (_, _) => const AdaptivePage(child: ForgotPasswordScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        builder: (_, state) => AdaptivePage(
+          child: ResetPasswordScreen(token: state.uri.queryParameters['token']),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.verifyEmail,
+        builder: (_, state) => AdaptivePage(
+          child: VerifyEmailScreen(token: state.uri.queryParameters['token']),
+        ),
       ),
       GoRoute(
         path: AppRoutes.registerGoogleCompletion,
@@ -342,3 +370,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+bool _isEmailLinkPath(String path) =>
+    path == AppRoutes.resetPassword || path == AppRoutes.verifyEmail;

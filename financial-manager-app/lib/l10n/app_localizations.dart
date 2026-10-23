@@ -2166,6 +2166,78 @@ abstract class AppLocalizations {
   /// **'Invia'**
   String get sendAction;
 
+  /// No description provided for @resetPasswordScreenTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuova password'**
+  String get resetPasswordScreenTitle;
+
+  /// No description provided for @resetPasswordInstructionsMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli una nuova password per il tuo account.'**
+  String get resetPasswordInstructionsMessage;
+
+  /// No description provided for @newPasswordLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuova password'**
+  String get newPasswordLabel;
+
+  /// No description provided for @resetPasswordAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva la password'**
+  String get resetPasswordAction;
+
+  /// No description provided for @resetPasswordSuccessMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Password aggiornata. Per sicurezza sono state chiuse tutte le sessioni: accedi con la nuova password.'**
+  String get resetPasswordSuccessMessage;
+
+  /// No description provided for @requestNewLinkAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Richiedi un nuovo link'**
+  String get requestNewLinkAction;
+
+  /// No description provided for @verifyEmailScreenTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Conferma email'**
+  String get verifyEmailScreenTitle;
+
+  /// No description provided for @verifyEmailInProgressMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Conferma dell\'indirizzo email in corso…'**
+  String get verifyEmailInProgressMessage;
+
+  /// No description provided for @verifyEmailSuccessMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Indirizzo email confermato.'**
+  String get verifyEmailSuccessMessage;
+
+  /// No description provided for @goToAppAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Vai all\'app'**
+  String get goToAppAction;
+
+  /// No description provided for @resendVerificationAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Invia un nuovo link'**
+  String get resendVerificationAction;
+
+  /// No description provided for @verificationResentMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Ti abbiamo inviato un nuovo link: controlla la posta.'**
+  String get verificationResentMessage;
+
   /// No description provided for @transactionDetailScreenTitle.
   ///
   /// In it, this message translates to:

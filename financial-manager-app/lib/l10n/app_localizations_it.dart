@@ -1169,6 +1169,46 @@ class AppLocalizationsIt extends AppLocalizations {
   String get sendAction => 'Invia';
 
   @override
+  String get resetPasswordScreenTitle => 'Nuova password';
+
+  @override
+  String get resetPasswordInstructionsMessage =>
+      'Scegli una nuova password per il tuo account.';
+
+  @override
+  String get newPasswordLabel => 'Nuova password';
+
+  @override
+  String get resetPasswordAction => 'Salva la password';
+
+  @override
+  String get resetPasswordSuccessMessage =>
+      'Password aggiornata. Per sicurezza sono state chiuse tutte le sessioni: accedi con la nuova password.';
+
+  @override
+  String get requestNewLinkAction => 'Richiedi un nuovo link';
+
+  @override
+  String get verifyEmailScreenTitle => 'Conferma email';
+
+  @override
+  String get verifyEmailInProgressMessage =>
+      'Conferma dell\'indirizzo email in corso…';
+
+  @override
+  String get verifyEmailSuccessMessage => 'Indirizzo email confermato.';
+
+  @override
+  String get goToAppAction => 'Vai all\'app';
+
+  @override
+  String get resendVerificationAction => 'Invia un nuovo link';
+
+  @override
+  String get verificationResentMessage =>
+      'Ti abbiamo inviato un nuovo link: controlla la posta.';
+
+  @override
   String get transactionDetailScreenTitle => 'Dettaglio operazione';
 
   @override
