@@ -20,5 +20,18 @@
   "webExpandSidebar": "Expand menu",
   "webUserMenu": "User menu",
   "webGreeting": "Hi, {name}",
-  "webSkipToContent": "Skip to content"
+  "webSkipToContent": "Skip to content",
+  "webShowPassword": "Show password",
+  "webHidePassword": "Hide password",
+  "webAuthTagline": "Your money, clearly.",
+  "webAuthPitch": "Record income and expenses in seconds, keep an eye on every wallet and see where your money goes.",
+  "webAuthFeatureWallets": "Wallets, cash and meal vouchers",
+  "webAuthFeatureReports": "Clear reports and charts",
+  "webAuthFeatureAi": "AI analysis with your own key",
+  "webLoginSubtitle": "Welcome back! Sign in to continue.",
+  "webNoAccount": "Don't have an account?",
+  "webHaveAccount": "Already have an account?",
+  "webStepOf": "Step {current} of {total}",
+  "webAvatarPreview": "Avatar preview",
+  "webGoogleUnavailable": "Google sign-in is not available right now."
 }

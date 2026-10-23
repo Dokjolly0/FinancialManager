@@ -20,5 +20,18 @@
   "webExpandSidebar": "Espandi menu",
   "webUserMenu": "Menu utente",
   "webGreeting": "Ciao, {name}",
-  "webSkipToContent": "Vai al contenuto"
+  "webSkipToContent": "Vai al contenuto",
+  "webShowPassword": "Mostra password",
+  "webHidePassword": "Nascondi password",
+  "webAuthTagline": "Le tue finanze, chiare.",
+  "webAuthPitch": "Registra entrate e uscite in pochi secondi, tieni d'occhio ogni portafoglio e capisci dove vanno i tuoi soldi.",
+  "webAuthFeatureWallets": "Portafogli, contanti e buoni pasto",
+  "webAuthFeatureReports": "Report e grafici chiari",
+  "webAuthFeatureAi": "Analisi AI con la tua chiave",
+  "webLoginSubtitle": "Bentornato! Accedi per continuare.",
+  "webNoAccount": "Non hai un account?",
+  "webHaveAccount": "Hai già un account?",
+  "webStepOf": "Passo {current} di {total}",
+  "webAvatarPreview": "Anteprima avatar",
+  "webGoogleUnavailable": "Accesso con Google non disponibile in questo momento."
 }

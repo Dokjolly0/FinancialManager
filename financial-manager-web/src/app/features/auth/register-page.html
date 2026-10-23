@@ -1,0 +1,235 @@
+<app-auth-layout [heading]="'createAccountAction' | transloco">
+  <!-- Progress -->
+  <ol
+    class="mb-8 flex items-center gap-2"
+    [attr.aria-label]="'webStepOf' | transloco: { current: step() + 1, total: 3 }"
+  >
+    @for (title of steps; track title; let i = $index) {
+      <li class="flex flex-1 items-center gap-2">
+        <span
+          class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold transition-colors"
+          [class]="
+            i < step()
+              ? 'bg-primary text-primary-fg'
+              : i === step()
+                ? 'bg-primary-soft text-primary ring-2 ring-primary'
+                : 'bg-surface-2 text-fg-muted'
+          "
+          [attr.aria-current]="i === step() ? 'step' : null"
+        >
+          @if (i < step()) {
+            <app-icon [icon]="Check" [size]="14" [strokeWidth]="3" />
+          } @else {
+            {{ i + 1 }}
+          }
+        </span>
+        <span
+          class="hidden text-xs font-semibold sm:inline"
+          [class.text-fg]="i === step()"
+          [class.text-fg-muted]="i !== step()"
+        >
+          {{ title | transloco }}
+        </span>
+        @if (i < steps.length - 1) {
+          <span class="h-px flex-1 bg-border"></span>
+        }
+      </li>
+    }
+  </ol>
+
+  <form
+    [formGroup]="form"
+    (ngSubmit)="step() === 2 ? submit() : next()"
+    novalidate
+    class="space-y-5"
+  >
+    @if (errors.message()) {
+      <div
+        class="rounded-xl border border-debit/30 bg-debit/5 px-4 py-3 text-sm text-debit"
+        role="alert"
+      >
+        {{ errors.message() }}
+      </div>
+    }
+
+    @switch (step()) {
+      @case (0) {
+        <div class="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label class="label" for="reg-first">{{ 'firstNameLabel' | transloco }}</label>
+            <input
+              id="reg-first"
+              class="input"
+              formControlName="firstName"
+              autocomplete="given-name"
+              [attr.aria-invalid]="!!errors.fields()['first_name'] || null"
+            />
+            @if (errors.fields()['first_name']; as m) {
+              <p class="field-error">{{ m }}</p>
+            }
+          </div>
+          <div>
+            <label class="label" for="reg-last">{{ 'lastNameLabel' | transloco }}</label>
+            <input
+              id="reg-last"
+              class="input"
+              formControlName="lastName"
+              autocomplete="family-name"
+              [attr.aria-invalid]="!!errors.fields()['last_name'] || null"
+            />
+            @if (errors.fields()['last_name']; as m) {
+              <p class="field-error">{{ m }}</p>
+            }
+          </div>
+        </div>
+        <div>
+          <label class="label" for="reg-username">{{ 'usernameLabel' | transloco }}</label>
+          <input
+            id="reg-username"
+            class="input"
+            formControlName="username"
+            autocomplete="username"
+            [attr.aria-invalid]="!!errors.fields()['username'] || null"
+          />
+          @if (errors.fields()['username']; as m) {
+            <p class="field-error">{{ m }}</p>
+          }
+        </div>
+        <div>
+          <label class="label" for="reg-email">{{ 'emailLabel' | transloco }}</label>
+          <input
+            id="reg-email"
+            class="input"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            [attr.aria-invalid]="!!errors.fields()['email'] || null"
+          />
+          @if (errors.fields()['email']; as m) {
+            <p class="field-error">{{ m }}</p>
+          }
+        </div>
+        <div>
+          <label class="label" for="reg-password">{{ 'passwordLabel' | transloco }}</label>
+          <app-password-input
+            inputId="reg-password"
+            formControlName="password"
+            autocomplete="new-password"
+            [invalid]="!!errors.fields()['password']"
+          />
+          @if (errors.fields()['password']; as m) {
+            <p class="field-error">{{ m }}</p>
+          }
+        </div>
+        <div>
+          <label class="label" for="reg-confirm">{{ 'confirmPasswordLabel' | transloco }}</label>
+          <app-password-input
+            inputId="reg-confirm"
+            formControlName="confirmPassword"
+            autocomplete="new-password"
+            [invalid]="!!errors.fields()['confirm_password']"
+          />
+          @if (errors.fields()['confirm_password']; as m) {
+            <p class="field-error">{{ m }}</p>
+          }
+        </div>
+      }
+      @case (1) {
+        <div class="card card-pad flex flex-col items-center text-center">
+          <app-avatar
+            [firstName]="values().firstName ?? ''"
+            [lastName]="values().lastName ?? ''"
+            [background]="values().avatarColor ?? avatarColors[0]"
+            [foreground]="avatarTextColor"
+            [size]="88"
+            [attr.aria-label]="'webAvatarPreview' | transloco"
+          />
+          <p class="mt-4 text-sm font-semibold text-fg">
+            {{ values().firstName }} {{ values().lastName }}
+          </p>
+          <p class="text-xs text-fg-muted">&#64;{{ values().username }}</p>
+          <p class="label mt-6">{{ 'backgroundColorLabel' | transloco }}</p>
+          <div
+            class="flex flex-wrap justify-center gap-3"
+            role="radiogroup"
+            [attr.aria-label]="'backgroundColorLabel' | transloco"
+          >
+            @for (color of avatarColors; track color) {
+              <button
+                type="button"
+                role="radio"
+                class="h-10 w-10 rounded-full ring-offset-2 ring-offset-surface transition-transform hover:scale-110"
+                [class.ring-2]="values().avatarColor === color"
+                [class.ring-fg]="values().avatarColor === color"
+                [style.background-color]="color"
+                [attr.aria-checked]="values().avatarColor === color"
+                [attr.aria-label]="color"
+                (click)="form.controls.avatarColor.setValue(color)"
+              ></button>
+            }
+          </div>
+        </div>
+      }
+      @case (2) {
+        <div>
+          <label class="label" for="reg-balance">{{ 'initialBalanceLabel' | transloco }}</label>
+          <app-amount-input
+            inputId="reg-balance"
+            formControlName="initialBalance"
+            [large]="true"
+            [invalid]="!!errors.fields()['initial_balance_minor']"
+          />
+          @if (errors.fields()['initial_balance_minor']; as m) {
+            <p class="field-error">{{ m }}</p>
+          }
+        </div>
+        <div class="rounded-xl bg-surface-2 px-4 py-3">
+          <p class="text-sm text-fg">
+            {{
+              'registrationSummaryLabel'
+                | transloco
+                  : {
+                      firstName: values().firstName ?? '',
+                      lastName: values().lastName ?? '',
+                      username: values().username ?? '',
+                      balance: (values().initialBalance ?? 0 | money),
+                    }
+            }}
+          </p>
+        </div>
+        <label class="flex cursor-pointer items-start gap-3">
+          <input type="checkbox" class="checkbox mt-0.5" formControlName="acceptedTerms" />
+          <span class="text-sm text-fg">{{ 'acceptTermsLabel' | transloco }}</span>
+        </label>
+        @if (errors.fields()['accepted_terms']; as m) {
+          <p class="field-error">{{ m }}</p>
+        }
+      }
+    }
+
+    <div class="flex items-center gap-3 pt-2">
+      @if (step() > 0) {
+        <button type="button" class="btn btn-ghost" (click)="back()">
+          {{ 'backAction' | transloco }}
+        </button>
+      }
+      <button
+        type="submit"
+        class="btn btn-primary btn-lg ml-auto min-w-40"
+        [disabled]="submitting()"
+      >
+        @if (submitting()) {
+          <app-spinner />
+        }
+        {{ (step() === 2 ? 'confirmRegistrationAction' : 'nextAction') | transloco }}
+      </button>
+    </div>
+  </form>
+
+  <p class="mt-8 text-center text-sm text-fg-muted">
+    {{ 'webHaveAccount' | transloco }}
+    <a routerLink="/login" class="font-semibold text-primary hover:underline">{{
+      'loginAction' | transloco
+    }}</a>
+  </p>
+</app-auth-layout>

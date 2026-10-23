@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard } from './core/session/guards';
+import { authGuard, googleCompletionGuard, guestGuard } from './core/session/guards';
 import { AppShell } from './layout/app-shell';
 
 /**
@@ -10,6 +10,39 @@ import { AppShell } from './layout/app-shell';
  */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'app/home' },
+  {
+    path: 'login',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
+  },
+  {
+    path: 'register',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/register-page').then((m) => m.RegisterPage),
+  },
+  {
+    path: 'register/google-completion',
+    canActivate: [googleCompletionGuard],
+    loadComponent: () =>
+      import('./features/auth/google-completion-page').then((m) => m.GoogleCompletionPage),
+  },
+  {
+    path: 'forgot-password',
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('./features/auth/forgot-password-page').then((m) => m.ForgotPasswordPage),
+  },
+  // The links in the emails ({APP_PUBLIC_URL}/reset-password?token=...):
+  // open with or without a session.
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./features/auth/reset-password-page').then((m) => m.ResetPasswordPage),
+  },
+  {
+    path: 'verify-email',
+    loadComponent: () => import('./features/auth/verify-email-page').then((m) => m.VerifyEmailPage),
+  },
   // The app's session-restore page; restore now runs before routing.
   { path: 'splash', redirectTo: 'app/home' },
   {
