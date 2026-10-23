@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -68,6 +69,7 @@ type Service struct {
 	ticketStore       *identities.TicketStore
 	rateLimiter       *ratelimit.Limiter
 	emailSender       email.Sender
+	publicURL         string
 	clock             clock.Clock
 	jwtSigningKey     string
 	accessTokenTTL    time.Duration
@@ -75,19 +77,23 @@ type Service struct {
 }
 
 type Deps struct {
-	DB              *database.Pool
-	Users           *users.Repository
-	Credentials     *CredentialsRepository
-	Sessions        *SessionRepository
-	EmailVerify     *EmailVerificationTokenRepository
-	PasswordReset   *PasswordResetTokenRepository
-	Wallets         *wallets.Repository
-	Transactions    *transactions.Repository
-	Identities      *identities.Repository
-	GoogleVerifier  identities.GoogleIDTokenVerifier
-	TicketStore     *identities.TicketStore
-	RateLimiter     *ratelimit.Limiter
-	EmailSender     email.Sender
+	DB             *database.Pool
+	Users          *users.Repository
+	Credentials    *CredentialsRepository
+	Sessions       *SessionRepository
+	EmailVerify    *EmailVerificationTokenRepository
+	PasswordReset  *PasswordResetTokenRepository
+	Wallets        *wallets.Repository
+	Transactions   *transactions.Repository
+	Identities     *identities.Repository
+	GoogleVerifier identities.GoogleIDTokenVerifier
+	TicketStore    *identities.TicketStore
+	RateLimiter    *ratelimit.Limiter
+	EmailSender    email.Sender
+	// PublicURL is the base of the links in emails (config.PublicURL):
+	// {PublicURL}/reset-password?token=... and /verify-email?token=...,
+	// pages of the web dashboard that also open the Android app.
+	PublicURL       string
 	Clock           clock.Clock
 	JWTSigningKey   string
 	AccessTokenTTL  time.Duration
@@ -109,6 +115,7 @@ func NewService(d Deps) *Service {
 		ticketStore:       d.TicketStore,
 		rateLimiter:       d.RateLimiter,
 		emailSender:       d.EmailSender,
+		publicURL:         d.PublicURL,
 		clock:             d.Clock,
 		jwtSigningKey:     d.JWTSigningKey,
 		accessTokenTTL:    d.AccessTokenTTL,
@@ -384,11 +391,8 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) ([]byte, int, 
 }
 
 func (s *Service) sendVerificationEmail(ctx context.Context, to string, rawToken string) {
-	_ = s.emailSender.Send(ctx, email.Message{
-		To:      to,
-		Subject: "Conferma la tua email",
-		Body:    fmt.Sprintf("Usa questo codice per verificare la tua email: %s", rawToken),
-	})
+	link := s.publicURL + "/verify-email?token=" + url.QueryEscape(rawToken)
+	_ = s.emailSender.Send(ctx, email.EmailVerificationMessage(to, link, emailVerificationTTL))
 }
 
 // --- Login --------------------------------------------------------------
@@ -699,11 +703,8 @@ func (s *Service) ForgotPassword(ctx context.Context, emailOrUsername string) er
 		return fmt.Errorf("create password reset token: %w", err)
 	}
 
-	_ = s.emailSender.Send(ctx, email.Message{
-		To:      user.Email,
-		Subject: "Reimposta la tua password",
-		Body:    fmt.Sprintf("Usa questo codice per reimpostare la password: %s", rawToken),
-	})
+	link := s.publicURL + "/reset-password?token=" + url.QueryEscape(rawToken)
+	_ = s.emailSender.Send(ctx, email.PasswordResetMessage(user.Email, link, passwordResetTTL))
 	return nil
 }
 

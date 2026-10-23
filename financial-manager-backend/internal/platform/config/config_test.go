@@ -21,6 +21,8 @@ func clearEnv(t *testing.T) {
 		"AI_ALLOW_PRIVATE_BASE_URLS", "AI_ALLOWED_BASE_URL_HOSTS", "AI_STREAM_MAX_DURATION",
 		"AI_STREAM_IDLE_TIMEOUT", "AI_MAX_PROMPT_TOKENS", "AI_RUNS_PER_HOUR",
 		"AI_ON_DEVICE_ENABLED", "AI_LOCAL_RUNS_PER_HOUR", "AI_LOCAL_MAX_DURATION",
+		"SMTP_PRESET", "SMTP_HOST", "SMTP_PORT", "SMTP_TLS", "SMTP_USERNAME", "SMTP_PASSWORD",
+		"SMTP_FROM", "APP_PUBLIC_URL",
 	} {
 		t.Setenv(name, "")
 	}
@@ -120,6 +122,7 @@ func TestLoad_BackupMissingCredentialsIsNotFatal(t *testing.T) {
 	t.Setenv("JWT_SIGNING_KEY", "k")
 	t.Setenv("OBJECT_STORAGE_ACCESS_KEY", "a")
 	t.Setenv("OBJECT_STORAGE_SECRET_KEY", "s")
+	t.Setenv("APP_PUBLIC_URL", "https://fm.example.com")
 	t.Setenv("BACKUP_ENABLED", "true")
 
 	cfg, err := Load()
@@ -288,5 +291,112 @@ func TestLoad_CORSAllowedOrigins(t *testing.T) {
 		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "CORS_ALLOWED_ORIGINS") {
 			t.Fatalf("%q: expected a CORS_ALLOWED_ORIGINS error, got %v", bad, err)
 		}
+	}
+}
+
+func TestLoad_EmailDisabledByDefault(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("DATABASE_URL", "postgres://localhost/test")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.EmailEnabled() {
+		t.Error("EmailEnabled() = true without SMTP settings")
+	}
+	if cfg.PublicURL != "http://localhost:5000" {
+		t.Errorf("PublicURL = %q, want the local dashboard", cfg.PublicURL)
+	}
+}
+
+func TestLoad_SMTPPresets(t *testing.T) {
+	for _, tc := range []struct {
+		preset, host, tls string
+		port              int
+	}{
+		{"gmail", "smtp.gmail.com", "starttls", 587},
+		{"infomaniak", "mail.infomaniak.com", "tls", 465},
+	} {
+		clearEnv(t)
+		t.Setenv("DATABASE_URL", "postgres://localhost/test")
+		t.Setenv("SMTP_PRESET", tc.preset)
+		t.Setenv("SMTP_USERNAME", "me@example.com")
+		t.Setenv("SMTP_PASSWORD", "secret")
+		t.Setenv("SMTP_FROM", "FinancialManager <me@example.com>")
+		t.Setenv("APP_PUBLIC_URL", "https://fm.example.com/")
+
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("%s: Load: %v", tc.preset, err)
+		}
+		if cfg.SMTPHost != tc.host || cfg.SMTPPort != tc.port || cfg.SMTPTLS != tc.tls || !cfg.EmailEnabled() {
+			t.Errorf("%s: got %s:%d %s", tc.preset, cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPTLS)
+		}
+		if cfg.PublicURL != "https://fm.example.com" {
+			t.Errorf("%s: PublicURL = %q, want no trailing slash", tc.preset, cfg.PublicURL)
+		}
+	}
+}
+
+func TestLoad_SMTPExplicitSettingsOverridePreset(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("DATABASE_URL", "postgres://localhost/test")
+	t.Setenv("SMTP_PRESET", "infomaniak")
+	t.Setenv("SMTP_PORT", "587")
+	t.Setenv("SMTP_TLS", "starttls")
+	t.Setenv("SMTP_FROM", "me@example.com")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.SMTPHost != "mail.infomaniak.com" || cfg.SMTPPort != 587 || cfg.SMTPTLS != "starttls" {
+		t.Errorf("got %s:%d %s", cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPTLS)
+	}
+}
+
+func TestLoad_SMTPInvalidSettings(t *testing.T) {
+	for name, env := range map[string]map[string]string{
+		"unknown preset":     {"SMTP_PRESET": "yahoo"},
+		"missing from":       {"SMTP_HOST": "smtp.example.com"},
+		"bad from":           {"SMTP_HOST": "smtp.example.com", "SMTP_FROM": "not an address"},
+		"bad tls":            {"SMTP_HOST": "smtp.example.com", "SMTP_FROM": "a@example.com", "SMTP_TLS": "ssl"},
+		"bad port":           {"SMTP_HOST": "smtp.example.com", "SMTP_FROM": "a@example.com", "SMTP_PORT": "70000"},
+		"username only":      {"SMTP_HOST": "smtp.example.com", "SMTP_FROM": "a@example.com", "SMTP_USERNAME": "a"},
+		"relative url":       {"APP_PUBLIC_URL": "financialmanager.example.com"},
+		"no tls in prod":     {"APP_ENV": EnvProduction, "SMTP_HOST": "smtp.example.com", "SMTP_FROM": "a@example.com", "SMTP_TLS": "none"},
+		"prod without links": {"APP_ENV": EnvProduction},
+	} {
+		clearEnv(t)
+		t.Setenv("DATABASE_URL", "postgres://localhost/test")
+		if env["APP_ENV"] == EnvProduction {
+			t.Setenv("JWT_SIGNING_KEY", "k")
+			t.Setenv("OBJECT_STORAGE_ACCESS_KEY", "a")
+			t.Setenv("OBJECT_STORAGE_SECRET_KEY", "s")
+			if name != "prod without links" {
+				t.Setenv("APP_PUBLIC_URL", "https://fm.example.com")
+			}
+		}
+		for k, v := range env {
+			t.Setenv(k, v)
+		}
+		_, err := Load()
+		if err == nil || !(strings.Contains(err.Error(), "SMTP_") || strings.Contains(err.Error(), "APP_PUBLIC_URL")) {
+			t.Errorf("%s: expected an SMTP_/APP_PUBLIC_URL error, got %v", name, err)
+		}
+	}
+}
+
+func TestLoad_SMTPNoneAllowedOutsideProduction(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("DATABASE_URL", "postgres://localhost/test")
+	t.Setenv("SMTP_HOST", "mailpit")
+	t.Setenv("SMTP_PORT", "1025")
+	t.Setenv("SMTP_TLS", "none")
+	t.Setenv("SMTP_FROM", "FinancialManager <noreply@localhost>")
+
+	if _, err := Load(); err != nil {
+		t.Fatalf("Load: %v", err)
 	}
 }

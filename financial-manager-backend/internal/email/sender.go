@@ -1,10 +1,10 @@
-// Package email abstracts outbound email (verification, password reset,
-// security notices — plan.md section 2.1C, 15.5, 20.2) behind a small
-// interface so a real SMTP/API provider can be plugged in later. No email
-// provider has been chosen yet (plan.md section 28.10 is still open), so
-// the only implementation today logs the message instead of sending it —
-// safe for local/test, and loud enough in staging that nobody mistakes it
-// for real delivery.
+// Package email sends outbound email (verification, password reset —
+// plan.md section 2.1C, 15.5, 20.2). SMTPSender delivers through any SMTP
+// server (a Gmail account with an app password, a transactional provider,
+// Mailpit in development); AsyncSender sends in the background so a slow
+// mail server neither delays the request nor reveals, by its timing,
+// whether an account exists. Without SMTP configuration the API falls back
+// to DevLogSender, which only logs that a message was not sent.
 package email
 
 import (
@@ -23,8 +23,8 @@ type Sender interface {
 }
 
 // DevLogSender logs the message instead of delivering it. It intentionally
-// does not log the full body by default beyond a short preview, consistent
-// with not logging user content unnecessarily (plan.md section 19.7).
+// does not log the body, which carries single-use links, consistent with
+// not logging user content unnecessarily (plan.md section 19.7).
 type DevLogSender struct {
 	Logger *slog.Logger
 }

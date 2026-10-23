@@ -6,6 +6,7 @@ package config
 import (
 	"encoding/base64"
 	"fmt"
+	"net/mail"
 	"net/netip"
 	"net/url"
 	"os"
@@ -60,6 +61,22 @@ type Config struct {
 
 	MaxUploadBytes    int64
 	AllowedImageTypes []string
+
+	// Outbound email, read by the API only (plan.md section 28.10). With
+	// SMTPHost empty no email is sent: the API logs that it would have.
+	// SMTP_PRESET fills host, port and TLS for known providers; explicit
+	// variables win. SMTPTLS is "starttls", "tls" or "none".
+	SMTPHost     string
+	SMTPPort     int
+	SMTPTLS      string
+	SMTPUsername string
+	SMTPPassword string
+	SMTPFrom     string
+
+	// PublicURL is where users reach the app on the web (APP_PUBLIC_URL,
+	// no trailing slash): the base of the links in emails. The same URLs
+	// open the Android app through App Links.
+	PublicURL string
 
 	// Backup settings are only read by the worker. When BackupEnabled is
 	// false (the default outside production compose) the job never runs and
@@ -253,6 +270,25 @@ func Load() (Config, error) {
 		AILocalMaxDuration:         optionalDuration("AI_LOCAL_MAX_DURATION", 30*time.Minute),
 	}
 
+	smtpPreset := os.Getenv("SMTP_PRESET")
+	presetHost, presetPort, presetTLS := "", int64(587), "starttls"
+	switch smtpPreset {
+	case "":
+	case "gmail":
+		presetHost, presetPort, presetTLS = "smtp.gmail.com", 587, "starttls"
+	case "infomaniak":
+		presetHost, presetPort, presetTLS = "mail.infomaniak.com", 465, "tls"
+	default:
+		errs = append(errs, fmt.Sprintf("SMTP_PRESET must be gmail, infomaniak or empty, got %q", smtpPreset))
+	}
+	cfg.SMTPHost = optionalString("SMTP_HOST", presetHost)
+	cfg.SMTPPort = int(optionalInt64("SMTP_PORT", presetPort))
+	cfg.SMTPTLS = optionalString("SMTP_TLS", presetTLS)
+	cfg.SMTPUsername = os.Getenv("SMTP_USERNAME")
+	cfg.SMTPPassword = os.Getenv("SMTP_PASSWORD")
+	cfg.SMTPFrom = os.Getenv("SMTP_FROM")
+	cfg.PublicURL = strings.TrimRight(os.Getenv("APP_PUBLIC_URL"), "/")
+
 	// Backup settings are parsed with errs swapped out, so their parse
 	// errors land in BackupProblems rather than failing the whole config.
 	mainErrs := errs
@@ -309,6 +345,40 @@ func Load() (Config, error) {
 	} else if cfg.JWTSigningKey == "" {
 		// Deterministic dev-only default so local/test runs do not need a secret manager.
 		cfg.JWTSigningKey = "dev-only-insecure-signing-key-do-not-use-in-production"
+	}
+
+	if cfg.PublicURL == "" {
+		if cfg.AppEnv == EnvProduction {
+			errs = append(errs, "APP_PUBLIC_URL is required in production (the base of the links in emails, e.g. https://financialmanager.alexviolatto.dev)")
+		} else {
+			// Where `flutter run -d chrome --web-port 5000` serves the app.
+			cfg.PublicURL = "http://localhost:5000"
+		}
+	} else if u, err := url.Parse(cfg.PublicURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" {
+		errs = append(errs, fmt.Sprintf("APP_PUBLIC_URL: %q is not an absolute http(s) URL", cfg.PublicURL))
+	}
+
+	if cfg.SMTPHost != "" {
+		switch cfg.SMTPTLS {
+		case "starttls", "tls":
+		case "none":
+			if cfg.AppEnv == EnvProduction {
+				errs = append(errs, "SMTP_TLS=none is not allowed in production: use starttls (port 587) or tls (port 465)")
+			}
+		default:
+			errs = append(errs, fmt.Sprintf("SMTP_TLS must be starttls, tls or none, got %q", cfg.SMTPTLS))
+		}
+		if cfg.SMTPPort < 1 || cfg.SMTPPort > 65535 {
+			errs = append(errs, "SMTP_PORT must be between 1 and 65535")
+		}
+		if cfg.SMTPFrom == "" {
+			errs = append(errs, "SMTP_FROM is required when SMTP_HOST or SMTP_PRESET is set (e.g. FinancialManager <name@gmail.com>)")
+		} else if _, err := mail.ParseAddress(cfg.SMTPFrom); err != nil {
+			errs = append(errs, fmt.Sprintf("SMTP_FROM: %q is not an email address: %v", cfg.SMTPFrom, err))
+		}
+		if (cfg.SMTPUsername == "") != (cfg.SMTPPassword == "") {
+			errs = append(errs, "SMTP_USERNAME and SMTP_PASSWORD must be set together")
+		}
 	}
 
 	if cfg.ImageSearchProvider == "unsplash" && cfg.ImageSearchAPIKey == "" {
@@ -376,6 +446,11 @@ func Load() (Config, error) {
 // there is a key to encrypt the users' provider API keys with.
 func (c Config) AIEnabled() bool {
 	return c.AIKeyEncryptionKey != ""
+}
+
+// EmailEnabled reports whether outbound email is configured.
+func (c Config) EmailEnabled() bool {
+	return c.SMTPHost != ""
 }
 
 // IsProduction reports whether the process is running in the production environment.

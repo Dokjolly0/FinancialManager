@@ -52,6 +52,14 @@ var (
 		Help: "Media uploads rejected before storage, by reason.",
 	}, []string{"reason"})
 
+	// EmailsTotal counts outbound emails (verification, password reset)
+	// by result (sent/failed): the only sign of a broken SMTP setup besides
+	// the email_send_failed log.
+	EmailsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "financialmanager_emails_total",
+		Help: "Outbound emails handed to the SMTP server, by result.",
+	}, []string{"result"})
+
 	// ImageProcessingDuration covers "tempo processamento immagini" —
 	// decode/crop/resize/re-encode, not the network fetch/upload time.
 	ImageProcessingDuration = promauto.NewHistogram(prometheus.HistogramOpts{

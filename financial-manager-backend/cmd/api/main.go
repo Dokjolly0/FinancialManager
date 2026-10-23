@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/mail"
 	"os"
 	"os/signal"
 	"syscall"
@@ -89,8 +90,13 @@ func run() error {
 		Redis:    func(ctx context.Context) error { return redisClient.Ping(ctx).Err() },
 	}
 
+	emailSender, waitEmails, err := newEmailSender(cfg, logger)
+	if err != nil {
+		return err
+	}
+
 	router := httpserver.New(logger, checks, cfg.HTTPRequestTimeout, cfg.TrustedProxies, cfg.CORSAllowedOrigins)
-	if err := mountRoutes(router, dbPool, redisClient, objectStore, cfg, logger); err != nil {
+	if err := mountRoutes(router, dbPool, redisClient, objectStore, emailSender, cfg, logger); err != nil {
 		return err
 	}
 
@@ -121,16 +127,50 @@ func run() error {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("graceful shutdown: %w", err)
 	}
+	// Emails queued by the last requests (a reset link just asked for).
+	if err := waitEmails(shutdownCtx); err != nil {
+		logger.Warn("shutdown_emails_not_sent", slog.String("error", err.Error()))
+	}
 
 	logger.Info("shutdown_complete")
 	return nil
+}
+
+// newEmailSender delivers through SMTP, in the background, when it is
+// configured; otherwise emails are only logged (DevLogSender). The returned
+// wait func lets shutdown finish the deliveries in flight.
+func newEmailSender(cfg config.Config, logger *slog.Logger) (email.Sender, func(context.Context) error, error) {
+	if !cfg.EmailEnabled() {
+		if cfg.IsProduction() {
+			logger.Warn("email_delivery_not_configured",
+				slog.String("hint", "set SMTP_PRESET or SMTP_HOST in .env, see docs/build-deploy.md"))
+		}
+		return email.DevLogSender{Logger: logger}, func(context.Context) error { return nil }, nil
+	}
+	from, err := mail.ParseAddress(cfg.SMTPFrom)
+	if err != nil {
+		return nil, nil, fmt.Errorf("SMTP_FROM: %w", err)
+	}
+	sender := email.NewAsync(email.SMTPSender{
+		Host:     cfg.SMTPHost,
+		Port:     cfg.SMTPPort,
+		Username: cfg.SMTPUsername,
+		Password: cfg.SMTPPassword,
+		From:     *from,
+		TLS:      email.TLSMode(cfg.SMTPTLS),
+	}, logger, time.Minute)
+	logger.Info("email_delivery_configured",
+		slog.String("smtp_host", cfg.SMTPHost),
+		slog.Int("smtp_port", cfg.SMTPPort),
+		slog.String("smtp_tls", cfg.SMTPTLS))
+	return sender, sender.Wait, nil
 }
 
 // mountRoutes wires each module's repositories, services, and HTTP
 // handlers onto the router. Kept as one function (rather than spread
 // across the module packages) so the dependency graph between modules is
 // visible in one place.
-func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Client, objectStore storage.Store, cfg config.Config, logger *slog.Logger) error {
+func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Client, objectStore storage.Store, emailSender email.Sender, cfg config.Config, logger *slog.Logger) error {
 	usersRepo := users.NewRepository(dbPool)
 	walletsRepo := wallets.NewRepository(dbPool)
 	transactionsRepo := transactions.NewRepository(dbPool)
@@ -159,7 +199,8 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		GoogleVerifier:  googleVerifier,
 		TicketStore:     identities.NewTicketStore(redisClient),
 		RateLimiter:     rateLimiter,
-		EmailSender:     email.DevLogSender{Logger: logger},
+		EmailSender:     emailSender,
+		PublicURL:       cfg.PublicURL,
 		Clock:           clock.System{},
 		JWTSigningKey:   cfg.JWTSigningKey,
 		AccessTokenTTL:  cfg.AccessTokenTTL,
