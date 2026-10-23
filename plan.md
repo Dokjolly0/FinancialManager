@@ -1069,6 +1069,8 @@ Main routes:
 /register
 /register/google-completion
 /forgot-password
+/reset-password?token=…      -- link in the reset email, any session state
+/verify-email?token=…        -- link in the verification email, any session state
 /app/home
 /app/transactions/new
 /app/transactions/:id
@@ -1089,7 +1091,9 @@ Guards:
 - authenticated and complete → app area;
 - refresh failed → controlled local logout.
 
-While the session is being restored the splash keeps the requested location (`/splash?from=/app/history`) and opens it afterwards, so a reload or a bookmark in the browser lands where it pointed.
+While the session is being restored the splash keeps the requested location (`/splash?from=/app/history`) and opens it afterwards, so a reload or a bookmark in the browser lands where it pointed. The two email-link routes are open in every session state and also come back through the splash.
+
+The email links are `https://financialmanager.alexviolatto.dev/...` URLs: on Android they open the app through App Links (`autoVerify` intent-filter, `/.well-known/assetlinks.json` served by the web image with the signing key's SHA-256), elsewhere the web dashboard. iOS Universal Links are not set up.
 
 ### 9.9 Web dashboard
 
@@ -1961,7 +1965,8 @@ Require recent authentication. Revoke any applicable Google tokens and remove th
 - Unique salt.
 - Optional pepper stored in the secret manager.
 - No passwords in logs.
-- Password reset via a single-use, hashed token with a short expiration.
+- Password reset via a single-use, hashed token with a short expiration (30 minutes), delivered as a link (`{APP_PUBLIC_URL}/reset-password?token=…`); a reset revokes every session. Email verification works the same way (24 hours, `/verify-email`).
+- Emails are sent over SMTP in the background (`internal/email`), so the response time of "forgot password" doesn't depend on whether the account exists or on the mail server.
 - Rate limit for login and reset.
 - Messages that don't allow trivial account enumeration.
 
@@ -2478,6 +2483,8 @@ services:
     ports:
       - "127.0.0.1:${OBJECT_STORAGE_HOST_PORT:-10004}:9000"
 ```
+
+The development stack also runs Mailpit (`127.0.0.1:${MAILPIT_HOST_PORT:-10006}` → 8025, web UI only), which receives every email the local API sends.
 
 In production it's preferable not to publish PostgreSQL and Redis. If an operational requirement mandates host ports, bind them at least to loopback or a private network:
 
@@ -3034,7 +3041,7 @@ These decisions do not block the plan, but must be closed in Phase 0.
 7. **"Last month" period:** last 30 days or the previous calendar month. The plan uses "Last 30 days."
 8. **Deletion:** immediate undo and/or a visible trash.
 9. **Image export:** included in the archive or references only.
-10. **Email notifications:** verification, reset, security, export ready.
+10. **Email notifications:** verification, reset, security, export ready. *Decided (October 2026):* verification and password reset only, over SMTP with presets for Gmail (app password) and Infomaniak and settings for any other server; Mailpit in development. Security and export emails are not sent.
 11. **Production storage:** self-hosted MinIO or cloud bucket.
 12. **Offline support:** read-only in the MVP, or queued writes.
 13. **Default report grouping:** category or title/template. To honor the draft, the default can be title/template with a category tab.

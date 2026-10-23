@@ -16,7 +16,7 @@ FinancialManager è un'app personale per la gestione delle finanze. Questa pagin
 
 ## Come vengono usati
 
-I dati servono esclusivamente a far funzionare l'app. Non vengono venduti, non vengono usati per pubblicità e non vengono condivisi con terzi, salvo quando usi tu stesso l'Analisi AI con un fornitore cloud, descritta qui sotto. L'Analisi AI sul dispositivo non coinvolge nessun fornitore.
+I dati servono esclusivamente a far funzionare l'app. Non vengono venduti, non vengono usati per pubblicità e non vengono condivisi con terzi, salvo il servizio di posta che consegna le email dell'account (descritto qui sotto) e quando usi tu stesso l'Analisi AI con un fornitore cloud. L'Analisi AI sul dispositivo non coinvolge nessun fornitore.
 
 ## Dove sono conservati
 
@@ -72,6 +72,15 @@ In alternativa a un fornitore cloud puoi far girare il modello AI **direttamente
 **Notifiche.** Download e analisi sul telefono possono continuare con l'app chiusa: in quel caso una notifica mostra l'avanzamento e un'altra avvisa quando hanno finito. Le notifiche riportano solo il titolo dell'analisi o il nome del modello, mai il contenuto del report. Il permesso per le notifiche è facoltativo: se lo neghi tutto funziona lo stesso, senza avvisi.
 
 **Il modello può sbagliare.** I modelli che girano su un telefono sono piccoli e possono confondere i numeri: controllali prima di prendere decisioni. Ogni modello è distribuito con la sua licenza, che l'app ti mostra prima del download.
+
+## Email
+
+L'app ti scrive solo per due motivi: confermare il tuo indirizzo email e reimpostare la password quando lo chiedi tu. Nessuna newsletter, nessuna email pubblicitaria.
+
+- Le email partono dal servizio di posta scelto dal proprietario dell'istanza (per esempio Gmail o Infomaniak), che riceve il tuo indirizzo e il testo del messaggio solo per consegnarlo.
+- Ogni email contiene un link personale che si può usare una volta sola e scade (30 minuti per la password, 24 ore per la conferma). Sul server viene salvata solo un'impronta del link, mai il link stesso, e i log non ne contengono il testo.
+- Se ricevi un'email che non hai chiesto, ignorala: senza il link non cambia nulla.
+- Il link apre la pagina su `financialmanager.alexviolatto.dev` o, se l'app è installata sul telefono, l'app stessa.
 
 ## Servizi di Google
 

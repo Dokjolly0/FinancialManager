@@ -18,6 +18,8 @@ Default dev host ports (loopback-only, configurable in `.env`): PostgreSQL `1000
 
 Production updates go through `./scripts/deploy.sh` on the VPS: `git pull`, then the Go images built one at a time with `--pull` (so a rebuild picks up the base images' security fixes) (never `up -d --build`, which builds them in parallel and strains the 2 GB VPS), the dashboard image pulled, `up -d` and a readiness check. The dashboard is never built on the VPS: CI publishes it to Docker Hub as `dokjolly/financial-manager-web` (`latest` and `sha-<commit>`; `WEB_IMAGE_TAG` pins one for a rollback) and `compose.prod.yaml` runs it with `pull_policy: always`.
 
+The dev stack also runs Mailpit: every email the API sends (verification, password reset) lands there whatever the recipient, readable at `http://127.0.0.1:10006`. In production the API sends through SMTP: `SMTP_PRESET=gmail` (an app password) or `infomaniak`, or `SMTP_HOST`/`SMTP_PORT`/`SMTP_TLS`/`SMTP_USERNAME`/`SMTP_PASSWORD`/`SMTP_FROM` for any server, plus `APP_PUBLIC_URL`, the base of the links in emails (required in production). Without SMTP nothing is sent and the API logs `email_not_sent_no_provider_configured`. Sending is asynchronous (`internal/email/async.go`), so requests never wait for the mail server; results are logged as `email_sent`/`email_send_failed` and counted in `financialmanager_emails_total`. Setup for each provider: [`../docs/build-deploy.md`](../docs/build-deploy.md), section 12.
+
 Run migrations manually against the dev stack:
 
 ```bash

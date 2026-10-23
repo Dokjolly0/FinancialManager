@@ -131,6 +131,14 @@ GDRIVE_CLIENT_ID=xxxxxxxx.apps.googleusercontent.com
 GDRIVE_CLIENT_SECRET=CAMBIA
 GDRIVE_REFRESH_TOKEN=CAMBIA
 
+# Base dei link nelle email (obbligatoria in produzione, vedi sezione 12)
+APP_PUBLIC_URL=https://financialmanager.alexviolatto.dev
+# Email (sezione 12): per esempio Gmail con una password per le app
+SMTP_PRESET=gmail
+SMTP_USERNAME=nome@gmail.com
+SMTP_PASSWORD=CAMBIA_CON_PASSWORD_PER_LE_APP
+SMTP_FROM=FinancialManager <nome@gmail.com>
+
 # Facoltativo: abilita l'Analisi AI con fornitori cloud (vedi sezione 8)
 AI_KEY_ENCRYPTION_KEY=CAMBIA_CON_OPENSSL_RAND_BASE64_32
 # Analisi AI sul dispositivo (vedi sezione 9): attiva di default
@@ -143,7 +151,7 @@ Generare `JWT_SIGNING_KEY` e `BACKUP_ENCRYPTION_KEY` (due valori diversi) con:
 openssl rand -base64 48
 ```
 
-In produzione `JWT_SIGNING_KEY`, `OBJECT_STORAGE_ACCESS_KEY` e `OBJECT_STORAGE_SECRET_KEY` sono obbligatori.
+In produzione `JWT_SIGNING_KEY`, `OBJECT_STORAGE_ACCESS_KEY`, `OBJECT_STORAGE_SECRET_KEY` e `APP_PUBLIC_URL` sono obbligatori. Le variabili `SMTP_*` sono facoltative, ma senza di esse "password dimenticata" e la conferma dell'email non mandano nulla: la configurazione per Gmail, Infomaniak o un altro server è nella sezione 12.
 
 `GOOGLE_CLIENT_IDS` contiene il client OAuth di tipo **Applicazione web**, lo stesso che l'app usa come `serverClientId` in `lib/core/auth/google_sign_in_service.dart`: il backend accetta solo ID token di Google emessi per quel client. Non cambia quando cambia la chiave di firma dell'app (vedi "Firma Android").
 
@@ -617,6 +625,102 @@ L'URL dell'API non si configura più sulla VPS: lo compila la CI (default del Do
 - **Layout**: sotto 840 px è identico all'app; da 840 px la navigazione passa in una barra laterale con "Aggiungi", e le pagine sono centrate (1100 px per le schede, 840 px per le pagine aperte sopra).
 - **URL**: puliti (`/app/history`), si possono salvare nei preferiti; ricaricando una pagina si resta lì dopo il ripristino della sessione.
 
+### 12. Email
+
+L'API manda due tipi di email: la **conferma dell'indirizzo** (alla registrazione e con "Invia di nuovo la verifica" nel profilo) e il **link per reimpostare la password** ("Password dimenticata?" nel login). Il worker non manda email.
+
+**Come funziona.**
+
+- Le email partono via SMTP da `internal/email` (`SMTPSender`), con qualsiasi server: Gmail, Infomaniak o altri.
+- L'invio avviene in background (`AsyncSender`): la richiesta risponde subito anche se il server di posta è lento o irraggiungibile, e "password dimenticata" impiega lo stesso tempo che l'account esista o no (non rivela chi è registrato).
+- Ogni email contiene un link monouso:
+  - `https://financialmanager.alexviolatto.dev/reset-password?token=…`, valido 30 minuti;
+  - `https://financialmanager.alexviolatto.dev/verify-email?token=…`, valido 24 ore.
+
+  Il dominio viene da `APP_PUBLIC_URL`. Il link apre la pagina della dashboard oppure, sul telefono con l'app installata, l'app stessa (App Links, più sotto). Usato una volta, o scaduto, il link mostra "Il link non è valido o è scaduto" con il pulsante per chiederne uno nuovo.
+- Reimpostare la password chiude tutte le sessioni dell'account (anche quella del telefono): si rientra con la nuova password.
+- Senza configurazione SMTP l'API parte lo stesso ma non manda nulla: nei log compare `email_not_sent_no_provider_configured` a ogni email e, in produzione, `email_delivery_not_configured` all'avvio.
+
+**Variabili** (solo il container `api` le riceve):
+
+| Variabile | Default | Significato |
+|---|---|---|
+| `APP_PUBLIC_URL` | obbligatoria in produzione (`http://localhost:5000` altrove) | Base dei link nelle email, senza `/` finale |
+| `SMTP_PRESET` | vuoto | `gmail` o `infomaniak`: imposta host, porta e TLS |
+| `SMTP_HOST` | dal preset | Server SMTP; vuoto = email disattivate |
+| `SMTP_PORT` | dal preset, altrimenti `587` | Porta |
+| `SMTP_TLS` | dal preset, altrimenti `starttls` | `starttls` (587), `tls` (465), `none` (solo server di prova; rifiutato in produzione) |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` | vuoti | Credenziali (entrambe o nessuna) |
+| `SMTP_FROM` | obbligatorio con un server | Mittente, per esempio `FinancialManager <nome@gmail.com>` |
+
+I preset riempiono solo host, porta e TLS: ogni variabile scritta esplicitamente vince sul preset. Un valore sbagliato (mittente non valido, `SMTP_TLS` sconosciuto, utente senza password) blocca l'avvio con un errore che lo nomina. Con `starttls` il passaggio a TLS è obbligatorio: se il server non lo offre l'invio fallisce, non prosegue in chiaro.
+
+**Gmail.** Gratuito, circa 500 email al giorno, più che sufficiente qui.
+
+1. Sull'account Google che farà da mittente attivare la verifica in due passaggi.
+2. Creare una password per le app su `https://myaccount.google.com/apppasswords` (nome a piacere, per esempio "FinancialManager"). Google mostra 16 caratteri una volta sola: salvarli nel password manager.
+3. Nel `.env`:
+   ```env
+   SMTP_PRESET=gmail
+   SMTP_USERNAME=nome@gmail.com
+   SMTP_PASSWORD=la_password_per_le_app_senza_spazi
+   SMTP_FROM=FinancialManager <nome@gmail.com>
+   ```
+
+Il mittente deve essere lo stesso account (o un suo alias verificato in Gmail): un altro indirizzo verrebbe sostituito da Gmail. Se si cambia la password dell'account Google, le password per le app vengono revocate e va generata una nuova.
+
+**Infomaniak.** Con una casella email di Infomaniak, per esempio `noreply@alexviolatto.dev` se il dominio ha la posta lì.
+
+1. Creare (o scegliere) la casella nel Manager di Infomaniak.
+2. Nel `.env`, con l'indirizzo completo e la password della casella:
+   ```env
+   SMTP_PRESET=infomaniak
+   SMTP_USERNAME=noreply@alexviolatto.dev
+   SMTP_PASSWORD=password_della_casella
+   SMTP_FROM=FinancialManager <noreply@alexviolatto.dev>
+   ```
+   Il preset usa `mail.infomaniak.com:465` con TLS. In alternativa funziona anche la porta 587: `SMTP_PORT=587` e `SMTP_TLS=starttls`. Se la casella richiede una password per le applicazioni (verifica in due passaggi attiva), usare quella al posto della password della casella.
+3. Perché le email non finiscano nello spam, il dominio del mittente deve avere SPF e DKIM per Infomaniak: nel DNS di `alexviolatto.dev` un record TXT `v=spf1 include:spf.infomaniak.ch -all` (o l'aggiunta di `include:spf.infomaniak.ch` a quello esistente) e la firma DKIM attivata nel Manager. Se il DNS del dominio è gestito da Infomaniak, il Manager propone di crearli da solo.
+
+**Altro server SMTP.** Qualsiasi provider (Brevo, Mailjet, il server del proprio hosting...):
+
+```env
+SMTP_HOST=smtp.provider.tld
+SMTP_PORT=587
+SMTP_TLS=starttls
+SMTP_USERNAME=utente
+SMTP_PASSWORD=password
+SMTP_FROM=FinancialManager <noreply@dominio.tld>
+```
+
+Per un dominio proprio valgono le stesse regole SPF/DKIM indicate dal provider.
+
+**Attivare in produzione.** Aggiungere le variabili al `.env` della VPS (mai nel repository) e ricreare l'API:
+
+```bash
+cd /projects/FinancialManager/financial-manager-backend
+docker compose -f compose.yaml -f compose.prod.yaml up -d api
+docker compose -f compose.yaml -f compose.prod.yaml logs api | grep email_
+```
+
+All'avvio deve comparire `email_delivery_configured` con host, porta e TLS. Poi provare "Password dimenticata?" con il proprio indirizzo: nei log `email_sent` (con l'oggetto e la durata, mai il testo né il link) e l'email in arrivo. Se l'invio fallisce compare `email_send_failed` con l'errore del server, per esempio `535` per credenziali sbagliate, oppure un timeout se la porta è bloccata. La metrica `financialmanager_emails_total{result="sent"|"failed"}` conta gli invii.
+
+**In sviluppo.** Lo stack di sviluppo avvia anche **Mailpit**, una casella finta: l'API locale manda lì tutte le email, qualunque sia il destinatario, e si leggono su `http://127.0.0.1:10006` (porta cambiabile con `MAILPIT_HOST_PORT`). I link puntano a `http://localhost:5000`, dove gira `flutter run -d chrome --web-port 5000` (sezione 8 di "Build Flutter"). Per provare un server vero in locale basta mettere le variabili `SMTP_*` in `compose.dev.yaml` al posto di quelle di Mailpit.
+
+**App Links.** Sul telefono, con l'app installata, i link delle email aprono direttamente l'app invece del browser.
+
+- `AndroidManifest.xml` dichiara per `MainActivity` un `intent-filter` con `android:autoVerify="true"` per `https://financialmanager.alexviolatto.dev/reset-password` e `/verify-email`.
+- Android lo accetta solo se il dominio conferma l'app: `https://financialmanager.alexviolatto.dev/.well-known/assetlinks.json` elenca il pacchetto `com.alexviolatto.financialmanager` e lo SHA-256 del certificato che firma l'APK. Il file è in `financial-manager-app/docker/assetlinks.json`, viene copiato nell'immagine della dashboard e servito come `application/json`.
+- Android verifica il dominio all'installazione dell'app (serve Internet in quel momento). Se la verifica fallisce, il link si apre nel browser con la dashboard: funziona comunque, solo non nell'app.
+- Controlli:
+  ```bash
+  curl -s https://financialmanager.alexviolatto.dev/.well-known/assetlinks.json
+  adb shell pm get-app-links com.alexviolatto.financialmanager      # financialmanager.alexviolatto.dev: verified
+  adb shell pm verify-app-links --re-verify com.alexviolatto.financialmanager   # ripete la verifica
+  ```
+- **Play Store**: le installazioni dal Play Store sono firmate con la chiave di Google, non con la nostra. Alla prima pubblicazione aggiungere a `sha256_cert_fingerprints` anche lo **SHA-256 della chiave di firma dell'app** (Play Console → *Integrità dell'app → Firma dell'app*), poi ripubblicare la dashboard. Le due impronte possono convivere.
+- Se un giorno la chiave di firma cambia, va cambiata anche l'impronta nel file.
+
 ## Build Flutter
 
 La stessa app si compila per Android (APK/AAB), iOS e il web. La build web per la produzione la fa GitHub Actions, che la pubblica su Docker Hub (sezione 11); questa parte riguarda soprattutto Android, e la sezione 8 lo sviluppo della dashboard.
@@ -777,7 +881,8 @@ financial-manager-app/build/app/outputs/bundle/release/app-release.aab
 
 1. creare l'app nella Play Console con il pacchetto `com.alexviolatto.financialmanager` e accettare Play App Signing (lasciare che Google generi la chiave di firma dell'app);
 2. caricare il primo `.aab` firmato con la nostra chiave: diventa automaticamente la upload key registrata;
-3. in *Configurazione → Integrità dell'app → Firma dell'app* copiare lo **SHA-1 della chiave di firma dell'app** (quella di Google) e aggiungerlo su Google Cloud come un secondo client OAuth Android (stesso pacchetto). Senza, il login con Google non funziona nelle installazioni dal Play Store, mentre continua a funzionare negli APK installati a mano.
+3. in *Configurazione → Integrità dell'app → Firma dell'app* copiare lo **SHA-1 della chiave di firma dell'app** (quella di Google) e aggiungerlo su Google Cloud come un secondo client OAuth Android (stesso pacchetto). Senza, il login con Google non funziona nelle installazioni dal Play Store, mentre continua a funzionare negli APK installati a mano;
+4. dalla stessa pagina copiare lo **SHA-256** della chiave di firma dell'app e aggiungerlo a `financial-manager-app/docker/assetlinks.json` (sezione 12, "App Links"), poi ripubblicare la dashboard. Senza, nelle installazioni dal Play Store i link delle email si aprono nel browser invece che nell'app.
 
 Un APK installato a mano (firmato con la nostra chiave) e uno dal Play Store (firmato da Google) hanno certificati diversi: per passare dall'uno all'altro sul telefono bisogna disinstallare.
 
@@ -841,7 +946,8 @@ Il backend di sviluppo gira su `http://localhost:10003`, la dashboard di `flutte
    cd financial-manager-app
    flutter run -d chrome --web-port 5000 --dart-define=API_BASE_URL=http://localhost:10003/v1
    ```
-3. Per provare la build di produzione senza Docker: `flutter build web --release --no-web-resources-cdn` e servire `build/web` con un server statico che rimandi a `index.html` i percorsi sconosciuti.
+3. Le email del backend di sviluppo arrivano in Mailpit (`http://127.0.0.1:10006`) e i loro link puntano a `http://localhost:5000`: aprendoli si provano le pagine `/reset-password` e `/verify-email` nella dashboard locale (sezione 12).
+4. Per provare la build di produzione senza Docker: `flutter build web --release --no-web-resources-cdn` e servire `build/web` con un server statico che rimandi a `index.html` i percorsi sconosciuti.
 
 Per provare l'immagine esattamente come la compila la CI:
 
@@ -867,11 +973,13 @@ Già fatto:
 - API in HTTPS dietro Caddy, porta `10003` solo su loopback;
 - `android:usesCleartextTraffic` tolto dalle build release.
 - dashboard web su `https://financialmanager.alexviolatto.dev`, compilata da GitHub Actions, pubblicata su Docker Hub e scaricata da compose (sezione 11);
-- aggiornamento della produzione in un comando, senza build parallele sulla VPS (`scripts/deploy.sh`, sezione 6).
+- aggiornamento della produzione in un comando, senza build parallele sulla VPS (`scripts/deploy.sh`, sezione 6);
+- email vere via SMTP per la conferma dell'indirizzo e il reset della password, con link che aprono la dashboard o l'app (App Links) (sezione 12).
 
 Ancora da fare prima di distribuire a utenti reali:
 
-- Registrare su Google Cloud lo SHA-1 della chiave di firma di Play (alla prima pubblicazione) e il bundle ID iOS se usi Google Sign-In su iOS.
+- Registrare su Google Cloud lo SHA-1 della chiave di firma di Play (alla prima pubblicazione) e il bundle ID iOS se usi Google Sign-In su iOS; aggiungere lo SHA-256 della chiave di Play ad `assetlinks.json` (sezione 12).
+- Universal Links su iOS: oggi i link delle email su iPhone si aprono sempre nel browser (servirebbero `apple-app-site-association` e i domini associati nell'app).
 - Dashboard web: le analisi AI sul dispositivo non esistono nel browser (solo fornitori cloud); il layout desktop copre navigazione e larghezza delle pagine, non schermate pensate apposta per il desktop.
 - Firma in CI (sezione 7 di "Build Flutter").
 - Immagini Go dalla CI: `api`, `worker` e `migrate` si compilano ancora sulla VPS (una alla volta). Pubblicarle su Docker Hub come la dashboard lascerebbe alla VPS solo `pull` e `up`, con deploy più rapidi e un rollback per tag anche per il backend; servono un job di pubblicazione in `backend-ci.yml` e `image:` al posto di `build:` in `compose.prod.yaml`.
@@ -886,6 +994,7 @@ financial-manager-app/android/app/src/main/AndroidManifest.xml
 financial-manager-app/android/app/src/debug/AndroidManifest.xml
 financial-manager-backend/deploy/Caddyfile.example
 financial-manager-app/Dockerfile
+financial-manager-app/docker/assetlinks.json
 financial-manager-backend/compose.prod.yaml
 financial-manager-backend/scripts/deploy.sh
 .github/workflows/mobile-ci.yml

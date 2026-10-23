@@ -23,6 +23,8 @@ What differs in the browser:
 - Files (export, AI report) are browser downloads via `saveOrShareFile` (`lib/core/files/save_file.dart`); image cropping uses cropperjs, vendored in `web/cropperjs`.
 - From 840 px the shell shows a side rail and pages are centered (`lib/app/layout/breakpoints.dart`); URLs use the path strategy.
 
+Email links: the backend's emails link to `/reset-password?token=...` and `/verify-email?token=...` (`lib/features/authentication/presentation/screens/reset_password_screen.dart`, `verify_email_screen.dart`), routes reachable with or without a session. On Android the same `https://financialmanager.alexviolatto.dev/...` URLs open the app through App Links: the `autoVerify` intent-filter in `android/app/src/main/AndroidManifest.xml` plus `docker/assetlinks.json`, served by the web image at `/.well-known/assetlinks.json` with the signing key's SHA-256 (add Play's app signing key there at the first Play release).
+
 To keep the web build working: no `dart:io` `Platform`/`File` outside `_io`/`_ffi` files (use `isAndroidApp`/`isIosApp` from `lib/core/platform/platform_info.dart` or `kIsWeb`), native-only code behind a conditional export. CI builds the web image on every push and pull request. Details: [`../docs/build-deploy.md`](../docs/build-deploy.md), "Dashboard web" and "Web in locale".
 
 ## Signing
