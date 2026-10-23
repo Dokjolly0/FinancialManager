@@ -124,6 +124,114 @@
   }
 }
 
+/* Building blocks shared by every screen: buttons, form fields, cards,
+   chips. Components compose these instead of repeating long class lists. */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 h-10 text-sm font-semibold whitespace-nowrap transition-colors select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply bg-primary text-primary-fg hover:bg-primary/90 active:bg-primary/80;
+  }
+  .btn-secondary {
+    @apply bg-surface-2 text-fg hover:bg-border/60;
+  }
+  .btn-outline {
+    @apply border border-border bg-surface text-fg hover:bg-surface-2;
+  }
+  .btn-ghost {
+    @apply text-fg hover:bg-surface-2;
+  }
+  .btn-danger {
+    @apply bg-debit text-white hover:bg-debit/90 dark:text-bg;
+  }
+  .btn-danger-ghost {
+    @apply text-debit hover:bg-debit/10;
+  }
+  .btn-sm {
+    @apply h-8 px-3 rounded-lg text-xs;
+  }
+  .btn-lg {
+    @apply h-12 px-5 text-base;
+  }
+  .btn-icon {
+    @apply h-10 w-10 px-0 rounded-xl;
+  }
+  .btn-icon.btn-sm {
+    @apply h-8 w-8;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-fg mb-1.5;
+  }
+  .hint {
+    @apply mt-1.5 text-xs text-fg-muted;
+  }
+  .field-error {
+    @apply mt-1.5 text-xs font-medium text-debit;
+  }
+  .input {
+    @apply block w-full h-11 rounded-xl border border-border bg-surface px-3.5 text-sm text-fg placeholder:text-fg-muted/70 transition-shadow outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 disabled:opacity-60 aria-invalid:border-debit aria-invalid:focus:ring-debit/15;
+  }
+  textarea.input {
+    @apply h-auto min-h-24 py-2.5 leading-relaxed;
+  }
+  select.input {
+    @apply appearance-none pr-10 bg-no-repeat;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235c6965' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.85rem center;
+  }
+  .checkbox {
+    @apply h-4.5 w-4.5 rounded-md border-border accent-primary cursor-pointer;
+  }
+
+  .card {
+    @apply rounded-card border border-border bg-surface shadow-card;
+  }
+  .card-pad {
+    @apply p-5 sm:p-6;
+  }
+  .section-title {
+    @apply text-xs font-semibold uppercase tracking-wider text-fg-muted;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 h-8 text-xs font-medium text-fg transition-colors hover:bg-surface-2 cursor-pointer;
+  }
+  .chip-active {
+    @apply border-primary bg-primary-soft text-primary;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold;
+  }
+  .list-row {
+    @apply flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2;
+  }
+  .skeleton {
+    @apply animate-pulse rounded-lg bg-surface-2;
+  }
+}
+
+/* Dialogs and drawers opened through ui/overlay.ts (CDK Dialog panels). */
+.fm-dialog-panel {
+  @apply w-[calc(100vw-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl border border-border bg-surface shadow-pop animate-fade-in;
+}
+.fm-dialog-panel.fm-wide {
+  @apply max-w-2xl;
+}
+/* Side drawer on wide screens, bottom sheet on phones. */
+.fm-drawer-panel {
+  @apply fixed! right-0 top-0 h-dvh w-full max-w-xl overflow-hidden border-l border-border bg-surface shadow-pop animate-slide-in-right;
+}
+@media (width < 40rem) {
+  .fm-drawer-panel {
+    @apply top-auto! bottom-0 h-auto max-h-[92dvh] rounded-t-2xl border-l-0 border-t animate-slide-in-up;
+  }
+}
+.fm-dialog-panel > *,
+.fm-drawer-panel > * {
+  @apply flex h-full max-h-[inherit] flex-col;
+}
+
 /* Loading screen of index.html, until the root component renders. Before
    Angular runs there is no theme class yet: follow the system setting. */
 .boot-screen {

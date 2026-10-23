@@ -1,3 +1,24 @@
 {
-  "webLoading": "Caricamento…"
+  "webLoading": "Caricamento…",
+  "webNavHome": "Home",
+  "webNavHistory": "Cronologia",
+  "webNavReports": "Report",
+  "webNavMain": "Navigazione principale",
+  "webAdd": "Aggiungi",
+  "webAddOperation": "Aggiungi operazione",
+  "webAddIncomeExpense": "Entrata / Uscita",
+  "webAddTransfer": "Trasferisci tra portafogli",
+  "webAddVoucherCredit": "Carica buoni pasto",
+  "webAddVoucherExpense": "Spesa con buoni pasto",
+  "webCommandPlaceholder": "Cerca pagine e azioni…",
+  "webCommandEmpty": "Nessun risultato",
+  "webCommandHint": "Comandi rapidi",
+  "webCommandGroupPages": "Pagine",
+  "webCommandGroupActions": "Azioni",
+  "webToggleTheme": "Cambia tema",
+  "webCollapseSidebar": "Riduci menu",
+  "webExpandSidebar": "Espandi menu",
+  "webUserMenu": "Menu utente",
+  "webGreeting": "Ciao, {name}",
+  "webSkipToContent": "Vai al contenuto"
 }

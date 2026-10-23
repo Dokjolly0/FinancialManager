@@ -1,3 +1,24 @@
 {
-  "webLoading": "Loading…"
+  "webLoading": "Loading…",
+  "webNavHome": "Home",
+  "webNavHistory": "History",
+  "webNavReports": "Reports",
+  "webNavMain": "Main navigation",
+  "webAdd": "Add",
+  "webAddOperation": "Add operation",
+  "webAddIncomeExpense": "Income / Expense",
+  "webAddTransfer": "Transfer between wallets",
+  "webAddVoucherCredit": "Load meal vouchers",
+  "webAddVoucherExpense": "Meal voucher expense",
+  "webCommandPlaceholder": "Search pages and actions…",
+  "webCommandEmpty": "No results",
+  "webCommandHint": "Quick commands",
+  "webCommandGroupPages": "Pages",
+  "webCommandGroupActions": "Actions",
+  "webToggleTheme": "Toggle theme",
+  "webCollapseSidebar": "Collapse menu",
+  "webExpandSidebar": "Expand menu",
+  "webUserMenu": "User menu",
+  "webGreeting": "Hi, {name}",
+  "webSkipToContent": "Skip to content"
 }
