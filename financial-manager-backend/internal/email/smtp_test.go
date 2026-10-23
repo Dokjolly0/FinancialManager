@@ -23,8 +23,8 @@ type fakeSMTP struct {
 }
 
 type received struct {
-	from, to string
-	data     string
+	helo, from, to string
+	data           string
 }
 
 func newFakeSMTP(t *testing.T, starttls bool) *fakeSMTP {
@@ -59,6 +59,7 @@ func (f *fakeSMTP) serve() {
 		cmd := strings.TrimRight(line, "\r\n")
 		switch upper := strings.ToUpper(cmd); {
 		case strings.HasPrefix(upper, "EHLO"):
+			msg.helo = strings.TrimSpace(cmd[len("EHLO"):])
 			if f.starttls {
 				reply("250-fake")
 				reply("250 STARTTLS")
@@ -117,6 +118,10 @@ func TestSMTPSender_DeliversPlainTextUTF8Message(t *testing.T) {
 	got := <-srv.got
 	if got.from != "noreply@example.com" || got.to != "mario@example.com" {
 		t.Errorf("envelope = %q -> %q", got.from, got.to)
+	}
+	// Spam filters penalize "EHLO localhost": greet with the sender's domain.
+	if got.helo != "example.com" {
+		t.Errorf("EHLO %q, want the sender's domain", got.helo)
 	}
 	head, body, ok := strings.Cut(got.data, "\r\n\r\n")
 	if !ok {

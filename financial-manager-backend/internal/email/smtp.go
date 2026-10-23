@@ -93,6 +93,13 @@ func (s SMTPSender) Send(ctx context.Context, msg Message) error {
 	}
 	defer c.Close()
 
+	// net/smtp greets with "EHLO localhost" unless told otherwise, and spam
+	// filters count a localhost greeting against the message. Use the
+	// sender's domain, the name the message claims to come from.
+	if err := c.Hello(s.heloName()); err != nil {
+		return fmt.Errorf("email: EHLO: %w", err)
+	}
+
 	if s.TLS == TLSStartTLS {
 		if ok, _ := c.Extension("STARTTLS"); !ok {
 			return errors.New("email: server does not offer STARTTLS (set SMTP_TLS=tls for port 465)")
@@ -127,6 +134,15 @@ func (s SMTPSender) Send(ctx context.Context, msg Message) error {
 	return c.Quit()
 }
 
+// heloName is the domain of the From address, or "localhost" if it has
+// none.
+func (s SMTPSender) heloName() string {
+	if at := strings.LastIndexByte(s.From.Address, '@'); at >= 0 && at < len(s.From.Address)-1 {
+		return s.From.Address[at+1:]
+	}
+	return "localhost"
+}
+
 // build renders msg as a plain-text UTF-8 message (RFC 5322), body in
 // quoted-printable so accented letters survive any relay.
 func (s SMTPSender) build(msg Message, now time.Time) ([]byte, error) {
@@ -134,10 +150,7 @@ func (s SMTPSender) build(msg Message, now time.Time) ([]byte, error) {
 	if _, err := rand.Read(id[:]); err != nil {
 		return nil, err
 	}
-	domain := "localhost"
-	if at := strings.LastIndexByte(s.From.Address, '@'); at >= 0 {
-		domain = s.From.Address[at+1:]
-	}
+	domain := s.heloName()
 
 	var b bytes.Buffer
 	header := func(name, value string) { fmt.Fprintf(&b, "%s: %s\r\n", name, value) }

@@ -695,6 +695,20 @@ SMTP_FROM=FinancialManager <noreply@dominio.tld>
 
 Per un dominio proprio valgono le stesse regole SPF/DKIM indicate dal provider.
 
+**Se le email finiscono nello spam.**
+
+1. **Guardare il verdetto del destinatario.** In Gmail: apri l'email → menu ⋮ → *Mostra originale*. In alto ci sono SPF, DKIM e DMARC, ciascuno PASS o FAIL.
+2. **DKIM.** È la causa più comune quando SPF passa ma l'email finisce comunque nello spam: senza firma DKIM un dominio nuovo ha poca reputazione. Su Infomaniak va attivato nel Manager: *Servizio Mail* del dominio → *DKIM*. Se il DNS è gestito da Infomaniak, come per `alexviolatto.dev` (`nsany1/2.infomaniak.com`), il record viene creato automaticamente. Dopo qualche ora, *Mostra originale* deve dare `DKIM: PASS` con `d=alexviolatto.dev`.
+3. **SPF e DMARC**, già presenti su `alexviolatto.dev`:
+   - `v=spf1 include:spf.infomaniak.ch -all` autorizza solo i server Infomaniak a spedire per il dominio;
+   - `_dmarc` con `p=reject` chiede di rifiutare le email che non passano né SPF né DKIM allineati. Mandare email "da" `@alexviolatto.dev` attraverso un altro servizio, Gmail compreso, verrebbe quindi rifiutato.
+4. **Reputazione.** Un dominio che non ha mai spedito parte da zero. Segnare l'email come "Non è spam" e spostarla in arrivo aiuta il filtro del destinatario. Con DKIM attivo e invii regolari, la reputazione migliora da sola.
+5. **Dal lato dell'app non c'è altro da cambiare.**
+   - Il saluto SMTP (EHLO) usa il dominio del mittente, non `localhost`.
+   - Il `Message-ID` ha il dominio del mittente.
+   - I link puntano allo stesso dominio del mittente.
+   - Il testo è semplice, senza immagini né link di tracciamento.
+
 **Attivare in produzione.** Aggiungere le variabili al `.env` della VPS (mai nel repository) e ricreare l'API:
 
 ```bash
