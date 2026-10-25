@@ -211,7 +211,7 @@ func TestLocal_FollowUpsAndCloudSeparation(t *testing.T) {
 	h.mustStatus(q, http.StatusCreated)
 	msgs := q.body["messages"].([]any)
 	if len(msgs) != 3 || msgs[1].(map[string]any)["content"] != "Report locale." ||
-		msgs[2].(map[string]any)["content"] != prompt.FollowUpQuestion("Perché?", prompt.LangIT) ||
+		msgs[2].(map[string]any)["content"] != prompt.FollowUpQuestion("Perché?", prompt.LangIT, prompt.PresetMonthlyCheckup) ||
 		q.body["kind"] != "ANSWER" || q.body["question_id"] == nil {
 		t.Fatalf("local follow-up = %s", q.raw)
 	}
@@ -224,7 +224,7 @@ func TestLocal_FollowUpsAndCloudSeparation(t *testing.T) {
 		t.Fatalf("report turn message kind = %v", k)
 	}
 	// The phone runs the answer with the follow-up rules, as the cloud does.
-	if q.body["system_prompt"] != prompt.WithFollowUpRules(prep.body["system_prompt"].(string), prompt.LangIT) {
+	if q.body["system_prompt"] != prompt.WithFollowUpRules(prep.body["system_prompt"].(string), prompt.LangIT, prompt.PresetMonthlyCheckup) {
 		t.Fatalf("local follow-up system prompt = %q", q.body["system_prompt"])
 	}
 	// While that answer is pending, another question waits.

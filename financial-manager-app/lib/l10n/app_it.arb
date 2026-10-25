@@ -532,7 +532,7 @@
   "aiConsentSentTitle": "Cosa viene inviato",
   "aiConsentSentAggregates": "Totali, andamento mensile, categorie e voci principali del periodo scelto",
   "aiConsentSentWallets": "Nome, tipo, scopo e saldo dei portafogli inclusi",
-  "aiConsentSentTransactions": "Solo se lo attivi: l'elenco dei movimenti, anche con titoli anonimizzati",
+  "aiConsentSentTransactions": "L'elenco dei movimenti: nelle analisi solo se lo attivi, anche con titoli anonimizzati; in \"Chiedi all'assistente\" sempre, perché le risposte si basano sui singoli movimenti",
   "aiConsentSentContext": "Solo se lo attivi: il contesto personale che hai scritto",
   "aiConsentNeverTitle": "Cosa non viene mai inviato",
   "aiConsentNeverBody": "Email, nome, nome utente, identificativi dell'account e immagini",

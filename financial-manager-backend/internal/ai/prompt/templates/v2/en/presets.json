@@ -34,5 +34,11 @@
     "description": "Write what you want to know about your data.",
     "headings": ["Answer", "Data it is based on"],
     "instructions": ""
+  },
+  "CHAT": {
+    "title": "Ask the assistant",
+    "description": "Ask a question about your transactions, as in a chat.",
+    "headings": [],
+    "instructions": ""
   }
 }

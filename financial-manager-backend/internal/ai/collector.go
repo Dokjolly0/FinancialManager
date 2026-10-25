@@ -28,6 +28,8 @@ const (
 	oneOffMedianFactor     = 3    // ...and three times the median item
 	DefaultMaxTransactions = 200
 	MaxMaxTransactions     = 500
+	// ChatMaxTransactions bounds the ledger of a chat (plan.md section 34).
+	ChatMaxTransactions = 2000
 )
 
 // collectInput is a validated analysis request.

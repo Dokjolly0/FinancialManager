@@ -525,6 +525,10 @@ paths:
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+        - name: type
+          in: query
+          description: chat lists only chats (preset CHAT), report only the other presets; omitted lists both.
+          schema: { type: string, enum: [chat, report] }
       responses:
         "200":
           description: A page of analyses.
@@ -538,7 +542,7 @@ paths:
                     items: { $ref: "#/components/schemas/AiAnalysisSummary" }
                   next_cursor: { type: [string, "null"] }
         "422":
-          description: Invalid cursor.
+          description: Invalid cursor or type.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -1104,7 +1108,17 @@ components:
       type: object
       required: [preset]
       properties:
-        preset: { type: string }
+        preset:
+          type: string
+          enum: [MONTHLY_CHECKUP, ANOMALIES, SAVINGS, RECURRING, WALLET_PURPOSE, CUSTOM, CHAT]
+          description: >
+            CHAT is a free-form conversation ("Chiedi all'assistente", plan.md
+            section 34), not listed by /ai/presets: instructions carry the first
+            question, the period defaults to all_time, the default sections are
+            monthly, categories, titles, recurring and personal_context, the
+            transaction list is always included (up to 2000; cut to the most
+            recent that fit budget_tokens, or the server's prompt limit, before
+            anything else) and anonymize_titles is refused.
         target:
           type: string
           enum: [cloud, on_device]
@@ -1144,7 +1158,7 @@ components:
               type: array
               items: { $ref: "#/components/schemas/AiDataSection" }
             include_transactions: { type: boolean, default: false }
-            max_transactions: { type: integer, minimum: 1, maximum: 500, default: 200 }
+            max_transactions: { type: integer, minimum: 1, maximum: 500, default: 200, description: "CHAT: maximum and default 2000." }
             anonymize_titles: { type: boolean, default: false }
             include_adjustments: { type: boolean, default: false }
             profile:
@@ -1178,7 +1192,7 @@ components:
         instructions:
           type: [string, "null"]
           maxLength: 4000
-          description: Null uses the preset's default instructions; required for CUSTOM.
+          description: Null uses the preset's default instructions; required for CUSTOM. For CHAT, the first question (at most 2000 characters).
 
     AiPreview:
       type: object
@@ -1287,9 +1301,10 @@ components:
             wallet_ids:
               type: array
               items: { type: string, format: uuid }
-            options: { type: object }
+            options: { type: object, description: "As requested, plus lang (the prompt language, it or en)." }
             prompt_version: { type: string }
-            system_prompt: { type: string }
+            system_prompt: { type: string, description: "As stored; follow-ups on reports are sent with the follow-up rules appended." }
+            question: { type: [string, "null"], description: "CHAT only: the first question as typed." }
             follow_ups_left: { type: integer }
             can_ask_follow_ups: { type: boolean }
             messages:
@@ -1316,14 +1331,19 @@ components:
         question_id: { type: string, format: uuid, description: "Follow-ups only." }
         message_id: { type: string, format: uuid, description: "The assistant message to submit the result for." }
         kind: { type: string, enum: [REPORT, ANSWER] }
-        system_prompt: { type: string }
+        system_prompt: { type: string, description: "The stored one for a report; with the follow-up rules appended for a report's follow-up." }
         messages:
           type: array
+          description: The conversation to send; questions are wrapped in <follow_up_question> (reports) or <question> (chats).
           items:
             type: object
             properties:
               role: { type: string, enum: [user, assistant] }
               content: { type: string }
+              kind:
+                type: string
+                enum: [CONTEXT, REPORT, QUESTION, ANSWER]
+                description: The stored message kind, for labelling the transcript; a chat's first answer is ANSWER.
         max_output_tokens: { type: integer }
         deadline_at: { type: string, format: date-time, description: "After this the analysis shows as interrupted (AI_LOCAL_MAX_DURATION)." }
 

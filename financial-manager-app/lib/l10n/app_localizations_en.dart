@@ -1464,7 +1464,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiConsentSentTransactions =>
-      'Only if you turn it on: the list of transactions, optionally with anonymized titles';
+      'The list of transactions: in analyses only if you turn it on, optionally with anonymized titles; in \"Ask the assistant\" always, since the answers rely on single transactions';
 
   @override
   String get aiConsentSentContext =>

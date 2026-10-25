@@ -530,7 +530,7 @@
   "aiConsentSentTitle": "What is sent",
   "aiConsentSentAggregates": "Totals, monthly trend, main categories and items of the chosen period",
   "aiConsentSentWallets": "Name, type, purpose and balance of the included wallets",
-  "aiConsentSentTransactions": "Only if you turn it on: the list of transactions, optionally with anonymized titles",
+  "aiConsentSentTransactions": "The list of transactions: in analyses only if you turn it on, optionally with anonymized titles; in \"Ask the assistant\" always, since the answers rely on single transactions",
   "aiConsentSentContext": "Only if you turn it on: the personal context you wrote",
   "aiConsentNeverTitle": "What is never sent",
   "aiConsentNeverBody": "Email, name, username, account identifiers and images",

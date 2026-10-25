@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -119,8 +120,12 @@ type builtPrompt struct {
 	compactionSteps []string
 }
 
-// userMessage is the first message sent to the model.
+// userMessage is the first message sent to the model. A chat's
+// instructions are its first question, which comes after the data.
 func (b builtPrompt) userMessage() string {
+	if b.preset == prompt.PresetChat {
+		return prompt.ChatUserMessage(b.instructions, b.prompt.DataBlock, b.lang)
+	}
 	return prompt.UserMessage(b.instructions, b.prompt.DataBlock)
 }
 
@@ -149,6 +154,7 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 	if !prompt.IsValidPreset(req.Preset) {
 		fieldErrors["preset"] = FieldInvalidValue
 	}
+	chat := req.Preset == prompt.PresetChat
 
 	tzName := req.Timezone
 	if tzName == "" {
@@ -166,6 +172,9 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 	periodPreset := req.Period.Preset
 	if periodPreset == "" {
 		periodPreset = reports.PresetLast12Months
+		if chat {
+			periodPreset = reports.PresetAllTime
+		}
 	}
 	var period reports.Period
 	if !reports.IsValidPreset(periodPreset) {
@@ -187,6 +196,18 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 	}
 
 	opts := req.Options
+	if chat {
+		// A chat answers from the transactions themselves; the search they
+		// need is by title, so titles can't be replaced by pseudonyms.
+		if len(opts.Sections) == 0 {
+			defaults, _ := prompt.PresetFor(lang, prompt.PresetChat)
+			opts.Sections = defaults.Defaults.Sections
+		}
+		opts.IncludeTransactions = true
+		if opts.AnonymizeTitles {
+			fieldErrors["options.anonymize_titles"] = FieldInvalidValue
+		}
+	}
 	sections := make([]string, 0, len(opts.Sections))
 	seen := map[string]bool{}
 	for _, sec := range opts.Sections {
@@ -209,13 +230,20 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 	if opts.BudgetTokens != 0 && (opts.BudgetTokens < MinBudgetTokens || opts.BudgetTokens > MaxBudgetTokens) {
 		fieldErrors["options.budget_tokens"] = FieldOutOfRange
 	}
-	if opts.MaxTransactions == 0 {
+	maxTransactions := MaxMaxTransactions
+	switch {
+	case chat:
+		maxTransactions = ChatMaxTransactions
+		if opts.MaxTransactions == 0 {
+			opts.MaxTransactions = ChatMaxTransactions
+		}
+	case opts.MaxTransactions == 0:
 		opts.MaxTransactions = DefaultMaxTransactions
 		if opts.Profile == prompt.ProfileCompact {
 			opts.MaxTransactions = compactDefaultTransactions
 		}
 	}
-	if opts.MaxTransactions < 1 || opts.MaxTransactions > MaxMaxTransactions {
+	if opts.MaxTransactions < 1 || opts.MaxTransactions > maxTransactions {
 		fieldErrors["options.max_transactions"] = FieldOutOfRange
 	}
 
@@ -233,7 +261,11 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 	} else if p, ok := prompt.PresetFor(lang, req.Preset); ok {
 		instructions = p.Instructions
 	}
-	if utf8.RuneCountInString(instructions) > MaxInstructionsLength {
+	maxInstructions := MaxInstructionsLength
+	if chat {
+		maxInstructions = MaxQuestionLength // the first question
+	}
+	if utf8.RuneCountInString(instructions) > maxInstructions {
 		fieldErrors["instructions"] = FieldTextTooLong
 	} else if instructions == "" && req.Preset != "" {
 		fieldErrors["instructions"] = apierror.FieldRequired
@@ -279,6 +311,16 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 	// step at a time until the prompt fits. Deterministic, so a run
 	// rebuilds exactly what its preview showed.
 	limits := prompt.LimitsFor(opts.Profile)
+	budget := opts.BudgetTokens
+	if chat {
+		// The ledger is what a chat answers from: keep all of it, then cut
+		// it to the budget (or the server's prompt limit) before anything
+		// else.
+		limits.Transactions = 0
+		if budget == 0 {
+			budget = s.limits.MaxPromptTokens
+		}
+	}
 	render := func() error {
 		bp.snapshot = prompt.Trim(snapshot, limits, lang)
 		built, err := prompt.Build(prompt.BuildInput{
@@ -294,10 +336,18 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 	if err := render(); err != nil {
 		return builtPrompt{}, err
 	}
-	if opts.BudgetTokens > 0 {
+	if chat && bp.estimated > budget {
+		if err := bp.fitLedger(&limits, budget, len(snapshot.Transactions), render); err != nil {
+			return builtPrompt{}, err
+		}
+	}
+	if budget > 0 {
 		for _, step := range prompt.BudgetSteps {
-			if bp.estimated <= opts.BudgetTokens {
+			if bp.estimated <= budget {
 				break
+			}
+			if chat && strings.HasPrefix(step.Name, "transactions_") {
+				continue // fitLedger already cut the ledger
 			}
 			step.Apply(&limits)
 			bp.compactionSteps = append(bp.compactionSteps, step.Name)
@@ -305,7 +355,7 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 				return builtPrompt{}, err
 			}
 		}
-		if bp.estimated > opts.BudgetTokens {
+		if bp.estimated > budget {
 			return builtPrompt{}, ErrPromptTooLarge
 		}
 	}
@@ -313,6 +363,31 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 		return builtPrompt{}, ErrPromptTooLarge
 	}
 	return bp, nil
+}
+
+// fitLedger keeps the most recent transactions that fit the budget,
+// shrinking the list by a quarter at a time (deterministic, so a run
+// rebuilds its preview) and dropping it only when not even a few fit. The
+// cut is recorded as a compaction step, "transactions_<kept>".
+func (bp *builtPrompt) fitLedger(limits *prompt.Limits, budget, total int, render func() error) error {
+	n := total
+	for bp.estimated > budget && n > 0 {
+		n = n * 3 / 4
+		if n < 4 {
+			n = 0
+		}
+		limits.Transactions = n
+		if n == 0 {
+			limits.Transactions = -1
+		}
+		if err := render(); err != nil {
+			return err
+		}
+	}
+	if n < total {
+		bp.compactionSteps = append(bp.compactionSteps, fmt.Sprintf("transactions_%d", n))
+	}
+	return nil
 }
 
 // openEndedPeriod is a custom period with only one bound: "from X to

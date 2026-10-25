@@ -51,6 +51,10 @@ const (
 	PresetRecurring      = "RECURRING"
 	PresetWalletPurpose  = "WALLET_PURPOSE"
 	PresetCustom         = "CUSTOM"
+	// PresetChat is a free-form conversation (plan.md section 34). It has
+	// its own system prompt, no headings, and is not offered by the report
+	// setup, so it is not in PresetOrder.
+	PresetChat = "CHAT"
 )
 
 // PresetOrder is the order presets are offered in.
@@ -98,6 +102,10 @@ var presetDefaults = map[string]PresetDefaults{
 	PresetRecurring:      {Sections: []string{SectionMonthly, SectionTitles, SectionRecurring, SectionPersonalContext}, PeriodPreset: "last_12_months"},
 	PresetWalletPurpose:  {Sections: []string{SectionCategories, SectionTitles, SectionTransfers, SectionPersonalContext}, PeriodPreset: "last_12_months"},
 	PresetCustom:         {Sections: AllSections, PeriodPreset: "last_12_months"},
+	PresetChat: {
+		Sections:            []string{SectionMonthly, SectionCategories, SectionTitles, SectionRecurring, SectionPersonalContext},
+		IncludeTransactions: true, PeriodPreset: "all_time",
+	},
 }
 
 // Preset is a preset's localized text plus its defaults.
@@ -118,10 +126,13 @@ type presetText struct {
 }
 
 type langTemplates struct {
-	system   *template.Template
-	compact  *template.Template // shorter rules for the compact profile
-	presets  map[string]presetText
-	followUp followUpText
+	system  *template.Template
+	compact *template.Template // shorter rules for the compact profile
+	// chat and chatCompact are the system prompts of PresetChat.
+	chat        *template.Template
+	chatCompact *template.Template
+	presets     map[string]presetText
+	followUp    followUpText
 }
 
 // parseTemplate reads an embedded template, normalizing line endings: a
@@ -149,7 +160,7 @@ func init() {
 		if err := json.Unmarshal(raw, &presets); err != nil {
 			panic(fmt.Sprintf("prompt: %s presets.json: %v", lang, err))
 		}
-		for _, id := range PresetOrder {
+		for _, id := range append(PresetOrder, PresetChat) {
 			if _, ok := presets[id]; !ok {
 				panic(fmt.Sprintf("prompt: %s presets.json lacks %s", lang, id))
 			}
@@ -159,11 +170,12 @@ func init() {
 			panic(err)
 		}
 		var followUp followUpText
-		if err := json.Unmarshal(raw, &followUp); err != nil || followUp.SystemRules == "" || followUp.Reminder == "" {
+		if err := json.Unmarshal(raw, &followUp); err != nil || followUp.SystemRules == "" || followUp.Reminder == "" || followUp.ChatReminder == "" {
 			panic(fmt.Sprintf("prompt: %s followup.json is invalid: %v", lang, err))
 		}
 		loaded[lang] = langTemplates{
 			system: parseTemplate(dir + "system.tmpl"), compact: parseTemplate(dir + "system_compact.tmpl"), presets: presets,
+			chat: parseTemplate(dir + "system_chat.tmpl"), chatCompact: parseTemplate(dir + "system_chat_compact.tmpl"),
 			followUp: followUp,
 		}
 	}
@@ -238,9 +250,15 @@ func Build(in BuildInput) (Prompt, error) {
 		return Prompt{}, fmt.Errorf("prompt: unknown preset %q", in.Preset)
 	}
 
-	tmpl := loaded[lang].system
-	if in.Profile == ProfileCompact {
-		tmpl = loaded[lang].compact
+	t := loaded[lang]
+	tmpl := t.system
+	switch {
+	case in.Preset == PresetChat && in.Profile == ProfileCompact:
+		tmpl = t.chatCompact
+	case in.Preset == PresetChat:
+		tmpl = t.chat
+	case in.Profile == ProfileCompact:
+		tmpl = t.compact
 	}
 	var system strings.Builder
 	err := tmpl.Execute(&system, struct {

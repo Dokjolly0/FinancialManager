@@ -291,7 +291,7 @@ func (s *Service) PrepareLocalFollowUp(ctx context.Context, userID, analysisID u
 	if err != nil {
 		return localTurnResponse{}, err
 	}
-	history, questions, err := s.replayHistory(messages, analysis.Provider, lang)
+	history, questions, err := s.replayHistory(messages, analysis, lang)
 	if err != nil {
 		return localTurnResponse{}, err
 	}
@@ -315,8 +315,8 @@ func (s *Service) PrepareLocalFollowUp(ctx context.Context, userID, analysisID u
 	for _, m := range history {
 		out = append(out, localMessage{Role: string(m.Role), Content: m.Content, Kind: m.Kind})
 	}
-	out = append(out, localMessage{Role: "user", Content: prompt.FollowUpQuestion(question, lang), Kind: KindQuestion})
-	resp := s.localTurn(analysis, answer, prompt.WithFollowUpRules(analysis.SystemPrompt, lang), out)
+	out = append(out, localMessage{Role: "user", Content: prompt.FollowUpQuestion(question, lang, analysis.Preset), Kind: KindQuestion})
+	resp := s.localTurn(analysis, answer, prompt.WithFollowUpRules(analysis.SystemPrompt, lang, analysis.Preset), out)
 	qid := q.ID.String()
 	resp.QuestionID = &qid
 	return resp, nil

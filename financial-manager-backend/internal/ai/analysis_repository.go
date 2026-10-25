@@ -308,8 +308,9 @@ func (r *Repository) ListAnalysesForExport(ctx context.Context, userID uuid.UUID
 	return out, msgRows.Err()
 }
 
-// ListAnalyses returns a page of the user's analyses, newest first.
-func (r *Repository) ListAnalyses(ctx context.Context, userID uuid.UUID, after *AnalysisCursor, limit int) ([]Analysis, error) {
+// ListAnalyses returns a page of the user's analyses, newest first;
+// historyType ("chat", "report" or "") keeps only chats or only reports.
+func (r *Repository) ListAnalyses(ctx context.Context, userID uuid.UUID, after *AnalysisCursor, limit int, historyType string) ([]Analysis, error) {
 	var createdAt *time.Time
 	var id *uuid.UUID
 	if after != nil {
@@ -317,8 +318,9 @@ func (r *Repository) ListAnalyses(ctx context.Context, userID uuid.UUID, after *
 	}
 	rows, err := r.db.Query(ctx, `SELECT `+analysisColumns+` FROM ai_analyses
 		WHERE user_id = $1 AND ($2::timestamptz IS NULL OR (created_at, id) < ($2, $3::uuid))
+			AND ($5::text = '' OR ($5::text = 'chat') = (preset = 'CHAT'))
 		ORDER BY created_at DESC, id DESC
-		LIMIT $4`, userID, createdAt, id, limit)
+		LIMIT $4`, userID, createdAt, id, limit, historyType)
 	if err != nil {
 		return nil, fmt.Errorf("list ai analyses: %w", err)
 	}

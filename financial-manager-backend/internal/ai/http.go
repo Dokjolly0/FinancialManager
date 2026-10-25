@@ -361,7 +361,7 @@ func (h *Handler) listAnalyses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	page, err := h.service.ListAnalyses(r.Context(), userID, r.URL.Query().Get("cursor"), limit)
+	page, err := h.service.ListAnalyses(r.Context(), userID, r.URL.Query().Get("cursor"), limit, r.URL.Query().Get("type"))
 	if err != nil {
 		apierror.Write(w, r, err)
 		return

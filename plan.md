@@ -3195,9 +3195,9 @@ Non-goals:
 
 ### 32.2 Privacy and consent
 
-- Before the first preview the app shows a consent sheet: the chosen provider is a third party; what is sent (aggregates, wallet names and purposes, optional transaction list, personal context); what is never sent (email, name, account identifiers, images); the provider's own retention policy applies; how to revoke.
-- Consent is versioned with `ai.ConsentVersion`. Preview and run return `403 AI_CONSENT_REQUIRED` when the stored version is older. The constant is bumped whenever the disclosure text changes.
-- Data minimization by default: aggregates only. The raw transaction list is opt-in, capped (default 200, max 500, newest first) and titles can be replaced by stable pseudonyms (`Voce 1..N`).
+- Before the first preview the app shows a consent sheet: the chosen provider is a third party; what is sent (aggregates, wallet names and purposes, the transaction list when turned on and always in chats, personal context); what is never sent (email, name, account identifiers, images); the provider's own retention policy applies; how to revoke.
+- Consent is versioned with `ai.ConsentVersion` (currently 2, since chats, section 34). Preview and run return `403 AI_CONSENT_REQUIRED` when the stored version is older. The constant is bumped whenever the disclosure text changes.
+- Data minimization by default: aggregates only. The raw transaction list is opt-in, capped (default 200, max 500, newest first) and titles can be replaced by stable pseudonyms (`Voce 1..N`). Chats (section 34) are the exception: the user asks about single transactions, so the list is always sent (up to 2000) with real titles.
 - The API key is encrypted at rest with AES-256-GCM (`internal/platform/secretbox`), key from `AI_KEY_ENCRYPTION_KEY`, additional authenticated data `user_id || provider || base_url`. Responses only carry a masked hint (`sk-…a1b2`). Keys are never logged or exported.
 - Everything is deleted with the account (`ON DELETE CASCADE`). The user can delete single analyses or the whole history, and remove stored keys.
 - `docs/privacy.md` describes the feature in its own section.
@@ -3208,7 +3208,7 @@ Non-goals:
 - `ai_provider_credentials`: one row per (user, provider, base_url) so switching provider does not mean retyping a key. Provider is `anthropic`, `openai`, `gemini` or `openai_compatible` (the last requires `base_url`). Encrypted key, nonce, key version, hint, last test result.
 - `ai_settings`: one row per user: active credential, model, consent version and date, defaults for the analysis options, `max_output_tokens`, optional prices per million tokens, `version` for optimistic locking.
 - `ai_user_context`: one row per user: household size, income type, free text "about me", goals, things to ignore, response style.
-- `ai_analyses`: preset, period, timezone, wallet ids, options (including `lang`, the prompt language set by the server, which follow-ups use for their rules; older rows without it use the user's current locale), provider, model, the provider account it ran with (`credential_id`, `ON DELETE SET NULL`), prompt version, data fingerprint, status (`STREAMING`, `COMPLETED`, `FAILED`, `CANCELLED`), error code, token totals, `client_request_id` (unique per user, replaces the idempotency header on SSE routes).
+- `ai_analyses`: preset (the report presets, or `CHAT` for a chat, section 34), period, timezone, wallet ids, options (including `lang`, the prompt language set by the server, which follow-ups use for their rules; older rows without it use the user's current locale), provider, model, the provider account it ran with (`credential_id`, `ON DELETE SET NULL`), prompt version, data fingerprint, status (`STREAMING`, `COMPLETED`, `FAILED`, `CANCELLED`), error code, token totals, `client_request_id` (unique per user, replaces the idempotency header on SSE routes).
 - `ai_messages`: ordered messages of an analysis, kind `CONTEXT` (the exact data block and instructions sent), `REPORT`, `QUESTION`, `ANSWER`, with per-message tokens and status. Follow-ups replay the stored messages and never recompute the data, so answers stay consistent with the report.
 
 ### 32.4 API
@@ -3228,7 +3228,7 @@ All routes require authentication. JSON routes keep the normal request timeout; 
 | `POST /v1/ai/analyses/preview` | build the prompt without sending it |
 | `POST /v1/ai/analyses` | run an analysis, Server-Sent Events |
 | `POST /v1/ai/analyses/{id}/messages` | follow-up question, Server-Sent Events |
-| `GET /v1/ai/analyses` | history, cursor paginated |
+| `GET /v1/ai/analyses` | history, cursor paginated; `type=chat` or `type=report` filters (section 34) |
 | `GET`, `PATCH`, `DELETE /v1/ai/analyses/{id}` | detail with messages, rename, delete |
 | `DELETE /v1/ai/analyses` | delete the whole history |
 
@@ -3488,6 +3488,33 @@ Error codes: `AI_ON_DEVICE_DISABLED` (503), `AI_LOCAL_CONSENT_REQUIRED` (403), `
 - Stored as `users.ai_enabled` (migration `0035_ai_choice_and_switch`, default `true`, so existing accounts keep what they had), returned by `GET /v1/me` and accepted by `PATCH /v1/me`, where an omitted value keeps the stored one (older apps don't send it).
 - It only drives what the app shows; the AI routes don't check it.
 - Until the profile has loaded the app treats the features as off, so they never flash in for a user who turned them off.
+
+## 34. AI chat (Chiedi all'assistente)
+
+Free-form questions about the user's own data that are not a report: "when did I pay the car insurance?", "how much do I spend on fuel per month?", "which subscriptions do I pay yearly?". Available wherever the AI analysis is (cloud and on device), behind the same consent and the same features switch.
+
+### 34.1 Model
+
+- A chat is an analysis with preset `CHAT` (migration `0036_ai_chat` adds it to `ai_analyses_preset_check`; the down migration deletes the chats). The first question is the request's `instructions`, the first answer is stored as the `REPORT` message, later questions are the usual `QUESTION`/`ANSWER` pairs. Preview, run, follow-ups, history, rename, delete, export and on-device runs are therefore the same code paths as reports.
+- `CHAT` is a valid preset but not part of `GET /v1/ai/presets`: the report setup never offers it.
+- Title: the first question on one line, at most 80 characters. `GET /v1/ai/analyses/{id}` returns `question`, the first question as typed (it sits after the data in the `CONTEXT` message).
+- History: `GET /v1/ai/analyses?type=chat|report` lists only chats or only reports.
+
+### 34.2 Prompt and data
+
+- Own system prompt (`system_chat.tmpl`, `system_chat_compact.tmpl` per language): conversational, no fixed headings and no greeting; questions arrive between `<question>` and `</question>`, the first one included, and every later one is followed by a short reminder; for "when/how much" questions it lists the matching transactions with date, amount and wallet plus the total, searching by title and category also with words of similar meaning; when nothing matches it says so and suggests other words or what to record; same rules as reports on invented numbers, data tags, transfers and regulated advice. Follow-ups keep the chat prompt as it is (no report follow-up rules).
+- First message: the data block, then the tagged question.
+- Data: period `all_time` by default, sections monthly, categories, titles, recurring (with the yearly/one-off table) and personal context, and always the transaction list, newest first, up to `ChatMaxTransactions` (2000). `anonymize_titles` is refused (`options.anonymize_titles`), because the answers search the titles.
+- Budget: the ledger is cut first. With `budget_tokens` (the phone always sends one) or, without it, the server's `AI_MAX_PROMPT_TOKENS`, the list shrinks by a quarter at a time to the most recent transactions that fit (`transactions_<kept>` in `disclosure.compaction_steps`); only then the usual budget steps apply, skipping the transaction ones. Deterministic, so a run reproduces its preview's fingerprint.
+
+### 34.3 Consent
+
+The cloud disclosure (`ConsentVersion` 2) now says that chats always send the transaction list; users who accepted version 1 are asked again before the next analysis or chat. The on-device disclosure doesn't list data and is unchanged.
+
+### 34.4 Tests
+
+- Backend (`internal/ai/chat_integration_test.go`): preview and run (system prompt without headings, whole-history ledger, first message = data + tagged question, title and `question`), follow-ups with the chat prompt, CHAT not among the presets, validation (missing, blank or too long question, anonymized titles, ledger cap, report cap unchanged), ledger cut to the budget keeping the newest and the same fingerprint twice, on-device chat (compact prompt, first answer labelled `ANSWER`), history type filter, export.
+- Prompt: golden files `chat_it`, `chat_en`, `chat_it_compact`; first-question round trip with tags inside the question.
 
 ---
 

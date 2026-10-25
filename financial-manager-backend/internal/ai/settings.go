@@ -14,8 +14,9 @@ import (
 // ConsentVersion is the version of the disclosure the app shows before the
 // first analysis. Bump it whenever that text changes in a way users must
 // see again: preview and run then answer AI_CONSENT_REQUIRED until the
-// user accepts the new version.
-const ConsentVersion = 1
+// user accepts the new version. Version 2: chats ("Chiedi all'assistente",
+// plan.md section 34) send the transaction list without a toggle.
+const ConsentVersion = 2
 
 // LocalConsentVersion is the version of the on-device disclosure (plan.md
 // section 33): no third party is involved, so it is separate and lighter

@@ -151,7 +151,13 @@ func (s *Service) PrepareAnalysis(ctx context.Context, userID uuid.UUID, req Run
 	}, nil
 }
 
+// chatTitleLength bounds a chat's title, its first question on one line.
+const chatTitleLength = 80
+
 func analysisTitle(presetTitle string, bp builtPrompt) string {
+	if bp.preset == prompt.PresetChat {
+		return truncateRunes(strings.Join(strings.Fields(bp.instructions), " "), chatTitleLength)
+	}
 	to := bp.period.To.In(bp.loc).Add(-time.Nanosecond).Format("2006-01-02")
 	if bp.period.From == nil {
 		return truncateRunes(presetTitle+" · → "+to, MaxTitleLength)
@@ -208,7 +214,7 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 	if err != nil {
 		return Turn{}, err
 	}
-	history, questions, err := s.replayHistory(messages, analysis.Provider, lang)
+	history, questions, err := s.replayHistory(messages, analysis, lang)
 	if err != nil {
 		return Turn{}, err
 	}
@@ -242,11 +248,11 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 	for _, m := range history {
 		sent = append(sent, m.Message)
 	}
-	sent = append(sent, provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(question, lang)})
+	sent = append(sent, provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(question, lang, analysis.Preset)})
 	return Turn{
 		Analysis: analysis, Message: answer, provider: rp.provider, kind: rp.kind, release: release,
 		request: provider.ChatRequest{
-			Model: rp.model, System: prompt.WithFollowUpRules(analysis.SystemPrompt, lang),
+			Model: rp.model, System: prompt.WithFollowUpRules(analysis.SystemPrompt, lang, analysis.Preset),
 			MaxTokens: settings.MaxOutputTokens, Messages: sent,
 		},
 	}, nil
@@ -277,14 +283,14 @@ type replayedMessage struct {
 // answer failed or is empty is left out together with that answer.
 // Questions are sent wrapped by prompt.FollowUpQuestion, as when they were
 // first asked.
-func (s *Service) replayHistory(messages []Message, analysisProvider string, lang prompt.Lang) ([]replayedMessage, int, error) {
+func (s *Service) replayHistory(messages []Message, analysis Analysis, lang prompt.Lang) ([]replayedMessage, int, error) {
 	now := s.clock.Now()
 	var history []replayedMessage
 	questions := 0
 	var reportOK bool
 	for i := 0; i < len(messages); i++ {
 		m := messages[i]
-		status := s.effectiveStatus(m.Status, m.UpdatedAt, now, analysisProvider)
+		status := s.effectiveStatus(m.Status, m.UpdatedAt, now, analysis.Provider)
 		switch m.Kind {
 		case KindContext:
 			history = append(history, replayedMessage{provider.Message{Role: provider.RoleUser, Content: m.Content}, KindContext})
@@ -296,20 +302,26 @@ func (s *Service) replayHistory(messages []Message, analysisProvider string, lan
 				return nil, 0, ErrAnalysisNotReady
 			}
 			reportOK = true
-			history = append(history, replayedMessage{provider.Message{Role: provider.RoleAssistant, Content: m.Content}, KindReport})
+			// A chat's first answer is stored as its report but is just an
+			// answer: the phone labels it as one.
+			kind := KindReport
+			if analysis.Preset == prompt.PresetChat {
+				kind = KindAnswer
+			}
+			history = append(history, replayedMessage{provider.Message{Role: provider.RoleAssistant, Content: m.Content}, kind})
 		case KindQuestion:
 			questions++
 			if i+1 >= len(messages) || messages[i+1].Kind != KindAnswer {
 				continue
 			}
 			answer := messages[i+1]
-			answerStatus := s.effectiveStatus(answer.Status, answer.UpdatedAt, now, analysisProvider)
+			answerStatus := s.effectiveStatus(answer.Status, answer.UpdatedAt, now, analysis.Provider)
 			if answerStatus == StatusStreaming {
 				return nil, 0, ErrStreamInProgress
 			}
 			if answerStatus != StatusFailed && strings.TrimSpace(answer.Content) != "" {
 				history = append(history,
-					replayedMessage{provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(m.Content, lang)}, KindQuestion},
+					replayedMessage{provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(m.Content, lang, analysis.Preset)}, KindQuestion},
 					replayedMessage{provider.Message{Role: provider.RoleAssistant, Content: answer.Content}, KindAnswer})
 			}
 			i++
@@ -466,7 +478,10 @@ type analysisDetail struct {
 	SystemPrompt    string            `json:"system_prompt"`
 	FollowUpsLeft   int               `json:"follow_ups_left"`
 	CanAskFollowUps bool              `json:"can_ask_follow_ups"`
-	Messages        []messageResponse `json:"messages"`
+	// Question is a chat's first question as typed (its CONTEXT message
+	// holds it after the data); nil for reports.
+	Question *string           `json:"question"`
+	Messages []messageResponse `json:"messages"`
 }
 
 func actualCost(settings Settings, analysisProvider string, in, out int) *float64 {
@@ -540,7 +555,14 @@ func decodeCursor(raw string) (*AnalysisCursor, error) {
 	return &AnalysisCursor{CreatedAt: createdAt, ID: uid}, nil
 }
 
-func (s *Service) ListAnalyses(ctx context.Context, userID uuid.UUID, cursor string, limit int) (historyPage, error) {
+// History filters by type: chats (preset CHAT) or reports (every other
+// preset); "" lists both.
+const (
+	HistoryTypeChat   = "chat"
+	HistoryTypeReport = "report"
+)
+
+func (s *Service) ListAnalyses(ctx context.Context, userID uuid.UUID, cursor string, limit int, historyType string) (historyPage, error) {
 	if err := s.requireFeature(); err != nil {
 		return historyPage{}, err
 	}
@@ -548,11 +570,14 @@ func (s *Service) ListAnalyses(ctx context.Context, userID uuid.UUID, cursor str
 	if err != nil {
 		return historyPage{}, apierror.NewValidation(map[string]string{"cursor": FieldInvalidValue})
 	}
+	if historyType != "" && historyType != HistoryTypeChat && historyType != HistoryTypeReport {
+		return historyPage{}, apierror.NewValidation(map[string]string{"type": FieldInvalidValue})
+	}
 	if limit <= 0 {
 		limit = defaultHistoryPage
 	}
 	limit = min(limit, maxHistoryPage)
-	list, err := s.repo.ListAnalyses(ctx, userID, after, limit+1)
+	list, err := s.repo.ListAnalyses(ctx, userID, after, limit+1, historyType)
 	if err != nil {
 		return historyPage{}, err
 	}
@@ -602,6 +627,10 @@ func (s *Service) GetAnalysis(ctx context.Context, userID, id uuid.UUID) (analys
 	}
 	now := s.clock.Now()
 	for _, m := range messages {
+		if a.Preset == prompt.PresetChat && m.Kind == KindContext {
+			q := prompt.ChatQuestion(m.Content)
+			detail.Question = &q
+		}
 		mr := messageResponse{
 			ID: m.ID.String(), Seq: m.Seq, Role: m.Role, Kind: m.Kind, Content: m.Content, Status: m.Status,
 			ErrorCode: m.ErrorCode, Model: m.Model, InputTokens: m.InputTokens, OutputTokens: m.OutputTokens,
@@ -615,7 +644,7 @@ func (s *Service) GetAnalysis(ctx context.Context, userID, id uuid.UUID) (analys
 		detail.Messages = append(detail.Messages, mr)
 	}
 	// Only the question count is used: the language doesn't matter.
-	if _, questions, err := s.replayHistory(messages, a.Provider, prompt.LangEN); err == nil {
+	if _, questions, err := s.replayHistory(messages, a, prompt.LangEN); err == nil {
 		detail.FollowUpsLeft = max(MaxFollowUps-questions, 0)
 		detail.CanAskFollowUps = detail.FollowUpsLeft > 0
 	}

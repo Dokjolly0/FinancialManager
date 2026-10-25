@@ -45,6 +45,8 @@ L'Analisi AI è disattivata finché non la configuri tu. Se non ti interessa, pu
 - solo se lo attivi, il contesto personale che hai scritto (per esempio obiettivi o composizione del nucleo familiare);
 - le istruzioni e le domande che scrivi.
 
+**Chiedi all'assistente** (le domande libere, come "quando ho pagato l'assicurazione?") invia gli stessi dati di un'analisi, ma sempre con l'elenco dei movimenti di tutta la cronologia (al massimo 2000, i più recenti) e con i titoli veri, perché le risposte si basano proprio sui singoli movimenti. Per questo il consenso è stato aggiornato: se l'avevi già accettato, l'app te lo chiede di nuovo.
+
 Prima dell'invio l'app ti mostra esattamente il testo che verrà inviato.
 
 **Cosa non viene mai inviato**: email, nome e cognome, nome utente, identificativi del tuo account, immagini e allegati.

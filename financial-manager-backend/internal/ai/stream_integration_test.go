@@ -339,9 +339,9 @@ func TestFollowUps(t *testing.T) {
 	// Follow-ups get the follow-up rules and a tagged question; the
 	// database keeps the question as typed.
 	sent := h.fake.LastRequest()
-	if sent.System != prompt.WithFollowUpRules(system, prompt.LangIT) || len(sent.Messages) != 3 ||
+	if sent.System != prompt.WithFollowUpRules(system, prompt.LangIT, prompt.PresetMonthlyCheckup) || len(sent.Messages) != 3 ||
 		sent.Messages[1].Content != "Report iniziale." ||
-		sent.Messages[2].Content != prompt.FollowUpQuestion("Perché spendo tanto?", prompt.LangIT) ||
+		sent.Messages[2].Content != prompt.FollowUpQuestion("Perché spendo tanto?", prompt.LangIT, prompt.PresetMonthlyCheckup) ||
 		sent.Messages[2].Role != provider.RoleUser {
 		t.Fatalf("follow-up request = %+v", sent)
 	}
@@ -353,9 +353,9 @@ func TestFollowUps(t *testing.T) {
 	h.fake.Deltas = []string{"Sì."}
 	h.stream("/v1/ai/analyses/"+analysisID+"/messages", map[string]any{"content": "Posso risparmiare?"}, nil)
 	sent = h.fake.LastRequest()
-	if len(sent.Messages) != 5 || sent.Messages[2].Content != prompt.FollowUpQuestion("Perché spendo tanto?", prompt.LangIT) ||
+	if len(sent.Messages) != 5 || sent.Messages[2].Content != prompt.FollowUpQuestion("Perché spendo tanto?", prompt.LangIT, prompt.PresetMonthlyCheckup) ||
 		sent.Messages[3].Content != "Perché l'affitto pesa molto." ||
-		sent.Messages[4].Content != prompt.FollowUpQuestion("Posso risparmiare?", prompt.LangIT) {
+		sent.Messages[4].Content != prompt.FollowUpQuestion("Posso risparmiare?", prompt.LangIT, prompt.PresetMonthlyCheckup) {
 		t.Fatalf("history after a failed answer = %+v", sent.Messages)
 	}
 
@@ -402,8 +402,8 @@ func TestFollowUps_OlderAnalysisGetsTheRules(t *testing.T) {
 	h.fake.Deltas = []string{"Risposta."}
 	h.stream("/v1/ai/analyses/"+analysisID+"/messages", map[string]any{"content": "E le spese annuali?"}, nil)
 	sent := h.fake.LastRequest()
-	if sent.System != prompt.WithFollowUpRules(oldSystem, prompt.LangIT) ||
-		sent.Messages[len(sent.Messages)-1].Content != prompt.FollowUpQuestion("E le spese annuali?", prompt.LangIT) {
+	if sent.System != prompt.WithFollowUpRules(oldSystem, prompt.LangIT, prompt.PresetMonthlyCheckup) ||
+		sent.Messages[len(sent.Messages)-1].Content != prompt.FollowUpQuestion("E le spese annuali?", prompt.LangIT, prompt.PresetMonthlyCheckup) {
 		t.Fatalf("follow-up on an older analysis = %+v", sent)
 	}
 }

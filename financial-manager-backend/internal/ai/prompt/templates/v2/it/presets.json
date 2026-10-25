@@ -34,5 +34,11 @@
     "description": "Scrivi tu cosa vuoi sapere sui tuoi dati.",
     "headings": ["Risposta", "Dati su cui si basa"],
     "instructions": ""
+  },
+  "CHAT": {
+    "title": "Chiedi all'assistente",
+    "description": "Fai una domanda sui tuoi movimenti, come in una chat.",
+    "headings": [],
+    "instructions": ""
   }
 }

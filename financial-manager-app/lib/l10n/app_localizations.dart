@@ -2727,7 +2727,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiConsentSentTransactions.
   ///
   /// In it, this message translates to:
-  /// **'Solo se lo attivi: l\'elenco dei movimenti, anche con titoli anonimizzati'**
+  /// **'L\'elenco dei movimenti: nelle analisi solo se lo attivi, anche con titoli anonimizzati; in \"Chiedi all\'assistente\" sempre, perché le risposte si basano sui singoli movimenti'**
   String get aiConsentSentTransactions;
 
   /// No description provided for @aiConsentSentContext.
