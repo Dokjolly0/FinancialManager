@@ -88,6 +88,37 @@ func TestTrim_MonthsTransactionsAndText(t *testing.T) {
 	}
 }
 
+func TestTrim_NonMonthly(t *testing.T) {
+	s := fixtureSnapshot()
+	out := Trim(s, Limits{NonMonthly: 2, TextRunes: 8}, LangIT)
+	if len(out.NonMonthly) != 2 || out.NonMonthly[0].Signal != SignalAnnualGap {
+		t.Fatalf("non-monthly = %+v", out.NonMonthly)
+	}
+	if label := out.NonMonthly[0].Label; label != "Assicur…" {
+		t.Fatalf("label not truncated: %q", label)
+	}
+	if s.NonMonthly[0].Label != "Assicurazione auto" || len(s.NonMonthly) != 3 {
+		t.Fatal("Trim must not modify its input")
+	}
+
+	p, _ := Build(BuildInput{Lang: LangEN, Preset: PresetRecurring, Sections: []string{SectionRecurring}, Snapshot: s})
+	for _, want := range []string{
+		"## Yearly or occasional expenses (to be checked)",
+		"Assicurazione auto | 2 | 480.00 | 2026-03 | same item about 12 months apart | 40.00",
+		"Dominio / sito | 1 | 22.94 | 2026-08 | yearly according to the title | 1.91",
+		"Lavatrice | 1 | 399.00 | 2026-05 | large one-off expense | -",
+	} {
+		if !strings.Contains(p.DataBlock, want) {
+			t.Errorf("data block lacks %q:\n%s", want, p.DataBlock)
+		}
+	}
+	s.NonMonthly = nil
+	if p, _ := Build(BuildInput{Lang: LangEN, Preset: PresetRecurring, Sections: []string{SectionRecurring}, Snapshot: s}); !strings.Contains(p.DataBlock,
+		"## Yearly or occasional expenses (to be checked)\nDetected automatically among items seen in fewer than 3 months. The monthly equivalent of yearly items is the last amount divided by 12.\nNo data.") {
+		t.Errorf("empty table should say there is no data:\n%s", p.DataBlock)
+	}
+}
+
 func TestBudgetSteps_OnlyTighten(t *testing.T) {
 	l := LimitsFor(ProfileCompact)
 	for _, step := range BudgetSteps {
@@ -97,7 +128,8 @@ func TestBudgetSteps_OnlyTighten(t *testing.T) {
 			t.Errorf("step %s changed nothing on compact limits", step.Name)
 		}
 	}
-	if l.Transactions != -1 || l.Categories != 5 || l.Titles != 5 || l.Months != 6 || l.Recurring != 4 || l.ContextRunes != 150 {
+	if l.Transactions != -1 || l.Categories != 5 || l.Titles != 5 || l.Months != 6 || l.Recurring != 4 || l.NonMonthly != 3 ||
+		l.ContextRunes != 150 {
 		t.Fatalf("final limits = %+v", l)
 	}
 	std := LimitsFor(ProfileStandard)

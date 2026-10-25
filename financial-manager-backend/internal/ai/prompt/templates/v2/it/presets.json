@@ -15,13 +15,13 @@
     "title": "Dove risparmiare",
     "description": "Opportunità concrete per spendere meno, con una stima del risparmio.",
     "headings": ["Sintesi", "Opportunità di risparmio", "Stima del risparmio", "Piano d'azione"],
-    "instructions": "Individua dove potrei risparmiare. Concentrati sulle spese discrezionali e ripetute, stima per ciascuna opportunità quanto potrei risparmiare al mese e in un anno, e ordina le opportunità dalla più facile alla più difficile da mettere in pratica. Tieni conto dei miei obiettivi, se li ho indicati."
+    "instructions": "Individua dove potrei risparmiare. Concentrati sulle spese discrezionali e ripetute, comprese quelle annuali (usa il loro equivalente mensile), stima per ciascuna opportunità quanto potrei risparmiare al mese e in un anno, e ordina le opportunità dalla più facile alla più difficile da mettere in pratica. Tieni conto dei miei obiettivi, se li ho indicati."
   },
   "RECURRING": {
     "title": "Abbonamenti e spese fisse",
     "description": "Pagamenti che si ripetono ogni mese e quanto pesano.",
     "headings": ["Sintesi", "Spese ricorrenti", "Variazioni di prezzo", "Cosa valutare"],
-    "instructions": "Analizza le mie spese ricorrenti (abbonamenti, bollette, rate, spese fisse). Elencale con l'importo mensile e annuale, segnala quelle il cui importo è cambiato nel tempo e quelle che potrebbero essere duplicate o non più utili. Calcola quanto pesano in totale rispetto alle entrate."
+    "instructions": "Analizza le mie spese ricorrenti (abbonamenti, bollette, rate, spese fisse), comprese quelle che pago una volta all'anno, indicate nei dati con il loro equivalente mensile. Elencale con l'importo mensile e annuale, segnala quelle il cui importo è cambiato nel tempo e quelle che potrebbero essere duplicate o non più utili. Calcola quanto pesano in totale rispetto alle entrate."
   },
   "WALLET_PURPOSE": {
     "title": "Uso dei portafogli",

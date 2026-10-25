@@ -19,6 +19,9 @@ type labels struct {
 
 	recurringHeading, recurringColumns, recurringNote, yes, no string
 
+	nonMonthlyHeading, nonMonthlyColumns, nonMonthlyNote string
+	nonMonthlySignals                                    map[string]string
+
 	transactionsHeading, transactionsColumns, transactionsOmitted string
 	credit, debit, uncategorized                                  string
 
@@ -69,6 +72,15 @@ var italian = labels{
 	recurringNote:    "Individuate automaticamente: stessa voce in almeno 3 mesi diversi. Possono includere falsi positivi.",
 	yes:              "sì",
 	no:               "no",
+
+	nonMonthlyHeading: "## Spese annuali o occasionali (da verificare)",
+	nonMonthlyColumns: "voce | mesi in cui compare | ultimo importo | ultimo mese | indizio | equivalente mensile",
+	nonMonthlyNote:    "Individuate automaticamente tra le voci viste in meno di 3 mesi. L'equivalente mensile delle voci annuali è l'ultimo importo diviso 12.",
+	nonMonthlySignals: map[string]string{
+		SignalAnnualGap:  "stessa voce a circa 12 mesi di distanza",
+		SignalAnnualWord: "annuale secondo il titolo",
+		SignalOneOff:     "spesa una tantum rilevante",
+	},
 
 	transactionsHeading: "## Movimenti (dal più recente)",
 	transactionsColumns: "data | portafoglio | tipo | importo | voce | categoria",
@@ -140,6 +152,15 @@ var english = labels{
 	recurringNote:    "Detected automatically: the same item in at least 3 different months. May include false positives.",
 	yes:              "yes",
 	no:               "no",
+
+	nonMonthlyHeading: "## Yearly or occasional expenses (to be checked)",
+	nonMonthlyColumns: "item | months seen | last amount | last month | hint | monthly equivalent",
+	nonMonthlyNote:    "Detected automatically among items seen in fewer than 3 months. The monthly equivalent of yearly items is the last amount divided by 12.",
+	nonMonthlySignals: map[string]string{
+		SignalAnnualGap:  "same item about 12 months apart",
+		SignalAnnualWord: "yearly according to the title",
+		SignalOneOff:     "large one-off expense",
+	},
 
 	transactionsHeading: "## Transactions (newest first)",
 	transactionsColumns: "date | wallet | type | amount | item | category",

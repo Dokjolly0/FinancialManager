@@ -41,6 +41,11 @@ func fixtureSnapshot() Snapshot {
 			{Label: "Netflix", Months: 12, AvgAmountMinor: 1399, LastAmountMinor: 1799, LastSeenMonth: "2026-09", AmountsVaryLittle: false},
 			{Label: "Palestra", Months: 9, AvgAmountMinor: 4500, LastAmountMinor: 4500, LastSeenMonth: "2026-09", AmountsVaryLittle: true},
 		},
+		NonMonthly: []NonMonthly{
+			{Label: "Assicurazione auto", Months: 2, LastAmountMinor: 48000, LastSeenMonth: "2026-03", Signal: SignalAnnualGap, MonthlyEquivalentMinor: 4000},
+			{Label: "Dominio | sito", Months: 1, LastAmountMinor: 2294, LastSeenMonth: "2026-08", Signal: SignalAnnualWord, MonthlyEquivalentMinor: 191},
+			{Label: "Lavatrice", Months: 1, LastAmountMinor: 39900, LastSeenMonth: "2026-05", Signal: SignalOneOff},
+		},
 		Transactions: []Transaction{
 			{Date: "2026-09-30", Wallet: "Conto corrente", Credit: false, AmountMinor: 9000, Title: "Cena\nfuori", Category: "Ristoranti"},
 			{Date: "2026-09-27", Wallet: "Conto corrente", Credit: true, AmountMinor: 260000, Title: "Stipendio ACME"},

@@ -25,6 +25,7 @@ type Limits struct {
 	Titles       int // rows per title list
 	Months       int // most recent months kept; older ones are summed
 	Recurring    int
+	NonMonthly   int // yearly and one-off rows of the recurring section
 	Transfers    int
 	Transactions int // -1 drops the list, 0 keeps it as collected
 	TextRunes    int // titles, categories and wallet names in tables
@@ -39,7 +40,7 @@ type Limits struct {
 func LimitsFor(profile string) Limits {
 	if profile == ProfileCompact {
 		return Limits{
-			Categories: 8, Titles: 10, Months: 12, Recurring: 8, Transfers: 5, Transactions: 100,
+			Categories: 8, Titles: 10, Months: 12, Recurring: 8, NonMonthly: 6, Transfers: 5, Transactions: 100,
 			TextRunes: 40, PurposeRunes: 80, ContextRunes: 300,
 		}
 	}
@@ -63,7 +64,7 @@ var BudgetSteps = []BudgetStep{
 	{"groups_5", func(l *Limits) { l.Categories, l.Titles = tighter(l.Categories, 5), tighter(l.Titles, 5) }},
 	{"months_6", func(l *Limits) { l.Months = tighter(l.Months, 6) }},
 	{"transfers", func(l *Limits) { l.DropTransfers = true }},
-	{"recurring_4", func(l *Limits) { l.Recurring = tighter(l.Recurring, 4) }},
+	{"recurring_4", func(l *Limits) { l.Recurring, l.NonMonthly = tighter(l.Recurring, 4), tighter(l.NonMonthly, 3) }},
 	{"context_150", func(l *Limits) { l.ContextRunes = tighter(l.ContextRunes, 150) }},
 }
 
@@ -111,10 +112,17 @@ func Trim(s Snapshot, l Limits, lang Lang) Snapshot {
 	if l.Recurring > 0 && len(s.Recurring) > l.Recurring {
 		out.Recurring = s.Recurring[:l.Recurring]
 	}
+	if l.NonMonthly > 0 && len(s.NonMonthly) > l.NonMonthly {
+		out.NonMonthly = s.NonMonthly[:l.NonMonthly]
+	}
 	if l.TextRunes > 0 {
 		out.Recurring = append([]Recurring(nil), out.Recurring...)
 		for i := range out.Recurring {
 			out.Recurring[i].Label = truncateRunes(out.Recurring[i].Label, l.TextRunes)
+		}
+		out.NonMonthly = append([]NonMonthly(nil), out.NonMonthly...)
+		for i := range out.NonMonthly {
+			out.NonMonthly[i].Label = truncateRunes(out.NonMonthly[i].Label, l.TextRunes)
 		}
 		out.Wallets = append([]Wallet(nil), s.Wallets...)
 		for i := range out.Wallets {

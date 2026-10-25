@@ -447,6 +447,26 @@ func renderData(l labels, s Snapshot, sections map[string]bool) string {
 				row(clean(r.Label), fmt.Sprint(r.Months), money(r.AvgAmountMinor), money(r.LastAmountMinor), r.LastSeenMonth, stable)
 			}
 		}
+
+		text("")
+		text(l.nonMonthlyHeading)
+		text(l.nonMonthlyNote)
+		if len(s.NonMonthly) == 0 {
+			text(l.noData)
+		} else {
+			text(l.nonMonthlyColumns)
+			for _, n := range s.NonMonthly {
+				monthly := "-"
+				if n.MonthlyEquivalentMinor > 0 {
+					monthly = money(n.MonthlyEquivalentMinor)
+				}
+				signal := l.nonMonthlySignals[n.Signal]
+				if signal == "" {
+					signal = n.Signal
+				}
+				row(clean(n.Label), fmt.Sprint(n.Months), money(n.LastAmountMinor), n.LastSeenMonth, signal, monthly)
+			}
+		}
 	}
 
 	if len(s.Transactions) > 0 {

@@ -65,6 +65,13 @@ item | months seen | average amount | last amount | last month | stable amount
 Netflix | 12 | 13.99 | 17.99 | 2026-09 | no
 Palestra | 9 | 45.00 | 45.00 | 2026-09 | yes
 
+## Yearly or occasional expenses (to be checked)
+Detected automatically among items seen in fewer than 3 months. The monthly equivalent of yearly items is the last amount divided by 12.
+item | months seen | last amount | last month | hint | monthly equivalent
+Assicurazione auto | 2 | 480.00 | 2026-03 | same item about 12 months apart | 40.00
+Dominio / sito | 1 | 22.94 | 2026-08 | yearly according to the title | 1.91
+Lavatrice | 1 | 399.00 | 2026-05 | large one-off expense | -
+
 ## Transactions (newest first)
 date | wallet | type | amount | item | category
 2026-09-30 | Conto corrente | expense | 90.00 | Cena fuori | Ristoranti

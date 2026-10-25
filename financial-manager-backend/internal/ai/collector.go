@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/google/uuid"
 
@@ -22,6 +23,9 @@ const (
 	maxTransferFlows       = 20
 	recurringMinMonths     = 3
 	recurringStableSpread  = 0.10
+	maxNonMonthly          = 15
+	oneOffMinMinor         = 2000 // a one-off expense is at least 20.00...
+	oneOffMedianFactor     = 3    // ...and three times the median item
 	DefaultMaxTransactions = 200
 	MaxMaxTransactions     = 500
 )
@@ -140,6 +144,7 @@ func (s *Service) collect(ctx context.Context, in collectInput) (prompt.Snapshot
 			return prompt.Snapshot{}, err
 		}
 		snap.Recurring = detectRecurring(monthly)
+		snap.NonMonthly = detectNonMonthly(monthly)
 	}
 
 	if in.options.IncludeTransactions {
@@ -287,6 +292,103 @@ func detectRecurring(rows []MonthlyTitleRow) []prompt.Recurring {
 	return out
 }
 
+// annualWords mark a yearly payment in a title (Italian and English).
+// Domain names are billed by the year, so they count too.
+var annualWords = map[string]bool{
+	"annuale": true, "annuali": true, "annuo": true, "annua": true, "anno": true,
+	"annual": true, "yearly": true, "year": true,
+	"dominio": true, "domini": true, "domain": true, "domains": true,
+}
+
+// detectNonMonthly flags expense items seen in fewer than recurringMinMonths
+// months that are probably yearly (the same item 11 to 13 months apart, or
+// a title that says so) or a large one-off (one month only, at least
+// oneOffMinMinor and oneOffMedianFactor times the median item-month amount).
+// Yearly items get their monthly equivalent, so a small model needn't
+// compute it. Yearly items come first, each group by last amount.
+func detectNonMonthly(rows []MonthlyTitleRow) []prompt.NonMonthly {
+	type acc struct {
+		label     string
+		months    []int // year*12 + month, ascending as rows are ordered
+		lastMonth string
+		lastMinor int64
+	}
+	byKey := map[string]*acc{}
+	var keys []string
+	amounts := make([]int64, 0, len(rows))
+	for _, r := range rows {
+		amounts = append(amounts, r.AmountMinor)
+		a, ok := byKey[r.Key]
+		if !ok {
+			a = &acc{}
+			byKey[r.Key] = a
+			keys = append(keys, r.Key)
+		}
+		var y, m int
+		if _, err := fmt.Sscanf(r.Month, "%d-%d", &y, &m); err == nil {
+			a.months = append(a.months, y*12+m)
+		}
+		if r.Month >= a.lastMonth {
+			a.lastMonth, a.lastMinor, a.label = r.Month, r.AmountMinor, r.Label
+		}
+	}
+	sort.Slice(amounts, func(i, j int) bool { return amounts[i] < amounts[j] })
+	var median int64
+	if len(amounts) > 0 {
+		median = amounts[(len(amounts)-1)/2]
+	}
+	oneOffMin := max(oneOffMinMinor, oneOffMedianFactor*median)
+
+	var out []prompt.NonMonthly
+	for _, k := range keys {
+		a := byKey[k]
+		if len(a.months) == 0 || len(a.months) >= recurringMinMonths {
+			continue
+		}
+		signal := ""
+		switch {
+		case len(a.months) == 2 && a.months[1]-a.months[0] >= 11 && a.months[1]-a.months[0] <= 13:
+			signal = prompt.SignalAnnualGap
+		case hasAnnualWord(a.label):
+			signal = prompt.SignalAnnualWord
+		case len(a.months) == 1 && a.lastMinor >= oneOffMin:
+			signal = prompt.SignalOneOff
+		default:
+			continue
+		}
+		n := prompt.NonMonthly{
+			Label: a.label, Months: len(a.months), LastAmountMinor: a.lastMinor, LastSeenMonth: a.lastMonth, Signal: signal,
+		}
+		if signal != prompt.SignalOneOff {
+			n.MonthlyEquivalentMinor = a.lastMinor / 12
+		}
+		out = append(out, n)
+	}
+	// Yearly items first: they are fixed costs, and a short list (compact
+	// profile) must not lose them to big one-off purchases.
+	yearly := func(n prompt.NonMonthly) bool { return n.Signal != prompt.SignalOneOff }
+	sort.SliceStable(out, func(i, j int) bool {
+		if yearly(out[i]) != yearly(out[j]) {
+			return yearly(out[i])
+		}
+		return out[i].LastAmountMinor > out[j].LastAmountMinor
+	})
+	if len(out) > maxNonMonthly {
+		out = out[:maxNonMonthly]
+	}
+	return out
+}
+
+func hasAnnualWord(title string) bool {
+	words := strings.FieldsFunc(strings.ToLower(title), func(r rune) bool { return !unicode.IsLetter(r) })
+	for _, w := range words {
+		if annualWords[w] {
+			return true
+		}
+	}
+	return false
+}
+
 // anonymize replaces transaction titles with stable pseudonyms ("Voce 1"),
 // the same title getting the same pseudonym everywhere in the block.
 // Categories and wallet names are kept: they are the user's own labels
@@ -315,6 +417,9 @@ func anonymize(s *prompt.Snapshot, lang prompt.Lang) {
 	}
 	for i := range s.Recurring {
 		s.Recurring[i].Label = pseudonym(s.Recurring[i].Label)
+	}
+	for i := range s.NonMonthly {
+		s.NonMonthly[i].Label = pseudonym(s.NonMonthly[i].Label)
 	}
 	for i := range s.Transactions {
 		s.Transactions[i].Title = pseudonym(s.Transactions[i].Title)

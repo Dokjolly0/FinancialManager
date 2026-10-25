@@ -15,13 +15,13 @@
     "title": "Where to save",
     "description": "Concrete opportunities to spend less, with an estimate of the savings.",
     "headings": ["Summary", "Savings opportunities", "Estimated savings", "Action plan"],
-    "instructions": "Find where I could save. Focus on discretionary and repeated expenses, estimate for each opportunity how much I could save per month and per year, and order the opportunities from the easiest to the hardest to put into practice. Take my goals into account, if I gave any."
+    "instructions": "Find where I could save. Focus on discretionary and repeated expenses, including yearly ones (use their monthly equivalent), estimate for each opportunity how much I could save per month and per year, and order the opportunities from the easiest to the hardest to put into practice. Take my goals into account, if I gave any."
   },
   "RECURRING": {
     "title": "Subscriptions and fixed costs",
     "description": "Payments that repeat every month and how much they weigh.",
     "headings": ["Summary", "Recurring expenses", "Price changes", "What to consider"],
-    "instructions": "Analyze my recurring expenses (subscriptions, bills, installments, fixed costs). List them with their monthly and yearly amount, flag those whose amount changed over time and those that might be duplicated or no longer useful. Work out how much they weigh in total compared with income."
+    "instructions": "Analyze my recurring expenses (subscriptions, bills, installments, fixed costs), including those I pay once a year, shown in the data with their monthly equivalent. List them with their monthly and yearly amount, flag those whose amount changed over time and those that might be duplicated or no longer useful. Work out how much they weigh in total compared with income."
   },
   "WALLET_PURPOSE": {
     "title": "Wallet usage",

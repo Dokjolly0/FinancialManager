@@ -27,6 +27,9 @@ type Snapshot struct {
 	TransfersOmitted    bool
 	Transfers           []TransferFlow
 	Recurring           []Recurring
+	// NonMonthly lists likely yearly and large one-off expenses; part of
+	// the recurring section.
+	NonMonthly []NonMonthly
 
 	// Transactions is the optional raw list, newest first.
 	Transactions        []Transaction
@@ -92,6 +95,24 @@ type Recurring struct {
 	LastAmountMinor   int64
 	LastSeenMonth     string // YYYY-MM
 	AmountsVaryLittle bool   // within 10% of the average
+}
+
+// Signals of a non-monthly expense, strongest first.
+const (
+	SignalAnnualGap  = "annual_gap"  // the same item about 12 months apart
+	SignalAnnualWord = "annual_word" // the title says it is yearly
+	SignalOneOff     = "one_off"     // seen once, much larger than usual
+)
+
+type NonMonthly struct {
+	Label           string
+	Months          int // distinct months it was seen in
+	LastAmountMinor int64
+	LastSeenMonth   string // YYYY-MM
+	Signal          string
+	// MonthlyEquivalentMinor is the last amount spread over 12 months for
+	// yearly items, 0 for one-off ones.
+	MonthlyEquivalentMinor int64
 }
 
 type Transaction struct {

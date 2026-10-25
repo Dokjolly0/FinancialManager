@@ -39,7 +39,7 @@ L'Analisi AI è disattivata finché non la configuri tu. Se non ti interessa, pu
 
 **Cosa viene inviato al fornitore che hai scelto**, solo quando avvii un'analisi o fai una domanda:
 
-- un riepilogo dei movimenti del periodo e dei portafogli che selezioni: totali, andamento mensile, ripartizione per categoria e per voce, trasferimenti tra portafogli, possibili spese ricorrenti;
+- un riepilogo dei movimenti del periodo e dei portafogli che selezioni: totali, andamento mensile, ripartizione per categoria e per voce, trasferimenti tra portafogli, possibili spese ricorrenti, annuali o occasionali (individuate dal titolo e dai mesi in cui compaiono);
 - nome, tipo, scopo e saldo dei portafogli inclusi;
 - solo se lo attivi, l'elenco dei singoli movimenti (al massimo 500); i titoli dei movimenti possono essere sostituiti da pseudonimi ("Voce 1", "Voce 2"…);
 - solo se lo attivi, il contesto personale che hai scritto (per esempio obiettivi o composizione del nucleo familiare);

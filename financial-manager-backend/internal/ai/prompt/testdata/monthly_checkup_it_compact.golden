@@ -65,6 +65,13 @@ voce | mesi in cui compare | importo medio | ultimo importo | ultimo mese | impo
 Netflix | 12 | 13.99 | 17.99 | 2026-09 | no
 Palestra | 9 | 45.00 | 45.00 | 2026-09 | sì
 
+## Spese annuali o occasionali (da verificare)
+Individuate automaticamente tra le voci viste in meno di 3 mesi. L'equivalente mensile delle voci annuali è l'ultimo importo diviso 12.
+voce | mesi in cui compare | ultimo importo | ultimo mese | indizio | equivalente mensile
+Assicurazione auto | 2 | 480.00 | 2026-03 | stessa voce a circa 12 mesi di distanza | 40.00
+Dominio / sito | 1 | 22.94 | 2026-08 | annuale secondo il titolo | 1.91
+Lavatrice | 1 | 399.00 | 2026-05 | spesa una tantum rilevante | -
+
 ## Movimenti (dal più recente)
 data | portafoglio | tipo | importo | voce | categoria
 2026-09-30 | Conto corrente | uscita | 90.00 | Cena fuori | Ristoranti
