@@ -30,7 +30,11 @@ import { Spinner } from './states';
       @if (busy()) {
         <app-spinner [size]="22" class="text-primary" />
       }
-      <div #slot class="w-full max-w-[400px]" [class.hidden]="busy()"></div>
+      <!-- Google's button is an iframe whose page declares no color-scheme:
+           under the dark theme's color-scheme the browser paints an opaque
+           white backdrop behind it. "light" matches that page, so the
+           iframe stays transparent around the filled_black button. -->
+      <div #slot class="w-full max-w-[400px] [color-scheme:light]" [class.hidden]="busy()"></div>
     </div>
     @if (failed()) {
       <p class="hint text-center">{{ 'webGoogleUnavailable' | transloco }}</p>
