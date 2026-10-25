@@ -29,10 +29,10 @@ services:
   object-storage:
     restart: unless-stopped
 
-  # The web dashboard: the Flutter app built for the browser and served by
-  # Caddy (financial-manager-app/Dockerfile). Never built here: CI publishes
-  # the image to Docker Hub (job build-web in .github/workflows/mobile-ci.yml)
-  # because compiling Flutter needs more memory than the VPS has. With
+  # The web dashboard: the Angular build served by Caddy
+  # (financial-manager-web/Dockerfile). Never built here: CI publishes the
+  # image to Docker Hub (job docker in .github/workflows/web-ci.yml), so the
+  # VPS spends no memory on builds. With
   # pull_policy: always, every `up` fetches the newest image, so
   # `docker compose ... up -d` also updates the dashboard (unchanged images
   # are not downloaded again). WEB_IMAGE_TAG=sha-<commit> pins a version

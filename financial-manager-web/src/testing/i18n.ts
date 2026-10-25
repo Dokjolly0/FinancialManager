@@ -1,6 +1,11 @@
 import { EnvironmentProviders, Provider, importProvidersFrom } from '@angular/core';
-import { Translation, TranslocoTestingModule } from '@jsverse/transloco';
-import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
+import {
+  Translation,
+  TranslocoTestingModule,
+  provideTranslocoTranspiler,
+} from '@jsverse/transloco';
+
+import { IcuTranspiler } from '../app/core/i18n/icu-transpiler';
 
 /**
  * Transloco for component tests: synchronous, in English, with the given
@@ -15,6 +20,6 @@ export function provideTestI18n(en: Translation = {}): (Provider | EnvironmentPr
         preloadLangs: true,
       }),
     ),
-    provideTranslocoMessageformat(),
+    provideTranslocoTranspiler(IcuTranspiler),
   ];
 }

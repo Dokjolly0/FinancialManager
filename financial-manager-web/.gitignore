@@ -45,3 +45,7 @@ Thumbs.db
 
 # Built from the ARB files by scripts/arb-to-json.mjs
 /public/i18n/
+
+# Playwright
+/test-results/
+/playwright-report/

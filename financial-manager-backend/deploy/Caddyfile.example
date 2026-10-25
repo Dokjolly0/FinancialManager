@@ -33,18 +33,19 @@ financialmanager.alexviolatto.dev {
 		}
 	}
 
-	# Everything else: the web dashboard, served by the `web` container
-	# (compose.prod.yaml) on 127.0.0.1:10005, which also sends app routes
-	# such as /app/history to index.html.
+	# Everything else: the web dashboard (the Angular build in the `web`
+	# container, compose.prod.yaml) on 127.0.0.1:10005, which also sends app
+	# routes such as /app/history to index.html.
 	handle {
 		# The browser may only load the dashboard's own files, plus Google's
-		# sign-in script/popup (GIS) and the fonts Flutter fetches for glyphs
-		# it doesn't bundle. 'wasm-unsafe-eval' is for CanvasKit (WebAssembly);
-		# 'unsafe-inline' styles because Flutter positions its elements with
-		# style attributes. Images: any https (category pictures from search
-		# providers), data: and blob: (picked files before upload).
+		# sign-in script/popup (GIS). No inline scripts and no eval: the
+		# Angular build needs neither. 'unsafe-inline' styles because Angular
+		# injects component styles and the charts position elements with style
+		# attributes. Images: any https (category pictures from search
+		# providers), data: and blob: (picked and cropped files before upload,
+		# images loaded with the session token). Fonts are self-hosted.
 		header {
-			Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://accounts.google.com/gsi/ https://fonts.gstatic.com; frame-src https://accounts.google.com/gsi/; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+			Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 			X-Content-Type-Options "nosniff"
 			Referrer-Policy "strict-origin-when-cross-origin"
 			Permissions-Policy "camera=(), microphone=(), geolocation=()"

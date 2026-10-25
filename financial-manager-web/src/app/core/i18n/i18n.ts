@@ -1,7 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { EnvironmentProviders, Injectable, Provider, inject, isDevMode } from '@angular/core';
-import { Translation, TranslocoLoader, provideTransloco } from '@jsverse/transloco';
-import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
+import {
+  Translation,
+  TranslocoLoader,
+  provideTransloco,
+  provideTranslocoTranspiler,
+} from '@jsverse/transloco';
+
+import { IcuTranspiler } from './icu-transpiler';
 
 /** Languages of the dashboard: the same as the app's ARB files. */
 export const LANGUAGES = ['it', 'en'] as const;
@@ -52,7 +58,8 @@ export function provideI18n(): (Provider | EnvironmentProviders)[] {
       },
       loader: TranslationLoader,
     }),
-    // ARB messages are ICU MessageFormat: {name}, plurals.
-    provideTranslocoMessageformat(),
+    // ARB messages are ICU MessageFormat ({name}, plurals), formatted
+    // without eval so the CSP can forbid it (icu-transpiler.ts).
+    provideTranslocoTranspiler(IcuTranspiler),
   ];
 }
