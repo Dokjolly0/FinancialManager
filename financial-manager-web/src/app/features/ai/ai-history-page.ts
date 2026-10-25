@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { History, Pencil, Sparkles, Trash2 } from 'lucide';
+import { History, MessageCircle, Pencil, Sparkles, Trash2 } from 'lucide';
 
 import { ErrorText } from '../../core/errors/error-text';
 import { AppDatePipe } from '../../core/formatting/pipes';
@@ -12,9 +12,12 @@ import { EmptyState, InlineError, SkeletonList, Spinner } from '../../shared/ui/
 import { TextPromptData, TextPromptDialog } from '../../shared/ui/text-prompt-dialog';
 import { Toasts } from '../../shared/ui/toast';
 import { AiApi } from './ai.api';
-import { AiAnalysisSummary, PROVIDER_LABELS } from './ai.model';
+import { AI_CHAT_PRESET, AiAnalysisSummary, AiHistoryType, PROVIDER_LABELS } from './ai.model';
 
-/** Analysis history (plan.md section 32.7): read again, rename, delete one or all. */
+/**
+ * Analysis and chat history (plan.md sections 32.7 and 34): filter by type,
+ * read again, rename, delete one or all.
+ */
 @Component({
   selector: 'app-ai-history-page',
   imports: [
@@ -41,10 +44,26 @@ import { AiAnalysisSummary, PROVIDER_LABELS } from './ai.model';
             {{ 'aiDeleteAllAction' | transloco }}
           </button>
         }
+        <a routerLink="/app/ai/chat" class="btn btn-ghost">
+          <app-icon [icon]="icons.MessageCircle" [size]="18" /> {{ 'aiChatTitle' | transloco }}
+        </a>
         <a routerLink="/app/ai/new" class="btn btn-primary">
           <app-icon [icon]="icons.Sparkles" [size]="18" /> {{ 'aiNewAnalysisTitle' | transloco }}
         </a>
       </app-page-header>
+      <div class="mb-4 flex flex-wrap gap-2" role="group">
+        @for (f of filters; track f.key) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip-active]="type() === f.type"
+            [attr.aria-pressed]="type() === f.type"
+            (click)="setType(f.type)"
+          >
+            {{ f.key | transloco }}
+          </button>
+        }
+      </div>
       <div class="card divide-y divide-border overflow-hidden">
         @if (loading()) {
           <app-skeleton-list [rows]="4" />
@@ -57,7 +76,10 @@ import { AiAnalysisSummary, PROVIDER_LABELS } from './ai.model';
                 <span
                   class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"
                 >
-                  <app-icon [icon]="icons.Sparkles" [size]="18" />
+                  <app-icon
+                    [icon]="a.preset === chatPreset ? icons.MessageCircle : icons.Sparkles"
+                    [size]="18"
+                  />
                 </span>
                 <span class="min-w-0 flex-1">
                   <span class="block truncate text-sm font-medium text-fg">{{ a.title }}</span>
@@ -129,7 +151,15 @@ export class AiHistoryPage implements OnInit {
   private readonly transloco = inject(TranslocoService);
   private readonly errorText = inject(ErrorText);
 
-  protected readonly icons = { History, Pencil, Sparkles, Trash2 };
+  protected readonly icons = { History, MessageCircle, Pencil, Sparkles, Trash2 };
+  protected readonly chatPreset = AI_CHAT_PRESET;
+  protected readonly filters: { key: string; type: AiHistoryType | null }[] = [
+    { key: 'aiHistoryFilterAll', type: null },
+    { key: 'aiHistoryFilterReports', type: 'report' },
+    { key: 'aiHistoryFilterChats', type: 'chat' },
+  ];
+  /** Only reports or only chats; null lists both. */
+  protected readonly type = signal<AiHistoryType | null>(null);
   protected readonly items = signal<AiAnalysisSummary[]>([]);
   protected readonly cursor = signal<string | null>(null);
   protected readonly loading = signal(true);
@@ -140,7 +170,16 @@ export class AiHistoryPage implements OnInit {
     void this.load(true);
   }
 
+  protected setType(type: AiHistoryType | null): void {
+    if (type === this.type()) return;
+    this.type.set(type);
+    this.items.set([]);
+    this.cursor.set(null);
+    void this.load(true);
+  }
+
   protected async load(reset: boolean): Promise<void> {
+    const type = this.type();
     if (reset) {
       this.loading.set(true);
       this.error.set(null);
@@ -148,7 +187,8 @@ export class AiHistoryPage implements OnInit {
       this.loadingMore.set(true);
     }
     try {
-      const page = await this.ai.list(reset ? null : this.cursor());
+      const page = await this.ai.list(reset ? null : this.cursor(), 20, type);
+      if (type !== this.type()) return; // the filter changed meanwhile
       this.items.update((items) =>
         reset ? (page.items ?? []) : [...items, ...(page.items ?? [])],
       );

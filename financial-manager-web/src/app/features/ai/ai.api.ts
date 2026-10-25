@@ -8,6 +8,7 @@ import {
   AiAnalysisDetail,
   AiAnalysisRequest,
   AiAnalysisSummary,
+  AiHistoryType,
   AiPreset,
   AiPreview,
   AiProbeRequest,
@@ -109,14 +110,16 @@ export class AiApi {
     return this.stream(api(`/ai/analyses/${analysisId}/messages`), { content }, signal);
   }
 
+  /** `type` keeps only reports or only chats; null lists both. */
   list(
     cursor: string | null,
     limit = 20,
+    type: AiHistoryType | null = null,
   ): Promise<{ items: AiAnalysisSummary[] | null; next_cursor?: string | null }> {
     return firstValueFrom(
       this.http.get<{ items: AiAnalysisSummary[] | null; next_cursor?: string | null }>(
         api('/ai/analyses'),
-        { params: query({ cursor, limit }) },
+        { params: query({ cursor, limit, type }) },
       ),
     );
   }

@@ -1,6 +1,6 @@
 <div class="mx-auto max-w-3xl">
   <app-page-header
-    [title]="detail()?.title ?? ('aiAnalysisTitle' | transloco)"
+    [title]="detail()?.title ?? ((chatQuestion() ? 'aiChatTitle' : 'aiAnalysisTitle') | transloco)"
     [subtitle]="detail() ? providerLabel() + ' · ' + detail()!.model : undefined"
     back="/app/ai/analyses"
     [backLabel]="'backAction' | transloco"
@@ -75,6 +75,13 @@
     }
 
     <div class="space-y-4">
+      @if (chatQuestion(); as q) {
+        <div
+          class="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-3 text-sm text-primary-fg whitespace-pre-wrap"
+        >
+          {{ q }}
+        </div>
+      }
       @for (m of messages(); track m.id) {
         @if (m.kind === 'QUESTION') {
           <div
@@ -82,6 +89,19 @@
           >
             {{ m.content }}
           </div>
+          @if (m.attachment) {
+            <details class="ml-auto max-w-[85%] text-right">
+              <summary class="cursor-pointer select-none text-xs font-medium text-primary">
+                {{ 'aiChatAttachmentChip' | transloco }}
+              </summary>
+              <p class="mt-2 text-left text-xs font-semibold text-fg">
+                {{ 'aiChatAttachmentTitle' | transloco }}
+              </p>
+              <pre
+                class="mt-1 max-h-72 overflow-auto whitespace-pre-wrap rounded-xl bg-surface-2 p-3 text-left text-xs leading-relaxed text-fg"
+                >{{ m.attachment }}</pre>
+            </details>
+          }
         } @else {
           <article class="card card-pad">
             <app-markdown [text]="m.content" />

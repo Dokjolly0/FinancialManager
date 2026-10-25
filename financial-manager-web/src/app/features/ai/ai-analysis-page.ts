@@ -27,6 +27,7 @@ import { Toasts } from '../../shared/ui/toast';
 import { AiDraft } from './ai-draft';
 import { AiApi } from './ai.api';
 import {
+  AI_CHAT_PRESET,
   AI_QUESTION_MAX_LENGTH,
   AiAnalysisDetail,
   AiMessage,
@@ -53,7 +54,9 @@ interface Live {
  * written as it streams (stop keeps what was written), the data that was
  * sent, follow-up questions (up to the server's limit), copy, Markdown
  * download, rename, delete. /app/ai/run starts the previewed draft; once the
- * server names the analysis the URL becomes /app/ai/analyses/:id.
+ * server names the analysis the URL becomes /app/ai/analyses/:id. A chat
+ * (plan.md section 34) is the same page with its first question shown as
+ * the first message, and the transactions searched for a question under it.
  */
 @Component({
   selector: 'app-ai-analysis-page',
@@ -93,10 +96,18 @@ export class AiAnalysisPage implements OnInit, OnDestroy {
   protected readonly live = signal<Live | null>(null);
   protected readonly streamError = signal<string | null>(null);
   protected readonly question = signal('');
+  /** A new chat's first question, until the stored one arrives. */
+  private readonly draftQuestion = signal<string | null>(null);
   private analysisId: string | null = null;
   private abort: AbortController | null = null;
 
   protected readonly streaming = computed(() => this.live()?.status === 'STREAMING');
+  /** A chat's first question; null for reports. */
+  protected readonly chatQuestion = computed(() => {
+    const d = this.detail();
+    if (d) return d.preset === AI_CHAT_PRESET ? (d.question ?? null) : null;
+    return this.draftQuestion();
+  });
   /** Messages shown as the conversation; the CONTEXT one is "what was sent". */
   protected readonly messages = computed(() =>
     (this.detail()?.messages ?? []).filter((m) => m.kind !== 'CONTEXT'),
@@ -127,6 +138,7 @@ export class AiAnalysisPage implements OnInit, OnDestroy {
       void this.router.navigateByUrl('/app/ai/new');
       return;
     }
+    if (request.preset === AI_CHAT_PRESET) this.draftQuestion.set(request.instructions);
     this.draft.clear();
     void this.consume('REPORT', undefined, (signal) =>
       this.ai.run(
@@ -247,9 +259,14 @@ export class AiAnalysisPage implements OnInit, OnDestroy {
   /** The report and the answers as a Markdown file (the app's "download" on the web). */
   protected download(): void {
     const d = this.detail();
-    const parts = (d?.messages ?? [])
-      .filter((m) => m.kind !== 'CONTEXT')
-      .map((m) => (m.kind === 'QUESTION' ? `> ${m.content.replace(/\n/g, '\n> ')}` : m.content));
+    const quote = (text: string) => `> ${text.replace(/\n/g, '\n> ')}`;
+    const first = this.chatQuestion();
+    const parts = [
+      ...(first ? [quote(first)] : []),
+      ...(d?.messages ?? [])
+        .filter((m) => m.kind !== 'CONTEXT')
+        .map((m) => (m.kind === 'QUESTION' ? quote(m.content) : m.content)),
+    ];
     const body = `# ${d?.title ?? this.transloco.translate('aiAnalysisTitle')}\n\n${parts.join('\n\n---\n\n')}\n`;
     saveFile(body, `analisi-${d?.id ?? 'report'}.md`, 'text/markdown');
   }

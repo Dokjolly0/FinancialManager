@@ -8,6 +8,7 @@ import {
   CircleCheck,
   Circle,
   History,
+  MessageCircle,
   ShieldCheck,
   Sparkles,
   UserRound,
@@ -279,6 +280,12 @@ export class AiAssistantPage {
           total: settings.setup.wallets_total,
         }),
         icon: Wallet,
+      },
+      {
+        link: '/app/ai/chat',
+        titleKey: 'aiChatTitle',
+        subtitle: t('aiChatMenuSubtitle'),
+        icon: MessageCircle,
       },
       {
         link: '/app/ai/analyses',

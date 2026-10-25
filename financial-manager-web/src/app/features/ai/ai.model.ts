@@ -36,6 +36,10 @@ export const AI_COMPACT_DEFAULT_TRANSACTIONS = 60;
 export const AI_COMPACT_MAX_TRANSACTIONS = 100;
 export const AI_INSTRUCTIONS_MAX_LENGTH = 4000;
 export const AI_QUESTION_MAX_LENGTH = 2000;
+
+/** "Chiedi all'assistente" (plan.md section 34): a preset of its own. */
+export const AI_CHAT_PRESET = 'CHAT';
+export const AI_CHAT_MAX_TRANSACTIONS = 2000;
 export const AI_CONTEXT_TEXT_MAX_LENGTH = 2000;
 
 export interface AiCredential {
@@ -236,6 +240,8 @@ export interface AiMessage {
   output_tokens?: number | null;
   truncated: boolean;
   created_at: string;
+  /** Chat questions: the older transactions sent with it (plan.md section 34.3). */
+  attachment?: string | null;
 }
 
 export interface AiAnalysisDetail extends AiAnalysisSummary {
@@ -245,7 +251,34 @@ export interface AiAnalysisDetail extends AiAnalysisSummary {
   system_prompt: string;
   follow_ups_left: number;
   can_ask_follow_ups: boolean;
+  /** A chat's first question as typed; null for reports. */
+  question?: string | null;
   messages: AiMessage[];
+}
+
+/** Which analyses the history lists: GET /v1/ai/analyses?type=. */
+export type AiHistoryType = 'report' | 'chat';
+
+/**
+ * A chat asking `question` on a cloud account: the server picks the data
+ * (whole history, its transaction list), the app's AiAnalysisRequest.chat.
+ */
+export function chatRequest(question: string, credentialId: string | null): AiAnalysisRequest {
+  return {
+    preset: AI_CHAT_PRESET,
+    target: 'cloud',
+    ...(credentialId ? { credential_id: credentialId } : {}),
+    period: { preset: 'all_time' },
+    wallet_ids: [],
+    options: {
+      sections: [],
+      include_transactions: true,
+      max_transactions: AI_CHAT_MAX_TRANSACTIONS,
+      anonymize_titles: false,
+      include_adjustments: false,
+    },
+    instructions: question.trim(),
+  };
 }
 
 /** One event of an analysis or follow-up stream: meta, deltas, usage or error, done. */

@@ -11,7 +11,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import type { EChartsCoreOption } from 'echarts/core';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
-import { ChartColumn, History, Sparkles, Table } from 'lucide';
+import { ChartColumn, History, MessageCircle, Sparkles, Table } from 'lucide';
 
 import { ErrorText } from '../../core/errors/error-text';
 import { formatDate } from '../../core/formatting/dates';
@@ -72,7 +72,7 @@ export class ReportPage {
   protected readonly wallets = inject(WalletsStore);
   protected readonly session = inject(SessionService);
 
-  protected readonly icons = { ChartColumn, History, Sparkles, Table };
+  protected readonly icons = { ChartColumn, History, MessageCircle, Sparkles, Table };
   protected readonly presets = PRESETS;
   protected readonly presetKeys = PRESET_KEYS;
 

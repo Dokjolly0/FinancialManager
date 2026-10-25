@@ -154,6 +154,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/ai/ai-setup-page').then((m) => m.AiSetupPage),
       },
       {
+        path: 'ai/chat',
+        canActivate: [aiGuard],
+        loadComponent: () => import('./features/ai/ai-chat-page').then((m) => m.AiChatPage),
+      },
+      {
         path: 'ai/preview',
         canActivate: [aiGuard],
         loadComponent: () => import('./features/ai/ai-preview-page').then((m) => m.AiPreviewPage),

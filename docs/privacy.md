@@ -30,7 +30,7 @@ FinancialManager si usa anche dal browser, su `financialmanager.alexviolatto.dev
 - **Accesso con Google**: il pulsante "Continua con Google" è fornito da Google e carica uno script di Google, solo nella pagina di accesso e in Account → Account collegati; quando lo usi, Google tratta i dati dell'accesso secondo le proprie regole, come nell'app.
 - **Caratteri e altre risorse**: i caratteri e tutti i file della pagina sono serviti dalla dashboard stessa; la pagina non contatta servizi di font o CDN di terzi. Le uniche richieste esterne sono lo script di accesso di Google (sopra) e le immagini delle categorie scelte da una ricerca esterna, che arrivano dal sito che le ospita.
 - **Nessun cookie di profilazione** e nessuno strumento di statistiche o pubblicità.
-- **Analisi AI**: nel browser sono disponibili solo le analisi con un fornitore cloud e la tua chiave API, descritte qui sotto; l'analisi sul dispositivo esiste solo nell'app Android.
+- **Analisi AI**: nel browser sono disponibili solo le analisi e le domande di "Chiedi all'assistente" con un fornitore cloud e la tua chiave API, descritte qui sotto; l'analisi sul dispositivo esiste solo nell'app Android.
 - I file che scarichi (export dei dati, report delle analisi) finiscono nella cartella download del tuo computer: da quel momento sono sotto il tuo controllo.
 
 ## Analisi AI (facoltativa)
