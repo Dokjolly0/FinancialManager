@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -75,6 +76,18 @@ type Message struct {
 	// older transactions matching it, plan.md section 34.3); sent before
 	// the question on every replay.
 	Attachment *string
+	// ToolTrace is what a chat answer looked up with tools (plan.md
+	// section 34.7): a JSON array of ToolTraceEntry; nil without tools.
+	ToolTrace []ToolTraceEntry
+}
+
+// ToolTraceEntry is one tool call of an answer: what the model asked and
+// the data it got back.
+type ToolTraceEntry struct {
+	Name   string          `json:"name"`
+	Args   json.RawMessage `json:"args"`
+	Result string          `json:"result"`
+	Rows   int             `json:"rows"`
 }
 
 const analysisColumns = `
@@ -100,13 +113,13 @@ func scanAnalysis(row pgx.Row) (Analysis, error) {
 
 const messageColumns = `
 	id, analysis_id, seq, role, kind, content, status, error_code, model, input_tokens, output_tokens,
-	truncated, created_at, updated_at, duration_ms, attachment
+	truncated, created_at, updated_at, duration_ms, attachment, tool_trace
 `
 
 func scanMessage(row pgx.Row) (Message, error) {
 	var m Message
 	err := row.Scan(&m.ID, &m.AnalysisID, &m.Seq, &m.Role, &m.Kind, &m.Content, &m.Status, &m.ErrorCode, &m.Model,
-		&m.InputTokens, &m.OutputTokens, &m.Truncated, &m.CreatedAt, &m.UpdatedAt, &m.DurationMs, &m.Attachment)
+		&m.InputTokens, &m.OutputTokens, &m.Truncated, &m.CreatedAt, &m.UpdatedAt, &m.DurationMs, &m.Attachment, &m.ToolTrace)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Message{}, ErrNotFound
 	}
@@ -187,6 +200,16 @@ type FinishInput struct {
 	OutputTokens int
 	Truncated    bool
 	DurationMs   *int // on-device only
+	// ToolTrace is stored when the answer used tools.
+	ToolTrace []ToolTraceEntry
+}
+
+// toolTraceValue is the column value: NULL without tool calls.
+func toolTraceValue(trace []ToolTraceEntry) any {
+	if len(trace) == 0 {
+		return nil
+	}
+	return trace
 }
 
 // FinishMessage stores a stream's outcome on its message and adds its
@@ -198,8 +221,9 @@ func (r *Repository) FinishMessage(ctx context.Context, m Message, in FinishInpu
 	}
 	if _, err := r.db.Exec(ctx, `
 		UPDATE ai_messages SET content = $2, status = $3, error_code = $4, input_tokens = $5, output_tokens = $6,
-			truncated = $7, duration_ms = $8, updated_at = now()
-		WHERE id = $1`, m.ID, in.Content, in.Status, in.ErrorCode, inTok, outTok, in.Truncated, in.DurationMs); err != nil {
+			truncated = $7, duration_ms = $8, tool_trace = $9, updated_at = now()
+		WHERE id = $1`, m.ID, in.Content, in.Status, in.ErrorCode, inTok, outTok, in.Truncated, in.DurationMs,
+		toolTraceValue(in.ToolTrace)); err != nil {
 		return fmt.Errorf("finish ai message: %w", err)
 	}
 	if m.Kind == KindReport {

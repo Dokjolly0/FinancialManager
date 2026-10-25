@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -57,6 +58,18 @@ type Turn struct {
 	provider provider.Provider
 	kind     provider.Kind
 	release  func()
+	// tools runs the calls of a cloud chat; nil for reports.
+	tools *toolRunner
+}
+
+// withChatTools offers the search tools when t is a chat.
+func (s *Service) withChatTools(t Turn, lang prompt.Lang) Turn {
+	if t.Analysis.Preset != prompt.PresetChat {
+		return t
+	}
+	t.request.Tools = chatTools()
+	t.tools = s.newToolRunner(t.Analysis, lang)
+	return t
 }
 
 // Release frees the per-user stream lock. StreamTurn calls it; callers
@@ -142,13 +155,13 @@ func (s *Service) PrepareAnalysis(ctx context.Context, userID uuid.UUID, req Run
 		return Turn{}, err
 	}
 
-	return Turn{
+	return s.withChatTools(Turn{
 		Analysis: created, Message: report, provider: rp.provider, kind: rp.kind, release: release,
 		request: provider.ChatRequest{
 			Model: rp.model, System: bp.prompt.System, MaxTokens: settings.MaxOutputTokens,
 			Messages: []provider.Message{{Role: provider.RoleUser, Content: userMessage}},
 		},
-	}, nil
+	}, bp.lang), nil
 }
 
 // chatTitleLength bounds a chat's title, its first question on one line.
@@ -253,13 +266,13 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 		sent = append(sent, m.Message)
 	}
 	sent = append(sent, provider.Message{Role: provider.RoleUser, Content: questionContent(question, attachment, lang, analysis.Preset)})
-	return Turn{
+	return s.withChatTools(Turn{
 		Analysis: analysis, Message: answer, provider: rp.provider, kind: rp.kind, release: release,
 		request: provider.ChatRequest{
 			Model: rp.model, System: prompt.WithFollowUpRules(analysis.SystemPrompt, lang, analysis.Preset),
 			MaxTokens: settings.MaxOutputTokens, Messages: sent,
 		},
-	}, nil
+	}, lang), nil
 }
 
 // questionContent is a question as sent: its attachment, if any, then the
@@ -369,8 +382,24 @@ func EffectiveStatus(status string, updatedAt, now time.Time, window time.Durati
 	return status
 }
 
+// toolEvent tells the client what the model is looking up: the tool and
+// its query or grouping, never the data.
+func toolEvent(call provider.ToolCall) map[string]string {
+	var args toolArgs
+	_ = json.Unmarshal(call.Args, &args)
+	ev := map[string]string{"name": call.Name}
+	if q := strings.TrimSpace(args.Query); q != "" {
+		ev["query"] = truncateRunes(q, 80)
+	}
+	if args.GroupBy != "" && args.GroupBy != GroupNone {
+		ev["group_by"] = args.GroupBy
+	}
+	return ev
+}
+
 // StreamTurn runs the model and relays its text to sink, then stores the
-// outcome. Events: meta, delta*, then either usage+done, or error+done.
+// outcome. Events: meta, delta* (tool* in between for a chat using tools),
+// then either usage+done, or error+done.
 // A client that disconnects cancels the provider call; what was written so
 // far is kept as CANCELLED.
 func (s *Service) StreamTurn(ctx context.Context, sink EventSink, t Turn) {
@@ -384,18 +413,69 @@ func (s *Service) StreamTurn(ctx context.Context, sink EventSink, t Turn) {
 	defer cancel()
 	var content strings.Builder
 	tooLong := false
-	result, err := t.provider.Stream(streamCtx, t.request, func(text string) error {
+	// Text after a round of tool calls starts a new paragraph.
+	newParagraph := false
+	onDelta := func(text string) error {
+		if newParagraph && content.Len() > 0 {
+			text = "\n\n" + text
+		}
+		newParagraph = false
 		if content.Len()+len(text) > maxStoredAnswerBytes {
 			tooLong = true
 			return errAnswerTooLong
 		}
 		content.WriteString(text)
 		return sink.Delta(text)
-	})
+	}
+
+	// A chat on a cloud provider may call tools (plan.md section 34.7):
+	// run them, send the results back, and let the model go on, at most
+	// maxToolRounds times; the last round may only answer.
+	req := t.request
+	var result provider.StreamResult
+	var err error
+	var trace []ToolTraceEntry
+	inputTokens, outputTokens := 0, 0
+	for round := 1; ; round++ {
+		roundStart := content.Len()
+		result, err = t.provider.Stream(streamCtx, req, onDelta)
+		var pe *provider.Error
+		if len(req.Tools) > 0 && content.Len() == roundStart && errors.As(err, &pe) && pe.Kind == provider.ErrToolsUnsupported {
+			// A compatible server without function calling: answer from
+			// the data already sent.
+			s.logger.Info("ai_tools_unsupported", slog.String("provider", string(t.kind)), slog.String("model", req.Model))
+			req.Tools, req.NoMoreToolCalls = nil, false
+			result, err = t.provider.Stream(streamCtx, req, onDelta)
+		}
+		inputTokens += result.InputTokens
+		outputTokens += result.OutputTokens
+		if err != nil || t.tools == nil || len(req.Tools) == 0 || len(result.ToolCalls) == 0 || round >= maxToolRounds {
+			break
+		}
+		results := make([]provider.ToolResult, 0, len(result.ToolCalls))
+		for _, call := range result.ToolCalls {
+			_ = sink.Event("tool", toolEvent(call))
+			out, rows, runErr := t.tools.run(streamCtx, call)
+			if runErr != nil {
+				s.logger.Error("ai_tool_failed", slog.String("tool", call.Name), slog.Any("error", runErr))
+				out = prompt.RenderToolError(t.tools.lang, "internal error, try again later")
+			}
+			s.logger.Info("ai_tool", slog.String("tool", call.Name), slog.Int("rows", rows))
+			trace = append(trace, ToolTraceEntry{Name: call.Name, Args: call.Args, Result: out, Rows: rows})
+			results = append(results, provider.ToolResult{CallID: call.ID, Name: call.Name, Content: out})
+		}
+		req.Messages = append(append([]provider.Message(nil), req.Messages...),
+			provider.Message{
+				Role: provider.RoleAssistant, Content: strings.TrimSpace(content.String()[roundStart:]), ToolCalls: result.ToolCalls,
+			},
+			provider.Message{Role: provider.RoleUser, ToolResults: results})
+		req.NoMoreToolCalls = round+1 >= maxToolRounds
+		newParagraph = true
+	}
 
 	finish := FinishInput{
-		Content: content.String(), Status: StatusCompleted, InputTokens: result.InputTokens,
-		OutputTokens: result.OutputTokens, Truncated: result.Truncated || tooLong,
+		Content: content.String(), Status: StatusCompleted, InputTokens: inputTokens,
+		OutputTokens: outputTokens, Truncated: result.Truncated || tooLong, ToolTrace: trace,
 	}
 	var errorEvent map[string]string
 	switch {
@@ -431,7 +511,7 @@ func (s *Service) StreamTurn(ctx context.Context, sink EventSink, t Turn) {
 	s.logger.Info("ai_stream", slog.String("provider", string(t.kind)), slog.String("model", t.request.Model),
 		slog.String("kind", t.Message.Kind), slog.String("status", finish.Status), slog.String("error_code", errorCode),
 		slog.Int("input_tokens", finish.InputTokens), slog.Int("output_tokens", finish.OutputTokens),
-		slog.Duration("duration", s.clock.Now().Sub(start)))
+		slog.Int("tool_calls", len(trace)), slog.Duration("duration", s.clock.Now().Sub(start)))
 
 	if finish.Status == StatusCancelled {
 		return
@@ -483,6 +563,8 @@ type messageResponse struct {
 	DurationMs   *int    `json:"duration_ms"`
 	// Attachment is the data sent with a chat question (plan.md section 34.3).
 	Attachment *string `json:"attachment"`
+	// ToolTrace is what a chat answer looked up (plan.md section 34.7).
+	ToolTrace []ToolTraceEntry `json:"tool_trace"`
 }
 
 type analysisDetail struct {
@@ -651,7 +733,7 @@ func (s *Service) GetAnalysis(ctx context.Context, userID, id uuid.UUID) (analys
 			ID: m.ID.String(), Seq: m.Seq, Role: m.Role, Kind: m.Kind, Content: m.Content, Status: m.Status,
 			ErrorCode: m.ErrorCode, Model: m.Model, InputTokens: m.InputTokens, OutputTokens: m.OutputTokens,
 			Truncated: m.Truncated, CreatedAt: m.CreatedAt.UTC().Format(timeLayout), DurationMs: m.DurationMs,
-			Attachment: m.Attachment,
+			Attachment: m.Attachment, ToolTrace: m.ToolTrace,
 		}
 		if effective := s.effectiveStatus(m.Status, m.UpdatedAt, now, a.Provider); effective != m.Status {
 			mr.Status = effective

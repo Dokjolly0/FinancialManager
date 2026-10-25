@@ -428,7 +428,9 @@ type aiMessageJSON struct {
 	Truncated    bool    `json:"troncato,omitempty"`
 	DurationMs   *int    `json:"durata_ms,omitempty"`
 	Attachment   *string `json:"allegato,omitempty"` // a chat question's attached data
-	CreatedAt    string  `json:"creato_il"`
+	// ToolTrace is what a chat answer looked up, with the data returned.
+	ToolTrace []ai.ToolTraceEntry `json:"ricerche,omitempty"`
+	CreatedAt string              `json:"creato_il"`
 }
 
 // toAIAnalysesJSON shapes the history; rows still pending past their
@@ -460,7 +462,7 @@ func (s *Service) toAIAnalysesJSON(history []ai.AnalysisWithMessages, now time.T
 				Kind: m.Kind, Content: m.Content, Status: ai.EffectiveStatus(m.Status, m.UpdatedAt, now, window),
 				ErrorCode: m.ErrorCode, Model: m.Model, InputTokens: m.InputTokens, OutputTokens: m.OutputTokens,
 				Truncated: m.Truncated, DurationMs: m.DurationMs, CreatedAt: m.CreatedAt.Format(timeLayout),
-				Attachment: m.Attachment,
+				Attachment: m.Attachment, ToolTrace: m.ToolTrace,
 			})
 		}
 		out = append(out, aiAnalysisJSON{

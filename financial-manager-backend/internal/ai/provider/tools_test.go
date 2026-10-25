@@ -168,3 +168,27 @@ func TestNoTools_RequestsUnchanged(t *testing.T) {
 		}
 	}
 }
+
+// The last allowed round keeps the tools declared but forbids new calls.
+func TestNoMoreToolCalls(t *testing.T) {
+	req := toolRequest
+	req.NoMoreToolCalls = true
+	for _, c := range []struct {
+		kind  Kind
+		field string
+		want  string
+	}{
+		{KindAnthropic, "tool_choice", `{"type":"none"}`},
+		{KindOpenAI, "tool_choice", `"none"`},
+		{KindGemini, "toolConfig", `{"functionCallingConfig":{"mode":"NONE"}}`},
+	} {
+		var rec recorded
+		srv := sseServer(t, http.StatusOK, "data: [DONE]\n\n", &rec)
+		p, _ := testFactory(c.kind, srv.URL).New(Config{Kind: c.kind, APIKey: "AIza-test-key"})
+		_, _, _ = collect(t, p, req)
+		if rec.body["tools"] == nil {
+			t.Errorf("%s: tools dropped", c.kind)
+		}
+		sameJSON(t, rec.body[c.field], c.want)
+	}
+}

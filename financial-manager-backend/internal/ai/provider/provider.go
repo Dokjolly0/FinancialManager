@@ -102,6 +102,9 @@ type ChatRequest struct {
 	// Tools, when set, may be called by the model; a request without
 	// them is sent exactly as before tools existed.
 	Tools []Tool
+	// NoMoreToolCalls keeps Tools declared (the history holds calls) but
+	// tells the model to answer with text: the last allowed round.
+	NoMoreToolCalls bool
 }
 
 // StreamResult is what a finished stream reports. Token counts are the

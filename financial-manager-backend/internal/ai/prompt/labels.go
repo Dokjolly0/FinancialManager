@@ -24,6 +24,7 @@ type labels struct {
 
 	transactionsHeading, transactionsColumns, transactionsOmitted string
 	matchesHeading, matchesFound, matchesNone                     string
+	toolFound, toolNone, toolError, sumColumns, sumNoLabel        string
 	credit, debit, uncategorized                                  string
 
 	noData, omittedForBrevity string
@@ -89,6 +90,11 @@ var italian = labels{
 	matchesHeading:      "## Movimenti meno recenti che corrispondono alla domanda",
 	matchesFound:        "L'elenco dei movimenti non è completo: questi sono i movimenti precedenti il cui titolo o la cui categoria contiene %s. Trovati %d, mostrati %d.",
 	matchesNone:         "L'elenco dei movimenti non è completo, e nessun movimento precedente contiene nel titolo o nella categoria %s.",
+	toolFound:           "Trovati %d movimenti, mostrati %d (dal più recente).",
+	toolNone:            "Nessun movimento corrisponde alla ricerca.",
+	toolError:           "Ricerca non eseguita: %s.",
+	sumColumns:          "gruppo | uscite | entrate | movimenti",
+	sumNoLabel:          "(senza nome)",
 	credit:              "entrata",
 	debit:               "uscita",
 	uncategorized:       "-",
@@ -172,6 +178,11 @@ var english = labels{
 	matchesHeading:      "## Older transactions matching the question",
 	matchesFound:        "The transaction list is not complete: these are the earlier transactions whose title or category contains %s. Found %d, shown %d.",
 	matchesNone:         "The transaction list is not complete, and no earlier transaction contains %s in its title or category.",
+	toolFound:           "Found %d transactions, shown %d (newest first).",
+	toolNone:            "No transaction matches the search.",
+	toolError:           "Search not run: %s.",
+	sumColumns:          "group | expenses | income | transactions",
+	sumNoLabel:          "(no name)",
 	credit:              "income",
 	debit:               "expense",
 	uncategorized:       "-",

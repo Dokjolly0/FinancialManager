@@ -65,6 +65,13 @@ type geminiRequest struct {
 	Contents          []geminiContent        `json:"contents"`
 	GenerationConfig  geminiGenerationConfig `json:"generationConfig"`
 	Tools             []geminiTool           `json:"tools,omitempty"`
+	ToolConfig        *geminiToolConfig      `json:"toolConfig,omitempty"`
+}
+
+type geminiToolConfig struct {
+	FunctionCallingConfig struct {
+		Mode string `json:"mode"`
+	} `json:"functionCallingConfig"`
 }
 
 type geminiChunk struct {
@@ -111,6 +118,10 @@ func (p *geminiProvider) Stream(ctx context.Context, req ChatRequest, onDelta fu
 			decls = append(decls, geminiFunctionDeclaration{Name: t.Name, Description: t.Description, Parameters: t.Schema})
 		}
 		body.Tools = []geminiTool{{FunctionDeclarations: decls}}
+		if req.NoMoreToolCalls {
+			body.ToolConfig = &geminiToolConfig{}
+			body.ToolConfig.FunctionCallingConfig.Mode = "NONE"
+		}
 	}
 
 	model := strings.TrimPrefix(req.Model, "models/")

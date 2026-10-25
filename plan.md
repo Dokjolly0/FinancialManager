@@ -3232,7 +3232,7 @@ All routes require authentication. JSON routes keep the normal request timeout; 
 | `GET`, `PATCH`, `DELETE /v1/ai/analyses/{id}` | detail with messages, rename, delete |
 | `DELETE /v1/ai/analyses` | delete the whole history |
 
-Streaming events: `meta` (analysis and message ids), `delta` (text, coalesced about every 50 ms), `usage`, `done`, `error`; a `: ping` comment every 15 s keeps proxies from closing the connection. Errors detected before the first byte are normal JSON error envelopes. If the client disconnects, the upstream call is cancelled and the partial text is saved with status `CANCELLED`.
+Streaming events: `meta` (analysis and message ids), `delta` (text, coalesced about every 50 ms), `tool` (chats on a cloud provider, section 34.7), `usage`, `done`, `error`; a `: ping` comment every 15 s keeps proxies from closing the connection. Errors detected before the first byte are normal JSON error envelopes. If the client disconnects, the upstream call is cancelled and the partial text is saved with status `CANCELLED`.
 
 Preview and run share the same request body. A cloud run may pick any of the user's stored provider accounts with `credential_id` (one that has a model and, when the provider needs one, a key); without it the active account runs. The account is stored on the analysis and its follow-ups keep using it, falling back to the active one if it was removed. The setup screen lists every such account and every model installed on the phone (section 33), so the user switches model per analysis without touching the settings; picking a phone model makes it the phone's active model. The picker starts on the model the account last ran an analysis with on this phone (stored on the device per account, written when the preview succeeds) while it is still available, else on the saved mode's model. The preview returns a `data_fingerprint` (SHA-256 of the rendered data block and prompt version). The run sends it back; if the data changed in between the server answers `409 AI_DATA_CHANGED` and the app previews again. The server always rebuilds the data block from the database: the client can only edit the instructions.
 
@@ -3267,7 +3267,7 @@ Error codes: `AI_DISABLED` (503, feature not configured on the server), `AI_NOT_
 ### 32.8 Limits and observability
 
 - One active stream per user (Redis lock), 20 runs per hour (`AI_RUNS_PER_HOUR`), 10 provider probes (test connection, model list) per 10 minutes, 20 follow-ups per analysis.
-- Logs carry provider, model, status, duration and token counts; never prompt text, responses or keys.
+- Logs carry provider, model, status, duration, token counts and, for chats, the tool names, row counts and number of calls; never prompt text, responses, tool arguments or results, or keys. Chat answers use at most 4 tool rounds (section 34.7).
 - Reverse proxies must not buffer the streaming routes; see `docs/build-deploy.md`.
 
 ### 32.9 Tests
@@ -3536,8 +3536,20 @@ The cloud disclosure (`ConsentVersion` 2) now says that chats always send the tr
 
 - Backend (`internal/ai/chat_integration_test.go`): preview and run (system prompt without headings, whole-history ledger, first message = data + tagged question, title and `question`), follow-ups with the chat prompt, CHAT not among the presets, validation (missing, blank or too long question, anonymized titles, ledger cap, report cap unchanged), ledger cut to the budget keeping the newest and the same fingerprint twice, on-device chat (compact prompt, first answer labelled `ANSWER`), history type filter, export; search (older matches attached to the first and later questions, stored and replayed exactly, accents folded, other wallets and other users never searched, export of the attachment), and nothing searched when the ledger is complete. `retrieval_test.go`: search terms and accent folding.
 - App: `ai_chat_screen_test.dart` (an example fills the question and enables sending; the request is a CHAT on `all_time` with the chosen account; the consent sheet comes first when required), the analysis screen in chat mode (first question bubble, no data message, the attachment sheet), the history type filter, the chat request and the new fields' parsing, the chat button on the Reports card.
+- Tools (`tools_integration_test.go`): search then answer (event order, the round's text and calls sent back, results inside the data tags, tokens of both rounds, trace stored and exported, follow-ups replaying only texts), sums by month limited to the chat's wallet and user and to the asked period, amount filter and limit, every kind of bad argument answered to the model, the 4-round limit with "no more calls" on the last, the fallback without tools, reports without tools. Adapters: `tool_choice: none` and Gemini's `mode: NONE` on the last round.
 - Web: `ai-chat.spec.ts` (the chat request: preset, whole history, ledger 2000, account chosen or active); lint, unit tests and the production build (templates and translation keys).
 - Prompt: matches rendering (found, none, placement before the question), golden files `chat_it`, `chat_en`, `chat_it_compact`; first-question round trip with tags inside the question.
+
+### 34.7 Tools (cloud)
+
+On a cloud provider a chat may search the whole history itself instead of relying on the list and the attachments alone (the ledger can be cut, and totals by period are easier to compute than to read):
+
+- Two tools (`internal/ai/tools.go`), always limited to the chat's wallets, kinds and period (the server sets them; the model can only narrow them): `search_transactions` (query words matched like the attachments, `from`/`to` days, `direction`, `min_amount`/`max_amount` in the currency, `limit` up to 50, default 20) returns the newest matches with the ledger's columns and the total found; `sum_transactions` (same filters, `group_by` none, month, category or title) returns expenses, income and count per group, at most 60 groups. Results go back inside `<financial_data>`, so the injection guard covers them. Invalid arguments, an unknown tool or arguments that aren't JSON come back to the model as "Ricerca non eseguita: …", never as a failed answer; a database error comes back as "internal error" and is logged.
+- Loop (`StreamTurn`): at most 4 rounds; each round's calls run in order, their results are sent back with the round's text and calls, and the 4th round declares the tools with "no more calls" (`tool_choice: none`, Gemini `mode: NONE`) so the model has to answer. Text from different rounds is separated by a blank line; tokens of every round are added up. A compatible server that refuses tools (`TOOLS_UNSUPPORTED`) is asked again without them, before any text.
+- Streaming: a `tool` event (`name`, the `query` up to 80 characters, `group_by`) for each call, between the deltas; never the data.
+- Storage: the answer's `tool_trace` (migration `0038_ai_message_tool_trace`: name, arguments, the result sent to the model and its row count), returned on messages and exported as `ricerche`. Later turns replay only the final texts, then may search again.
+- Reports never get tools; on the phone there are none (small models and the single-turn engine), the attachments cover that case. The standard chat prompt says to use the tools when the data given isn't enough and to report only what they return.
+- Logs: `ai_tool` with the tool name and row count, and `tool_calls` on `ai_stream`; never arguments or results.
 
 ---
 

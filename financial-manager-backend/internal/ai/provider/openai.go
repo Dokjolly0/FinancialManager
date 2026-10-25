@@ -68,6 +68,7 @@ type openAIRequest struct {
 	MaxCompletionTokens int                  `json:"max_completion_tokens,omitempty"`
 	Temperature         *float64             `json:"temperature,omitempty"`
 	Tools               []openAITool         `json:"tools,omitempty"`
+	ToolChoice          string               `json:"tool_choice,omitempty"`
 }
 
 type openAIChunk struct {
@@ -114,6 +115,9 @@ func (p *openAIProvider) Stream(ctx context.Context, req ChatRequest, onDelta fu
 		body.Tools = append(body.Tools, openAITool{
 			Type: "function", Function: openAIFunction{Name: t.Name, Description: t.Description, Parameters: t.Schema},
 		})
+	}
+	if len(body.Tools) > 0 && req.NoMoreToolCalls {
+		body.ToolChoice = "none"
 	}
 
 	result, started, err := p.stream(ctx, body, onDelta)

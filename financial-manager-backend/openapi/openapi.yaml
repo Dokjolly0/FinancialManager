@@ -464,8 +464,10 @@ paths:
         happens before the stream starts and fails as a normal JSON error.
         Then the response is text/event-stream with these events, each data
         line being JSON:
-        meta {analysis_id, message_id, kind}; delta {text}, repeated;
-        then usage {input_tokens, output_tokens, truncated} or
+        meta {analysis_id, message_id, kind}; delta {text}, repeated (on a
+        CHAT, tool {name, query?, group_by?} when the model searches the
+        transactions, between deltas); then usage {input_tokens,
+        output_tokens, truncated} or
         error {code, message}; and finally done {status}. A ": ping" comment
         is sent every 15 s. If the client disconnects the provider call is
         cancelled and the partial text is kept with status CANCELLED. Not
@@ -1290,6 +1292,18 @@ components:
         output_tokens: { type: [integer, "null"] }
         truncated: { type: boolean, description: "Stopped at the output token limit." }
         duration_ms: { type: [integer, "null"], description: "On-device only." }
+        tool_trace:
+          type: [array, "null"]
+          description: >
+            CHAT answers on a cloud provider: the tools the model called
+            (plan.md section 34.7), with the arguments and the data returned.
+          items:
+            type: object
+            properties:
+              name: { type: string, enum: [search_transactions, sum_transactions] }
+              args: { type: object }
+              result: { type: string }
+              rows: { type: integer }
         attachment:
           type: [string, "null"]
           description: >

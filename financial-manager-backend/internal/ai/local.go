@@ -437,6 +437,6 @@ func toMessageResponse(m Message) messageResponse {
 		ID: m.ID.String(), Seq: m.Seq, Role: m.Role, Kind: m.Kind, Content: m.Content, Status: m.Status,
 		ErrorCode: m.ErrorCode, Model: m.Model, InputTokens: m.InputTokens, OutputTokens: m.OutputTokens,
 		Truncated: m.Truncated, CreatedAt: m.CreatedAt.UTC().Format(timeLayout), DurationMs: m.DurationMs,
-		Attachment: m.Attachment,
+		Attachment: m.Attachment, ToolTrace: m.ToolTrace,
 	}
 }

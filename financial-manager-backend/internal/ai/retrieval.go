@@ -127,7 +127,9 @@ func (s *Service) chatAttachment(ctx context.Context, cs chatSearch, question st
 	if len(terms) == 0 {
 		return "", nil
 	}
-	rows, total, err := s.repo.SearchTransactions(ctx, cs.walletIDs, cs.kinds, cs.from, cs.before, terms, cs.limit)
+	rows, total, err := s.repo.SearchTransactions(ctx, TransactionSearch{
+		WalletIDs: cs.walletIDs, Kinds: cs.kinds, From: cs.from, Before: cs.before, Terms: terms,
+	}, cs.limit)
 	if err != nil {
 		return "", err
 	}

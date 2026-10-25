@@ -58,28 +58,55 @@ func (r *Repository) ListTransactions(ctx context.Context, walletIDs []uuid.UUID
 // both sides of a chat search (searchTerms folds the terms the same way).
 const accentFrom, accentTo = "àáâäèéêëìíîïòóôöùúûü", "aaaaeeeeiiiioooouuuu"
 
-// SearchTransactions returns the newest transactions before `before` whose
-// title or category contains any of the terms (lowercase, accents folded),
-// at most limit rows, and how many match in all.
-func (r *Repository) SearchTransactions(ctx context.Context, walletIDs []uuid.UUID, kinds []string, from *time.Time, before time.Time, terms []string, limit int) ([]TransactionRow, int, error) {
-	// Terms are letters only (see searchTerms): nothing to escape.
-	patterns := make([]string, len(terms))
-	for i, t := range terms {
-		patterns[i] = "%" + t + "%"
+// TransactionSearch selects transactions for a chat: its wallets and
+// kinds, [From, Before), and optionally words in the title or category
+// (lowercase, accents folded, letters only), a direction and an amount
+// range in minor units (0: no bound).
+type TransactionSearch struct {
+	WalletIDs []uuid.UUID
+	Kinds     []string
+	From      *time.Time
+	Before    time.Time
+	Terms     []string
+	Direction string
+	MinMinor  int64
+	MaxMinor  int64
+}
+
+// where is the search as SQL conditions on t (transactions) and c
+// (categories), with its arguments from $1.
+func (q TransactionSearch) where() (string, []any) {
+	cond := `t.wallet_id = ANY($1::uuid[]) AND t.deleted_at IS NULL AND t.kind = ANY($2::text[])
+		AND ($3::timestamptz IS NULL OR t.occurred_at >= $3) AND t.occurred_at < $4
+		AND ($5::text = '' OR t.direction = $5)
+		AND ($6::bigint = 0 OR t.amount_minor >= $6) AND ($7::bigint = 0 OR t.amount_minor <= $7)`
+	args := []any{q.WalletIDs, q.Kinds, q.From, q.Before, q.Direction, q.MinMinor, q.MaxMinor}
+	if len(q.Terms) > 0 {
+		// Terms are letters only (see searchTerms): nothing to escape.
+		patterns := make([]string, len(q.Terms))
+		for i, t := range q.Terms {
+			patterns[i] = "%" + t + "%"
+		}
+		cond += `
+		AND (translate(t.title_normalized, $9, $10) LIKE ANY($8::text[])
+			OR translate(lower(COALESCE(c.name, '')), $9, $10) LIKE ANY($8::text[]))`
+		args = append(args, patterns, accentFrom, accentTo)
 	}
+	return cond, args
+}
+
+// SearchTransactions returns the newest matching transactions, at most
+// limit rows, and how many match in all.
+func (r *Repository) SearchTransactions(ctx context.Context, q TransactionSearch, limit int) ([]TransactionRow, int, error) {
+	cond, args := q.where()
 	rows, err := r.db.Query(ctx, `
 		SELECT t.occurred_at, w.name, t.direction, t.amount_minor, t.title, c.name, count(*) OVER ()
 		FROM transactions t
 		JOIN wallets w ON w.id = t.wallet_id
 		LEFT JOIN categories c ON c.id = t.category_id
-		WHERE t.wallet_id = ANY($1::uuid[]) AND t.deleted_at IS NULL AND t.kind = ANY($2::text[])
-			AND ($3::timestamptz IS NULL OR t.occurred_at >= $3)
-			AND t.occurred_at < $4
-			AND (translate(t.title_normalized, $6, $7) LIKE ANY($5::text[])
-				OR translate(lower(COALESCE(c.name, '')), $6, $7) LIKE ANY($5::text[]))
+		WHERE `+cond+`
 		ORDER BY t.occurred_at DESC, t.id
-		LIMIT $8
-	`, walletIDs, kinds, from, before, patterns, accentFrom, accentTo, limit)
+		LIMIT `+fmt.Sprint(max(limit, 0)), args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("search ai transactions: %w", err)
 	}
@@ -94,6 +121,76 @@ func (r *Repository) SearchTransactions(ctx context.Context, walletIDs []uuid.UU
 		out = append(out, t)
 	}
 	return out, total, rows.Err()
+}
+
+// Groupings of SumTransactions.
+const (
+	GroupNone     = "none"
+	GroupMonth    = "month"
+	GroupCategory = "category"
+	GroupTitle    = "title"
+)
+
+// SumRow is one group of SumTransactions; Label is "" for GroupNone and
+// for transactions without a category.
+type SumRow struct {
+	Label        string
+	DebitsMinor  int64
+	CreditsMinor int64
+	Count        int64
+}
+
+// maxSumRows bounds a grouped sum.
+const maxSumRows = 60
+
+// SumTransactions totals the matching transactions, split by direction,
+// grouped by month (in tzName), category or title; the largest groups
+// first, months in order.
+func (r *Repository) SumTransactions(ctx context.Context, q TransactionSearch, groupBy, tzName string) ([]SumRow, error) {
+	cond, args := q.where()
+	tz := "$" + fmt.Sprint(len(args)+1)
+	args = append(args, tzName)
+	var key, order string
+	switch groupBy {
+	case GroupMonth:
+		key, order = "to_char(t.occurred_at AT TIME ZONE "+tz+", 'YYYY-MM')", "1"
+	case GroupCategory:
+		key, order = "COALESCE(c.name, '')", "SUM(t.amount_minor) DESC, 1"
+	case GroupTitle:
+		key, order = "MIN(t.title)", "SUM(t.amount_minor) DESC, 1"
+	default:
+		key, order = "''", "1"
+	}
+	groupClause := ""
+	switch groupBy {
+	case GroupMonth, GroupCategory:
+		groupClause = " GROUP BY 1"
+	case GroupTitle:
+		groupClause = " GROUP BY t.title_normalized"
+	}
+	rows, err := r.db.Query(ctx, `
+		SELECT `+key+`,
+			COALESCE(SUM(t.amount_minor) FILTER (WHERE t.direction = 'DEBIT'), 0),
+			COALESCE(SUM(t.amount_minor) FILTER (WHERE t.direction = 'CREDIT'), 0),
+			COUNT(*)
+		FROM transactions t
+		LEFT JOIN categories c ON c.id = t.category_id
+		WHERE `+cond+groupClause+`
+		ORDER BY `+order+`
+		LIMIT `+fmt.Sprint(maxSumRows), args...)
+	if err != nil {
+		return nil, fmt.Errorf("sum ai transactions: %w", err)
+	}
+	defer rows.Close()
+	var out []SumRow
+	for rows.Next() {
+		var s SumRow
+		if err := rows.Scan(&s.Label, &s.DebitsMinor, &s.CreditsMinor, &s.Count); err != nil {
+			return nil, fmt.Errorf("scan ai sum: %w", err)
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
 }
 
 // TransferFlowRow sums transfers from one wallet to another.

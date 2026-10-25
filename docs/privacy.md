@@ -45,7 +45,7 @@ L'Analisi AI è disattivata finché non la configuri tu. Se non ti interessa, pu
 - solo se lo attivi, il contesto personale che hai scritto (per esempio obiettivi o composizione del nucleo familiare);
 - le istruzioni e le domande che scrivi.
 
-**Chiedi all'assistente** (le domande libere, come "quando ho pagato l'assicurazione?") invia gli stessi dati di un'analisi, ma sempre con l'elenco dei movimenti di tutta la cronologia (al massimo 2000, i più recenti) e con i titoli veri, perché le risposte si basano proprio sui singoli movimenti. Se non entrano tutti, a ogni domanda si aggiungono i movimenti più vecchi che contengono le sue parole nel titolo o nella categoria, e restano salvati con la domanda nella cronologia. Per questo il consenso è stato aggiornato: se l'avevi già accettato, l'app te lo chiede di nuovo.
+**Chiedi all'assistente** (le domande libere, come "quando ho pagato l'assicurazione?") invia gli stessi dati di un'analisi, ma sempre con l'elenco dei movimenti di tutta la cronologia (al massimo 2000, i più recenti) e con i titoli veri, perché le risposte si basano proprio sui singoli movimenti. Se non entrano tutti, a ogni domanda si aggiungono i movimenti più vecchi che contengono le sue parole nel titolo o nella categoria, e restano salvati con la domanda nella cronologia. Con un fornitore cloud il modello può anche chiedere di cercare o sommare altri movimenti del tuo account (solo dei portafogli e del periodo della chat): ogni ricerca, con i dati che ha ricevuto, è salvata con la risposta e visibile in "Ricerche fatte". Per questo il consenso è stato aggiornato: se l'avevi già accettato, l'app te lo chiede di nuovo.
 
 Prima dell'invio l'app ti mostra esattamente il testo che verrà inviato.
 

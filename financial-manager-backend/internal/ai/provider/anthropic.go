@@ -48,7 +48,12 @@ type anthropicRequest struct {
 	Messages    []anthropicMessage `json:"messages"`
 	Temperature *float64           `json:"temperature,omitempty"`
 	Tools       []anthropicTool    `json:"tools,omitempty"`
+	ToolChoice  *anthropicChoice   `json:"tool_choice,omitempty"`
 	Stream      bool               `json:"stream"`
+}
+
+type anthropicChoice struct {
+	Type string `json:"type"`
 }
 
 type anthropicUsage struct {
@@ -123,6 +128,9 @@ func (p *anthropicProvider) Stream(ctx context.Context, req ChatRequest, onDelta
 	}
 	for _, t := range req.Tools {
 		body.Tools = append(body.Tools, anthropicTool{Name: t.Name, Description: t.Description, InputSchema: t.Schema})
+	}
+	if len(body.Tools) > 0 && req.NoMoreToolCalls {
+		body.ToolChoice = &anthropicChoice{Type: "none"}
 	}
 
 	var result StreamResult
