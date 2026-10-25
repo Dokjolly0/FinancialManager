@@ -1,0 +1,285 @@
+<div class="mx-auto max-w-2xl">
+  <app-page-header
+    [title]="'aiProviderMenuTitle' | transloco"
+    back="/app/account/ai"
+    [backLabel]="'backAction' | transloco"
+  />
+
+  @if (ai.settings.isLoading() && !ai.settings.hasValue()) {
+    <div class="card card-pad space-y-4">
+      <div class="skeleton h-11 w-full"></div>
+      <div class="skeleton h-11 w-full"></div>
+    </div>
+  } @else if (ai.settings.error()) {
+    <div class="card">
+      <app-inline-error
+        [message]="errorText.message(ai.settings.error())"
+        (retry)="ai.settings.reload()"
+      />
+    </div>
+  } @else if (ai.settings.value()?.available === false) {
+    <div class="card card-pad text-sm text-fg-muted">{{ 'aiUnavailableBody' | transloco }}</div>
+  } @else {
+    <form class="space-y-6" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <section class="card card-pad space-y-5">
+        <div>
+          <label class="label" for="ai-provider">{{ 'aiProviderLabel' | transloco }}</label>
+          <select id="ai-provider" class="input" formControlName="provider">
+            @for (p of providers; track p) {
+              <option [value]="p">{{ providerLabel(p) }}</option>
+            }
+          </select>
+          <p class="hint">{{ hintKeys[values().provider ?? 'anthropic'] | transloco }}</p>
+        </div>
+
+        @if (needsBaseUrl()) {
+          <div>
+            <label class="label" for="ai-base">{{ 'aiBaseUrlLabel' | transloco }}</label>
+            <input
+              id="ai-base"
+              class="input"
+              formControlName="baseUrl"
+              placeholder="https://…/v1"
+              autocomplete="off"
+              [attr.aria-invalid]="!!errors.fields()['base_url'] || null"
+            />
+            <div class="mt-2 flex flex-wrap gap-1.5">
+              @for (preset of compatiblePresets; track preset.name) {
+                <button
+                  type="button"
+                  class="chip"
+                  [class.chip-active]="values().baseUrl === preset.baseUrl"
+                  (click)="applyPreset(preset.baseUrl)"
+                >
+                  {{ preset.name }}
+                </button>
+              }
+            </div>
+            <p class="hint">{{ 'aiBaseUrlHelper' | transloco }}</p>
+            @if (errors.fields()['base_url']; as m) {
+              <p class="field-error">{{ m }}</p>
+            }
+          </div>
+        }
+
+        <div>
+          <label class="label" for="ai-key">{{
+            (needsKey() ? 'aiApiKeyLabel' : 'aiApiKeyOptionalLabel') | transloco
+          }}</label>
+          @if (stored()?.has_key && !replacingKey()) {
+            <div
+              class="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-2/60 px-3.5 py-2.5"
+            >
+              <span class="flex-1 text-sm text-fg" [class.line-through]="removeKey()">
+                {{ 'aiApiKeyStored' | transloco: { hint: stored()?.key_hint ?? '' } }}
+              </span>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                (click)="replacingKey.set(true); removeKey.set(false)"
+              >
+                {{ 'aiApiKeyReplace' | transloco }}
+              </button>
+              @if (!needsKey()) {
+                <button
+                  type="button"
+                  class="btn btn-danger-ghost btn-sm"
+                  (click)="removeKey.set(!removeKey())"
+                >
+                  {{ 'aiApiKeyRemove' | transloco }}
+                </button>
+              }
+            </div>
+            @if (removeKey()) {
+              <p class="hint text-warning">{{ 'aiApiKeyWillBeRemoved' | transloco }}</p>
+            }
+          }
+          @if (showKeyField()) {
+            <input
+              id="ai-key"
+              class="input font-mono"
+              type="password"
+              formControlName="apiKey"
+              autocomplete="off"
+              spellcheck="false"
+              [attr.aria-invalid]="!!errors.fields()['api_key'] || null"
+            />
+          }
+          <p class="hint">{{ 'aiApiKeyHelper' | transloco }}</p>
+          @if (errors.fields()['api_key']; as m) {
+            <p class="field-error">{{ m }}</p>
+          }
+        </div>
+
+        <div>
+          <label class="label" for="ai-model">{{ 'aiModelLabel' | transloco }}</label>
+          <div class="flex gap-2">
+            <input
+              id="ai-model"
+              class="input flex-1"
+              formControlName="model"
+              list="ai-model-list"
+              autocomplete="off"
+              spellcheck="false"
+              [attr.aria-invalid]="!!errors.fields()['model'] || null"
+            />
+            <button
+              type="button"
+              class="btn btn-outline"
+              [disabled]="loadingModels()"
+              (click)="loadModels()"
+            >
+              @if (loadingModels()) {
+                <app-spinner />
+              } @else {
+                <app-icon [icon]="icons.Download" [size]="16" />
+              }
+              <span class="max-sm:hidden">{{ 'aiLoadModels' | transloco }}</span>
+            </button>
+          </div>
+          <datalist id="ai-model-list">
+            @for (m of models() ?? []; track m.id) {
+              <option [value]="m.id">{{ m.display_name }}</option>
+            }
+          </datalist>
+          @if (models()?.length) {
+            <div class="mt-2 flex max-h-36 flex-wrap gap-1.5 overflow-y-auto">
+              @for (m of models(); track m.id) {
+                <button
+                  type="button"
+                  class="chip"
+                  [class.chip-active]="values().model === m.id"
+                  (click)="form.controls.model.setValue(m.id)"
+                >
+                  {{ m.display_name || m.id }}
+                </button>
+              }
+            </div>
+          }
+          <p class="hint">{{ 'aiModelHelper' | transloco }}</p>
+          @if (errors.fields()['model']; as m) {
+            <p class="field-error">{{ m }}</p>
+          }
+        </div>
+
+        @if (stored(); as s) {
+          @if (s.last_test_ok !== null && s.last_test_ok !== undefined) {
+            <p
+              class="flex items-center gap-2 text-xs"
+              [class]="s.last_test_ok ? 'text-credit' : 'text-debit'"
+            >
+              <app-icon
+                [icon]="s.last_test_ok ? icons.CircleCheck : icons.CircleAlert"
+                [size]="14"
+              />
+              {{ (s.last_test_ok ? 'aiLastTestOk' : 'aiLastTestFailed') | transloco }}
+            </p>
+          }
+        }
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="button" class="btn btn-outline" [disabled]="testing()" (click)="test()">
+            @if (testing()) {
+              <app-spinner />
+            } @else {
+              <app-icon [icon]="icons.PlugZap" [size]="16" />
+            }
+            {{ 'aiTestConnection' | transloco }}
+          </button>
+          @if (testResult(); as r) {
+            <p class="flex-1 text-sm" [class]="r.ok ? 'text-credit' : 'text-debit'" role="status">
+              {{ r.text }}
+            </p>
+          }
+        </div>
+      </section>
+
+      <details class="card card-pad group">
+        <summary class="cursor-pointer select-none text-sm font-semibold text-fg">
+          {{ 'aiAdvancedSettings' | transloco }}
+        </summary>
+        <div class="mt-5 space-y-5">
+          <div>
+            <label class="label" for="ai-tokens">{{ 'aiMaxOutputTokensLabel' | transloco }}</label>
+            <input
+              id="ai-tokens"
+              type="number"
+              class="input tabular w-40"
+              formControlName="maxOutputTokens"
+              [min]="minTokens"
+              [max]="maxTokens"
+              step="256"
+            />
+            <p class="hint">
+              {{ 'aiMaxOutputTokensHelper' | transloco: { min: minTokens, max: maxTokens } }}
+            </p>
+            @if (errors.fields()['max_output_tokens']; as m) {
+              <p class="field-error">{{ m }}</p>
+            }
+          </div>
+          <div>
+            <p class="label">{{ 'aiPricesTitle' | transloco }}</p>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class="hint mb-1.5 mt-0 block" for="ai-in-price">{{
+                  'aiInputPriceLabel' | transloco
+                }}</label>
+                <input
+                  id="ai-in-price"
+                  class="input tabular"
+                  inputmode="decimal"
+                  formControlName="inputPrice"
+                />
+                @if (errors.fields()['input_price_per_mtok']; as m) {
+                  <p class="field-error">{{ m }}</p>
+                }
+              </div>
+              <div>
+                <label class="hint mb-1.5 mt-0 block" for="ai-out-price">{{
+                  'aiOutputPriceLabel' | transloco
+                }}</label>
+                <input
+                  id="ai-out-price"
+                  class="input tabular"
+                  inputmode="decimal"
+                  formControlName="outputPrice"
+                />
+                @if (errors.fields()['output_price_per_mtok']; as m) {
+                  <p class="field-error">{{ m }}</p>
+                }
+              </div>
+            </div>
+            <p class="hint">{{ 'aiPricesHelper' | transloco }}</p>
+          </div>
+          <app-switch
+            formControlName="includeTransactions"
+            [label]="'aiDefaultIncludeTransactions' | transloco"
+            [description]="'aiDefaultIncludeTransactionsHint' | transloco"
+          />
+          <app-switch
+            formControlName="anonymizeTitles"
+            [label]="'aiDefaultAnonymizeTitles' | transloco"
+            [description]="'aiDefaultAnonymizeTitlesHint' | transloco"
+          />
+        </div>
+      </details>
+
+      <p class="text-xs text-fg-muted">{{ 'aiCloudOnlyHereNote' | transloco }}</p>
+      @if (errors.message()) {
+        <p class="field-error" role="alert">{{ errors.message() }}</p>
+      }
+      <div class="flex flex-wrap items-center gap-2">
+        @if (stored()) {
+          <button type="button" class="btn btn-danger-ghost mr-auto" (click)="forget()">
+            {{ 'aiForgetProviderAction' | transloco }}
+          </button>
+        }
+        <button type="submit" class="btn btn-primary ml-auto" [disabled]="saving()">
+          @if (saving()) {
+            <app-spinner />
+          }
+          {{ 'aiSaveSettings' | transloco }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

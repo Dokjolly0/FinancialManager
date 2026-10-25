@@ -96,5 +96,9 @@
   "webLastAccess": "Last access: {date}",
   "webEndSession": "End session",
   "webEndSessionTitle": "End this session?",
-  "webSaving": "Saving…"
+  "webSaving": "Saving…",
+  "webAiStatusFailed": "Failed",
+  "webAiStatusCancelled": "Stopped",
+  "webAiStatusStreaming": "Running",
+  "webAiLeaveBody": "Leaving stops the analysis: what has been written so far is kept."
 }

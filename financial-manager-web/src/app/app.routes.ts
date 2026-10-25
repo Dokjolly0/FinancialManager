@@ -1,6 +1,12 @@
 import { Routes } from '@angular/router';
 
-import { authGuard, googleCompletionGuard, guestGuard } from './core/session/guards';
+import {
+  aiGuard,
+  authGuard,
+  googleCompletionGuard,
+  guestGuard,
+  leaveWhileStreamingGuard,
+} from './core/session/guards';
 import { AppShell } from './layout/app-shell';
 
 /**
@@ -114,6 +120,60 @@ export const routes: Routes = [
       {
         path: 'account/data',
         loadComponent: () => import('./features/account/data-page').then((m) => m.DataPage),
+      },
+      // AI analysis (plan.md section 32): gone when the AI features are off.
+      {
+        path: 'account/ai',
+        canActivate: [aiGuard],
+        loadComponent: () =>
+          import('./features/ai/ai-assistant-page').then((m) => m.AiAssistantPage),
+      },
+      {
+        path: 'account/ai/provider',
+        canActivate: [aiGuard],
+        loadComponent: () => import('./features/ai/ai-provider-page').then((m) => m.AiProviderPage),
+      },
+      {
+        path: 'account/ai/context',
+        canActivate: [aiGuard],
+        loadComponent: () => import('./features/ai/ai-context-page').then((m) => m.AiContextPage),
+      },
+      {
+        path: 'account/ai/wallet-purposes',
+        canActivate: [aiGuard],
+        loadComponent: () =>
+          import('./features/ai/ai-wallet-purposes-page').then((m) => m.AiWalletPurposesPage),
+      },
+      // On-device models only exist on the phone (section 33).
+      { path: 'account/ai/local-models', redirectTo: 'account/ai' },
+      { path: 'account/ai/local-runtime', redirectTo: 'account/ai' },
+      { path: 'ai/pending', redirectTo: 'account/ai' },
+      {
+        path: 'ai/new',
+        canActivate: [aiGuard],
+        loadComponent: () => import('./features/ai/ai-setup-page').then((m) => m.AiSetupPage),
+      },
+      {
+        path: 'ai/preview',
+        canActivate: [aiGuard],
+        loadComponent: () => import('./features/ai/ai-preview-page').then((m) => m.AiPreviewPage),
+      },
+      {
+        path: 'ai/run',
+        canActivate: [aiGuard],
+        canDeactivate: [leaveWhileStreamingGuard],
+        loadComponent: () => import('./features/ai/ai-analysis-page').then((m) => m.AiAnalysisPage),
+      },
+      {
+        path: 'ai/analyses',
+        canActivate: [aiGuard],
+        loadComponent: () => import('./features/ai/ai-history-page').then((m) => m.AiHistoryPage),
+      },
+      {
+        path: 'ai/analyses/:id',
+        canActivate: [aiGuard],
+        canDeactivate: [leaveWhileStreamingGuard],
+        loadComponent: () => import('./features/ai/ai-analysis-page').then((m) => m.AiAnalysisPage),
       },
       {
         path: 'account/wallets',

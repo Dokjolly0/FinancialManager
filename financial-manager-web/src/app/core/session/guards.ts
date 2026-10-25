@@ -1,5 +1,8 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router, UrlTree } from '@angular/router';
+import { CanActivateFn, CanDeactivateFn, Router, UrlTree } from '@angular/router';
+import { TranslocoService } from '@jsverse/transloco';
+
+import { Overlay } from '../../shared/ui/overlay';
 
 import { SessionService } from './session.service';
 
@@ -63,3 +66,19 @@ export function isEmailLink(url: string): boolean {
   const path = url.split('?')[0];
   return path === '/reset-password' || path === '/verify-email';
 }
+
+/**
+ * Leaving a page while the model is writing stops it (the server keeps the
+ * partial text): ask first, like the app's "analysis still running" dialog.
+ */
+export const leaveWhileStreamingGuard: CanDeactivateFn<{ canLeave(): boolean }> = (page) => {
+  if (page.canLeave()) return true;
+  const transloco = inject(TranslocoService);
+  return inject(Overlay).confirm({
+    title: transloco.translate('aiLeaveTitle'),
+    message: transloco.translate('webAiLeaveBody'),
+    confirmLabel: transloco.translate('aiLeaveStop'),
+    cancelLabel: transloco.translate('aiLeaveStay'),
+    destructive: true,
+  });
+};

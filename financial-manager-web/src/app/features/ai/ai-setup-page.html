@@ -1,0 +1,303 @@
+<div class="mx-auto max-w-3xl">
+  <app-page-header
+    [title]="'aiNewAnalysisTitle' | transloco"
+    back="/app/account/ai"
+    [backLabel]="'backAction' | transloco"
+  >
+    <a routerLink="/app/ai/analyses" class="btn btn-ghost">{{ 'aiHistoryTitle' | transloco }}</a>
+  </app-page-header>
+
+  @if (ai.settings.isLoading() && !ai.settings.hasValue()) {
+    <div class="card card-pad space-y-4">
+      <div class="skeleton h-24 w-full"></div>
+      <div class="skeleton h-40 w-full"></div>
+    </div>
+  } @else if (ai.settings.error()) {
+    <div class="card">
+      <app-inline-error
+        [message]="errorText.message(ai.settings.error())"
+        (retry)="ai.settings.reload()"
+      />
+    </div>
+  } @else if (!ai.settings.value()?.available) {
+    <div class="card">
+      <app-empty-state
+        [heading]="'aiUnavailableTitle' | transloco"
+        [message]="'aiUnavailableBody' | transloco"
+        [icon]="icons.BotMessageSquare"
+      />
+    </div>
+  } @else if (ai.credentials().length === 0) {
+    <div class="card">
+      <app-empty-state
+        [heading]="'aiNotReadyTitle' | transloco"
+        [message]="'aiNotReadyBody' | transloco"
+        [icon]="icons.BotMessageSquare"
+      >
+        <a routerLink="/app/account/ai/provider" class="btn btn-primary btn-sm">{{
+          'aiGoToSetup' | transloco
+        }}</a>
+      </app-empty-state>
+    </div>
+  } @else {
+    <div class="space-y-6">
+      <!-- Who runs it -->
+      <section class="card card-pad">
+        <label class="label" for="ai-run-model">{{ 'aiRunModelLabel' | transloco }}</label>
+        <select
+          id="ai-run-model"
+          class="input"
+          [ngModel]="credentialId()"
+          (ngModelChange)="credentialId.set($event)"
+        >
+          @for (c of ai.credentials(); track c.id) {
+            <option [ngValue]="c.id">{{ credentialLabel(c.id) }}</option>
+          }
+        </select>
+      </section>
+
+      <!-- What -->
+      <section class="card card-pad">
+        <h2 class="mb-3 font-semibold text-fg">{{ 'aiWhatToAnalyze' | transloco }}</h2>
+        @if (presets.isLoading() && !presets.hasValue()) {
+          <div class="grid gap-2 sm:grid-cols-2">
+            @for (i of [1, 2, 3, 4]; track i) {
+              <div class="skeleton h-20"></div>
+            }
+          </div>
+        } @else if (presets.error()) {
+          <app-inline-error
+            [message]="errorText.message(presets.error())"
+            (retry)="presets.reload()"
+          />
+        } @else {
+          <div
+            class="grid gap-2 sm:grid-cols-2"
+            role="radiogroup"
+            [attr.aria-label]="'aiWhatToAnalyze' | transloco"
+          >
+            @for (p of presets.value(); track p.id) {
+              <button
+                type="button"
+                role="radio"
+                class="rounded-xl border p-3.5 text-left transition-colors"
+                [class]="
+                  preset()?.id === p.id
+                    ? 'border-primary bg-primary-soft ring-1 ring-primary'
+                    : 'border-border hover:bg-surface-2'
+                "
+                [attr.aria-checked]="preset()?.id === p.id"
+                (click)="selectPreset(p)"
+              >
+                <span class="block text-sm font-semibold text-fg">{{ p.title }}</span>
+                <span class="mt-0.5 block text-xs leading-relaxed text-fg-muted">{{
+                  p.description
+                }}</span>
+              </button>
+            }
+          </div>
+          @if (preset()?.id === 'CUSTOM') {
+            <div class="mt-4">
+              <label class="label" for="ai-question">{{
+                'aiCustomQuestionLabel' | transloco
+              }}</label>
+              <textarea
+                id="ai-question"
+                class="input"
+                rows="3"
+                [maxlength]="questionMax"
+                [placeholder]="'aiCustomQuestionHint' | transloco"
+                [ngModel]="question()"
+                (ngModelChange)="question.set($event); questionError.set(null)"
+                [attr.aria-invalid]="!!questionError() || null"
+              ></textarea>
+              @if (questionError()) {
+                <p class="field-error">{{ questionError() }}</p>
+              }
+            </div>
+          }
+        }
+      </section>
+
+      <!-- When and which wallets -->
+      <section class="card card-pad space-y-5">
+        <div>
+          <p class="label">{{ 'aiPeriodLabel' | transloco }}</p>
+          <div class="flex flex-wrap gap-2">
+            @for (q of quickPeriods; track q.id) {
+              <button
+                type="button"
+                class="chip"
+                [class.chip-active]="quick() === q.id"
+                (click)="setQuick(q.id)"
+              >
+                {{ q.key | transloco }}
+              </button>
+            }
+          </div>
+          <div class="mt-3 flex flex-wrap items-end gap-3">
+            <div>
+              <label class="hint mb-1 mt-0 block" for="ai-from">{{
+                'aiDateFrom' | transloco
+              }}</label>
+              <input
+                id="ai-from"
+                type="date"
+                class="input h-10 w-44"
+                [value]="range().from ?? ''"
+                (change)="setBound('from', $any($event.target).value)"
+              />
+            </div>
+            <div>
+              <label class="hint mb-1 mt-0 block" for="ai-to">{{ 'aiDateTo' | transloco }}</label>
+              <input
+                id="ai-to"
+                type="date"
+                class="input h-10 w-44"
+                [value]="range().to ?? ''"
+                (change)="setBound('to', $any($event.target).value)"
+              />
+            </div>
+            <p class="pb-2 text-xs text-fg-muted">
+              {{ range().from ? '' : ('aiDateFromEmpty' | transloco) }}
+              {{ range().to ? '' : ('aiDateToEmpty' | transloco) }}
+            </p>
+          </div>
+        </div>
+        @if (wallets.wallets().length > 1) {
+          <div>
+            <p class="label">{{ 'aiWalletsLabel' | transloco }}</p>
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="chip"
+                [class.chip-active]="walletIds().length === 0"
+                (click)="toggleWallet(null)"
+              >
+                {{ 'aiAllWallets' | transloco }}
+              </button>
+              @for (w of wallets.wallets(); track w.id) {
+                <button
+                  type="button"
+                  class="chip"
+                  [class.chip-active]="walletIds().includes(w.id)"
+                  [attr.aria-pressed]="walletIds().includes(w.id)"
+                  (click)="toggleWallet(w.id)"
+                >
+                  <span class="h-2 w-2 rounded-full" [style.background-color]="w.color"></span
+                  >{{ w.name }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+        @if (filterChips().length) {
+          <div>
+            <p class="label">
+              {{ (fromHistory() ? 'aiFiltersFromHistoryTitle' : 'aiFiltersTitle') | transloco }}
+            </p>
+            <div class="flex flex-wrap gap-2">
+              @for (chip of filterChips(); track chip.key) {
+                <span class="chip chip-active cursor-default">
+                  {{ chip.label }}
+                  <button
+                    type="button"
+                    class="-mr-1 rounded-full p-0.5 hover:bg-primary/15"
+                    [attr.aria-label]="'webRemoveFilter' | transloco"
+                    (click)="removeFilter(chip.key)"
+                  >
+                    <app-icon [icon]="icons.X" [size]="12" />
+                  </button>
+                </span>
+              }
+            </div>
+            <p class="hint">{{ 'aiFiltersHint' | transloco }}</p>
+          </div>
+        }
+      </section>
+
+      <!-- Data -->
+      <section class="card card-pad space-y-5">
+        <div>
+          <p class="label">{{ 'aiDataToSend' | transloco }}</p>
+          <div class="flex flex-wrap gap-2">
+            @for (s of sectionList; track s) {
+              <button
+                type="button"
+                class="chip"
+                [class.chip-active]="sections().includes(s)"
+                [attr.aria-pressed]="sections().includes(s)"
+                (click)="toggleSection(s)"
+              >
+                {{ sectionKeys[s] | transloco }}
+              </button>
+            }
+          </div>
+          <p class="hint">{{ 'aiDataToSendHint' | transloco }}</p>
+        </div>
+        <div class="space-y-4 border-t border-border pt-5">
+          <app-switch
+            [label]="'aiCompactProfile' | transloco"
+            [description]="'aiCompactProfileHint' | transloco"
+            [ngModel]="compact()"
+            (ngModelChange)="setCompact($event)"
+          />
+          <app-switch
+            [label]="'aiIncludeTransactions' | transloco"
+            [description]="'aiIncludeTransactionsHint' | transloco"
+            [ngModel]="includeTransactions()"
+            (ngModelChange)="includeTransactions.set($event)"
+          />
+          @if (includeTransactions()) {
+            <div class="flex items-center gap-4 pl-1">
+              <input
+                type="range"
+                class="flex-1 accent-primary"
+                [min]="sliderMin()"
+                [max]="sliderMax()"
+                step="10"
+                [attr.aria-label]="'aiIncludeTransactions' | transloco"
+                [value]="maxTransactions()"
+                (input)="maxTransactions.set(+$any($event.target).value)"
+              />
+              <span class="tabular w-20 text-right text-sm text-fg-muted">{{
+                'aiMaxTransactionsValue' | transloco: { count: maxTransactions() }
+              }}</span>
+            </div>
+          }
+          <app-switch
+            [label]="'aiDefaultAnonymizeTitles' | transloco"
+            [description]="'aiDefaultAnonymizeTitlesHint' | transloco"
+            [ngModel]="anonymize()"
+            (ngModelChange)="anonymize.set($event)"
+          />
+          <app-switch
+            [label]="'aiIncludeAdjustments' | transloco"
+            [description]="'aiIncludeAdjustmentsHint' | transloco"
+            [ngModel]="includeAdjustments()"
+            (ngModelChange)="includeAdjustments.set($event)"
+          />
+        </div>
+      </section>
+
+      @if (error()) {
+        <p class="field-error" role="alert">{{ error() }}</p>
+      }
+      <div class="flex justify-end">
+        <button
+          type="button"
+          class="btn btn-primary btn-lg"
+          [disabled]="previewing() || !preset()"
+          (click)="preview()"
+        >
+          @if (previewing()) {
+            <app-spinner />
+          } @else {
+            <app-icon [icon]="icons.Sparkles" [size]="18" />
+          }
+          {{ 'aiPreviewAction' | transloco }}
+        </button>
+      </div>
+    </div>
+  }
+</div>

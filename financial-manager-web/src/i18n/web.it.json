@@ -96,5 +96,9 @@
   "webLastAccess": "Ultimo accesso: {date}",
   "webEndSession": "Termina sessione",
   "webEndSessionTitle": "Terminare questa sessione?",
-  "webSaving": "Salvataggio…"
+  "webSaving": "Salvataggio…",
+  "webAiStatusFailed": "Non riuscita",
+  "webAiStatusCancelled": "Interrotta",
+  "webAiStatusStreaming": "In corso",
+  "webAiLeaveBody": "Uscendo l'analisi si ferma: il testo scritto finora resta salvato."
 }
