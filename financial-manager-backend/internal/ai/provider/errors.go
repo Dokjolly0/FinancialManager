@@ -26,6 +26,10 @@ const (
 	ErrTimeout        ErrorKind = "TIMEOUT"
 	ErrNetwork        ErrorKind = "NETWORK"
 	ErrBadResponse    ErrorKind = "BAD_RESPONSE"
+	// ErrToolsUnsupported: the server refused a request because of its
+	// tools (an OpenAI-compatible server without function calling). The
+	// caller may retry without them.
+	ErrToolsUnsupported ErrorKind = "TOOLS_UNSUPPORTED"
 )
 
 // Error is a classified provider failure. Message is the provider's own

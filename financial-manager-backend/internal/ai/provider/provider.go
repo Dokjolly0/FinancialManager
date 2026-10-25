@@ -11,6 +11,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -53,6 +54,39 @@ const (
 type Message struct {
 	Role    Role
 	Content string
+	// ToolCalls, on an assistant message, are the calls the model made
+	// after Content.
+	ToolCalls []ToolCall
+	// ToolResults, on a user message, answer the previous assistant
+	// message's calls, in order.
+	ToolResults []ToolResult
+}
+
+// Tool is a function the model may call (plan.md section 34.7).
+type Tool struct {
+	Name        string
+	Description string
+	// Schema is the JSON Schema of the arguments: an object with
+	// properties, kept to the subset every provider accepts (type,
+	// description, enum, properties, required).
+	Schema json.RawMessage
+}
+
+// ToolCall is one call the model made. Args is a JSON object.
+type ToolCall struct {
+	ID   string
+	Name string
+	Args json.RawMessage
+	// Signature is opaque provider data that must travel back with the
+	// call (Gemini's thought signature); empty for the others.
+	Signature string
+}
+
+// ToolResult answers one ToolCall.
+type ToolResult struct {
+	CallID  string
+	Name    string // Gemini matches results by name
+	Content string
 }
 
 // ChatRequest is one streamed completion. System is sent the way each
@@ -65,6 +99,9 @@ type ChatRequest struct {
 	// Temperature is left to the provider default when nil: reasoning
 	// models reject it.
 	Temperature *float64
+	// Tools, when set, may be called by the model; a request without
+	// them is sent exactly as before tools existed.
+	Tools []Tool
 }
 
 // StreamResult is what a finished stream reports. Token counts are the
@@ -74,6 +111,9 @@ type StreamResult struct {
 	OutputTokens int
 	// Truncated is true when generation stopped at MaxTokens.
 	Truncated bool
+	// ToolCalls are the calls the model made instead of (or after) its
+	// text; the caller runs them and sends the results back.
+	ToolCalls []ToolCall
 }
 
 type ModelInfo struct {

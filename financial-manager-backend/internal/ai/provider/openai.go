@@ -27,8 +27,32 @@ func (p *openAIProvider) headers() map[string]string {
 }
 
 type openAIMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role       string           `json:"role"`
+	Content    string           `json:"content"`
+	ToolCalls  []openAIToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string           `json:"tool_call_id,omitempty"`
+}
+
+type openAIFunctionCall struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
+type openAIToolCall struct {
+	ID       string             `json:"id"`
+	Type     string             `json:"type"`
+	Function openAIFunctionCall `json:"function"`
+}
+
+type openAIFunction struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Parameters  json.RawMessage `json:"parameters"`
+}
+
+type openAITool struct {
+	Type     string         `json:"type"`
+	Function openAIFunction `json:"function"`
 }
 
 type openAIStreamOptions struct {
@@ -43,12 +67,21 @@ type openAIRequest struct {
 	MaxTokens           int                  `json:"max_tokens,omitempty"`
 	MaxCompletionTokens int                  `json:"max_completion_tokens,omitempty"`
 	Temperature         *float64             `json:"temperature,omitempty"`
+	Tools               []openAITool         `json:"tools,omitempty"`
 }
 
 type openAIChunk struct {
 	Choices []struct {
 		Delta struct {
-			Content string `json:"content"`
+			Content   string `json:"content"`
+			ToolCalls []struct {
+				Index    int    `json:"index"`
+				ID       string `json:"id"`
+				Function struct {
+					Name      string `json:"name"`
+					Arguments string `json:"arguments"`
+				} `json:"function"`
+			} `json:"tool_calls"`
 		} `json:"delta"`
 		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
@@ -76,8 +109,11 @@ func (p *openAIProvider) Stream(ctx context.Context, req ChatRequest, onDelta fu
 	if req.System != "" {
 		body.Messages = append(body.Messages, openAIMessage{Role: "system", Content: req.System})
 	}
-	for _, m := range req.Messages {
-		body.Messages = append(body.Messages, openAIMessage{Role: string(m.Role), Content: m.Content})
+	body.Messages = append(body.Messages, openAIMessages(req.Messages)...)
+	for _, t := range req.Tools {
+		body.Tools = append(body.Tools, openAITool{
+			Type: "function", Function: openAIFunction{Name: t.Name, Description: t.Description, Parameters: t.Schema},
+		})
 	}
 
 	result, started, err := p.stream(ctx, body, onDelta)
@@ -90,12 +126,48 @@ func (p *openAIProvider) Stream(ctx context.Context, req ChatRequest, onDelta fu
 		body.StreamOptions = nil
 		result, _, err = p.stream(ctx, body, onDelta)
 	}
+	// A compatible server without function calling refuses the tools.
+	if len(body.Tools) > 0 && !started && errors.As(err, &pe) &&
+		(pe.Status == http.StatusBadRequest || pe.Status == http.StatusUnprocessableEntity) &&
+		containsAny(strings.ToLower(pe.Message), "tool", "function") {
+		return result, &Error{Kind: ErrToolsUnsupported, Status: pe.Status, Message: pe.Message}
+	}
 	return result, err
+}
+
+// openAIMessages turns the conversation into Chat Completions messages:
+// tool calls on the assistant message, each result as its own "tool"
+// message.
+func openAIMessages(messages []Message) []openAIMessage {
+	out := make([]openAIMessage, 0, len(messages))
+	for _, m := range messages {
+		if len(m.ToolResults) > 0 {
+			for _, r := range m.ToolResults {
+				out = append(out, openAIMessage{Role: "tool", ToolCallID: r.CallID, Content: r.Content})
+			}
+			if m.Content != "" {
+				out = append(out, openAIMessage{Role: string(m.Role), Content: m.Content})
+			}
+			continue
+		}
+		msg := openAIMessage{Role: string(m.Role), Content: m.Content}
+		for _, c := range m.ToolCalls {
+			msg.ToolCalls = append(msg.ToolCalls, openAIToolCall{
+				ID: c.ID, Type: "function", Function: openAIFunctionCall{Name: c.Name, Arguments: string(argsOrEmpty(c.Args))},
+			})
+		}
+		out = append(out, msg)
+	}
+	return out
 }
 
 func (p *openAIProvider) stream(ctx context.Context, body openAIRequest, onDelta func(string) error) (StreamResult, bool, error) {
 	var result StreamResult
 	started := false
+	// Tool calls by index: id and name come first, arguments in pieces.
+	calls := map[int]*ToolCall{}
+	args := map[int]*strings.Builder{}
+	var order []int
 	err := p.postStream(ctx, p.baseURL+"/chat/completions", p.headers(), body, func(ev sseEvent) error {
 		if strings.TrimSpace(ev.Data) == "[DONE]" {
 			return errStreamDone
@@ -115,6 +187,22 @@ func (p *openAIProvider) stream(ctx context.Context, body openAIRequest, onDelta
 			if c.FinishReason == "length" {
 				result.Truncated = true
 			}
+			for _, tc := range c.Delta.ToolCalls {
+				started = true
+				call, ok := calls[tc.Index]
+				if !ok {
+					call = &ToolCall{}
+					calls[tc.Index], args[tc.Index] = call, &strings.Builder{}
+					order = append(order, tc.Index)
+				}
+				if tc.ID != "" {
+					call.ID = tc.ID
+				}
+				if tc.Function.Name != "" {
+					call.Name = tc.Function.Name
+				}
+				args[tc.Index].WriteString(tc.Function.Arguments)
+			}
 			if c.Delta.Content != "" {
 				started = true
 				if err := onDelta(c.Delta.Content); err != nil {
@@ -124,6 +212,11 @@ func (p *openAIProvider) stream(ctx context.Context, body openAIRequest, onDelta
 		}
 		return nil
 	})
+	for _, i := range order {
+		c := calls[i]
+		c.Args = argsOrEmpty(json.RawMessage(args[i].String()))
+		result.ToolCalls = append(result.ToolCalls, *c)
+	}
 	return result, started, err
 }
 

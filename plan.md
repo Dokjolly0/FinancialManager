@@ -3244,6 +3244,7 @@ Error codes: `AI_DISABLED` (503, feature not configured on the server), `AI_NOT_
 
 - Native adapters for Anthropic (Messages API), OpenAI (Chat Completions) and Google Gemini (`streamGenerateContent`), plus "OpenAI-compatible" with a user-supplied base URL, which covers Mistral, Groq, DeepSeek, OpenRouter and local servers such as Ollama.
 - One interface: `Stream(ctx, request, onDelta) (usage, error)` and `ListModels(ctx)`. Provider errors are classified into the error codes above; provider bodies are truncated and redacted before logging.
+- Tool calling (used by chats, section 34.7): a request may carry `Tools` (name, description, a JSON Schema kept to the subset every provider accepts); the result returns the `ToolCalls` the model made (id, name, JSON arguments), and the next request replays them on the assistant message with the `ToolResults` on a user message. Anthropic: `tools` with `input_schema`, `tool_use` blocks whose arguments stream as `input_json_delta`, `tool_result` blocks. OpenAI and compatible: `tools` of type `function`, `delta.tool_calls` accumulated by index, `role: "tool"` results. Gemini: `functionDeclarations`, whole `functionCall` parts (ids generated when missing) and `functionResponse` parts; the call's `thoughtSignature` is kept on the call and sent back, as thinking models require. A compatible server that refuses a request with tools (400/422 mentioning tools or functions) returns `TOOLS_UNSUPPORTED`, so the caller can retry without them. Requests without tools are unchanged.
 - Custom base URLs are an SSRF risk on a server. Policy: `https` only, no credentials in the URL, no redirects, and the resolved IP is checked at connect time (blocks loopback, private ranges, link-local including cloud metadata, CGNAT and DNS rebinding). `AI_ALLOW_PRIVATE_BASE_URLS=true` lifts the IP check and allows `http` for a LAN model server; `AI_ALLOWED_BASE_URL_HOSTS` optionally restricts hosts to an allowlist.
 - Without `AI_KEY_ENCRYPTION_KEY` the feature is unavailable (`available:false`, `503 AI_DISABLED`) but the server still starts. A malformed key fails startup.
 
@@ -3273,7 +3274,7 @@ Error codes: `AI_DISABLED` (503, feature not configured on the server), `AI_NOT_
 
 - Credential choice: a run with a non-active account (preview, model sent, stored provider), follow-ups on the same account, fallback after its removal, refused ids including another user's.
 
-- Provider adapters against scripted `httptest` servers: deltas, usage, end of stream, cancellation, error classification, model list parsing.
+- Provider adapters against scripted `httptest` servers: deltas, usage, end of stream, cancellation, error classification, model list parsing; tool calls streamed in pieces, text and calls in one turn, the replay of calls and results, Gemini's thought signature, `TOOLS_UNSUPPORTED` only for requests with tools, and no tool fields in plain requests (`provider/tools_test.go`).
 - SSRF policy table, secretbox round trip, tampering and key rotation.
 - Collector: recurring and yearly/one-off detection (12-month gap, yearly words, domain names, median-based one-off threshold, yearly first, cap), anonymization of every title list.
 - Prompt golden files per preset and language, plus the follow-up rules and wrapped question (`follow_up_<lang>.golden`); totals in the data block match the reports endpoints.

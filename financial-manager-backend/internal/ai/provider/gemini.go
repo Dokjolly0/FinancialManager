@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"slices"
 	"strings"
@@ -19,7 +20,34 @@ func (p *geminiProvider) headers() map[string]string {
 }
 
 type geminiPart struct {
-	Text string `json:"text"`
+	Text             string                  `json:"text,omitempty"`
+	FunctionCall     *geminiFunctionCall     `json:"functionCall,omitempty"`
+	FunctionResponse *geminiFunctionResponse `json:"functionResponse,omitempty"`
+	// ThoughtSignature must travel back with the function call it came
+	// with (thinking models refuse the next turn otherwise).
+	ThoughtSignature string `json:"thoughtSignature,omitempty"`
+}
+
+type geminiFunctionCall struct {
+	ID   string          `json:"id,omitempty"`
+	Name string          `json:"name"`
+	Args json.RawMessage `json:"args,omitempty"`
+}
+
+type geminiFunctionResponse struct {
+	ID       string         `json:"id,omitempty"`
+	Name     string         `json:"name"`
+	Response map[string]any `json:"response"`
+}
+
+type geminiFunctionDeclaration struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Parameters  json.RawMessage `json:"parameters"`
+}
+
+type geminiTool struct {
+	FunctionDeclarations []geminiFunctionDeclaration `json:"functionDeclarations"`
 }
 
 type geminiContent struct {
@@ -36,14 +64,17 @@ type geminiRequest struct {
 	SystemInstruction *geminiContent         `json:"systemInstruction,omitempty"`
 	Contents          []geminiContent        `json:"contents"`
 	GenerationConfig  geminiGenerationConfig `json:"generationConfig"`
+	Tools             []geminiTool           `json:"tools,omitempty"`
 }
 
 type geminiChunk struct {
 	Candidates []struct {
 		Content struct {
 			Parts []struct {
-				Text    string `json:"text"`
-				Thought bool   `json:"thought"`
+				Text             string              `json:"text"`
+				Thought          bool                `json:"thought"`
+				FunctionCall     *geminiFunctionCall `json:"functionCall"`
+				ThoughtSignature string              `json:"thoughtSignature"`
 			} `json:"parts"`
 		} `json:"content"`
 		FinishReason string `json:"finishReason"`
@@ -73,12 +104,13 @@ func (p *geminiProvider) Stream(ctx context.Context, req ChatRequest, onDelta fu
 	if req.System != "" {
 		body.SystemInstruction = &geminiContent{Parts: []geminiPart{{Text: req.System}}}
 	}
-	for _, m := range req.Messages {
-		role := "user"
-		if m.Role == RoleAssistant {
-			role = "model"
+	body.Contents = geminiContents(req.Messages)
+	if len(req.Tools) > 0 {
+		decls := make([]geminiFunctionDeclaration, 0, len(req.Tools))
+		for _, t := range req.Tools {
+			decls = append(decls, geminiFunctionDeclaration{Name: t.Name, Description: t.Description, Parameters: t.Schema})
 		}
-		body.Contents = append(body.Contents, geminiContent{Role: role, Parts: []geminiPart{{Text: m.Content}}})
+		body.Tools = []geminiTool{{FunctionDeclarations: decls}}
 	}
 
 	model := strings.TrimPrefix(req.Model, "models/")
@@ -102,6 +134,17 @@ func (p *geminiProvider) Stream(ctx context.Context, req ChatRequest, onDelta fu
 		}
 		for _, c := range chunk.Candidates {
 			for _, part := range c.Content.Parts {
+				if fc := part.FunctionCall; fc != nil {
+					// Calls arrive whole; older models give no id.
+					id := fc.ID
+					if id == "" {
+						id = fmt.Sprintf("call_%d", len(result.ToolCalls)+1)
+					}
+					result.ToolCalls = append(result.ToolCalls, ToolCall{
+						ID: id, Name: fc.Name, Args: argsOrEmpty(fc.Args), Signature: part.ThoughtSignature,
+					})
+					continue
+				}
 				if part.Thought || part.Text == "" {
 					continue
 				}
@@ -119,6 +162,36 @@ func (p *geminiProvider) Stream(ctx context.Context, req ChatRequest, onDelta fu
 		return nil
 	})
 	return result, err
+}
+
+// geminiContents turns the conversation into contents: the model's calls
+// as functionCall parts after its text, results as functionResponse parts
+// of a user turn.
+func geminiContents(messages []Message) []geminiContent {
+	out := make([]geminiContent, 0, len(messages))
+	for _, m := range messages {
+		role := "user"
+		if m.Role == RoleAssistant {
+			role = "model"
+		}
+		var parts []geminiPart
+		if m.Content != "" || (len(m.ToolCalls) == 0 && len(m.ToolResults) == 0) {
+			parts = append(parts, geminiPart{Text: m.Content})
+		}
+		for _, c := range m.ToolCalls {
+			parts = append(parts, geminiPart{
+				FunctionCall:     &geminiFunctionCall{Name: c.Name, Args: argsOrEmpty(c.Args)},
+				ThoughtSignature: c.Signature,
+			})
+		}
+		for _, r := range m.ToolResults {
+			parts = append(parts, geminiPart{FunctionResponse: &geminiFunctionResponse{
+				Name: r.Name, Response: map[string]any{"content": r.Content},
+			}})
+		}
+		out = append(out, geminiContent{Role: role, Parts: parts})
+	}
+	return out
 }
 
 func (p *geminiProvider) ListModels(ctx context.Context) ([]ModelInfo, error) {

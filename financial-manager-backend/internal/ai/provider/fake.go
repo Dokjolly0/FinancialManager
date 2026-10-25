@@ -6,8 +6,17 @@ import (
 	"time"
 )
 
+// ScriptedTurn is one scripted model response: text, then tool calls.
+type ScriptedTurn struct {
+	Deltas    []string
+	ToolCalls []ToolCall
+	Result    StreamResult
+	Err       error
+}
+
 // ScriptedProvider replays canned deltas; used by the ai package tests in
-// place of a real provider.
+// place of a real provider. With Turns set, each Stream call plays the
+// next turn (the last one repeats); otherwise Deltas, Result and Err.
 type ScriptedProvider struct {
 	Deltas        []string
 	Result        StreamResult
@@ -16,16 +25,31 @@ type ScriptedProvider struct {
 	Models        []ModelInfo
 	ModelsErr     error
 
+	Turns []ScriptedTurn
+	// RejectTools makes a request with tools fail with
+	// ErrToolsUnsupported, as an OpenAI-compatible server without function
+	// calling does.
+	RejectTools bool
+
 	mu       sync.Mutex
 	Requests []ChatRequest
+	turn     int
 }
 
 func (s *ScriptedProvider) Stream(ctx context.Context, req ChatRequest, onDelta func(string) error) (StreamResult, error) {
 	s.mu.Lock()
 	s.Requests = append(s.Requests, req)
+	turn := ScriptedTurn{Deltas: s.Deltas, Result: s.Result, Err: s.Err}
+	if len(s.Turns) > 0 {
+		turn = s.Turns[min(s.turn, len(s.Turns)-1)]
+		s.turn++
+	}
 	s.mu.Unlock()
 
-	for _, d := range s.Deltas {
+	if s.RejectTools && len(req.Tools) > 0 {
+		return StreamResult{}, &Error{Kind: ErrToolsUnsupported, Status: 400, Message: "tools are not supported"}
+	}
+	for _, d := range turn.Deltas {
 		if s.DelayPerDelta > 0 {
 			select {
 			case <-time.After(s.DelayPerDelta):
@@ -40,10 +64,12 @@ func (s *ScriptedProvider) Stream(ctx context.Context, req ChatRequest, onDelta 
 			return StreamResult{}, err
 		}
 	}
-	if s.Err != nil {
-		return StreamResult{}, s.Err
+	if turn.Err != nil {
+		return StreamResult{}, turn.Err
 	}
-	return s.Result, nil
+	result := turn.Result
+	result.ToolCalls = turn.ToolCalls
+	return result, nil
 }
 
 func (s *ScriptedProvider) ListModels(context.Context) ([]ModelInfo, error) {
