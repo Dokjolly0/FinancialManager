@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Window size classes for the web dashboard and tablets (Material 3):
+/// Window size classes for tablets and wide windows (Material 3):
 /// compact keeps the phone layout, medium and expanded get a side rail.
 abstract final class Breakpoints {
   static const double medium = 840;

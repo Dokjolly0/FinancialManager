@@ -19,7 +19,7 @@ import 'router.dart';
 /// The transfer and voucher entries were previously buried in the
 /// Account → Portafogli app bar; here they're one tap from every tab.
 ///
-/// On wide windows (the web dashboard, tablets) the same destinations and
+/// On wide windows (tablets, desktop) the same destinations and
 /// "Aggiungi" sit in a side rail, labelled from 1200 px, and the tab
 /// content is centered at most [Breakpoints.shellMaxWidth] wide.
 class AppShell extends ConsumerWidget {

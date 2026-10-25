@@ -95,8 +95,8 @@ class _ModeBodyState extends ConsumerState<_ModeBody> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final settings = widget.settings;
-    // The web dashboard can't run models: cloud only, whatever the
-    // account's mode (set from the phone).
+    // A device that can't run models (iOS): cloud only, whatever the
+    // account's mode (set from an Android phone).
     final localSupported = ref.watch(localAiSupportedProvider);
     final mode = settings.onDeviceAvailable && localSupported
         ? settings.mode

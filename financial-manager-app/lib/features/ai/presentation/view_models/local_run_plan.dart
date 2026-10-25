@@ -147,8 +147,7 @@ class LocalRunPlan {
 }
 
 /// On-device models run on Android only (iOS builds, but the feature is
-/// unavailable there; the web dashboard has no engines and uses cloud
-/// providers only). Overridden in tests.
+/// unavailable there and uses cloud providers only). Overridden in tests.
 final localAiSupportedProvider = Provider<bool>((ref) => isAndroidApp);
 
 /// The plan for the active model; null when none is installed. Refreshed

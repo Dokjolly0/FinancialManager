@@ -43,7 +43,7 @@ class AiAssistantScreen extends ConsumerWidget {
               ),
             ],
           ),
-          // On the web only the cloud path can run.
+          // Where models can't run (iOS) only the cloud path can.
           data: (settings) =>
               settings.available ||
                   (settings.onDeviceAvailable && localSupported)
@@ -80,8 +80,8 @@ class _AssistantBody extends ConsumerWidget {
 
   final AiSettings settings;
 
-  /// Whether this device runs models (false on the web): the account may
-  /// be in on-device mode because of the phone.
+  /// Whether this device runs models (false on iOS): the account may be
+  /// in on-device mode because of another phone.
   final bool localSupported;
 
   bool get _onDevice =>

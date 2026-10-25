@@ -1,6 +1,3 @@
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +11,6 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/app_error.dart';
 import '../../../../core/errors/error_code_localizations.dart';
 import '../../../../core/errors/error_presentation.dart';
-import '../../../../core/files/save_file.dart';
 import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/providers.dart';
@@ -240,15 +236,6 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
                         context,
                       ).showSnackBar(SnackBar(content: Text(l10n.aiCopied)));
                     }
-                  } else if (action == 'download') {
-                    // The browser: a Markdown file instead of the share
-                    // sheet, which desktop browsers mostly lack.
-                    await saveOrShareFile(
-                      utf8.encode(text),
-                      filename:
-                          'analisi-${state.analysisId ?? widget.analysisId ?? 'report'}.md',
-                      mimeType: 'text/markdown',
-                    );
                   } else {
                     await SharePlus.instance.share(
                       ShareParams(text: text, subject: detail?.summary.title),
@@ -257,16 +244,10 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
                 },
                 itemBuilder: (_) => [
                   PopupMenuItem(value: 'copy', child: Text(l10n.aiCopyAction)),
-                  if (kIsWeb)
-                    PopupMenuItem(
-                      value: 'download',
-                      child: Text(l10n.aiDownloadAction),
-                    )
-                  else
-                    PopupMenuItem(
-                      value: 'share',
-                      child: Text(l10n.aiShareAction),
-                    ),
+                  PopupMenuItem(
+                    value: 'share',
+                    child: Text(l10n.aiShareAction),
+                  ),
                 ],
               ),
           ],

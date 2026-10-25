@@ -12,25 +12,6 @@ class DeviceInfoService {
   Future<({String? deviceName, String? platform})> current() async {
     try {
       final plugin = DeviceInfoPlugin();
-      if (kIsWeb) {
-        // "Chrome (Windows)": the browser and the OS it reports.
-        final info = await plugin.webBrowserInfo;
-        final browser = switch (info.browserName) {
-          BrowserName.chrome => 'Chrome',
-          BrowserName.edge => 'Edge',
-          BrowserName.firefox => 'Firefox',
-          BrowserName.safari => 'Safari',
-          BrowserName.opera => 'Opera',
-          BrowserName.samsungInternet => 'Samsung Internet',
-          BrowserName.msie => 'Internet Explorer',
-          BrowserName.unknown => 'Browser',
-        };
-        final os = (info.platform ?? '').trim();
-        return (
-          deviceName: os.isEmpty ? browser : '$browser ($os)',
-          platform: 'web',
-        );
-      }
       if (isAndroidApp) {
         final info = await plugin.androidInfo;
         final name = '${info.manufacturer} ${info.model}'.trim();
@@ -46,9 +27,6 @@ class DeviceInfoService {
     } catch (_) {
       // Fall through to the platform-only fallback below.
     }
-    return (
-      deviceName: null,
-      platform: kIsWeb ? 'web' : defaultTargetPlatform.name,
-    );
+    return (deviceName: null, platform: defaultTargetPlatform.name);
   }
 }
