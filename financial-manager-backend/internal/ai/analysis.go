@@ -42,6 +42,9 @@ type AnalysisOptions struct {
 	// BudgetTokens, when set, drops detail step by step (prompt.BudgetSteps)
 	// until the estimated prompt fits.
 	BudgetTokens int `json:"budget_tokens,omitempty"`
+	// Lang is the prompt language, set by the server; follow-ups use it
+	// for their rules. Empty on analyses stored before it existed.
+	Lang string `json:"lang,omitempty"`
 }
 
 // Token budget bounds.
@@ -202,6 +205,7 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 	if opts.Profile == "" {
 		opts.Profile = prompt.ProfileStandard
 	}
+	opts.Lang = string(lang)
 	if opts.BudgetTokens != 0 && (opts.BudgetTokens < MinBudgetTokens || opts.BudgetTokens > MaxBudgetTokens) {
 		fieldErrors["options.budget_tokens"] = FieldOutOfRange
 	}

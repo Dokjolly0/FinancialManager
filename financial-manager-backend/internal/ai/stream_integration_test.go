@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"financial-manager-backend/internal/ai"
+	"financial-manager-backend/internal/ai/prompt"
 	"financial-manager-backend/internal/ai/provider"
 )
 
@@ -335,9 +336,13 @@ func TestFollowUps(t *testing.T) {
 	if first.status != http.StatusOK || first.text() != "Perché l'affitto pesa molto." || first.events[0].data["kind"] != "ANSWER" {
 		t.Fatalf("first follow-up = %d %v %q", first.status, first.names(), first.text())
 	}
+	// Follow-ups get the follow-up rules and a tagged question; the
+	// database keeps the question as typed.
 	sent := h.fake.LastRequest()
-	if sent.System != system || len(sent.Messages) != 3 || sent.Messages[1].Content != "Report iniziale." ||
-		sent.Messages[2].Content != "Perché spendo tanto?" || sent.Messages[2].Role != provider.RoleUser {
+	if sent.System != prompt.WithFollowUpRules(system, prompt.LangIT) || len(sent.Messages) != 3 ||
+		sent.Messages[1].Content != "Report iniziale." ||
+		sent.Messages[2].Content != prompt.FollowUpQuestion("Perché spendo tanto?", prompt.LangIT) ||
+		sent.Messages[2].Role != provider.RoleUser {
 		t.Fatalf("follow-up request = %+v", sent)
 	}
 
@@ -348,13 +353,21 @@ func TestFollowUps(t *testing.T) {
 	h.fake.Deltas = []string{"Sì."}
 	h.stream("/v1/ai/analyses/"+analysisID+"/messages", map[string]any{"content": "Posso risparmiare?"}, nil)
 	sent = h.fake.LastRequest()
-	if len(sent.Messages) != 5 || sent.Messages[3].Content != "Perché l'affitto pesa molto." || sent.Messages[4].Content != "Posso risparmiare?" {
+	if len(sent.Messages) != 5 || sent.Messages[2].Content != prompt.FollowUpQuestion("Perché spendo tanto?", prompt.LangIT) ||
+		sent.Messages[3].Content != "Perché l'affitto pesa molto." ||
+		sent.Messages[4].Content != prompt.FollowUpQuestion("Posso risparmiare?", prompt.LangIT) {
 		t.Fatalf("history after a failed answer = %+v", sent.Messages)
 	}
 
 	detail := h.do(http.MethodGet, "/v1/ai/analyses/"+analysisID, nil)
 	if len(detail.body["messages"].([]any)) != 8 || detail.body["follow_ups_left"] != float64(ai.MaxFollowUps-3) {
 		t.Fatalf("detail = %s", detail.raw)
+	}
+	if q := detail.body["messages"].([]any)[2].(map[string]any)["content"]; q != "Perché spendo tanto?" {
+		t.Fatalf("stored question = %q", q)
+	}
+	if detail.body["system_prompt"] != system || detail.body["options"].(map[string]any)["lang"] != "it" {
+		t.Fatalf("stored system prompt or language changed: %s", detail.raw)
 	}
 	if detail.body["input_tokens"].(float64) < 50 {
 		t.Fatalf("follow-up tokens not added: %v", detail.body["input_tokens"])
@@ -367,6 +380,31 @@ func TestFollowUps(t *testing.T) {
 	other.configure("sk-other-0001")
 	if r := other.do(http.MethodPost, "/v1/ai/analyses/"+analysisID+"/messages", map[string]any{"content": "Ciao"}); r.status != http.StatusNotFound {
 		t.Fatalf("someone else's analysis = %d", r.status)
+	}
+}
+
+// Analyses stored before the follow-up rules (prompt v1, no options.lang)
+// get them too, in the user's language.
+func TestFollowUps_OlderAnalysisGetsTheRules(t *testing.T) {
+	h := newHarness(t)
+	h.configure("sk-follow-0003")
+	h.seedLedger()
+	h.fake.Deltas = []string{"Report."}
+	res := h.stream("/v1/ai/analyses", h.runBody(previewBody(nil)), nil)
+	analysisID := res.events[0].data["analysis_id"].(string)
+	const oldSystem = "Prompt v1.\n- Sezioni, in quest'ordine, come titoli ##: Sintesi; Suggerimenti."
+	if _, err := h.db.Exec(context.Background(),
+		`UPDATE ai_analyses SET system_prompt = $2, prompt_version = 'v1', options = options - 'lang' WHERE id = $1`,
+		analysisID, oldSystem); err != nil {
+		t.Fatal(err)
+	}
+
+	h.fake.Deltas = []string{"Risposta."}
+	h.stream("/v1/ai/analyses/"+analysisID+"/messages", map[string]any{"content": "E le spese annuali?"}, nil)
+	sent := h.fake.LastRequest()
+	if sent.System != prompt.WithFollowUpRules(oldSystem, prompt.LangIT) ||
+		sent.Messages[len(sent.Messages)-1].Content != prompt.FollowUpQuestion("E le spese annuali?", prompt.LangIT) {
+		t.Fatalf("follow-up on an older analysis = %+v", sent)
 	}
 }
 

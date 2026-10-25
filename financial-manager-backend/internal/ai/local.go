@@ -143,14 +143,16 @@ type localTurnResponse struct {
 	DeadlineAt      string         `json:"deadline_at"`
 }
 
-func (s *Service) localTurn(a Analysis, answer Message, history []localMessage) localTurnResponse {
+// system is the prompt to run with: the stored one for the report, the
+// one with the follow-up rules for an answer.
+func (s *Service) localTurn(a Analysis, answer Message, system string, history []localMessage) localTurnResponse {
 	maxOut := 0
 	if a.Runtime != nil {
 		maxOut = a.Runtime.MaxOutputTokens
 	}
 	return localTurnResponse{
 		AnalysisID: a.ID.String(), MessageID: answer.ID.String(), Kind: answer.Kind,
-		SystemPrompt: a.SystemPrompt, Messages: history, MaxOutputTokens: maxOut,
+		SystemPrompt: system, Messages: history, MaxOutputTokens: maxOut,
 		DeadlineAt: answer.CreatedAt.Add(s.limits.LocalMaxDuration).UTC().Format(timeLayout),
 	}
 }
@@ -226,7 +228,7 @@ func (s *Service) PrepareLocalAnalysis(ctx context.Context, userID uuid.UUID, re
 	if err != nil {
 		return localTurnResponse{}, false, err
 	}
-	return s.localTurn(stored, report, []localMessage{{Role: "user", Content: userMessage}}), true, nil
+	return s.localTurn(stored, report, stored.SystemPrompt, []localMessage{{Role: "user", Content: userMessage}}), true, nil
 }
 
 // resumeLocalAnalysis answers a repeated prepare: the same turn while the
@@ -251,7 +253,7 @@ func (s *Service) resumeLocalAnalysis(ctx context.Context, a Analysis) (localTur
 	if contextMsg == nil || report == nil || report.Status != StatusStreaming {
 		return localTurnResponse{}, false, ErrAnalysisExists
 	}
-	return s.localTurn(a, *report, []localMessage{{Role: "user", Content: contextMsg.Content}}), false, nil
+	return s.localTurn(a, *report, a.SystemPrompt, []localMessage{{Role: "user", Content: contextMsg.Content}}), false, nil
 }
 
 // PrepareLocalFollowUp stores a question on an on-device analysis and
@@ -281,7 +283,11 @@ func (s *Service) PrepareLocalFollowUp(ctx context.Context, userID, analysisID u
 	if err != nil {
 		return localTurnResponse{}, err
 	}
-	history, questions, err := s.replayHistory(messages, analysis.Provider)
+	lang, err := s.analysisLang(ctx, analysis)
+	if err != nil {
+		return localTurnResponse{}, err
+	}
+	history, questions, err := s.replayHistory(messages, analysis.Provider, lang)
 	if err != nil {
 		return localTurnResponse{}, err
 	}
@@ -305,8 +311,8 @@ func (s *Service) PrepareLocalFollowUp(ctx context.Context, userID, analysisID u
 	for _, m := range history {
 		out = append(out, localMessage{Role: string(m.Role), Content: m.Content})
 	}
-	out = append(out, localMessage{Role: "user", Content: question})
-	resp := s.localTurn(analysis, answer, out)
+	out = append(out, localMessage{Role: "user", Content: prompt.FollowUpQuestion(question, lang)})
+	resp := s.localTurn(analysis, answer, prompt.WithFollowUpRules(analysis.SystemPrompt, lang), out)
 	qid := q.ID.String()
 	resp.QuestionID = &qid
 	return resp, nil

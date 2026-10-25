@@ -204,7 +204,11 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 	if err != nil {
 		return Turn{}, err
 	}
-	history, questions, err := s.replayHistory(messages, analysis.Provider)
+	lang, err := s.analysisLang(ctx, analysis)
+	if err != nil {
+		return Turn{}, err
+	}
+	history, questions, err := s.replayHistory(messages, analysis.Provider, lang)
 	if err != nil {
 		return Turn{}, err
 	}
@@ -234,19 +238,35 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 		return Turn{}, err
 	}
 
-	history = append(history, provider.Message{Role: provider.RoleUser, Content: question})
+	history = append(history, provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(question, lang)})
 	return Turn{
 		Analysis: analysis, Message: answer, provider: rp.provider, kind: rp.kind, release: release,
 		request: provider.ChatRequest{
-			Model: rp.model, System: analysis.SystemPrompt, MaxTokens: settings.MaxOutputTokens, Messages: history,
+			Model: rp.model, System: prompt.WithFollowUpRules(analysis.SystemPrompt, lang),
+			MaxTokens: settings.MaxOutputTokens, Messages: history,
 		},
 	}, nil
+}
+
+// analysisLang is the language an analysis was written in; analyses stored
+// before options.lang existed use the user's current locale.
+func (s *Service) analysisLang(ctx context.Context, a Analysis) (prompt.Lang, error) {
+	if a.Options.Lang != "" {
+		return prompt.Lang(a.Options.Lang), nil
+	}
+	user, err := s.users.GetByID(ctx, a.UserID)
+	if err != nil {
+		return "", err
+	}
+	return prompt.LangFor(user.Locale), nil
 }
 
 // replayHistory rebuilds the conversation from stored messages, keeping
 // user/assistant alternation (Anthropic requires it): a question whose
 // answer failed or is empty is left out together with that answer.
-func (s *Service) replayHistory(messages []Message, analysisProvider string) ([]provider.Message, int, error) {
+// Questions are sent wrapped by prompt.FollowUpQuestion, as when they were
+// first asked.
+func (s *Service) replayHistory(messages []Message, analysisProvider string, lang prompt.Lang) ([]provider.Message, int, error) {
 	now := s.clock.Now()
 	var history []provider.Message
 	questions := 0
@@ -278,7 +298,7 @@ func (s *Service) replayHistory(messages []Message, analysisProvider string) ([]
 			}
 			if answerStatus != StatusFailed && strings.TrimSpace(answer.Content) != "" {
 				history = append(history,
-					provider.Message{Role: provider.RoleUser, Content: m.Content},
+					provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(m.Content, lang)},
 					provider.Message{Role: provider.RoleAssistant, Content: answer.Content})
 			}
 			i++
@@ -583,7 +603,8 @@ func (s *Service) GetAnalysis(ctx context.Context, userID, id uuid.UUID) (analys
 		}
 		detail.Messages = append(detail.Messages, mr)
 	}
-	if _, questions, err := s.replayHistory(messages, a.Provider); err == nil {
+	// Only the question count is used: the language doesn't matter.
+	if _, questions, err := s.replayHistory(messages, a.Provider, prompt.LangEN); err == nil {
 		detail.FollowUpsLeft = max(MaxFollowUps-questions, 0)
 		detail.CanAskFollowUps = detail.FollowUpsLeft > 0
 	}

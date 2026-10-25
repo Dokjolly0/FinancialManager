@@ -22,7 +22,7 @@ import (
 )
 
 // Version identifies the templates below; it is stored with every analysis.
-const Version = "v1"
+const Version = "v2"
 
 //go:embed templates
 var templatesFS embed.FS
@@ -118,9 +118,10 @@ type presetText struct {
 }
 
 type langTemplates struct {
-	system  *template.Template
-	compact *template.Template // shorter rules for the compact profile
-	presets map[string]presetText
+	system   *template.Template
+	compact  *template.Template // shorter rules for the compact profile
+	presets  map[string]presetText
+	followUp followUpText
 }
 
 // parseTemplate reads an embedded template, normalizing line endings: a
@@ -153,8 +154,17 @@ func init() {
 				panic(fmt.Sprintf("prompt: %s presets.json lacks %s", lang, id))
 			}
 		}
+		raw, err = templatesFS.ReadFile(dir + "followup.json")
+		if err != nil {
+			panic(err)
+		}
+		var followUp followUpText
+		if err := json.Unmarshal(raw, &followUp); err != nil || followUp.SystemRules == "" || followUp.Reminder == "" {
+			panic(fmt.Sprintf("prompt: %s followup.json is invalid: %v", lang, err))
+		}
 		loaded[lang] = langTemplates{
 			system: parseTemplate(dir + "system.tmpl"), compact: parseTemplate(dir + "system_compact.tmpl"), presets: presets,
+			followUp: followUp,
 		}
 	}
 }

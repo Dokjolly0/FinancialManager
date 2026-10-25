@@ -1,0 +1,4 @@
+{
+  "system_rules": "Domande successive:\n- Dopo il report la persona ti fa delle domande. Ogni domanda arriva tra <follow_up_question> e </follow_up_question>.\n- Rispondi solo a quella domanda e parti subito dalla risposta: niente saluti, niente sezioni del report, non riassumere e non ripetere il report.\n- Usa titoli, elenchi o tabelle solo se la risposta li richiede: di solito bastano poche righe.\n- Basati sugli stessi dati. Se non bastano per rispondere, dillo e indica quale dato manca e come la persona può aggiungerlo (per esempio registrando il movimento, o includendo l'elenco dei movimenti in una nuova analisi).",
+  "reminder": "Rispondi solo a questa domanda, in modo diretto, senza ripetere il report."
+}

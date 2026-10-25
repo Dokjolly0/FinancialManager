@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"financial-manager-backend/internal/ai"
+	"financial-manager-backend/internal/ai/prompt"
 )
 
 var testRuntime = map[string]any{
@@ -209,9 +210,14 @@ func TestLocal_FollowUpsAndCloudSeparation(t *testing.T) {
 	q := h.do(http.MethodPost, "/v1/ai/local/analyses/"+id+"/messages", map[string]any{"content": "  Perché?  "})
 	h.mustStatus(q, http.StatusCreated)
 	msgs := q.body["messages"].([]any)
-	if len(msgs) != 3 || msgs[1].(map[string]any)["content"] != "Report locale." || msgs[2].(map[string]any)["content"] != "Perché?" ||
+	if len(msgs) != 3 || msgs[1].(map[string]any)["content"] != "Report locale." ||
+		msgs[2].(map[string]any)["content"] != prompt.FollowUpQuestion("Perché?", prompt.LangIT) ||
 		q.body["kind"] != "ANSWER" || q.body["question_id"] == nil {
 		t.Fatalf("local follow-up = %s", q.raw)
+	}
+	// The phone runs the answer with the follow-up rules, as the cloud does.
+	if q.body["system_prompt"] != prompt.WithFollowUpRules(prep.body["system_prompt"].(string), prompt.LangIT) {
+		t.Fatalf("local follow-up system prompt = %q", q.body["system_prompt"])
 	}
 	// While that answer is pending, another question waits.
 	if r := h.do(http.MethodPost, "/v1/ai/local/analyses/"+id+"/messages", map[string]any{"content": "E poi?"}); r.errorCode() != "AI_STREAM_IN_PROGRESS" {
