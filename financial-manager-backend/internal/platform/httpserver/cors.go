@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-// CORS lets a browser app on another origin call the API, for local
-// development only: `flutter run -d chrome` serves the dashboard on
-// http://localhost:5000 while the API is on http://localhost:10003. In
-// production the dashboard and the API share an origin
-// (financialmanager.alexviolatto.dev and /api), so allowedOrigins stays
-// empty and no CORS header is ever sent.
+// CORS lets a browser app on another origin call the API. Normally
+// allowedOrigins is empty and no CORS header is ever sent: in production the
+// dashboard and the API share an origin (financialmanager.alexviolatto.dev
+// and /api), and in development the dashboard's dev server
+// (financial-manager-web, port 5000) proxies /api to the API. It is only for
+// a client served from somewhere else.
 //
 // Only exact origins are allowed (no wildcard) and no credentials: the app
 // authenticates with a bearer token, not cookies.

@@ -1,6 +1,6 @@
 # Build e deploy
 
-Guida operativa per pubblicare il backend e la dashboard web su una VPS e compilare e firmare l'app Flutter.
+Guida operativa per pubblicare il backend e la dashboard web (Angular) su una VPS e compilare e firmare l'app Flutter (Android e iOS).
 
 ## Architettura in produzione
 
@@ -17,7 +17,7 @@ Guida operativa per pubblicare il backend e la dashboard web su una VPS e compil
                                        │                          │
                               127.0.0.1:10003            127.0.0.1:10005
                               container api              container web
-                                       │                 (dashboard Flutter web,
+                                       │                 (dashboard Angular,
                                        │                  immagine da Docker Hub)
                          rete Docker backend_internal
                postgres · redis · object-storage (MinIO) · worker
@@ -26,7 +26,7 @@ Guida operativa per pubblicare il backend e la dashboard web su una VPS e compil
 - Il progetto è in `/projects/FinancialManager` sulla VPS `alex-violatto`. Fino a ottobre 2026 il backend girava sulla VPS `remote-viewer` (`http://83.228.246.84:10003`), che ora resta dedicata a RemoteViewer: lo spostamento è descritto nella sezione 10.
 - Su Internet è esposto solo Caddy. L'API è pubblicata sull'host solo su `127.0.0.1:10003`; PostgreSQL, Redis e MinIO sono raggiungibili solo sulla rete interna di Docker.
 - L'app usa `https://financialmanager.alexviolatto.dev/api/v1`: Caddy toglie il prefisso `/api`, quindi il backend continua a esporre `/v1/...` e `/health/...` come in locale.
-- La dashboard web (il sottodominio senza `/api`) è la stessa app Flutter compilata per il browser, servita dal container `web` (sezione 11). Sta sullo stesso dominio dell'API, quindi in produzione non serve CORS.
+- La dashboard web (il sottodominio senza `/api`) è un'app Angular separata (`financial-manager-web/`), servita dal container `web` (sezione 11). Sta sullo stesso dominio dell'API, quindi non serve CORS.
 - La VPS compila solo le immagini Go (api, worker, migrate), una alla volta. La dashboard la compila GitHub Actions a ogni push su `main` e la pubblica su Docker Hub come `dokjolly/financial-manager-web`; la VPS la scarica e basta (sezione 11, che spiega anche perché). L'aggiornamento completo è un comando: `./scripts/deploy.sh` (sezione 6).
 
 ## Backend su VPS
@@ -39,7 +39,7 @@ Il backend e' un'app Go eseguita via Docker Compose con PostgreSQL, Redis e MinI
 - `financial-manager-backend/Dockerfile`
 - `financial-manager-backend/deploy/Caddyfile.example` (il blocco del sito per Caddy)
 - `financial-manager-backend/scripts/deploy.sh` (l'aggiornamento della produzione in un comando, sezione 6)
-- `financial-manager-app/Dockerfile` (l'immagine della dashboard web: la compila la CI, `.github/workflows/mobile-ci.yml`, non la VPS; sezione 11)
+- `financial-manager-web/Dockerfile` (l'immagine della dashboard web: la compila la CI, `.github/workflows/web-ci.yml`, non la VPS; sezione 11)
 
 ### 1. Preparare la VPS
 
@@ -192,7 +192,7 @@ financialmanager.alexviolatto.dev {
 
 	handle {
 		header {
-			Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://accounts.google.com/gsi/ https://fonts.gstatic.com; frame-src https://accounts.google.com/gsi/; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+			Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 			X-Content-Type-Options "nosniff"
 			Referrer-Policy "strict-origin-when-cross-origin"
 			Permissions-Policy "camera=(), microphone=(), geolocation=()"
@@ -208,7 +208,7 @@ Cosa fa ogni parte:
 - `/api/metrics` risponde 404: il backend espone le metriche Prometheus su `/metrics` senza autenticazione e non devono essere pubbliche (plan.md sezione 22.1). La regola sta **dentro** `handle_path`, dove il prefisso `/api` è già stato tolto (quindi `/metrics*`): Caddy esegue `handle_path` prima di `respond`, e un `respond` messo fuori dal blocco non verrebbe mai applicato;
 - `handle_path /api/*` inoltra all'API togliendo `/api` (`/api/v1/me` → `/v1/me`, `/api/health/ready` → `/health/ready`) e aggiunge `X-Forwarded-For`. `flush_interval -1` serve allo streaming delle analisi AI (sezione 8);
 - `handle` inoltra tutto il resto al container `web` (la dashboard, sezione 11), che rimanda a `index.html` i percorsi che non sono file (`/app/history` ricaricato nel browser funziona). Gli header valgono solo per la dashboard:
-  - `Content-Security-Policy`: il browser carica solo i file della dashboard, lo script e il popup di accesso Google (`accounts.google.com/gsi/…`) e i font che Flutter scarica da `fonts.gstatic.com` per i caratteri che non ha. `'wasm-unsafe-eval'` serve a CanvasKit (WebAssembly), `'unsafe-inline'` negli stili perché Flutter posiziona i suoi elementi con attributi `style`; script inline invece non sono ammessi. Le immagini possono venire da qualsiasi `https` (immagini delle categorie dai fornitori di ricerca), da `data:` e `blob:` (file scelti prima dell'upload). `frame-ancestors 'none'` impedisce di incorporare la dashboard in altri siti;
+  - `Content-Security-Policy`: il browser carica solo i file della dashboard e lo script e il popup di accesso Google (`accounts.google.com/gsi/…`). Niente script inline e niente `eval` (né `'unsafe-eval'` né `'wasm-unsafe-eval'`): la build Angular non ne ha bisogno, e anche le traduzioni ICU sono formattate senza compilare codice (`financial-manager-web/src/app/core/i18n/icu-transpiler.ts`). Per questo `angular.json` disattiva `inlineCritical`, che aggiungerebbe un gestore `onload` inline. `'unsafe-inline'` resta negli stili perché Angular inserisce gli stili dei componenti e i grafici posizionano i loro elementi con attributi `style`. I font (Inter) sono serviti dalla dashboard stessa: `font-src 'self'`, nessuna richiesta a Google Fonts. Le immagini possono venire da qualsiasi `https` (immagini delle categorie dai fornitori di ricerca), da `data:` e `blob:` (file scelti e ritagliati prima dell'upload, e le immagini caricate dall'API con il token di sessione). `frame-ancestors 'none'` impedisce di incorporare la dashboard in altri siti;
   - `nosniff`, `Referrer-Policy` e `Permissions-Policy` (niente fotocamera, microfono e posizione via API del browser: la scelta di una foto usa il normale selettore di file).
 
 Ricaricare Caddy:
@@ -320,7 +320,7 @@ cd /projects/FinancialManager/financial-manager-backend
 5. `docker image prune -f`: elimina le immagini vecchie rimaste senza tag;
 6. attende fino a 60 secondi che `http://127.0.0.1:10003/health/ready` risponda; se non succede esce con errore e suggerisce di guardare `docker compose ... logs api`. Alla fine stampa `docker compose ... ps` e `deploy ok`.
 
-Se sono cambiati file in `financial-manager-app`, prima di lanciare lo script aspettare che su GitHub il job `build-web` del workflow `mobile-ci` sia verde (tab *Actions*, qualche minuto dopo il push): finché non ha finito, Docker Hub ha ancora la dashboard precedente e lo script la lascia com'è. Si può rilanciare lo script in qualsiasi momento: se nulla è cambiato non ricrea nessun container.
+Se sono cambiati file in `financial-manager-web` (o i file ARB dell'app, da cui vengono le traduzioni), prima di lanciare lo script aspettare che su GitHub il workflow `web-ci` sia verde (tab *Actions*, qualche minuto dopo il push): finché non ha finito, Docker Hub ha ancora la dashboard precedente e lo script la lascia com'è. Si può rilanciare lo script in qualsiasi momento: se nulla è cambiato non ricrea nessun container.
 
 Gli stessi passi a mano:
 
@@ -523,17 +523,20 @@ rm ~/fm-migration.dump ~/fm-media.tar.gz
 
 ### 11. Dashboard web
 
-La dashboard su `https://financialmanager.alexviolatto.dev` è l'app Flutter compilata per il browser: stesse schermate e stesse API dell'app Android, con un layout per schermi larghi.
+La dashboard su `https://financialmanager.alexviolatto.dev` è un'app Angular 22 (componenti standalone, signals, Tailwind CSS 4, Angular CDK) in `financial-manager-web/`: stesse funzioni e stesse API dell'app Android, con un'interfaccia pensata per il browser. Architettura: plan.md sezione 9.9; sviluppo e test: `financial-manager-web/README.md`. Fino al 25 ottobre 2026 era l'app Flutter compilata per il browser (CanvasKit); quella build è stata rimossa.
 
 **Da dove arriva.**
 
 ```text
-git push su main (file in financial-manager-app/)
+git push su main (file in financial-manager-web/, nei file ARB dell'app
+o in deploy/Caddyfile.example)
         │
-GitHub Actions, workflow mobile-ci
-  analyze-and-test ──► build-web: docker build di financial-manager-app/Dockerfile
-                                   │  (linux/amd64, cache degli strati su GitHub)
-                                   ▼
+GitHub Actions, workflow web-ci
+  check (format, lint, test, build, smoke test Playwright)
+        └──► docker: docker build di financial-manager-web/Dockerfile
+                     │  (contesto = radice del repository, linux/amd64,
+                     │   cache degli strati su GitHub)
+                     ▼
             Docker Hub: dokjolly/financial-manager-web:latest
                         dokjolly/financial-manager-web:sha-<commit>
                                    │
@@ -544,15 +547,15 @@ VPS: scripts/deploy.sh ──► docker compose pull web + up -d
 
 **Come viene costruita e servita.**
 
-- `financial-manager-app/Dockerfile`, compilato dalla CI (job `build-web`):
-  1. stage di build: Debian `trixie-slim`, Flutter clonato al tag della release (`FLUTTER_VERSION`, oggi `3.47.2`, la stessa usata per l'APK), solo gli artefatti web, poi `flutter build web --release --no-web-resources-cdn --dart-define=API_BASE_URL=…`. L'URL dell'API è il default del Dockerfile, `https://financialmanager.alexviolatto.dev/api/v1`, e resta compilato nell'immagine;
-  2. stage finale: `caddy:2.11.7-alpine` con `financial-manager-app/docker/Caddyfile.web`, che serve i file su `:8080`, comprime con zstd/gzip, rimanda le route dell'app a `index.html` e manda `Cache-Control: no-cache` su tutto. I nomi dei file di Flutter (`main.dart.js`, `canvaskit/…`) non contengono un hash, quindi i browser devono sempre rivalidare (con ETag, risposte 304 leggere), altrimenti dopo un deploy terrebbero la versione vecchia.
-- Servizio `web` di `compose.prod.yaml`: `image: dokjolly/financial-manager-web:${WEB_IMAGE_TAG:-latest}` con `pull_policy: always`. Ogni `docker compose ... up` controlla su Docker Hub se c'è un'immagine più recente: se sì la scarica e ricrea il container, se no non scarica nulla. Quindi anche un semplice `up -d` aggiorna la dashboard. Non c'è una sezione `build`: sulla VPS la dashboard non si può compilare nemmeno per errore.
-- Il container è pubblicato solo su `127.0.0.1:${WEB_HOST_PORT:-10005}`; il Caddy di sistema lo raggiunge da lì (sezione 3) e aggiunge HTTPS e gli header di sicurezza. Non è collegato alla rete `backend_internal`: parla con l'API come qualsiasi browser, via `https://…/api/v1`.
-- `--no-web-resources-cdn` fa servire CanvasKit dal container invece che dal CDN di Google.
-- `web` esiste solo in `compose.prod.yaml`: lo stack di sviluppo non lo usa (in locale si lavora con `flutter run -d chrome`, sezione 8 di "Build Flutter").
+- `financial-manager-web/Dockerfile`, compilato dalla CI (job `docker` di `web-ci`). Il contesto della build è la radice del repository, perché le traduzioni vengono dai file ARB dell'app (`financial-manager-app/lib/l10n/`); `financial-manager-web/Dockerfile.dockerignore` lascia nel contesto solo la dashboard e quei file:
+  1. stage di build: `node:24.22.0-alpine`, `npm ci`, poi `npm run build`, che prima genera `public/i18n/{it,en}.json` dai file ARB (`scripts/arb-to-json.mjs`, fallisce se manca una chiave o un placeholder) e poi compila Angular in produzione. L'API è relativa (`/api/v1` sullo stesso dominio), quindi nell'immagine non c'è nessun URL compilato;
+  2. stage finale: `caddy:2.11.7-alpine` con `financial-manager-web/docker/Caddyfile.web`, che serve i file su `:8080`, comprime con zstd/gzip, rimanda le route dell'app a `index.html` e copia `financial-manager-web/docker/assetlinks.json` in `/.well-known/assetlinks.json` (sezione 12, "App Links").
+- Cache: Angular mette un hash del contenuto nel nome di script, stili e font (`main-XXXX.js`, `chunk-XXXX.js`, `styles-XXXX.css`, `media/…`), quindi questi file hanno `Cache-Control: public, max-age=31536000, immutable` e il browser non li richiede più. Tutto il resto (`index.html`, `i18n/*.json`, manifest, icone) ha `no-cache`: il browser rivalida a ogni visita (ETag, risposte 304 leggere), così dopo un deploy prende subito il nuovo `index.html`, che punta ai file nuovi.
+- Servizio `web` di `compose.prod.yaml`: `image: dokjolly/financial-manager-web:${WEB_IMAGE_TAG:-latest}` con `pull_policy: always`. Ogni `docker compose ... up` controlla su Docker Hub se c'è un'immagine più recente: se sì la scarica e ricrea il container, se no non scarica nulla. Quindi anche un semplice `up -d` aggiorna la dashboard. Non c'è una sezione `build`: sulla VPS la dashboard non si compila.
+- Il container è pubblicato solo su `127.0.0.1:${WEB_HOST_PORT:-10005}`; il Caddy di sistema lo raggiunge da lì (sezione 3) e aggiunge HTTPS e gli header di sicurezza, Content-Security-Policy compresa. Non è collegato alla rete `backend_internal`: parla con l'API come qualsiasi browser, via `https://…/api/v1`.
+- `web` esiste solo in `compose.prod.yaml`: lo stack di sviluppo non lo usa (in locale si lavora con `npm start`, sezione 8 di "Build Flutter", "Web in locale").
 
-**Perché la VPS non compila la dashboard.** All'inizio il servizio `web` aveva una sezione `build` e `up -d --build` compilava la dashboard sulla VPS insieme alle immagini Go. Al primo deploy, il 22 ottobre 2026, compose ha avviato in parallelo la build di `api`, `worker` e `migrate` e la preparazione di Flutter (`flutter precache`). La memoria impegnata è salita a circa 6,5 GB, il 160% di RAM più swap (`sar -r`). Il kernel non ha terminato nessun processo: la macchina è rimasta bloccata a spostare pagine tra RAM e swap per quasi due ore, senza rispondere a SSH e a Caddy (API, dashboard e `git.alexviolatto.dev` irraggiungibili) e senza eseguire il controllo orario del backup. Si è sbloccata solo con un riavvio dal pannello del provider; i container sono ripartiti da soli e i dati non hanno subito danni. La fase più pesante, la compilazione di `main.dart.js` (dart2js), non era ancora iniziata. Per questo:
+**Perché la VPS non compila la dashboard.** All'inizio il servizio `web` aveva una sezione `build` e `up -d --build` compilava la dashboard (allora Flutter) sulla VPS insieme alle immagini Go. Al primo deploy, il 22 ottobre 2026, compose ha avviato in parallelo la build di `api`, `worker` e `migrate` e la preparazione di Flutter (`flutter precache`). La memoria impegnata è salita a circa 6,5 GB, il 160% di RAM più swap (`sar -r`). Il kernel non ha terminato nessun processo: la macchina è rimasta bloccata a spostare pagine tra RAM e swap per quasi due ore, senza rispondere a SSH e a Caddy (API, dashboard e `git.alexviolatto.dev` irraggiungibili) e senza eseguire il controllo orario del backup. Si è sbloccata solo con un riavvio dal pannello del provider; i container sono ripartiti da soli e i dati non hanno subito danni. La build Angular è più leggera di quella Flutter, ma vuole comunque Node e qualche centinaio di MB di dipendenze, quindi la regola resta:
 
 - la dashboard la compila GitHub Actions, i cui runner hanno molta più memoria, e la VPS la scarica;
 - le immagini Go, molto più leggere, si compilano ancora sulla VPS, ma una alla volta (`scripts/deploy.sh`): così ognuna sta nei 2 GB (misurato: swap usata sotto i 130 MB).
@@ -561,14 +564,16 @@ Se il server non risponde più durante un deploy: riavviarlo dal pannello del pr
 
 **Pubblicazione: GitHub Actions e Docker Hub.**
 
-Il job `build-web` di `.github/workflows/mobile-ci.yml`:
+Il workflow `.github/workflows/web-ci.yml`:
 
-- parte quando cambia qualcosa in `financial-manager-app/` (o il workflow stesso), dopo che `analyze-and-test` è passato;
-- compila sempre l'immagine, anche nelle pull request: un import che non compila per il browser fa fallire la CI;
-- la pubblica solo su `main` (push, oppure avvio manuale con *Run workflow*, grazie a `workflow_dispatch`), con due tag:
+- parte quando cambia qualcosa in `financial-manager-web/`, nei file ARB dell'app (`financial-manager-app/lib/l10n/`), in `financial-manager-backend/deploy/Caddyfile.example` (gli smoke test usano la sua CSP) o nel workflow stesso;
+- job `check`: `npm ci`, `format:check`, lint, test unitari e di componenti (Vitest), test degli script, build di produzione e smoke test nel browser (Playwright, desktop e telefono, API simulata, con la CSP di produzione: una violazione fa fallire il test). Se fallisce, il report di Playwright resta tra gli artefatti dell'esecuzione per 7 giorni;
+- job `docker`, dopo `check`: compila sempre l'immagine, anche nelle pull request, e la pubblica solo su `main` (push, oppure avvio manuale con *Run workflow*, grazie a `workflow_dispatch`), con due tag:
   - `latest`: quello che usa la VPS di default;
   - `sha-<commit>` (hash completo del commit): non cambia più dopo la pubblicazione, serve per tornare indietro;
-- riusa tra un'esecuzione e l'altra gli strati già compilati (cache di GitHub Actions, `scope=web`), quindi di solito ricompila solo `flutter build web`.
+- riusa tra un'esecuzione e l'altra gli strati già compilati (cache di GitHub Actions, `scope=web`): se `package-lock.json` non cambia, salta `npm ci`.
+
+Il workflow `mobile-ci` riguarda solo l'app Flutter e non pubblica più nulla su Docker Hub.
 
 Configurazione, da fare una volta:
 
@@ -578,32 +583,38 @@ Configurazione, da fare una volta:
    - `DOCKERHUB_TOKEN` = il token del punto 1.
 
    I secrets valgono per un solo repository: quelli di `Dokjolly0/minio` qui non si vedono.
-3. Il repository `dokjolly/financial-manager-web` su Docker Hub viene creato dal primo push, pubblico. Contiene solo la dashboard compilata, che è comunque pubblica (chiunque la scarica aprendo il sito): niente segreti, solo l'URL dell'API. Le immagini pubbliche su Docker Hub sono gratuite e la VPS le scarica senza login.
-4. Per la prima pubblicazione: push su `main` di una modifica in `financial-manager-app/`, oppure su GitHub *Actions → mobile-ci → Run workflow* sul branch `main`.
+3. Il repository `dokjolly/financial-manager-web` su Docker Hub esiste già (lo usava la dashboard Flutter) ed è pubblico. Contiene solo la dashboard compilata, che è comunque pubblica (chiunque la scarica aprendo il sito): niente segreti. Le immagini pubbliche su Docker Hub sono gratuite e la VPS le scarica senza login.
+4. Per la prima pubblicazione della versione Angular: push su `main` di una modifica in `financial-manager-web/`, oppure su GitHub *Actions → web-ci → Run workflow* sul branch `main`.
 
 Il repository self-hosted (`git.alexviolatto.dev`) riceve gli stessi commit ma non esegue la CI: la pubblicazione passa solo da GitHub.
 
 **Aggiornare la dashboard.**
 
 1. Push su `main` (su GitHub).
-2. Attendere il job `build-web` verde.
-3. Sulla VPS: `./scripts/deploy.sh` (sezione 6). Se è cambiata solo l'app basta anche `docker compose -f compose.yaml -f compose.prod.yaml up -d web`, che scarica l'immagine nuova e ricrea il solo container `web`.
-4. Controllo: `curl -s https://financialmanager.alexviolatto.dev/version.json` riporta `version` e `build_number` di `pubspec.yaml`; `docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' financial-manager-web-1` il commit da cui è stata compilata l'immagine in esecuzione.
+2. Attendere il workflow `web-ci` verde (entrambi i job).
+3. Se è cambiata la CSP in `deploy/Caddyfile.example`, riportarla a mano in `/etc/caddy/Caddyfile` e ricaricare Caddy (sezione 3) **prima** di aggiornare il container: con la CSP vecchia la dashboard nuova potrebbe essere bloccata.
+4. Sulla VPS: `./scripts/deploy.sh` (sezione 6). Se è cambiata solo la dashboard basta anche `docker compose -f compose.yaml -f compose.prod.yaml up -d web`, che scarica l'immagine nuova e ricrea il solo container `web`.
+5. Controllo:
+   - `docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' financial-manager-web-1`: il commit da cui è stata compilata l'immagine in esecuzione;
+   - `curl -sI https://financialmanager.alexviolatto.dev/app/history`: `200`, `cache-control: no-cache` e l'header `content-security-policy`;
+   - `curl -s https://financialmanager.alexviolatto.dev/.well-known/assetlinks.json`: il JSON degli App Links;
+   - nel browser, la console degli strumenti per sviluppatori non deve mostrare violazioni della CSP.
 
-**Tornare a una versione precedente.** Nel `.env` della VPS `WEB_IMAGE_TAG=sha-<commit>` (l'hash completo di un commit di `main` già pubblicato; l'elenco è su Docker Hub, nella pagina *Tags* del repository), poi `docker compose -f compose.yaml -f compose.prod.yaml up -d web`. Per tornare agli aggiornamenti automatici: togliere la riga (o `WEB_IMAGE_TAG=latest`) e ripetere `up -d web`.
+Le schede già aperte restano sulla versione precedente finché non vengono ricaricate. Se una di queste chiede un chunk che nel deploy nuovo non esiste più (aprendo una sezione mai visitata), Caddy risponde con `index.html` e la navigazione fallisce: basta ricaricare la pagina.
 
-**Deploy di emergenza senza CI** (GitHub o Docker Hub non disponibili, o una prova urgente da un branch): compilare l'immagine sul PC, con Docker Desktop, e copiarla sulla VPS.
+**Tornare a una versione precedente.** Nel `.env` della VPS `WEB_IMAGE_TAG=sha-<commit>` (l'hash completo di un commit di `main` già pubblicato; l'elenco è su Docker Hub, nella pagina *Tags* del repository), poi `docker compose -f compose.yaml -f compose.prod.yaml up -d web`. Per tornare agli aggiornamenti automatici: togliere la riga (o `WEB_IMAGE_TAG=latest`) e ripetere `up -d web`. I tag `sha-*` pubblicati prima del 25 ottobre 2026 contengono la dashboard Flutter, che vuole la CSP precedente (`'wasm-unsafe-eval'`, `fonts.gstatic.com`): tornare a uno di quelli vuol dire ripristinare in Caddy anche quella CSP (è nella storia git di `deploy/Caddyfile.example`).
+
+**Deploy di emergenza senza CI** (GitHub o Docker Hub non disponibili, o una prova urgente da un branch): compilare l'immagine sul PC, con Docker Desktop, e copiarla sulla VPS. Dalla radice del repository:
 
 ```bash
-cd financial-manager-app
-docker build --platform linux/amd64 -t dokjolly/financial-manager-web:latest .
+docker build --platform linux/amd64 -f financial-manager-web/Dockerfile -t dokjolly/financial-manager-web:latest .
 docker save dokjolly/financial-manager-web:latest | gzip -1 | ssh alex-violatto 'gunzip | docker load'
 ssh alex-violatto 'cd /projects/FinancialManager/financial-manager-backend && docker compose -f compose.yaml -f compose.prod.yaml up -d --pull never web'
 ```
 
-`--pull never` ignora `pull_policy: always` per quel comando, altrimenti compose rimpiazzerebbe subito l'immagine copiata con quella di Docker Hub. Il successivo `deploy.sh` o `up -d` torna all'immagine pubblicata dalla CI. Sul PC la build richiede circa 1,5 minuti con la cache e 4–5 minuti la prima volta; si trasferiscono circa 45 MB.
+`--pull never` ignora `pull_policy: always` per quel comando, altrimenti compose rimpiazzerebbe subito l'immagine copiata con quella di Docker Hub. Il successivo `deploy.sh` o `up -d` torna all'immagine pubblicata dalla CI.
 
-**Tempi e risorse.** Sulla CI la build parte da zero solo la prima volta (Flutter e dipendenze) e poi riusa la cache. L'immagine pesa circa 165 MB su disco (45 MB compressi su Docker Hub). `main.dart.js` pesa circa 8,7 MB (3,6 MB compresso) e CanvasKit 7,3 MB (3 MB compresso): il primo accesso al sito scarica circa 6,6 MB; dopo, grazie agli ETag, il browser riceve solo risposte 304 fino al deploy successivo.
+**Tempi e risorse.** L'immagine pesa circa 100 MB su disco, quasi tutti di Caddy e Alpine: la dashboard compilata occupa circa 2,7 MB, font compresi. Al primo accesso il browser scarica circa 540 kB di JavaScript e CSS (circa 160 kB compressi). Ogni sezione (cronologia, report con i grafici, account, analisi AI) è un chunk separato, caricato quando la si apre. Dopo, i file con l'hash restano nella cache del browser e `index.html` costa una risposta 304 fino al deploy successivo.
 
 **Variabili** (nel `.env` della VPS, tutte facoltative):
 
@@ -612,18 +623,18 @@ ssh alex-violatto 'cd /projects/FinancialManager/financial-manager-backend && do
 | `WEB_HOST_PORT` | `10005` | Porta su `127.0.0.1` a cui Caddy inoltra la dashboard |
 | `WEB_IMAGE_TAG` | `latest` | Tag di `dokjolly/financial-manager-web` da usare; `sha-<commit>` per fissare una versione |
 
-L'URL dell'API non si configura più sulla VPS: lo compila la CI (default del Dockerfile). Per un'installazione con un altro dominio serve un'immagine compilata con `--build-arg API_BASE_URL=https://altro-dominio/api/v1` (sul PC, come nel deploy di emergenza, o aggiungendo `build-args` al job).
+L'URL dell'API non si configura: la dashboard chiama `/api/v1` sullo stesso dominio da cui è servita. La stessa immagine funziona quindi anche con un altro dominio, purché il suo Caddy inoltri `/api/*` all'API come in `deploy/Caddyfile.example`.
 
-**Aggiornare Flutter.** Cambiare `FLUTTER_VERSION` in `financial-manager-app/Dockerfile` insieme alla versione installata sul PC con cui si compila l'APK (`flutter --version`), così web e Android escono dallo stesso SDK. Il cambio invalida la cache della CI: la build successiva riparte da zero e dura di più.
+**Aggiornare Node o Angular.** Node: cambiare insieme l'immagine `node:` nel Dockerfile e `node-version` in `web-ci.yml`. Angular: `npx ng update @angular/core @angular/cli` in `financial-manager-web/`, poi `npm run lint && npm test && npm run build && npm run e2e` prima del push. Un cambio di `package-lock.json` invalida nella CI la cache di `npm ci`.
 
 **Cosa cambia rispetto all'app.**
 
-- **Analisi AI**: solo con i fornitori cloud e la chiave API dell'utente. Nel browser non ci sono motori locali: niente selettore "Sul dispositivo", niente gestione dei modelli né "Risposte non inviate" (le rotte rimandano alle impostazioni AI). Se il profilo è in modalità "sul dispositivo" (scelta dal telefono), le impostazioni AI mostrano il modulo cloud con una nota e il telefono non viene toccato.
-- **Accesso con Google**: con il pulsante ufficiale di Google (Google Identity Services) invece del selettore di Android; il backend riceve lo stesso ID token. Serve che nel client OAuth **Web** `394336083524-bulv…` su Google Cloud, alla voce *Origini JavaScript autorizzate*, ci siano `https://financialmanager.alexviolatto.dev` e, per lo sviluppo, `http://localhost:5000` e `http://localhost` (senza `/` finale né percorso). Altrimenti il popup di Google risponde "no registered origin" con "Errore 401: invalid_client" (o `origin_mismatch`), mentre su Android l'accesso funziona, perché l'app Android non usa le origini. Errori tipici: origine messa negli *URI di reindirizzamento autorizzati* invece che nelle origini, o aggiunta a un altro client (per esempio quello Android o quello "Desktop" del backup su Drive). Il client giusto è quello il cui ID è compilato in `lib/core/auth/google_sign_in_service.dart`; per controllare quello della dashboard online: `curl -s https://financialmanager.alexviolatto.dev/main.dart.js | grep -oE "[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com"`. Dopo il salvataggio Google può impiegare da 5 minuti a qualche ora ad applicare la modifica. Il client secret non serve: l'app usa solo ID token.
-- **Sessione**: il refresh token resta nel browser (cifrato da `flutter_secure_storage` con WebCrypto, in localStorage), quindi si resta collegati tra una visita e l'altra finché non si esce. La Content-Security-Policy limita gli script che potrebbero leggerlo. Ogni browser compare come sessione separata ("Chrome (Windows)") in Account → Sicurezza.
-- **File**: l'export dei dati e il report di un'analisi ("Scarica (.md)") si scaricano come file; le immagini si scelgono dal disco e si ritagliano in una finestra (cropperjs, in `web/cropperjs`).
-- **Layout**: sotto 840 px è identico all'app; da 840 px la navigazione passa in una barra laterale con "Aggiungi", e le pagine sono centrate (1100 px per le schede, 840 px per le pagine aperte sopra).
-- **URL**: puliti (`/app/history`), si possono salvare nei preferiti; ricaricando una pagina si resta lì dopo il ripristino della sessione.
+- **Analisi AI**: solo con i fornitori cloud e la chiave API dell'utente. Nel browser non ci sono modelli locali: niente modalità "Sul dispositivo", niente gestione dei modelli né "Risposte non inviate" (le rotte `/app/account/ai/local-models`, `/app/account/ai/local-runtime` e `/app/ai/pending` rimandano alle impostazioni AI). Se il profilo è in modalità "sul dispositivo" (scelta dal telefono), le impostazioni AI mostrano il modulo cloud con una nota e il telefono non viene toccato.
+- **Accesso con Google**: con il pulsante ufficiale di Google (Google Identity Services, `accounts.google.com/gsi/client`) invece del selettore di Android; il backend riceve lo stesso ID token. Serve che nel client OAuth **Web** `394336083524-bulv…` su Google Cloud, alla voce *Origini JavaScript autorizzate*, ci siano `https://financialmanager.alexviolatto.dev` e, per lo sviluppo, `http://localhost:5000` e `http://localhost` (senza `/` finale né percorso). Altrimenti il popup di Google risponde "no registered origin" con "Errore 401: invalid_client" (o `origin_mismatch`), mentre su Android l'accesso funziona, perché l'app Android non usa le origini. Errori tipici: origine messa negli *URI di reindirizzamento autorizzati* invece che nelle origini, o aggiunta a un altro client (per esempio quello Android o quello "Desktop" del backup su Drive). Il client giusto è quello il cui ID è in `financial-manager-web/src/app/core/auth/google-identity.ts`, lo stesso `serverClientId` dell'app (`lib/core/auth/google_sign_in_service.dart`). Dopo il salvataggio Google può impiegare da 5 minuti a qualche ora ad applicare la modifica. Il client secret non serve: si usano solo ID token.
+- **Sessione**: l'access token resta in memoria, il refresh token nel `localStorage` del browser (`fm.refresh_token`), quindi si resta collegati tra una visita e l'altra finché non si esce. La Content-Security-Policy (niente script inline né da altri domini, tranne quello di Google) limita gli script che potrebbero leggerlo. Le schede aperte condividono la sessione: il rinnovo del token avviene dentro un Web Lock (`fm.refresh`), così due schede non presentano mai lo stesso refresh token già ruotato, che il backend tratterebbe come un furto revocando tutte le sessioni; uscendo da una scheda si esce da tutte. Ogni browser compare come sessione separata ("Chrome (Windows)") in Account → Sicurezza.
+- **File**: l'export dei dati e il report di un'analisi ("Scarica (.md)") si scaricano come file. Le immagini si scelgono dal disco, si trascinano nella finestra o, sul telefono, si scattano con la fotocamera; si ritagliano e ruotano in una finestra (`ngx-image-cropper`).
+- **Layout**: sotto 768 px una barra di navigazione in basso con "Aggiungi" al centro; da 768 px una barra laterale (solo icone, con le etichette da 1024 px se non la si riduce) e una barra in alto con "+ Aggiungi" e il menu utente. Le operazioni rapide (trasferimento, rettifica, buoni pasto) si aprono in un pannello laterale, sul telefono dal basso. `Ctrl+K` apre una ricerca rapida di pagine e azioni. Tema chiaro, scuro o di sistema, come nel profilo.
+- **URL**: puliti (`/app/history`), si possono salvare nei preferiti; i filtri di Cronologia e Report stanno nell'URL (si condividono, e il tasto Indietro li ripristina); ricaricando una pagina si resta lì dopo il ripristino della sessione. Due URL non esistono nell'app: `/app/account/wallets/:id/denominations` e `/app/account/wallets/:id/voucher-lots`.
 
 ### 12. Email
 
@@ -719,12 +730,12 @@ docker compose -f compose.yaml -f compose.prod.yaml logs api | grep email_
 
 All'avvio deve comparire `email_delivery_configured` con host, porta e TLS. Poi provare "Password dimenticata?" con il proprio indirizzo: nei log `email_sent` (con l'oggetto e la durata, mai il testo né il link) e l'email in arrivo. Se l'invio fallisce compare `email_send_failed` con l'errore del server, per esempio `535` per credenziali sbagliate, oppure un timeout se la porta è bloccata. La metrica `financialmanager_emails_total{result="sent"|"failed"}` conta gli invii.
 
-**In sviluppo.** Lo stack di sviluppo avvia anche **Mailpit**, una casella finta: l'API locale manda lì tutte le email, qualunque sia il destinatario, e si leggono su `http://127.0.0.1:10006` (porta cambiabile con `MAILPIT_HOST_PORT`). I link puntano a `http://localhost:5000`, dove gira `flutter run -d chrome --web-port 5000` (sezione 8 di "Build Flutter"). Per provare un server vero in locale basta mettere le variabili `SMTP_*` in `compose.dev.yaml` al posto di quelle di Mailpit.
+**In sviluppo.** Lo stack di sviluppo avvia anche **Mailpit**, una casella finta: l'API locale manda lì tutte le email, qualunque sia il destinatario, e si leggono su `http://127.0.0.1:10006` (porta cambiabile con `MAILPIT_HOST_PORT`). I link puntano a `http://localhost:5000`, dove gira la dashboard di sviluppo (`npm start` in `financial-manager-web/`, sezione 8 di "Build Flutter"). Per provare un server vero in locale basta mettere le variabili `SMTP_*` in `compose.dev.yaml` al posto di quelle di Mailpit.
 
 **App Links.** Sul telefono, con l'app installata, i link delle email aprono direttamente l'app invece del browser.
 
 - `AndroidManifest.xml` dichiara per `MainActivity` un `intent-filter` con `android:autoVerify="true"` per `https://financialmanager.alexviolatto.dev/reset-password` e `/verify-email`.
-- Android lo accetta solo se il dominio conferma l'app: `https://financialmanager.alexviolatto.dev/.well-known/assetlinks.json` elenca il pacchetto `com.alexviolatto.financialmanager` e lo SHA-256 del certificato che firma l'APK. Il file è in `financial-manager-app/docker/assetlinks.json`, viene copiato nell'immagine della dashboard e servito come `application/json`.
+- Android lo accetta solo se il dominio conferma l'app: `https://financialmanager.alexviolatto.dev/.well-known/assetlinks.json` elenca il pacchetto `com.alexviolatto.financialmanager` e lo SHA-256 del certificato che firma l'APK. Il file è in `financial-manager-web/docker/assetlinks.json`, viene copiato nell'immagine della dashboard e servito come `application/json`, senza redirect (`docker/Caddyfile.web`).
 - Android verifica il dominio all'installazione dell'app (serve Internet in quel momento). Se la verifica fallisce, il link si apre nel browser con la dashboard: funziona comunque, solo non nell'app.
 - Controlli:
   ```bash
@@ -737,7 +748,7 @@ All'avvio deve comparire `email_delivery_configured` con host, porta e TLS. Poi 
 
 ## Build Flutter
 
-La stessa app si compila per Android (APK/AAB), iOS e il web. La build web per la produzione la fa GitHub Actions, che la pubblica su Docker Hub (sezione 11); questa parte riguarda soprattutto Android, e la sezione 8 lo sviluppo della dashboard.
+L'app Flutter si compila per Android (APK/AAB) e iOS; non ha più una build web. La dashboard web è il progetto Angular `financial-manager-web/`, compilato da GitHub Actions e pubblicato su Docker Hub (sezione 11); la sezione 8 qui sotto ne descrive lo sviluppo in locale.
 
 L'app Flutter legge l'URL API da `--dart-define`.
 
@@ -896,7 +907,7 @@ financial-manager-app/build/app/outputs/bundle/release/app-release.aab
 1. creare l'app nella Play Console con il pacchetto `com.alexviolatto.financialmanager` e accettare Play App Signing (lasciare che Google generi la chiave di firma dell'app);
 2. caricare il primo `.aab` firmato con la nostra chiave: diventa automaticamente la upload key registrata;
 3. in *Configurazione → Integrità dell'app → Firma dell'app* copiare lo **SHA-1 della chiave di firma dell'app** (quella di Google) e aggiungerlo su Google Cloud come un secondo client OAuth Android (stesso pacchetto). Senza, il login con Google non funziona nelle installazioni dal Play Store, mentre continua a funzionare negli APK installati a mano;
-4. dalla stessa pagina copiare lo **SHA-256** della chiave di firma dell'app e aggiungerlo a `financial-manager-app/docker/assetlinks.json` (sezione 12, "App Links"), poi ripubblicare la dashboard. Senza, nelle installazioni dal Play Store i link delle email si aprono nel browser invece che nell'app.
+4. dalla stessa pagina copiare lo **SHA-256** della chiave di firma dell'app e aggiungerlo a `financial-manager-web/docker/assetlinks.json` (sezione 12, "App Links"), poi ripubblicare la dashboard. Senza, nelle installazioni dal Play Store i link delle email si aprono nel browser invece che nell'app.
 
 Un APK installato a mano (firmato con la nostra chiave) e uno dal Play Store (firmato da Google) hanno certificati diversi: per passare dall'uno all'altro sul telefono bisogna disinstallare.
 
@@ -948,36 +959,36 @@ Il runner viene distrutto a fine job, quindi `upload.jks` e `key.properties` non
 
 ### 8. Web in locale (sviluppo della dashboard)
 
-Il backend di sviluppo gira su `http://localhost:10003`, la dashboard di `flutter run` su un'altra porta: per il browser sono origini diverse, quindi serve CORS solo in questo caso.
+La dashboard è in `financial-manager-web/` (Angular, dettagli nel suo `README.md`). Serve Node.js `^22.22.3` o `^24.15.0`.
 
-1. Nel `.env` del backend di sviluppo:
-   ```env
-   CORS_ALLOWED_ORIGINS=http://localhost:5000
-   ```
-   e riavviare l'API (`docker compose -f compose.yaml -f compose.dev.yaml up -d api`). In produzione la variabile resta vuota.
-2. Avviare la dashboard sulla porta 5000 (deve coincidere con l'origine autorizzata, anche su Google Cloud per il pulsante Google):
+1. Avviare il backend di sviluppo (da `financial-manager-backend/`):
    ```bash
-   cd financial-manager-app
-   flutter run -d chrome --web-port 5000 --dart-define=API_BASE_URL=http://localhost:10003/v1
+   docker compose -f compose.yaml -f compose.dev.yaml up --build
    ```
-3. Le email del backend di sviluppo arrivano in Mailpit (`http://127.0.0.1:10006`) e i loro link puntano a `http://localhost:5000`: aprendoli si provano le pagine `/reset-password` e `/verify-email` nella dashboard locale (sezione 12).
-4. Per provare la build di produzione senza Docker: `flutter build web --release --no-web-resources-cdn` e servire `build/web` con un server statico che rimandi a `index.html` i percorsi sconosciuti.
+2. Avviare la dashboard sulla porta 5000 (deve coincidere con l'origine autorizzata su Google Cloud per il pulsante Google, sezione 11):
+   ```bash
+   cd financial-manager-web
+   npm ci
+   npm start   # http://localhost:5000
+   ```
+   `npm start` rigenera le traduzioni dai file ARB a ogni modifica e avvia `ng serve`, che inoltra `/api/*` all'API su `http://localhost:10003` togliendo `/api` (`proxy.conf.json`), come Caddy in produzione. Per il browser c'è una sola origine, quindi **non serve CORS**: `CORS_ALLOWED_ORIGINS` resta vuota anche in sviluppo.
+3. Le email del backend di sviluppo arrivano in Mailpit (`http://127.0.0.1:10006`) e i loro link puntano a `http://localhost:5000` (`APP_PUBLIC_URL` di default in sviluppo): aprendoli si provano le pagine `/reset-password` e `/verify-email` nella dashboard locale (sezione 12).
+4. Prima di un push, gli stessi controlli della CI:
+   ```bash
+   npm run format:check && npm run lint && npm test -- --watch=false && npm run test:scripts
+   npm run build && npm run e2e   # la prima volta: npx playwright install chromium
+   ```
 
-Per provare l'immagine esattamente come la compila la CI:
+Per provare l'immagine esattamente come la compila la CI (dalla radice del repository):
 
 ```bash
-cd financial-manager-app
-docker build -t fm-web .
+docker build -f financial-manager-web/Dockerfile -t fm-web .
 docker run --rm -p 127.0.0.1:18080:8080 fm-web
 ```
 
-Le pagine si aprono su `http://127.0.0.1:18080`, ma da lì le chiamate all'API di produzione sono bloccate dal browser (origine diversa e nessun CORS in produzione): serve solo a controllare build, file serviti, routing e cache.
+Le pagine si aprono su `http://127.0.0.1:18080`; il container non ha un'API dietro `/api`, quindi serve solo a controllare build, file serviti, routing, cache e `/.well-known/assetlinks.json`. Gli smoke test (`npm run e2e`) fanno lo stesso con la CSP di produzione e un'API simulata.
 
-Regole per il codice, perché la build web continui a funzionare (la CI la verifica con il job `build-web`):
-
-- niente `dart:io` `Platform`/`File`/`Directory` fuori dai file `_io`/`_ffi`; per sapere la piattaforma `isAndroidApp`/`isIosApp` (`lib/core/platform/platform_info.dart`) o `kIsWeb`;
-- il codice nativo va dietro un export condizionale: `if (dart.library.ffi)` per i motori AI (`local_engines.dart`), `if (dart.library.js_interop)` per le parti solo web (`google_web_button.dart`, `save_file.dart`);
-- i file si consegnano con `saveOrShareFile` (`lib/core/files/save_file.dart`).
+L'app Flutter non si compila più per il browser: il codice può usare `dart:io` liberamente, e `isAndroidApp`/`isIosApp` (`lib/core/platform/platform_info.dart`) distinguono le due piattaforme. I file ARB (`lib/l10n/app_{it,en}.arb`) sono condivisi con la dashboard: una chiave nuova o un placeholder cambiato vanno messi in entrambe le lingue, altrimenti fallisce la build della dashboard (`web-ci`).
 
 ## Cose da sistemare prima di una release pubblica
 
@@ -986,7 +997,7 @@ Già fatto:
 - firma release Android con una keystore unica (sezione "Firma Android");
 - API in HTTPS dietro Caddy, porta `10003` solo su loopback;
 - `android:usesCleartextTraffic` tolto dalle build release.
-- dashboard web su `https://financialmanager.alexviolatto.dev`, compilata da GitHub Actions, pubblicata su Docker Hub e scaricata da compose (sezione 11);
+- dashboard web Angular su `https://financialmanager.alexviolatto.dev`, compilata da GitHub Actions, pubblicata su Docker Hub e scaricata da compose (sezione 11), con una CSP senza `eval`;
 - aggiornamento della produzione in un comando, senza build parallele sulla VPS (`scripts/deploy.sh`, sezione 6);
 - email vere via SMTP per la conferma dell'indirizzo e il reset della password, con link che aprono la dashboard o l'app (App Links) (sezione 12).
 
@@ -994,7 +1005,7 @@ Ancora da fare prima di distribuire a utenti reali:
 
 - Registrare su Google Cloud lo SHA-1 della chiave di firma di Play (alla prima pubblicazione) e il bundle ID iOS se usi Google Sign-In su iOS; aggiungere lo SHA-256 della chiave di Play ad `assetlinks.json` (sezione 12).
 - Universal Links su iOS: oggi i link delle email su iPhone si aprono sempre nel browser (servirebbero `apple-app-site-association` e i domini associati nell'app).
-- Dashboard web: le analisi AI sul dispositivo non esistono nel browser (solo fornitori cloud); il layout desktop copre navigazione e larghezza delle pagine, non schermate pensate apposta per il desktop.
+- Dashboard web: le analisi AI sul dispositivo non esistono nel browser (solo fornitori cloud).
 - Firma in CI (sezione 7 di "Build Flutter").
 - Immagini Go dalla CI: `api`, `worker` e `migrate` si compilano ancora sulla VPS (una alla volta). Pubblicarle su Docker Hub come la dashboard lascerebbe alla VPS solo `pull` e `up`, con deploy più rapidi e un rollback per tag anche per il backend; servono un job di pubblicazione in `backend-ci.yml` e `image:` al posto di `build:` in `compose.prod.yaml`.
 - Storage delle immagini: MinIO community non è più mantenuto. Oggi si usa la sua ultima release ricompilata (`dokjolly/minio`, sezione 4); nel lungo periodo valutare uno storage compatibile S3 ancora sviluppato (per esempio Garage o SeaweedFS). Il backend usa un client S3 standard, quindi cambierebbero solo il compose, la copia del bucket e gli script di backup.
@@ -1007,10 +1018,12 @@ financial-manager-app/android/app/build.gradle.kts
 financial-manager-app/android/app/src/main/AndroidManifest.xml
 financial-manager-app/android/app/src/debug/AndroidManifest.xml
 financial-manager-backend/deploy/Caddyfile.example
-financial-manager-app/Dockerfile
-financial-manager-app/docker/assetlinks.json
+financial-manager-web/Dockerfile
+financial-manager-web/docker/Caddyfile.web
+financial-manager-web/docker/assetlinks.json
 financial-manager-backend/compose.prod.yaml
 financial-manager-backend/scripts/deploy.sh
+.github/workflows/web-ci.yml
 .github/workflows/mobile-ci.yml
 ```
 
@@ -1019,11 +1032,12 @@ financial-manager-backend/scripts/deploy.sh
 Backend (sulla VPS `alex-violatto`):
 
 ```bash
-# se è cambiata l'app: prima il job build-web verde su GitHub
+# se è cambiata la dashboard: prima il workflow web-ci verde su GitHub
+# (e la CSP di deploy/Caddyfile.example riportata in /etc/caddy/Caddyfile)
 cd /projects/FinancialManager/financial-manager-backend
 ./scripts/deploy.sh
 curl https://financialmanager.alexviolatto.dev/api/health/ready
-curl -s https://financialmanager.alexviolatto.dev/version.json
+curl -sI https://financialmanager.alexviolatto.dev/app/home | grep -i 'content-security-policy\|cache-control'
 ```
 
 Flutter APK (con `android/key.properties` configurato):
@@ -1042,4 +1056,13 @@ cd financial-manager-app
 flutter pub get
 flutter test
 flutter build appbundle --release
+```
+
+Dashboard web (sul PC, prima del push):
+
+```bash
+cd financial-manager-web
+npm ci
+npm run format:check && npm run lint && npm test -- --watch=false
+npm run build && npm run e2e
 ```

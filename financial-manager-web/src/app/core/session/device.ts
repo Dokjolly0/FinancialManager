@@ -1,7 +1,7 @@
 /**
  * Device label sent with login, register and Google sign-in so "Active
  * sessions" (plan.md section 7.13) shows "Chrome (Windows)" instead of an
- * unknown device, as the app's DeviceInfoService does on the web.
+ * unknown device, like the phone model the app sends.
  */
 export function deviceInfo(userAgent: string = navigator.userAgent): {
   device_name: string;

@@ -351,7 +351,7 @@ func Load() (Config, error) {
 		if cfg.AppEnv == EnvProduction {
 			errs = append(errs, "APP_PUBLIC_URL is required in production (the base of the links in emails, e.g. https://financialmanager.alexviolatto.dev)")
 		} else {
-			// Where `flutter run -d chrome --web-port 5000` serves the app.
+			// Where the web dashboard's dev server (npm start) runs.
 			cfg.PublicURL = "http://localhost:5000"
 		}
 	} else if u, err := url.Parse(cfg.PublicURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.RawQuery != "" || u.Fragment != "" {

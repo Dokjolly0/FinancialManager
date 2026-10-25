@@ -5,8 +5,9 @@
 // + src/i18n/web.<lang>.json                           (web-only strings)
 // = public/i18n/<lang>.json                            (served, gitignored)
 //
-// ARB messages are already ICU MessageFormat ({name}, plurals), which is what
-// Transloco's messageformat transpiler reads, so they are copied unchanged;
+// ARB messages are already ICU MessageFormat ({name}, plurals, select), which
+// the dashboard's transpiler reads (src/app/core/i18n/icu-transpiler.ts), so
+// they are copied unchanged;
 // only the "@key"/"@@locale" metadata is dropped. Fails when a language
 // misses a key of the template (it) or a placeholder differs, and when a
 // web key shadows an ARB key.
