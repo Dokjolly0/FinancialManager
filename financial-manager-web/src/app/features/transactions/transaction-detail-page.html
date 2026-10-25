@@ -1,0 +1,179 @@
+<div class="mx-auto max-w-3xl">
+  <app-page-header
+    [title]="'transactionDetailScreenTitle' | transloco"
+    back="/app/history"
+    [backLabel]="'backAction' | transloco"
+  >
+    @if (transaction(); as t) {
+      @if (voucherExpense()) {
+        <button type="button" class="btn btn-outline" (click)="editVoucherExpense()">
+          <app-icon [icon]="icons.Pencil" [size]="16" /> {{ 'editTooltip' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger-ghost"
+          [disabled]="deleting()"
+          (click)="remove()"
+        >
+          @if (deleting()) {
+            <app-spinner />
+          } @else {
+            <app-icon [icon]="icons.Trash2" [size]="16" />
+          }
+          {{ 'deleteTooltip' | transloco }}
+        </button>
+      } @else if (editable()) {
+        <a
+          class="btn btn-outline"
+          [routerLink]="['/app/transactions/new']"
+          [queryParams]="{ linkTo: t.id }"
+        >
+          <app-icon [icon]="icons.Link" [size]="16" />
+          <span class="max-sm:hidden">{{ 'addLinkedPaymentTooltip' | transloco }}</span>
+        </a>
+        <a class="btn btn-outline" [routerLink]="['/app/transactions', t.id, 'edit']">
+          <app-icon [icon]="icons.Pencil" [size]="16" /> {{ 'editTooltip' | transloco }}
+        </a>
+        <button
+          type="button"
+          class="btn btn-danger-ghost"
+          [disabled]="deleting()"
+          (click)="remove()"
+        >
+          @if (deleting()) {
+            <app-spinner />
+          } @else {
+            <app-icon [icon]="icons.Trash2" [size]="16" />
+          }
+          {{ 'deleteTooltip' | transloco }}
+        </button>
+      } @else if (t.kind === 'OPENING_BALANCE' || t.kind === 'TRANSFER') {
+        <button type="button" class="btn btn-outline" (click)="editAmountDate()">
+          <app-icon [icon]="icons.Pencil" [size]="16" /> {{ 'editTooltip' | transloco }}
+        </button>
+      }
+    }
+  </app-page-header>
+
+  @if (data.isLoading() && !data.hasValue()) {
+    <div class="card card-pad space-y-4">
+      <div class="skeleton h-12 w-40"></div>
+      <div class="skeleton h-5 w-2/3"></div>
+      <div class="skeleton h-40 w-full"></div>
+    </div>
+  } @else if (data.error()) {
+    <div class="card">
+      <app-inline-error [message]="errorText.message(data.error())" (retry)="data.reload()" />
+    </div>
+  } @else if (transaction(); as t) {
+    <section class="card overflow-hidden">
+      <div class="flex flex-col gap-6 p-6 sm:flex-row sm:items-start">
+        @if (t.media_id) {
+          <img
+            [appMediaSrc]="t.media_id"
+            alt=""
+            class="h-40 w-40 shrink-0 rounded-2xl bg-surface-2 object-cover shadow-card"
+          />
+        }
+        <div class="min-w-0 flex-1">
+          <span
+            class="badge"
+            [class]="credit() ? 'bg-credit/12 text-credit' : 'bg-debit/12 text-debit'"
+          >
+            {{ (credit() ? 'creditsColumnLabel' : 'debitsColumnLabel') | transloco }}
+          </span>
+          <p
+            class="tabular mt-3 text-4xl font-bold tracking-tight"
+            [class]="credit() ? 'text-credit' : 'text-fg'"
+          >
+            {{ credit() ? '+' : '−' }}{{ t.amount_minor | money: t.currency }}
+          </p>
+          <h2 class="mt-2 break-words text-xl font-semibold text-fg">{{ t.title }}</h2>
+          <p class="mt-1 text-sm text-fg-muted">{{ t.occurred_at | appDate: 'dateTimeLong' }}</p>
+        </div>
+      </div>
+      <dl class="grid divide-y divide-border border-t border-border sm:grid-cols-2 sm:divide-y-0">
+        <div class="flex items-center gap-3 px-6 py-4 sm:border-b sm:border-border">
+          @if (wallet(); as w) {
+            <app-wallet-badge [icon]="w.icon" [color]="w.color" [size]="32" />
+          }
+          <div>
+            <dt class="text-xs text-fg-muted">{{ 'walletLabel' | transloco }}</dt>
+            <dd class="text-sm font-medium text-fg">{{ wallet()?.name ?? '—' }}</dd>
+          </div>
+        </div>
+        <div class="px-6 py-4 sm:border-b sm:border-l sm:border-border">
+          <dt class="text-xs text-fg-muted">{{ 'categoryLabel' | transloco }}</dt>
+          <dd class="text-sm font-medium text-fg">
+            {{ categories.name(t.category_id) ?? ('noCategoryLabel' | transloco) }}
+          </dd>
+        </div>
+        <div class="px-6 py-4 sm:border-b sm:border-border">
+          <dt class="text-xs text-fg-muted">{{ 'sourceLabel' | transloco }}</dt>
+          <dd class="text-sm font-medium text-fg">{{ kindKey(t) | transloco }}</dd>
+        </div>
+        <div class="px-6 py-4 sm:border-b sm:border-l sm:border-border">
+          <dt class="text-xs text-fg-muted">{{ 'dateAndTimeLabel' | transloco }}</dt>
+          <dd class="text-sm font-medium text-fg">{{ t.occurred_at | appDate: 'dateTimeLong' }}</dd>
+        </div>
+        @if (t.description) {
+          <div class="px-6 py-4 sm:col-span-2 sm:border-b sm:border-border">
+            <dt class="text-xs text-fg-muted">{{ 'descriptionLabel' | transloco }}</dt>
+            <dd class="mt-0.5 whitespace-pre-line text-sm text-fg">{{ t.description }}</dd>
+          </div>
+        }
+        <div class="px-6 py-4">
+          <dt class="text-xs text-fg-muted">{{ 'createdLabel' | transloco }}</dt>
+          <dd class="text-sm text-fg">{{ t.created_at | appDate: 'dateTime' }}</dd>
+        </div>
+        <div class="px-6 py-4 sm:border-l sm:border-border">
+          <dt class="text-xs text-fg-muted">{{ 'lastModifiedLabel' | transloco }}</dt>
+          <dd class="text-sm text-fg">{{ t.updated_at | appDate: 'dateTime' }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    @if (members().length > 1) {
+      <section class="mt-6">
+        <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 class="section-title">{{ 'linkedPaymentsSectionTitle' | transloco }}</h2>
+            <p class="mt-1 text-sm text-fg-muted">
+              {{ 'linkedPaymentsMemberCountLabel' | transloco: { count: members().length } }}
+            </p>
+          </div>
+          <p class="text-right">
+            <span class="block text-xs text-fg-muted">{{
+              'linkedPaymentsTotalLabel' | transloco
+            }}</span>
+            <span class="tabular text-lg font-bold text-fg">{{
+              groupTotal() | money: t.currency
+            }}</span>
+          </p>
+        </div>
+        <div class="card divide-y divide-border overflow-hidden">
+          @for (member of members(); track member.id) {
+            <div class="flex items-center">
+              <div class="min-w-0 flex-1">
+                <app-transaction-row
+                  [transaction]="member"
+                  [showDate]="true"
+                  [current]="member.id === t.id"
+                />
+              </div>
+              <button
+                type="button"
+                class="btn btn-ghost btn-icon btn-sm mr-2"
+                [attr.aria-label]="'webUnlinkPaymentAction' | transloco"
+                [title]="'webUnlinkPaymentAction' | transloco"
+                (click)="unlink(member)"
+              >
+                <app-icon [icon]="icons.Link2Off" [size]="16" />
+              </button>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  }
+</div>

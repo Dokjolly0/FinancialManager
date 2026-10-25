@@ -1,0 +1,283 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+/* Structural rules for CDK overlays (dialogs, drawers, menus). */
+@import '@angular/cdk/overlay-prebuilt.css';
+
+/* Dark mode follows the `dark` class ThemeService puts on <html> (profile
+   theme: system, light or dark), not the media query alone. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Palette from plan.md section 6.3 (the same hex values as the app's
+   lib/app/theme/app_colors.dart). Components use the semantic names below,
+   never raw colours, so both themes come from these two blocks. */
+:root {
+  --c-bg: #f7f9f8;
+  --c-surface: #ffffff;
+  --c-surface-2: #f0f4f2;
+  --c-border: #dce4e1;
+  --c-fg: #16201d;
+  --c-fg-muted: #5c6965;
+  --c-primary: #176b5b;
+  --c-primary-fg: #ffffff;
+  --c-primary-soft: #d7f4ec;
+  --c-credit: #067647;
+  --c-debit: #b42318;
+  --c-warning: #b54708;
+  --c-info: #175cd3;
+  --c-overlay: rgb(14 21 19 / 0.45);
+  /* Chart series (income, expenses): blue/orange, validated for colour-blind
+     separation on both surfaces; red/green fails it in dark mode. */
+  --c-chart-in: #2a78d6;
+  --c-chart-out: #eb6834;
+  color-scheme: light;
+}
+
+.dark {
+  --c-bg: #0e1513;
+  --c-surface: #17211e;
+  --c-surface-2: #1f2b27;
+  --c-border: #2c3a35;
+  --c-fg: #f1f6f4;
+  --c-fg-muted: #aab8b3;
+  --c-primary: #65cdb5;
+  --c-primary-fg: #0e1513;
+  --c-primary-soft: #1d3d36;
+  --c-credit: #3fce84;
+  --c-debit: #f2795f;
+  --c-warning: #f0a15d;
+  --c-info: #6fa8f5;
+  --c-overlay: rgb(0 0 0 / 0.6);
+  --c-chart-in: #3987e5;
+  --c-chart-out: #d95926;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-surface-2: var(--c-surface-2);
+  --color-border: var(--c-border);
+  --color-fg: var(--c-fg);
+  --color-fg-muted: var(--c-fg-muted);
+  --color-primary: var(--c-primary);
+  --color-primary-fg: var(--c-primary-fg);
+  --color-primary-soft: var(--c-primary-soft);
+  --color-credit: var(--c-credit);
+  --color-debit: var(--c-debit);
+  --color-warning: var(--c-warning);
+  --color-info: var(--c-info);
+  --color-overlay: var(--c-overlay);
+  --color-chart-in: var(--c-chart-in);
+  --color-chart-out: var(--c-chart-out);
+
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 2px rgb(16 24 20 / 0.04), 0 4px 16px rgb(16 24 20 / 0.04);
+  --shadow-pop: 0 8px 32px rgb(16 24 20 / 0.16);
+
+  --animate-fade-in: fade-in 120ms ease-out;
+  --animate-slide-in-right: slide-in-right 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-slide-in-up: slide-in-up 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(24px);
+      opacity: 0;
+    }
+  }
+  @keyframes slide-in-up {
+    from {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+  }
+}
+
+@layer base {
+  html {
+    background: var(--c-bg);
+    color: var(--c-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  /* Amounts line up in tables and lists. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      transition-duration: 1ms !important;
+    }
+  }
+}
+
+/* Building blocks shared by every screen: buttons, form fields, cards,
+   chips. Components compose these instead of repeating long class lists. */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 h-10 text-sm font-semibold whitespace-nowrap transition-colors select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply bg-primary text-primary-fg hover:bg-primary/90 active:bg-primary/80;
+  }
+  .btn-secondary {
+    @apply bg-surface-2 text-fg hover:bg-border/60;
+  }
+  .btn-outline {
+    @apply border border-border bg-surface text-fg hover:bg-surface-2;
+  }
+  .btn-ghost {
+    @apply text-fg hover:bg-surface-2;
+  }
+  .btn-danger {
+    @apply bg-debit text-white hover:bg-debit/90 dark:text-bg;
+  }
+  .btn-danger-ghost {
+    @apply text-debit hover:bg-debit/10;
+  }
+  .btn-sm {
+    @apply h-8 px-3 rounded-lg text-xs;
+  }
+  .btn-lg {
+    @apply h-12 px-5 text-base;
+  }
+  .btn-icon {
+    @apply h-10 w-10 px-0 rounded-xl;
+  }
+  .btn-icon.btn-sm {
+    @apply h-8 w-8;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-fg mb-1.5;
+  }
+  .hint {
+    @apply mt-1.5 text-xs text-fg-muted;
+  }
+  .field-error {
+    @apply mt-1.5 text-xs font-medium text-debit;
+  }
+  .input {
+    @apply block w-full h-11 rounded-xl border border-border bg-surface px-3.5 text-sm text-fg placeholder:text-fg-muted/70 transition-shadow outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 disabled:opacity-60 aria-invalid:border-debit aria-invalid:focus:ring-debit/15;
+  }
+  textarea.input {
+    @apply h-auto min-h-24 py-2.5 leading-relaxed;
+  }
+  select.input {
+    @apply appearance-none pr-10 bg-no-repeat;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235c6965' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.85rem center;
+  }
+  .checkbox {
+    @apply h-4.5 w-4.5 rounded-md border-border accent-primary cursor-pointer;
+  }
+
+  .card {
+    @apply rounded-card border border-border bg-surface shadow-card;
+  }
+  .card-pad {
+    @apply p-5 sm:p-6;
+  }
+  .section-title {
+    @apply text-xs font-semibold uppercase tracking-wider text-fg-muted;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 h-8 text-xs font-medium text-fg transition-colors hover:bg-surface-2 cursor-pointer;
+  }
+  .chip-active {
+    @apply border-primary bg-primary-soft text-primary;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold;
+  }
+  .list-row {
+    @apply flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2;
+  }
+  .skeleton {
+    @apply animate-pulse rounded-lg bg-surface-2;
+  }
+}
+
+/* Dialogs and drawers opened through ui/overlay.ts (CDK Dialog panels). */
+.cdk-overlay-pane.fm-dialog-panel {
+  @apply w-[calc(100vw-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl border border-border bg-surface shadow-pop animate-fade-in;
+}
+.cdk-overlay-pane.fm-dialog-panel.fm-wide {
+  @apply max-w-2xl;
+}
+/* Side drawer on wide screens, bottom sheet on phones. */
+.cdk-overlay-pane.fm-drawer-panel {
+  @apply fixed! right-0 top-0 h-dvh w-full max-w-xl overflow-hidden border-l border-border bg-surface shadow-pop animate-slide-in-right;
+}
+@media (width < 40rem) {
+  .cdk-overlay-pane.fm-drawer-panel {
+    @apply top-auto! bottom-0 h-auto max-h-[92dvh] rounded-t-2xl border-l-0 border-t animate-slide-in-up;
+  }
+}
+.fm-dialog-panel > *,
+.fm-drawer-panel > * {
+  @apply flex h-full max-h-[inherit] flex-col;
+}
+
+/* Loading screen of index.html, until the root component renders. Before
+   Angular runs there is no theme class yet: follow the system setting. */
+.boot-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  font-weight: 600;
+  color: var(--c-fg-muted);
+}
+
+.boot-screen img {
+  border-radius: 20px;
+  animation: boot-pulse 1.6s ease-in-out infinite;
+}
+
+.boot-noscript {
+  padding: 24px;
+  text-align: center;
+}
+
+@keyframes boot-pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not(.light) {
+    --c-bg: #0e1513;
+    --c-fg: #f1f6f4;
+    --c-fg-muted: #aab8b3;
+  }
+}
+
+.cdk-overlay-dark-backdrop {
+  background: var(--c-overlay);
+}

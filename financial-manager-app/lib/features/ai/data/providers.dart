@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,7 +66,7 @@ final aiPresetsProvider = FutureProvider<List<AiPreset>>((ref) {
 });
 
 /// The phone's model manager (plan.md section 33): LiteRT-LM and llama.cpp
-/// on Android arm64. Elsewhere (iOS, the web) every on-device run reports
+/// on Android arm64. Elsewhere (iOS) every on-device run reports
 /// AI_LOCAL_UNSUPPORTED or AI_LOCAL_MODEL_MISSING.
 final localModelHostProvider = Provider<LocalModelHost>((ref) {
   if (!isAndroidApp) return const UnavailableLocalModelHost();
@@ -100,15 +99,12 @@ final modelBenchmarkProvider = Provider<ModelBenchmark>(
 );
 
 /// Results generated on the phone that the server hasn't received yet.
-/// The browser never generates any, and has no files: an empty outbox.
 final localResultOutboxProvider = Provider<LocalResultOutbox>(
-  (ref) => kIsWeb
-      ? MemoryLocalResultOutbox()
-      : FileLocalResultOutbox(
-          () async => File(
-            '${(await getApplicationSupportDirectory()).path}/ai_local/outbox.json',
-          ),
-        ),
+  (ref) => FileLocalResultOutbox(
+    () async => File(
+      '${(await getApplicationSupportDirectory()).path}/ai_local/outbox.json',
+    ),
+  ),
 );
 
 /// Sends results left in the outbox when someone signs in and whenever the

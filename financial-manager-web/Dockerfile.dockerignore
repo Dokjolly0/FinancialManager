@@ -1,0 +1,12 @@
+# The image builds from the repository root (see Dockerfile): only the
+# dashboard's sources and the app's ARB files go into the context.
+*
+!financial-manager-web/
+!financial-manager-app/lib/l10n/*.arb
+financial-manager-web/node_modules/
+financial-manager-web/dist/
+financial-manager-web/.angular/
+financial-manager-web/public/i18n/
+financial-manager-web/test-results/
+financial-manager-web/playwright-report/
+**/.DS_Store

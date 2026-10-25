@@ -314,6 +314,8 @@ The "Add" button opens the entry screen directly. A long press or a bottom sheet
 - New expense;
 - New income.
 
+The web dashboard (section 9.9) keeps the same destinations (plus "Analisi AI") and the same "Aggiungi" rules: below 768 px a bottom bar with the center button, as on phones; from 768 px a collapsible sidebar and a top bar with a "+ Aggiungi" menu (income/expense, transfer with two or more wallets, meal-voucher credit/expense when a voucher wallet exists) and the user menu. `Ctrl+K` opens a command palette for pages and quick actions.
+
 ### 5.2 Section hierarchy
 
 ```text
@@ -376,6 +378,8 @@ Characteristics:
 ### 6.2 Material Design
 
 Use Material 3 as a base, customizing tokens and components. Avoid building from scratch behaviors already solved by the framework, such as date pickers, bottom sheets, snack bars, and navigation bars.
+
+The web dashboard does not use Material: its components are built on Tailwind CSS 4 (design tokens as CSS variables in `src/styles.css`, light and dark) and the Angular CDK for the behaviors (dialogs, drawers and bottom sheets, menus, overlays, focus trapping). It keeps the palette, the semantic credit/debit colors, the typography scale and the generated avatars of this section, so the two clients look related. Font: Inter, self-hosted.
 
 ### 6.3 Proposed palette
 
@@ -447,7 +451,7 @@ Income and expenses must also differ via icon, `+/-` sign, label, and position �
 - Semantic labels for charts and icons.
 - Contrast verified for light and dark theme.
 - Do not use color as the only indicator.
-- Allow keyboard navigation on tablet/web, if that target is included.
+- Allow keyboard navigation on tablet and web: the web dashboard is fully keyboard-operable (focus trapped in dialogs and restored on close, visible focus rings, `Ctrl+K` palette).
 - Reduce or disable animations when requested by the system.
 - Provide a textual or tabular summary for every chart.
 
@@ -1091,21 +1095,28 @@ Guards:
 - authenticated and complete → app area;
 - refresh failed → controlled local logout.
 
-While the session is being restored the splash keeps the requested location (`/splash?from=/app/history`) and opens it afterwards, so a reload or a bookmark in the browser lands where it pointed. The two email-link routes are open in every session state and also come back through the splash.
+While the session is being restored the splash keeps the requested location (`/splash?from=/app/history`) and opens it afterwards, so an App Link lands where it pointed. The two email-link routes are open in every session state and also come back through the splash.
 
 The email links are `https://financialmanager.alexviolatto.dev/...` URLs: on Android they open the app through App Links (`autoVerify` intent-filter, `/.well-known/assetlinks.json` served by the web image with the signing key's SHA-256), elsewhere the web dashboard. iOS Universal Links are not set up.
 
+The web dashboard (section 9.9) uses the same paths, so links and bookmarks work in both clients. It restores the session before the first navigation (no splash page; `/splash` redirects to `/app/home`), and adds two URLs for pages the app pushes without one: `/app/account/wallets/:id/denominations` and `/app/account/wallets/:id/voucher-lots`. A finished streamed analysis (`/app/ai/run`) replaces its URL with `/app/ai/analyses/:id`.
+
 ### 9.9 Web dashboard
 
-The same Flutter app is built for the browser and served at `https://financialmanager.alexviolatto.dev` (the API is on the same origin under `/api`, so production needs no CORS).
+The browser dashboard at `https://financialmanager.alexviolatto.dev` is a separate client, `financial-manager-web/`: **Angular 22** (standalone components, zoneless change detection, signals, `OnPush`), **Tailwind CSS 4** and the **Angular CDK**. It has the app's features except the on-device AI (section 33). Until October 2026 the dashboard was the Flutter app built for the browser; CanvasKit rendering, a `NavigationRail` layout and no access to modern web styling made it feel like a phone app in a window, so it was rewritten and the Flutter web build removed.
 
-- Platform code: `isAndroidApp`/`isIosApp` (`lib/core/platform/platform_info.dart`) instead of `dart:io` `Platform`, which throws on the web; native-only code behind conditional exports (`dart.library.ffi` for the on-device engines, `dart.library.js_interop` for web-only pieces).
-- AI: cloud providers only (section 33 is Android-only); the model management screens and the outbox redirect to the AI settings.
-- Google: Google Identity Services' rendered button (section 15.2).
-- Files: exports and AI reports are browser downloads (`saveOrShareFile`); images are cropped with cropperjs, served from the app.
-- Layout: below 840 px as on phones; from 840 px a `NavigationRail` with "Aggiungi", tab content centered at most 1100 px wide and pushed pages at most 840 px (`lib/app/layout/breakpoints.dart`). Path URL strategy (`/app/history`).
-- Session: the refresh token persists in the browser through `flutter_secure_storage` (WebCrypto-encrypted localStorage); the Content-Security-Policy (section 19.3) limits what scripts can run.
-- Deploy: `financial-manager-app/Dockerfile` (Flutter pinned to the APK's version, served by Caddy with no-cache revalidation) is built by CI and published to Docker Hub as `dokjolly/financial-manager-web` (`latest` and `sha-<commit>`); service `web` in `compose.prod.yaml` pulls it (`pull_policy: always`, `WEB_IMAGE_TAG` for a rollback) and the host's Caddy proxies it. The VPS never compiles Flutter: on 1 vCPU / 2 GB it exhausted memory (October 2026). `scripts/deploy.sh` updates backend and dashboard together. Local development uses `CORS_ALLOWED_ORIGINS` (section 19). Details in `docs/build-deploy.md`.
+- **API**: same origin, `/api/v1` relative (production needs no CORS). In development `ng serve` runs on port 5000 and proxies `/api` to the API on `:10003` (`proxy.conf.json`), so development needs no CORS either and the default dev `APP_PUBLIC_URL` (`http://localhost:5000`) opens the local dashboard. Interceptors add `X-Request-ID` and the bearer token; creates send an `Idempotency-Key` (section 7.6) as the app does. Reads use `resource`/`httpResource`; AI streams use `fetch` with a `ReadableStream` SSE parser (POST with the bearer token, which `EventSource` can't send).
+- **Session**: access token in memory, refresh token in `localStorage` (`fm.refresh_token`). Refresh is single-flight and runs inside a Web Lock (`navigator.locks`, `fm.refresh`) that re-reads the stored token first, so two tabs never present the same rotated token (the backend treats a replay as theft and revokes every session, section 15.6); a `storage` event signs the other tabs out together. A network error during refresh keeps the session; an invalid refresh token signs out. The CSP (section 19.3) limits which scripts could read the token.
+- **Structure**: `core/` (API, auth, errors, formatting, i18n, session and guards, theme, media), `shared/ui/` (the UI kit), `layout/` (shell, "Aggiungi" menu, command palette), `features/<feature>/` with one lazy chunk per page. Business rules are ported from the app, not re-invented: money in integer minor units with `Intl.NumberFormat` (section 9.7), error codes → ARB keys, day grouping, report periods, "Aggiungi" rules, AI setup and preview models.
+- **Routes**: the app's paths (section 9.8) with functional guards (`authGuard`, `guestGuard`, `googleCompletionGuard`, `aiGuard`; a `CanDeactivate` guard asks before leaving a running stream). Local-AI routes redirect to the AI settings. History and Reports keep their filters in the URL query.
+- **Layout**: below 768 px a bottom bar with the center "Aggiungi" button, forms as full pages and quick actions as bottom sheets; from 768 px a collapsible sidebar (labels from 1024 px), a top bar with "+ Aggiungi", quick actions in a side drawer and content centered. Skeletons, empty states, inline errors and toasts as in section 7.15. Theme from `profile.theme` (system/light/dark) through a `dark` class on `<html>`.
+- **i18n**: the app's ARB files are the source (`scripts/arb-to-json.mjs` merges them with a few web-only strings into `public/i18n/{it,en}.json` and fails on a missing key or placeholder); Transloco at runtime, following `profile.locale`. ICU messages are formatted by our own transpiler (`core/i18n/icu-transpiler.ts`) because `@messageformat/core` compiles with `new Function`, which the CSP forbids.
+- **Google**: Google Identity Services' rendered button (section 15.2), the script loaded only where the button is shown.
+- **Images and files**: `/media/{id}` needs the bearer token, so images are fetched as blobs and shown through object URLs (cached, revoked when unused). Uploads by file picker, drag and drop or the phone's camera (`capture`); cropping and rotation with `ngx-image-cropper`. Exports and AI reports download through a Blob.
+- **Charts**: ECharts 6 (tree-shaken: line, bar, pie) through `ngx-echarts`, each with a table view (section 6.7); credit/debit colors chosen to stay distinguishable with color-vision deficiencies in both themes.
+- **AI**: cloud providers only (section 32); markdown answers rendered with `marked` through Angular's sanitizer.
+- **Tests**: Vitest unit and component tests; Playwright smoke tests on the production build with the API mocked and the production CSP enforced (section 23.10).
+- **Deploy**: `financial-manager-web/Dockerfile` (Node build, then Caddy on `:8080`: hashed assets `immutable`, everything else `no-cache`, SPA fallback, `assetlinks.json`), built from the repository root because of the ARB files. CI (`web-ci.yml`, section 24.1) publishes it to Docker Hub as `dokjolly/financial-manager-web` (`latest` and `sha-<commit>`); service `web` in `compose.prod.yaml` pulls it (`pull_policy: always`, `WEB_IMAGE_TAG` for a rollback) and the host's Caddy proxies it. The VPS never builds the dashboard: on 1 vCPU / 2 GB a parallel Flutter + Go build exhausted memory (October 2026). Details in `docs/build-deploy.md` and `financial-manager-web/README.md`.
 
 ---
 
@@ -1938,7 +1949,7 @@ The client sends the backend an ID token. The backend must verify at least:
 
 Do not use unverified email or IDs supplied by the client as proof of identity.
 
-The apps send an ID token issued for the Web OAuth client: Android through `serverClientId`, the web dashboard through Google Identity Services' button (`google_sign_in` has no programmatic sign-in in the browser), with that same client as `clientId`. One audience in `GOOGLE_CLIENT_IDS` covers both. The Web client lists the dashboard's origin under "Authorized JavaScript origins"; no client secret is used anywhere.
+The clients send an ID token issued for the Web OAuth client: Android through `serverClientId`, the web dashboard (Angular, `src/app/core/auth/google-identity.ts`) through Google Identity Services' rendered button, with that same client as `client_id`. One audience in `GOOGLE_CLIENT_IDS` covers both. The Web client lists the dashboard's origin under "Authorized JavaScript origins"; no client secret is used anywhere.
 
 ### 15.3 Linking Google to an existing account
 
@@ -2323,7 +2334,7 @@ Do not expose methods that fetch a record by ID and delegate the check to the cl
 
 Implemented: the host's Caddy on the `alex-violatto` VPS terminates TLS for `financialmanager.alexviolatto.dev` with automatic Let's Encrypt certificates, redirects http to https and sends `Strict-Transport-Security: max-age=31536000; includeSubDomains`; it forwards `/api/*` to the API on `127.0.0.1:10003` with the prefix stripped and answers 404 on `/api/metrics` (section 22.1). The site block is `financial-manager-backend/deploy/Caddyfile.example`. Android release builds refuse cleartext traffic: only the debug manifest sets `usesCleartextTraffic`, for the local backend on the emulator. See `docs/build-deploy.md`.
 
-The web dashboard (section 9.9) gets a Content-Security-Policy from Caddy: scripts only from its own origin plus Google's sign-in client, `'wasm-unsafe-eval'` for CanvasKit, inline styles (Flutter needs them) but no inline scripts, fonts from fonts.gstatic.com, `frame-ancestors 'none'`; plus `nosniff`, a referrer policy and a Permissions-Policy. CanvasKit and cropperjs are served from the dashboard, not from CDNs. The API sends CORS headers only to origins in `CORS_ALLOWED_ORIGINS`, empty in production and meant for local development.
+The web dashboard (section 9.9) gets a Content-Security-Policy from Caddy: scripts only from its own origin plus Google's sign-in client, no inline scripts and no `eval` of any kind (no `'unsafe-eval'`, no `'wasm-unsafe-eval'`), inline styles (Angular component styles and chart positioning), fonts only from its own origin, `frame-ancestors 'none'`; plus `nosniff`, a referrer policy and a Permissions-Policy. Everything the page loads is served by the dashboard itself, no CDN. To fit the policy the build disables `inlineCritical` (it adds an inline `onload` handler) and ICU messages are formatted without compiling code. The Playwright smoke tests serve the build with this exact policy, so a violation fails CI. The API sends CORS headers only to origins in `CORS_ALLOWED_ORIGINS`, empty in production and in development (the dashboard's dev server proxies `/api`).
 
 ### 19.4 Secrets
 
@@ -2503,7 +2514,7 @@ worker
 postgres
 redis
 object-storage
-web             -- production: the Flutter web dashboard (image from Docker Hub, built by CI)
+web             -- production: the Angular web dashboard (image from Docker Hub, built by CI)
 reverse-proxy   -- production (Caddy on the host)
 ```
 
@@ -2724,6 +2735,13 @@ Initial targets to validate:
 
 ---
 
+### 23.10 Web dashboard
+
+- Unit and component tests with Vitest (`ng test`): session refresh (single flight, Web Lock, multi-tab sign-out), SSE parser, money parsing and formatting, error mapping, the ICU transpiler over every ARB message, "Aggiungi" rules, AI periods.
+- Build-script tests (`node --test`): ARB conversion, missing keys and placeholder mismatches.
+- Browser smoke tests with Playwright on desktop Chrome and a Pixel 7 profile, against the production build with the API mocked in the browser and the production CSP enforced: login → home → new operation → history search → reports.
+- Manual pass against the real backend before a release: the feature-parity list of section 9.9 in light and dark, Italian and English, desktop and 375 px.
+
 ## 24. CI/CD and release
 
 ### 24.1 Flutter pipeline
@@ -2737,7 +2755,9 @@ Initial targets to validate:
 - signing only in a protected environment;
 - distribution to testers.
 
-Implemented in `mobile-ci.yml`: format, analyze, tests, debug and release APK (with size analysis), unsigned iOS build, and the web dashboard image (`financial-manager-app/Dockerfile`): built on every run, so imports that don't compile for the browser fail CI, and published to Docker Hub (`dokjolly/financial-manager-web:latest` and `:sha-<commit>`) on `main`, with the `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets.
+Implemented in `mobile-ci.yml`: format, analyze, tests, debug and release APK (with size analysis), unsigned iOS build.
+
+Web dashboard pipeline, `web-ci.yml` (on changes to `financial-manager-web/`, the app's ARB files or the Caddy example): Prettier check, ESLint, Vitest, build-script tests, production build, Playwright smoke tests (report kept as an artifact on failure); then the Docker image, built on every run and published to Docker Hub (`dokjolly/financial-manager-web:latest` and `:sha-<commit>`) on `main`, with the `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets.
 
 Android signing (implemented): one upload keystore signs release and debug builds on every PC, so Google Sign-In needs a single SHA-1 and APKs built anywhere update each other. `android/app/build.gradle.kts` reads its path and passwords from `android/key.properties` (never committed; `key.properties.example` shows the fields); without it builds fall back to the local debug key, which is what CI does today. For the Play Store the keystore is the upload key of Play App Signing, and the SHA-1 of Google's app signing key gets its own Android OAuth client. Signing in CI from GitHub Secrets is documented as future work in `docs/build-deploy.md`.
 
@@ -2754,7 +2774,7 @@ Android signing (implemented): one upload keystore signs release and debug build
 - SBOM;
 - registry push.
 
-Implemented in `backend-ci.yml`: gofmt, `go vet`, `go test -race`, govulncheck (fails on vulnerabilities the code reaches), Redocly lint of the OpenAPI contract, then the API and worker image builds scanned by Trivy (HIGH/CRITICAL with a fix fail the build). The Go release comes from go.mod's `toolchain` directive (latest patch, for the standard library's security fixes); images build on `golang:1.27-alpine3.24` and run on `alpine:3.24`. Both workflows run on `ubuntu-26.04` with actions on Node 24; third-party actions that had their tags moved (`trivy-action`) are pinned to a commit. Registry push and SBOM are not done for the Go images (they build on the VPS); the web dashboard image is pushed by `mobile-ci.yml` (section 24.1).
+Implemented in `backend-ci.yml`: gofmt, `go vet`, `go test -race`, govulncheck (fails on vulnerabilities the code reaches), Redocly lint of the OpenAPI contract, then the API and worker image builds scanned by Trivy (HIGH/CRITICAL with a fix fail the build). The Go release comes from go.mod's `toolchain` directive (latest patch, for the standard library's security fixes); images build on `golang:1.27-alpine3.24` and run on `alpine:3.24`. Both workflows run on `ubuntu-26.04` with actions on Node 24; third-party actions that had their tags moved (`trivy-action`) are pinned to a commit. Registry push and SBOM are not done for the Go images (they build on the VPS); the web dashboard image is pushed by `web-ci.yml` (section 24.1).
 
 ### 24.3 Deploy
 
@@ -3094,6 +3114,17 @@ Alternatively, a monorepo suits a small team:
 
 A monorepo makes coordinated OpenAPI/client changes easier; separate repositories reduce organizational coupling. The choice should be recorded as an ADR.
 
+Implemented: a monorepo.
+
+```text
+financial-manager-backend/   -- Go API and worker, migrations, OpenAPI, compose files, deploy/
+financial-manager-app/       -- Flutter client (Android, iOS); lib/l10n/*.arb shared with the web
+financial-manager-web/       -- Angular web dashboard, its Dockerfile and docker/ (Caddy, assetlinks)
+docs/                        -- build and deploy, privacy, AI spike
+.github/workflows/           -- backend-ci, mobile-ci, web-ci
+plan.md
+```
+
 ---
 
 ## 30. Definition of Done
@@ -3248,7 +3279,7 @@ Error codes: `AI_DISABLED` (503, feature not configured on the server), `AI_NOT_
 
 ## 33. On-device AI analysis (Analisi AI sul dispositivo)
 
-The AI analysis of section 32 can also run its model **on the user's phone**. The server still builds the prompt from the database and keeps the history; only the text generation moves to the device, so no third party ever sees the data. Android only for now (arm64); iOS builds but reports the feature as unavailable, and the web dashboard has no engines at all (section 9.9). Measurements behind every choice below are in `docs/ai-on-device-spike.md` (prototype on a Galaxy S26 Ultra, two rounds).
+The AI analysis of section 32 can also run its model **on the user's phone**. The server still builds the prompt from the database and keeps the history; only the text generation moves to the device, so no third party ever sees the data. Android only for now (arm64); iOS builds but reports the feature as unavailable, and the web dashboard (Angular, section 9.9) offers cloud providers only. Measurements behind every choice below are in `docs/ai-on-device-spike.md` (prototype on a Galaxy S26 Ultra, two rounds).
 
 ### 33.1 Goals and non-goals
 

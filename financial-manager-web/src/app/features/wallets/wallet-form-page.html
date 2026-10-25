@@ -1,0 +1,336 @@
+<div class="mx-auto max-w-3xl">
+  <app-page-header
+    [title]="(editing() ? 'editWalletScreenTitle' : 'newWalletScreenTitle') | transloco"
+    back="/app/account/wallets"
+    [backLabel]="'backAction' | transloco"
+  >
+    @if (editing() && existing()) {
+      <button
+        type="button"
+        class="btn btn-danger-ghost"
+        [disabled]="archiving()"
+        (click)="archive()"
+      >
+        @if (archiving()) {
+          <app-spinner />
+        } @else {
+          <app-icon [icon]="icons.Archive" [size]="18" />
+        }
+        {{ 'archiveWalletAction' | transloco }}
+      </button>
+    }
+  </app-page-header>
+
+  @if (loading()) {
+    <div class="card card-pad space-y-4">
+      <div class="skeleton h-11 w-full"></div>
+      <div class="skeleton h-11 w-2/3"></div>
+      <div class="skeleton h-32 w-full"></div>
+    </div>
+  } @else if (loadError()) {
+    <div class="card"><app-inline-error [message]="loadError()!" (retry)="reload()" /></div>
+  } @else {
+    <form class="space-y-6" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <!-- Preview + identity -->
+      <section class="card card-pad space-y-5">
+        <div class="flex items-center gap-4">
+          <span
+            class="grid h-16 w-16 shrink-0 place-items-center rounded-2xl text-white shadow-card"
+            [style.background-color]="values().color"
+          >
+            <app-icon
+              [icon]="walletIcons[values().icon ?? 'wallet'] ?? walletIcons['wallet']"
+              [size]="30"
+            />
+          </span>
+          <div class="min-w-0 flex-1">
+            <label class="label" for="w-name">{{ 'walletNameLabel' | transloco }}</label>
+            <input
+              id="w-name"
+              class="input"
+              formControlName="name"
+              [attr.aria-invalid]="!!errors.fields()['name'] || null"
+            />
+            @if (errors.fields()['name']; as m) {
+              <p class="field-error">{{ m }}</p>
+            }
+          </div>
+        </div>
+
+        <div>
+          <p class="label">{{ 'walletTypeLabel' | transloco }}</p>
+          <app-segmented
+            formControlName="type"
+            [options]="typeOptions()"
+            [label]="'walletTypeLabel' | transloco"
+          />
+        </div>
+
+        @if (session.aiEnabled()) {
+          <div>
+            <label class="label" for="w-purpose">{{ 'walletPurposeLabel' | transloco }}</label>
+            <textarea
+              id="w-purpose"
+              class="input"
+              rows="2"
+              formControlName="purpose"
+              [maxlength]="purposeMax"
+              [placeholder]="'walletPurposeHint' | transloco"
+            ></textarea>
+            <p class="hint flex justify-between gap-4">
+              <span>{{ 'walletPurposeHelper' | transloco }}</span>
+              <span class="tabular shrink-0"
+                >{{ values().purpose?.length ?? 0 }}/{{ purposeMax }}</span
+              >
+            </p>
+            @if (errors.fields()['purpose']; as m) {
+              <p class="field-error">{{ m }}</p>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- Icon and colour -->
+      <section class="card card-pad space-y-5">
+        <div>
+          <p class="label">{{ 'walletIconLabel' | transloco }}</p>
+          <div
+            class="grid grid-cols-7 gap-2 sm:grid-cols-[repeat(13,minmax(0,1fr))]"
+            role="radiogroup"
+            [attr.aria-label]="'walletIconLabel' | transloco"
+          >
+            @for (key of iconKeys; track key) {
+              <button
+                type="button"
+                role="radio"
+                class="grid aspect-square place-items-center rounded-xl border transition-colors"
+                [class]="
+                  values().icon === key
+                    ? 'border-primary bg-primary-soft text-primary'
+                    : 'border-border text-fg-muted hover:bg-surface-2'
+                "
+                [attr.aria-checked]="values().icon === key"
+                [attr.aria-label]="key"
+                (click)="form.controls.icon.setValue(key)"
+              >
+                <app-icon [icon]="walletIcons[key]" [size]="20" />
+              </button>
+            }
+          </div>
+        </div>
+        <div>
+          <p class="label">{{ 'walletColorLabel' | transloco }}</p>
+          <div
+            class="flex flex-wrap gap-3"
+            role="radiogroup"
+            [attr.aria-label]="'walletColorLabel' | transloco"
+          >
+            @for (color of colors; track color) {
+              <button
+                type="button"
+                role="radio"
+                class="h-9 w-9 rounded-full ring-offset-2 ring-offset-surface transition-transform hover:scale-110"
+                [class.ring-2]="values().color?.toUpperCase() === color"
+                [class.ring-fg]="values().color?.toUpperCase() === color"
+                [style.background-color]="color"
+                [attr.aria-checked]="values().color?.toUpperCase() === color"
+                [attr.aria-label]="color"
+                (click)="form.controls.color.setValue(color)"
+              ></button>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- Money -->
+      @if (!editing() && !isVoucher()) {
+        <section class="card card-pad">
+          <label class="label" for="w-opening">{{ 'initialBalanceLabel' | transloco }}</label>
+          <app-amount-input
+            inputId="w-opening"
+            formControlName="openingBalance"
+            [large]="true"
+            [invalid]="!!errors.fields()['opening_balance_minor']"
+          />
+          @if (errors.fields()['opening_balance_minor']; as m) {
+            <p class="field-error">{{ m }}</p>
+          }
+        </section>
+      }
+
+      @if (isVoucher()) {
+        <section class="card card-pad space-y-5">
+          <div>
+            <p class="label">{{ 'voucherUnitValueLabel' | transloco }}</p>
+            @if (editing()) {
+              <p class="tabular text-lg font-semibold text-fg">
+                {{ existing()?.voucher_unit_value_minor ?? 0 | money }}
+              </p>
+            } @else {
+              <app-amount-input
+                inputId="w-unit"
+                formControlName="voucherUnitValue"
+                [invalid]="!!errors.fields()['voucher_unit_value_minor']"
+              />
+              @if (errors.fields()['voucher_unit_value_minor']; as m) {
+                <p class="field-error">{{ m }}</p>
+              }
+            }
+          </div>
+          <div>
+            <p class="label">{{ 'voucherExpiryPolicyLabel' | transloco }}</p>
+            <div class="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label class="hint mb-1.5 mt-0 block" for="w-cutoff">{{
+                  'voucherExpiryCutoffMonthLabel' | transloco
+                }}</label>
+                <select id="w-cutoff" class="input" formControlName="cutoffMonth">
+                  @for (m of months(); track m.value) {
+                    <option [ngValue]="m.value">{{ m.label }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="hint mb-1.5 mt-0 block" for="w-exp-month">{{
+                  'voucherExpiryMonthLabel' | transloco
+                }}</label>
+                <select id="w-exp-month" class="input" formControlName="expiryMonth">
+                  @for (m of months(); track m.value) {
+                    <option [ngValue]="m.value">{{ m.label }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="hint mb-1.5 mt-0 block" for="w-exp-day">{{
+                  'voucherExpiryDayLabel' | transloco
+                }}</label>
+                <select id="w-exp-day" class="input" formControlName="expiryDay">
+                  @for (d of days; track d) {
+                    <option [ngValue]="d">{{ d }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            @for (
+              field of [
+                'voucher_expiry_cutoff_month',
+                'voucher_expiry_month',
+                'voucher_expiry_day',
+              ];
+              track field
+            ) {
+              @if (errors.fields()[field]; as m) {
+                <p class="field-error">{{ m }}</p>
+              }
+            }
+          </div>
+          @if (!editing()) {
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class="label" for="w-qty">{{
+                  'voucherInitialQuantityLabel' | transloco
+                }}</label>
+                <input
+                  id="w-qty"
+                  type="number"
+                  min="0"
+                  step="1"
+                  class="input tabular"
+                  formControlName="initialQuantity"
+                />
+              </div>
+              <div>
+                <label class="label" for="w-loaded">{{ 'voucherLoadedAtLabel' | transloco }}</label>
+                <input id="w-loaded" type="date" class="input" formControlName="loadedAt" />
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      <!-- Operations on an existing wallet -->
+      @if (existing(); as wallet) {
+        <section class="card divide-y divide-border overflow-hidden">
+          @if (!isVoucher()) {
+            <button type="button" class="list-row w-full text-left" (click)="adjust()">
+              <span class="grid h-9 w-9 place-items-center rounded-lg bg-surface-2 text-fg-muted"
+                ><app-icon [icon]="icons.SlidersHorizontal" [size]="18"
+              /></span>
+              <span class="flex-1">
+                <span class="block text-sm font-medium text-fg">{{
+                  'accountBalanceAdjustmentAction' | transloco
+                }}</span>
+                <span class="tabular block text-xs text-fg-muted">{{
+                  wallet.current_balance_minor | money: wallet.currency
+                }}</span>
+              </span>
+              <app-icon [icon]="icons.ChevronRight" [size]="18" class="text-fg-muted" />
+            </button>
+            @if (openingBalance(); as opening) {
+              <button
+                type="button"
+                class="list-row w-full text-left"
+                (click)="editOpeningBalance()"
+              >
+                <span class="grid h-9 w-9 place-items-center rounded-lg bg-surface-2 text-fg-muted"
+                  ><app-icon [icon]="icons.CalendarClock" [size]="18"
+                /></span>
+                <span class="flex-1">
+                  <span class="block text-sm font-medium text-fg">{{
+                    'editOpeningBalanceSheetTitle' | transloco
+                  }}</span>
+                  <span class="tabular block text-xs text-fg-muted">{{
+                    opening.amount_minor | money: opening.currency
+                  }}</span>
+                </span>
+                <app-icon [icon]="icons.ChevronRight" [size]="18" class="text-fg-muted" />
+              </button>
+            }
+          }
+          @if (isVoucher()) {
+            <a [routerLink]="['/app/account/wallets', wallet.id, 'voucher-lots']" class="list-row">
+              <span class="grid h-9 w-9 place-items-center rounded-lg bg-surface-2 text-fg-muted"
+                ><app-icon [icon]="icons.Ticket" [size]="18"
+              /></span>
+              <span class="flex-1">
+                <span class="block text-sm font-medium text-fg">{{
+                  'voucherLotsAction' | transloco
+                }}</span>
+                <span class="tabular block text-xs text-fg-muted">{{
+                  wallet.current_balance_minor | money: wallet.currency
+                }}</span>
+              </span>
+              <app-icon [icon]="icons.ChevronRight" [size]="18" class="text-fg-muted" />
+            </a>
+          }
+          @if (values().type === 'CASH' && wallet.type === 'CASH') {
+            <a [routerLink]="['/app/account/wallets', wallet.id, 'denominations']" class="list-row">
+              <span class="grid h-9 w-9 place-items-center rounded-lg bg-surface-2 text-fg-muted"
+                ><app-icon [icon]="icons.Banknote" [size]="18"
+              /></span>
+              <span class="flex-1 text-sm font-medium text-fg">{{
+                'walletDenominationsAction' | transloco
+              }}</span>
+              <app-icon [icon]="icons.ChevronRight" [size]="18" class="text-fg-muted" />
+            </a>
+          }
+        </section>
+      }
+
+      @if (errors.message()) {
+        <p class="field-error" role="alert">{{ errors.message() }}</p>
+      }
+      <div class="flex justify-end gap-2">
+        <a routerLink="/app/account/wallets" class="btn btn-ghost">{{
+          'commonCancel' | transloco
+        }}</a>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          @if (saving()) {
+            <app-spinner />
+          }
+          {{ 'saveWalletAction' | transloco }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

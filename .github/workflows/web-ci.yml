@@ -1,0 +1,111 @@
+name: web-ci
+
+# The Angular web dashboard (financial-manager-web/). Its translations come
+# from the app's ARB files, so those trigger it too.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "financial-manager-web/**"
+      - "financial-manager-app/lib/l10n/**"
+      - "financial-manager-backend/deploy/Caddyfile.example"
+      - ".github/workflows/web-ci.yml"
+  pull_request:
+    paths:
+      - "financial-manager-web/**"
+      - "financial-manager-app/lib/l10n/**"
+      - "financial-manager-backend/deploy/Caddyfile.example"
+      - ".github/workflows/web-ci.yml"
+  # Republishes the image by hand (e.g. to rebuild on a new base image).
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: financial-manager-web
+
+jobs:
+  check:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.22"
+          cache: npm
+          cache-dependency-path: financial-manager-web/package-lock.json
+
+      - run: npm ci
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      # pretest builds the translations from the ARB files and fails on a
+      # missing key or a placeholder mismatch.
+      - name: Unit and component tests
+        run: npm test -- --watch=false
+
+      - name: Build script tests
+        run: npm run test:scripts
+
+      - name: Production build
+        run: npm run build
+
+      # Desktop and phone, API mocked, the production CSP enforced
+      # (e2e/serve.mjs reads it from deploy/Caddyfile.example).
+      - name: Browser smoke tests
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: financial-manager-web/playwright-report/
+          retention-days: 7
+
+  # The image (financial-manager-web/Dockerfile). Every run builds it; on
+  # main (push or manual run) it is also published to Docker Hub, and the VPS
+  # only pulls it (docs/build-deploy.md, "Dashboard web").
+  #
+  # Tags: latest (what compose.prod.yaml runs by default) and
+  # sha-<commit> (never moves; WEB_IMAGE_TAG pins it for a rollback).
+  # Secrets: DOCKERHUB_USERNAME and DOCKERHUB_TOKEN (Docker Hub access
+  # token with Read & Write permission).
+  docker:
+    runs-on: ubuntu-26.04
+    needs: check
+    env:
+      IMAGE: dokjolly/financial-manager-web
+      PUBLISH: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        if: env.PUBLISH == 'true'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # The VPS is amd64. The context is the repository root: the image
+      # needs the app's ARB files (Dockerfile.dockerignore keeps it small).
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: financial-manager-web/Dockerfile
+          platforms: linux/amd64
+          push: ${{ env.PUBLISH == 'true' }}
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web

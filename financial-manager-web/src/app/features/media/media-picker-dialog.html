@@ -1,0 +1,235 @@
+<app-sheet [title]="'webChooseImage' | transloco">
+  <div
+    class="-mx-5 -mt-5 mb-5 flex gap-1 overflow-x-auto border-b border-border px-5"
+    role="tablist"
+  >
+    @for (t of tabs; track t.id) {
+      <button
+        type="button"
+        role="tab"
+        class="-mb-px whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold transition-colors"
+        [class]="
+          tab() === t.id
+            ? 'border-primary text-primary'
+            : 'border-transparent text-fg-muted hover:text-fg'
+        "
+        [attr.aria-selected]="tab() === t.id"
+        (click)="tab.set(t.id)"
+      >
+        {{ t.key | transloco }}
+      </button>
+    }
+  </div>
+
+  @switch (tab()) {
+    @case ('upload') {
+      @if (file(); as f) {
+        <div class="mx-auto max-w-md">
+          <image-cropper
+            [imageFile]="f"
+            [maintainAspectRatio]="true"
+            [aspectRatio]="1"
+            [roundCropper]="round()"
+            [canvasRotation]="rotation()"
+            [autoCrop]="false"
+            [resizeToWidth]="1024"
+            [onlyScaleDown]="true"
+            format="jpeg"
+            [imageQuality]="92"
+            output="blob"
+            (loadImageFailed)="file.set(null)"
+          />
+          <div class="mt-4 flex justify-center gap-2">
+            <button type="button" class="btn btn-outline btn-sm" (click)="rotate(-1)">
+              <app-icon [icon]="icons.RotateCcw" [size]="16" />
+              {{ 'mediaCropRotateLeft' | transloco }}
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" (click)="rotate(1)">
+              <app-icon [icon]="icons.RotateCw" [size]="16" />
+              {{ 'mediaCropRotateRight' | transloco }}
+            </button>
+          </div>
+        </div>
+      } @else {
+        <label
+          class="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-14 text-center transition-colors"
+          [class]="
+            dragging() ? 'border-primary bg-primary-soft' : 'border-border hover:bg-surface-2'
+          "
+          (dragover)="$event.preventDefault(); dragging.set(true)"
+          (dragleave)="dragging.set(false)"
+          (drop)="onDrop($event)"
+        >
+          <span class="grid h-12 w-12 place-items-center rounded-2xl bg-primary-soft text-primary">
+            <app-icon [icon]="icons.ImageUp" [size]="24" />
+          </span>
+          <span class="text-sm font-semibold text-fg">{{ 'webDropImage' | transloco }}</span>
+          <span class="text-xs text-fg-muted">JPG, PNG, WebP, HEIC</span>
+          <input
+            type="file"
+            accept="image/*"
+            class="sr-only"
+            (change)="onFile($any($event.target).files)"
+          />
+        </label>
+        <!-- On phones: straight to the camera. -->
+        <label class="btn btn-outline mt-3 w-full sm:hidden">
+          {{ 'mediaCameraAction' | transloco }}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            class="sr-only"
+            (change)="onFile($any($event.target).files)"
+          />
+        </label>
+      }
+    }
+
+    @case ('search') {
+      <label class="relative mb-4 block">
+        <app-icon
+          [icon]="icons.Search"
+          [size]="18"
+          class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-muted"
+        />
+        <input
+          class="input pl-10"
+          [placeholder]="'mediaSearchHint' | transloco"
+          (input)="onSearchInput($any($event.target).value)"
+        />
+      </label>
+      @if (searchQuery().trim().length < 2) {
+        <app-empty-state
+          [message]="'mediaSearchMinCharsMessage' | transloco"
+          [icon]="icons.Search"
+        />
+      } @else if (results.isLoading()) {
+        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
+            <div class="skeleton aspect-square"></div>
+          }
+        </div>
+      } @else if (results.error()) {
+        <app-inline-error
+          [message]="'mediaSearchUnavailableMessage' | transloco"
+          (retry)="results.reload()"
+        />
+      } @else {
+        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          @for (result of results.value() ?? []; track result.external_id) {
+            <button
+              type="button"
+              class="group relative aspect-square overflow-hidden rounded-xl bg-surface-2"
+              [disabled]="selecting() !== null"
+              [title]="result.attribution"
+              (click)="selectResult(result)"
+            >
+              <img
+                [src]="result.thumb_url"
+                alt=""
+                class="h-full w-full object-cover transition-transform group-hover:scale-105"
+                loading="lazy"
+              />
+              @if (selecting() === result.external_id) {
+                <span class="absolute inset-0 grid place-items-center bg-black/40 text-white"
+                  ><app-spinner [size]="22"
+                /></span>
+              }
+            </button>
+          } @empty {
+            <div class="col-span-full">
+              <app-empty-state [message]="'mediaSearchNoResultsMessage' | transloco" />
+            </div>
+          }
+        </div>
+      }
+    }
+
+    @default {
+      @if (tab() === 'library') {
+        <label class="relative mb-4 block">
+          <app-icon
+            [icon]="icons.Search"
+            [size]="18"
+            class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-muted"
+          />
+          <input
+            class="input pl-10"
+            [placeholder]="'mediaLibrarySearchHint' | transloco"
+            (input)="onLibraryInput($any($event.target).value)"
+          />
+        </label>
+      }
+      @if (assets.isLoading() && !assets.hasValue()) {
+        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
+            <div class="skeleton aspect-square"></div>
+          }
+        </div>
+      } @else if (assets.error()) {
+        <app-inline-error
+          [message]="'mediaLoadErrorMessage' | transloco"
+          (retry)="assets.reload()"
+        />
+      } @else {
+        <div class="grid grid-cols-3 gap-3 sm:grid-cols-4">
+          @for (asset of assets.value() ?? []; track asset.id) {
+            <div class="group relative">
+              <button type="button" class="block w-full text-left" (click)="pick(asset)">
+                <img
+                  [appMediaSrc]="asset.id"
+                  alt=""
+                  class="aspect-square w-full rounded-xl bg-surface-2 object-cover ring-primary transition group-hover:ring-2"
+                />
+                <span class="mt-1 block truncate text-center text-xs text-fg-muted">{{
+                  asset.name || ('mediaUntitledLabel' | transloco)
+                }}</span>
+              </button>
+              @if (tab() === 'library') {
+                <div
+                  class="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+                >
+                  <button
+                    type="button"
+                    class="grid h-7 w-7 place-items-center rounded-lg bg-surface/90 text-fg shadow"
+                    [attr.aria-label]="'mediaRenameDialogTitle' | transloco"
+                    (click)="rename(asset, $event)"
+                  >
+                    <app-icon [icon]="icons.Pencil" [size]="14" />
+                  </button>
+                  <button
+                    type="button"
+                    class="grid h-7 w-7 place-items-center rounded-lg bg-surface/90 text-debit shadow"
+                    [attr.aria-label]="'commonDelete' | transloco"
+                    (click)="remove(asset, $event)"
+                  >
+                    <app-icon [icon]="icons.Trash2" [size]="14" />
+                  </button>
+                </div>
+              }
+            </div>
+          } @empty {
+            <div class="col-span-full">
+              <app-empty-state [message]="'mediaEmptyStateMessage' | transloco" />
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+
+  @if (tab() === 'upload' && file()) {
+    <app-sheet-footer>
+      <button type="button" class="btn btn-ghost" (click)="file.set(null)">
+        {{ 'backAction' | transloco }}
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="uploading()" (click)="upload()">
+        @if (uploading()) {
+          <app-spinner />
+        }
+        {{ 'mediaCropConfirm' | transloco }}
+      </button>
+    </app-sheet-footer>
+  }
+</app-sheet>

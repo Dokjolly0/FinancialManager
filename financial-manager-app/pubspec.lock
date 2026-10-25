@@ -537,7 +537,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_web_plugins:
-    dependency: "direct main"
+    dependency: transitive
     description: flutter
     source: sdk
     version: "0.0.0"
@@ -614,7 +614,7 @@ packages:
     source: hosted
     version: "3.1.0"
   google_sign_in_web:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: google_sign_in_web
       sha256: d473003eeca892f96a01a64fc803378be765071cb0c265ee872c7f8683245d14
@@ -1419,7 +1419,7 @@ packages:
     source: hosted
     version: "1.2.1"
   web:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: web
       sha256: "868d88a33d8a87b18ffc05f9f030ba328ffefba92d6c127917a2ba740f9cfe4a"

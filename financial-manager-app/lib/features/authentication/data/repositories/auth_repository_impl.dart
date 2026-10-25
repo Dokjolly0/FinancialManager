@@ -91,13 +91,12 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<GoogleSignInOutcome> signInWithGoogle({String? idToken}) async {
-    if (idToken == null) {
-      try {
-        idToken = await _googleSignIn.signIn();
-      } on GoogleSignInCancelled {
-        return const GoogleSignInCancelledByUser();
-      }
+  Future<GoogleSignInOutcome> signInWithGoogle() async {
+    final String idToken;
+    try {
+      idToken = await _googleSignIn.signIn();
+    } on GoogleSignInCancelled {
+      return const GoogleSignInCancelledByUser();
     }
 
     try {

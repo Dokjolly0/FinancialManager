@@ -51,8 +51,8 @@ abstract final class AppRoutes {
   static const registerGoogleCompletion = '/register/google-completion';
   static const forgotPassword = '/forgot-password';
 
-  // Links in emails (`?token=...`): open on the web dashboard and, through
-  // Android App Links, in the app. Reachable signed in or not.
+  // Links in emails (`?token=...`): open on the web dashboard
+  // (financial-manager-web) and, through Android App Links, in the app. Reachable signed in or not.
   static const resetPassword = '/reset-password';
   static const verifyEmail = '/verify-email';
 
@@ -132,8 +132,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       switch (status) {
         case SessionStatus.checking:
-          // Keep where the user was going (a reload or a link in the
-          // browser), to land there once the session is restored.
+          // Keep where the user was going (an App Link), to land there
+          // once the session is restored.
           if (path == AppRoutes.splash) return null;
           return Uri(
             path: AppRoutes.splash,
@@ -170,7 +170,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             return AppRoutes.account;
           }
           // Model management and the phone's outbox don't exist where
-          // models can't run (the web dashboard).
+          // models can't run (iOS).
           if (!ref.read(localAiSupportedProvider) &&
               (path == AppRoutes.aiLocalModels ||
                   path == AppRoutes.aiLocalRuntime ||

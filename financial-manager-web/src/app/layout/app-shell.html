@@ -1,0 +1,240 @@
+<a
+  href="#main"
+  class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-4 focus:py-2 focus:shadow-pop"
+  >{{ 'webSkipToContent' | transloco }}</a
+>
+
+<div class="flex min-h-dvh">
+  <!-- Sidebar: icons only on tablets or when collapsed, labelled from lg. -->
+  <aside
+    class="sticky top-0 hidden h-dvh w-20 shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200 md:flex"
+    [class.lg:w-64]="!collapsed()"
+  >
+    <div class="flex h-16 items-center gap-3 px-5">
+      <img src="icons/Icon-192.png" alt="" width="32" height="32" class="rounded-lg" />
+      <span
+        class="hidden truncate text-base font-bold tracking-tight text-fg"
+        [class.lg:block]="!collapsed()"
+        >Financial Manager</span
+      >
+    </div>
+
+    <div class="px-3 pb-2 pt-1">
+      @if (add.direct()) {
+        <button
+          type="button"
+          class="btn btn-primary w-full"
+          [attr.aria-label]="'webAddOperation' | transloco"
+          (click)="add.runDefault()"
+        >
+          <app-icon [icon]="icons.Plus" />
+          <span class="hidden" [class.lg:inline]="!collapsed()">{{ 'webAdd' | transloco }}</span>
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="btn btn-primary w-full"
+          [attr.aria-label]="'webAddOperation' | transloco"
+          [cdkMenuTriggerFor]="addMenu"
+        >
+          <app-icon [icon]="icons.Plus" />
+          <span class="hidden" [class.lg:inline]="!collapsed()">{{ 'webAdd' | transloco }}</span>
+        </button>
+      }
+    </div>
+
+    <nav
+      class="flex-1 space-y-1 overflow-y-auto px-3 py-2"
+      [attr.aria-label]="'webNavMain' | transloco"
+    >
+      @for (item of nav(); track item.path) {
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="bg-primary-soft text-primary"
+          [routerLinkActiveOptions]="{ exact: item.path === '/app/account' }"
+          #rla="routerLinkActive"
+          [attr.aria-current]="rla.isActive ? 'page' : null"
+          [attr.title]="item.labelKey | transloco"
+          class="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+        >
+          <app-icon [icon]="item.icon" />
+          <span class="hidden truncate" [class.lg:inline]="!collapsed()">{{
+            item.labelKey | transloco
+          }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="border-t border-border p-3">
+      <button
+        type="button"
+        class="hidden h-9 w-full items-center gap-3 rounded-lg px-3 text-xs font-medium text-fg-muted hover:bg-surface-2 hover:text-fg lg:flex"
+        (click)="toggleCollapsed()"
+      >
+        <app-icon [icon]="collapsed() ? icons.ChevronsRight : icons.ChevronsLeft" [size]="18" />
+        @if (!collapsed()) {
+          <span>{{ 'webCollapseSidebar' | transloco }}</span>
+        } @else {
+          <span class="sr-only">{{ 'webExpandSidebar' | transloco }}</span>
+        }
+      </button>
+    </div>
+  </aside>
+
+  <div class="flex min-w-0 flex-1 flex-col">
+    <!-- Top bar -->
+    <header
+      class="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-bg/80 px-4 backdrop-blur-md sm:px-6 lg:px-8"
+    >
+      <img src="icons/Icon-192.png" alt="" width="28" height="28" class="rounded-lg md:hidden" />
+      <button
+        type="button"
+        class="ml-auto flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-sm text-fg-muted transition-colors hover:text-fg md:ml-0 md:w-72"
+        (click)="openPalette()"
+      >
+        <app-icon [icon]="icons.Search" [size]="18" />
+        <span class="hidden flex-1 text-left md:inline">{{
+          'webCommandPlaceholder' | transloco
+        }}</span>
+        <kbd class="hidden rounded-md border border-border px-1.5 text-[11px] font-medium md:inline"
+          >Ctrl K</kbd
+        >
+      </button>
+      <div class="flex-1 max-md:hidden"></div>
+      <button
+        type="button"
+        class="btn btn-ghost btn-icon"
+        [attr.aria-label]="'webToggleTheme' | transloco"
+        (click)="toggleTheme()"
+      >
+        <app-icon [icon]="theme.dark() ? icons.Sun : icons.Moon" />
+      </button>
+      @if (session.profile(); as profile) {
+        <button
+          type="button"
+          class="rounded-full ring-offset-2 ring-offset-bg focus-visible:ring-2 focus-visible:ring-primary"
+          [attr.aria-label]="'webUserMenu' | transloco"
+          [cdkMenuTriggerFor]="userMenu"
+        >
+          <app-avatar
+            [firstName]="profile.first_name"
+            [lastName]="profile.last_name"
+            [background]="profile.avatar_background_color"
+            [foreground]="profile.avatar_text_color"
+            [size]="36"
+          />
+        </button>
+      }
+    </header>
+
+    <main
+      id="main"
+      class="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-6 sm:px-6 md:pb-10 lg:px-8"
+    >
+      <router-outlet />
+    </main>
+  </div>
+</div>
+
+<!-- Phone bottom bar with the centre "+" -->
+<nav
+  class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-center border-t border-border bg-surface/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+  [attr.aria-label]="'webNavMain' | transloco"
+>
+  @for (item of mobileNav(); track item.path; let i = $index) {
+    @if (i === 2) {
+      <div class="flex justify-center">
+        @if (add.direct()) {
+          <button
+            type="button"
+            class="-mt-6 grid h-14 w-14 place-items-center rounded-2xl bg-primary text-primary-fg shadow-pop"
+            [attr.aria-label]="'webAddOperation' | transloco"
+            (click)="add.runDefault()"
+          >
+            <app-icon [icon]="icons.Plus" [size]="26" />
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="-mt-6 grid h-14 w-14 place-items-center rounded-2xl bg-primary text-primary-fg shadow-pop"
+            [attr.aria-label]="'webAddOperation' | transloco"
+            [cdkMenuTriggerFor]="addMenu"
+          >
+            <app-icon [icon]="icons.Plus" [size]="26" />
+          </button>
+        }
+      </div>
+    }
+    <a
+      [routerLink]="item.path"
+      routerLinkActive="text-primary"
+      [routerLinkActiveOptions]="{ exact: false }"
+      class="flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium text-fg-muted"
+    >
+      <app-icon [icon]="item.icon" [size]="22" />
+      <span class="truncate">{{ item.labelKey | transloco }}</span>
+    </a>
+  }
+</nav>
+
+<ng-template #addMenu>
+  <div
+    cdkMenu
+    class="min-w-64 rounded-xl border border-border bg-surface p-1.5 shadow-pop animate-fade-in"
+  >
+    @for (action of add.actions(); track action.id) {
+      <button
+        cdkMenuItem
+        type="button"
+        class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-fg hover:bg-surface-2 focus:bg-surface-2 focus:outline-none"
+        (cdkMenuItemTriggered)="action.run()"
+      >
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-primary-soft text-primary">
+          <app-icon [icon]="action.icon" [size]="18" />
+        </span>
+        {{ action.labelKey | transloco }}
+      </button>
+    }
+  </div>
+</ng-template>
+
+<ng-template #userMenu>
+  <div
+    cdkMenu
+    class="min-w-60 rounded-xl border border-border bg-surface p-1.5 shadow-pop animate-fade-in"
+  >
+    @if (session.profile(); as profile) {
+      <div class="px-3 py-2">
+        <p class="truncate text-sm font-semibold text-fg">
+          {{ profile.first_name }} {{ profile.last_name }}
+        </p>
+        <p class="truncate text-xs text-fg-muted">{{ profile.email }}</p>
+      </div>
+      <div class="my-1 h-px bg-border"></div>
+    }
+    <a
+      cdkMenuItem
+      routerLink="/app/account"
+      class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-fg hover:bg-surface-2 focus:bg-surface-2 focus:outline-none"
+    >
+      {{ 'accountScreenTitle' | transloco }}
+    </a>
+    <a
+      cdkMenuItem
+      routerLink="/app/account/preferences"
+      class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-fg hover:bg-surface-2 focus:bg-surface-2 focus:outline-none"
+    >
+      {{ 'accountPreferencesMenuTitle' | transloco }}
+    </a>
+    <div class="my-1 h-px bg-border"></div>
+    <button
+      cdkMenuItem
+      type="button"
+      class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-debit hover:bg-debit/10 focus:bg-debit/10 focus:outline-none"
+      (cdkMenuItemTriggered)="signOut()"
+    >
+      <app-icon [icon]="icons.LogOut" [size]="16" />
+      {{ 'accountLogoutAction' | transloco }}
+    </button>
+  </div>
+</ng-template>

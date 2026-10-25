@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_cropper/image_cropper.dart';
@@ -465,22 +464,6 @@ class _UploadTabState extends ConsumerState<_UploadTab> {
           cropStyle: cropStyle,
         ),
         IOSUiSettings(title: l10n.mediaCropScreenTitle, cropStyle: cropStyle),
-        // The browser crops with cropperjs (web/cropperjs, loaded by
-        // web/index.html), in a dialog; no circular mask there.
-        if (kIsWeb)
-          WebUiSettings(
-            context: context,
-            presentStyle: WebPresentStyle.dialog,
-            size: const CropperSize(width: 480, height: 480),
-            viewwMode: WebViewMode.mode_1,
-            translations: WebTranslations(
-              title: l10n.mediaCropScreenTitle,
-              rotateLeftTooltip: l10n.mediaCropRotateLeft,
-              rotateRightTooltip: l10n.mediaCropRotateRight,
-              cancelButton: l10n.commonCancel,
-              cropButton: l10n.mediaCropConfirm,
-            ),
-          ),
       ],
     );
     if (cropped == null || !mounted) return;

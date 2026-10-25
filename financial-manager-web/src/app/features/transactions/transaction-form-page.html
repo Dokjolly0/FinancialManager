@@ -1,0 +1,126 @@
+<div class="mx-auto max-w-2xl">
+  <app-page-header
+    [title]="title() | transloco"
+    back="/app/history"
+    [backLabel]="'backAction' | transloco"
+  />
+
+  @if (loading()) {
+    <div class="card card-pad space-y-4">
+      <div class="skeleton h-10 w-1/2"></div>
+      <div class="skeleton h-14 w-full"></div>
+      <div class="skeleton h-24 w-full"></div>
+    </div>
+  } @else if (loadError()) {
+    <div class="card"><app-inline-error [message]="loadError()!" (retry)="retry()" /></div>
+  } @else {
+    <form class="space-y-6" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <section class="card card-pad space-y-5">
+        <app-segmented
+          formControlName="direction"
+          [options]="directionOptions"
+          [label]="'webDirection' | transloco"
+          [activeClasses]="{ DEBIT: 'text-debit!', CREDIT: 'text-credit!' }"
+        />
+        <div>
+          <label class="label" for="tx-amount">{{ 'webAmountLabel' | transloco }}</label>
+          <app-amount-input
+            inputId="tx-amount"
+            formControlName="amount"
+            [large]="true"
+            [invalid]="!!errors.fields()['amount_minor']"
+          />
+          @if (errors.fields()['amount_minor']; as m) {
+            <p class="field-error">{{ m }}</p>
+          }
+        </div>
+        <div>
+          <label class="label" for="tx-title">{{ 'titleFieldLabel' | transloco }}</label>
+          <app-title-autocomplete
+            inputId="tx-title"
+            formControlName="title"
+            [direction]="values().direction ?? 'DEBIT'"
+            [invalid]="!!errors.fields()['title']"
+            (picked)="applyTemplate($event)"
+          />
+          @if (errors.fields()['title']; as m) {
+            <p class="field-error">{{ m }}</p>
+          }
+        </div>
+        <div class="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label class="label" for="tx-category">{{ 'categoryLabel' | transloco }}</label>
+            <app-category-select
+              inputId="tx-category"
+              formControlName="categoryId"
+              [direction]="values().direction ?? 'DEBIT'"
+            />
+            @if (errors.fields()['category_id']; as m) {
+              <p class="field-error">{{ m }}</p>
+            }
+          </div>
+          <div>
+            <label class="label" for="tx-date">{{ 'dateAndTimeLabel' | transloco }}</label>
+            <input id="tx-date" type="datetime-local" class="input" formControlName="occurredAt" />
+            @if (errors.fields()['occurred_at']; as m) {
+              <p class="field-error">{{ m }}</p>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="card card-pad">
+        <p class="label">{{ 'walletLabel' | transloco }}</p>
+        <app-wallet-select
+          formControlName="walletId"
+          [types]="walletTypes"
+          [label]="'walletLabel' | transloco"
+        />
+        @if (errors.fields()['wallet_id']; as m) {
+          <p class="field-error">{{ m }}</p>
+        }
+      </section>
+
+      <section class="card card-pad space-y-5">
+        <div>
+          <label class="label" for="tx-description">{{
+            'descriptionOptionalLabel' | transloco
+          }}</label>
+          <textarea
+            id="tx-description"
+            class="input"
+            rows="3"
+            formControlName="description"
+          ></textarea>
+        </div>
+        <div>
+          <p class="label">{{ 'webImageLabel' | transloco }}</p>
+          <app-image-field formControlName="mediaId" kind="transaction" />
+          @if (errors.fields()['media_id']; as m) {
+            <p class="field-error">{{ m }}</p>
+          }
+        </div>
+        <app-switch
+          formControlName="saveAsTemplate"
+          [label]="(template() ? 'webUpdateTemplate' : 'webSaveAsTemplate') | transloco"
+          [description]="'webTemplateHint' | transloco"
+        />
+      </section>
+
+      @if (errors.message()) {
+        <p class="field-error" role="alert">{{ errors.message() }}</p>
+      }
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn-ghost" (click)="leave()">
+          {{ 'commonCancel' | transloco }}
+        </button>
+        <button type="submit" class="btn btn-primary min-w-40" [disabled]="saving()">
+          @if (saving()) {
+            <app-spinner />
+          }
+          {{ 'webSaveOperation' | transloco }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

@@ -1,0 +1,60 @@
+{
+  "name": "financial-manager-web",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "i18n": "node scripts/arb-to-json.mjs",
+    "start": "node scripts/dev.mjs",
+    "prebuild": "npm run i18n",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "pretest": "npm run i18n",
+    "test": "ng test",
+    "lint": "ng lint",
+    "format": "prettier --write \"src/**/*.{ts,html,css,json}\" \"scripts/**/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.{ts,html,css,json}\" \"scripts/**/*.mjs\"",
+    "test:scripts": "node --test scripts/*.test.mjs",
+    "e2e": "playwright test"
+  },
+  "private": true,
+  "packageManager": "npm@11.19.1",
+  "dependencies": {
+    "@angular/cdk": "^22.2.4",
+    "@angular/common": "^22.2.0",
+    "@angular/compiler": "^22.2.0",
+    "@angular/core": "^22.2.0",
+    "@angular/forms": "^22.2.0",
+    "@angular/platform-browser": "^22.2.0",
+    "@angular/router": "^22.2.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@jsverse/transloco": "^8.4.0",
+    "echarts": "^6.1.0",
+    "lucide": "^1.61.0",
+    "marked": "^18.1.1",
+    "ngx-echarts": "^22.0.0",
+    "ngx-image-cropper": "^9.1.7",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.2.4",
+    "@angular/cli": "^22.2.4",
+    "@angular/compiler-cli": "^22.2.0",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/postcss": "^4.1.12",
+    "@types/node": "^24.19.2",
+    "angular-eslint": "22.6.0",
+    "eslint": "^10.12.0",
+    "jsdom": "^30.0.0",
+    "postcss": "^8.5.3",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4.1.12",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "8.71.0",
+    "vitest": "^5.0.0"
+  },
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0"
+  }
+}

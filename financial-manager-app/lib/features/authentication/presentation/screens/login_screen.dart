@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,11 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router.dart';
 import '../../../../app/session/pending_google_registration_provider.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../core/auth/google_web_button.dart';
 import '../../../../core/errors/error_code_localizations.dart';
 import '../../../../core/errors/error_presentation.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../data/providers.dart';
 import '../../domain/models/google_sign_in_outcome.dart';
 import '../view_models/google_sign_in_controller.dart';
 import '../view_models/login_controller.dart';
@@ -31,25 +27,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameOrEmailController = TextEditingController();
   final _passwordController = TextEditingController();
-  StreamSubscription<String>? _webGoogleTokens;
-
-  @override
-  void initState() {
-    super.initState();
-    // On the web Google's button starts the sign-in; its ID token arrives
-    // here and goes through the same flow as the native one.
-    final google = ref.read(googleSignInServiceProvider);
-    if (google.usesWebButton) {
-      google.prepareWebButton();
-      _webGoogleTokens = google.webIdTokens.listen(
-        (token) => _continueWithGoogle(idToken: token),
-      );
-    }
-  }
-
   @override
   void dispose() {
-    _webGoogleTokens?.cancel();
     _usernameOrEmailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -67,10 +46,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _continueWithGoogle({String? idToken}) async {
+  Future<void> _continueWithGoogle() async {
     final outcome = await ref
         .read(googleSignInControllerProvider.notifier)
-        .signIn(idToken: idToken);
+        .signIn();
     if (!mounted || outcome == null) return;
 
     switch (outcome) {
@@ -180,29 +159,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
               ],
-              if (ref.read(googleSignInServiceProvider).usesWebButton)
-                Center(
-                  child: googleState.isSubmitting
-                      ? const SizedBox(
-                          height: 44,
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      : GoogleWebSignInButton(locale: l10n.localeName),
-                )
-              else
-                OutlinedButton.icon(
-                  onPressed: googleState.isSubmitting
-                      ? null
-                      : () => _continueWithGoogle(),
-                  icon: googleState.isSubmitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.g_mobiledata),
-                  label: Text(l10n.continueWithGoogleAction),
-                ),
+              OutlinedButton.icon(
+                onPressed: googleState.isSubmitting
+                    ? null
+                    : _continueWithGoogle,
+                icon: googleState.isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.g_mobiledata),
+                label: Text(l10n.continueWithGoogleAction),
+              ),
               const SizedBox(height: AppSpacing.lg),
               Center(
                 child: TextButton(

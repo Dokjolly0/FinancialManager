@@ -31,9 +31,8 @@ class DataState {
 }
 
 /// Dati (plan.md section 7.13, 20.2): richiede un export, lo scarica e lo
-/// consegna con saveOrShareFile: foglio di condivisione nativo sul
-/// telefono (Files/Drive/email/..., senza permessi di archiviazione su
-/// Android), download del browser sul web.
+/// consegna con saveOrShareFile: foglio di condivisione nativo
+/// (Files/Drive/email/..., senza permessi di archiviazione su Android).
 class DataController extends Notifier<DataState> {
   @override
   DataState build() => const DataState();

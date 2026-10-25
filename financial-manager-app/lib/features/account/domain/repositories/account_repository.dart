@@ -50,9 +50,7 @@ abstract class AccountRepository {
   /// Runs the native Google sign-in flow and links the resulting account
   /// (plan.md section 14.3: "richiedere autenticazione recente" — proven
   /// here by [currentPassword]).
-  /// Links Google to the account. [idToken] comes from Google's web
-  /// button; null runs the native flow.
-  Future<void> linkGoogle(String currentPassword, {String? idToken});
+  Future<void> linkGoogle(String currentPassword);
   Future<void> unlinkGoogle();
 
   Future<ExportRecord> requestExport(String format);
