@@ -2041,7 +2041,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get aiHistoryEmpty =>
-      'Nessuna analisi ancora. Avviane una dalla sezione Report.';
+      'Nessuna analisi ancora. Avviane una dalla sezione Report o fai una domanda in Chiedi all\'assistente.';
 
   @override
   String get aiDeleteAnalysisTitle => 'Eliminare l\'analisi?';
@@ -2880,4 +2880,54 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get notifyAnalysisFallbackBody => 'Tocca per leggerla.';
+
+  @override
+  String get aiChatTitle => 'Chiedi all\'assistente';
+
+  @override
+  String get aiChatMenuSubtitle =>
+      'Domande libere sui tuoi movimenti, come in una chat';
+
+  @override
+  String get aiChatIntro =>
+      'Fai una domanda sui tuoi movimenti: quando hai pagato qualcosa, quanto spendi per una voce, quali spese hai ogni anno.';
+
+  @override
+  String get aiChatExamplesTitle => 'Per esempio';
+
+  @override
+  String get aiChatExampleInsurance =>
+      'Quando ho pagato l\'assicurazione della macchina?';
+
+  @override
+  String get aiChatExampleFuel => 'Quanto spendo in media al mese di benzina?';
+
+  @override
+  String get aiChatExampleYearly => 'Quali spese pago una volta all\'anno?';
+
+  @override
+  String get aiChatHint => 'Scrivi la tua domanda';
+
+  @override
+  String get aiChatDataNoteCloud =>
+      'Per rispondere invia al fornitore tutta la cronologia, con l\'elenco dei movimenti e i loro titoli.';
+
+  @override
+  String get aiChatDataNoteOnDevice =>
+      'Il modello sul telefono legge tutta la cronologia con l\'elenco dei movimenti; se non entra tutta, a ogni domanda si aggiungono i movimenti più vecchi che le corrispondono.';
+
+  @override
+  String get aiChatAttachmentChip => 'Movimenti cercati';
+
+  @override
+  String get aiChatAttachmentTitle => 'Movimenti aggiunti alla domanda';
+
+  @override
+  String get aiHistoryFilterAll => 'Tutte';
+
+  @override
+  String get aiHistoryFilterReports => 'Report';
+
+  @override
+  String get aiHistoryFilterChats => 'Chat';
 }

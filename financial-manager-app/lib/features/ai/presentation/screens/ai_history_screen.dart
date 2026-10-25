@@ -16,7 +16,8 @@ import '../../domain/models/ai_analysis.dart';
 import '../view_models/ai_history_controller.dart';
 import 'ai_pending_results_screen.dart';
 
-/// Saved analyses (plan.md section 32.7): open, rename, delete.
+/// Saved analyses and chats (plan.md sections 32.7 and 34): filter by
+/// type, open, rename, delete.
 class AiHistoryScreen extends ConsumerWidget {
   const AiHistoryScreen({super.key});
 
@@ -85,6 +86,11 @@ class AiHistoryScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l10n.aiHistoryTitle),
         actions: [
+          IconButton(
+            tooltip: l10n.aiChatTitle,
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () => context.push(AppRoutes.aiChat),
+          ),
           if (state.items.isNotEmpty)
             IconButton(
               tooltip: l10n.aiDeleteAllAction,
@@ -114,6 +120,36 @@ class AiHistoryScreen extends ConsumerWidget {
           // Results written on this phone that the server doesn't have.
           AiPendingResultsBanner(
             onOpen: () => context.push(AppRoutes.aiPending),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              0,
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<AiHistoryType?>(
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(
+                    value: null,
+                    label: Text(l10n.aiHistoryFilterAll),
+                  ),
+                  ButtonSegment(
+                    value: AiHistoryType.report,
+                    label: Text(l10n.aiHistoryFilterReports),
+                  ),
+                  ButtonSegment(
+                    value: AiHistoryType.chat,
+                    label: Text(l10n.aiHistoryFilterChats),
+                  ),
+                ],
+                selected: {state.type},
+                onSelectionChanged: (s) => controller.setType(s.first),
+              ),
+            ),
           ),
           Expanded(
             child: state.isLoading
@@ -171,6 +207,7 @@ class AiHistoryScreen extends ConsumerWidget {
                               leading: _StatusIcon(
                                 status: a.status,
                                 onDevice: a.isOnDevice,
+                                chat: a.isChat,
                               ),
                               title: Text(
                                 a.title,
@@ -218,19 +255,30 @@ class AiHistoryScreen extends ConsumerWidget {
 }
 
 class _StatusIcon extends StatelessWidget {
-  const _StatusIcon({required this.status, this.onDevice = false});
+  const _StatusIcon({
+    required this.status,
+    this.onDevice = false,
+    this.chat = false,
+  });
 
   final AiStatus status;
 
   /// Written on the phone: a phone instead of a document when completed.
   final bool onDevice;
 
+  /// A chat: a speech bubble (the phone still wins, it says more).
+  final bool chat;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return switch (status) {
       AiStatus.completed => Icon(
-        onDevice ? Icons.smartphone_outlined : Icons.description_outlined,
+        onDevice
+            ? Icons.smartphone_outlined
+            : chat
+            ? Icons.chat_bubble_outline
+            : Icons.description_outlined,
         color: scheme.primary,
       ),
       AiStatus.streaming => const SizedBox.square(

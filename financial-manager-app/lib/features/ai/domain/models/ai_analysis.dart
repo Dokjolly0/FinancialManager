@@ -186,6 +186,7 @@ class AiMessage {
     this.truncated = false,
     this.createdAt,
     this.durationMs,
+    this.attachment,
   });
 
   final String id;
@@ -201,6 +202,10 @@ class AiMessage {
 
   /// How long the phone took (on-device only).
   final int? durationMs;
+
+  /// The older transactions sent with a chat question (plan.md section
+  /// 34.3); null otherwise.
+  final String? attachment;
 
   bool get fromUser =>
       kind == AiMessageKind.question || kind == AiMessageKind.context;
@@ -224,6 +229,7 @@ class AiMessage {
     truncated: truncated ?? this.truncated,
     createdAt: createdAt,
     durationMs: durationMs,
+    attachment: attachment,
   );
 
   static AiMessage fromJson(Map<String, dynamic> json) => AiMessage(
@@ -238,6 +244,7 @@ class AiMessage {
     truncated: json['truncated'] as bool? ?? false,
     createdAt: _date(json['created_at']),
     durationMs: json['duration_ms'] as int?,
+    attachment: json['attachment'] as String?,
   );
 }
 
@@ -278,6 +285,9 @@ class AiAnalysisSummary {
 
   bool get isOnDevice => provider == AiProviderKind.onDevice;
 
+  /// A "Chiedi all'assistente" conversation rather than a report.
+  bool get isChat => preset == aiChatPreset;
+
   static AiAnalysisSummary fromJson(Map<String, dynamic> json) =>
       AiAnalysisSummary(
         id: json['id'] as String,
@@ -304,6 +314,7 @@ class AiAnalysisDetail {
     required this.messages,
     required this.followUpsLeft,
     required this.canAskFollowUps,
+    this.question,
   });
 
   final AiAnalysisSummary summary;
@@ -311,6 +322,9 @@ class AiAnalysisDetail {
   final List<AiMessage> messages;
   final int followUpsLeft;
   final bool canAskFollowUps;
+
+  /// A chat's first question as typed; null for reports.
+  final String? question;
 
   /// The first message: instructions and data exactly as sent.
   AiMessage? get contextMessage {
@@ -329,7 +343,18 @@ class AiAnalysisDetail {
             .toList(),
         followUpsLeft: json['follow_ups_left'] as int? ?? 0,
         canAskFollowUps: json['can_ask_follow_ups'] as bool? ?? false,
+        question: json['question'] as String?,
       );
+}
+
+/// Which analyses the history lists (GET /v1/ai/analyses?type=).
+enum AiHistoryType {
+  report('report'),
+  chat('chat');
+
+  const AiHistoryType(this.wire);
+
+  final String wire;
 }
 
 class AiHistoryPage {

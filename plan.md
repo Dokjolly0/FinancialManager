@@ -3260,7 +3260,8 @@ Error codes: `AI_DISABLED` (503, feature not configured on the server), `AI_NOT_
 
 - **Account → Assistente AI**: setup checklist (key and model, personal context, wallet purposes, first analysis) with progress; screens for provider and key (provider picker, base URL presets for compatible providers, masked key with replace and remove, model list loaded from the provider with free-text fallback, "Verifica connessione" with result and latency), personal context, wallet purposes, privacy and consent, history.
 - **Reports → Analisi AI card**: setup (preset, period prefilled from the report, wallets, data toggles), then preview (what is sent, estimated tokens and cost, read-only system prompt and data block, editable instructions with "Ripristina"), then the analysis screen (Markdown streamed live, stop button, model and token footer, "Dati inviati", follow-up questions, copy and share, retry on errors).
-- **History**: list with status, rename, swipe to delete, delete all.
+- **History**: list with status, rename, swipe to delete, delete all; a Tutte / Report / Chat filter (section 34).
+- **Chiedi all'assistente** (section 34.4): from the Reports card, Account → Assistente AI and the history.
 
 ### 32.8 Limits and observability
 
@@ -3518,13 +3519,21 @@ When the ledger had to be cut (long histories, the phone's context), questions a
 - First question: part of the `CONTEXT` message, so of the preview and its fingerprint. To make room, the ledger is cut to the budget minus the matches over the whole period (capped at a third of the budget); then the matches older than the oldest transaction kept are attached, fewer if they still don't fit.
 - Later questions: stored with the question (`ai_messages.attachment`, migration `0037_ai_message_attachment`) and replayed as sent; returned as `attachment` on messages and `allegato` in the export. On the phone it is part of the question message and counts against the context like any text.
 
-### 34.4 Consent
+### 34.4 App
+
+- **Entries**: "Chiedi all'assistente" on the Reports AI card (when a model is ready), in Account → Assistente AI and in the history's app bar.
+- **Chat screen** (`/app/ai/chat`): a short intro, three example questions (car insurance, monthly fuel, yearly expenses) that fill the composer, the model picker of the report setup (cloud accounts and phone models, starting on the last one used), a line on what is sent (cloud: the whole history with titles; phone: the same, plus searched matches when it doesn't fit), and the composer (at most 2000 characters). Sending asks for consent when needed, previews without showing the preview screen (`AiAnalysisRequest.chat`: preset `CHAT`, `all_time`, ledger 2000; on the phone the compact profile with the model's budget and device params), remembers the model, and replaces itself with the run screen. Preview errors stay on the chat screen.
+- **Conversation**: the analysis screen in chat mode: titled "Chiedi all'assistente" until the stored title (the question) arrives, the first question as a user bubble (`question` from the detail, or the draft's while it runs), then answers and questions as usual. A question with an attachment has a "Movimenti cercati" chip that opens the attached transactions in a sheet. "Dati inviati", copy, share, stop, background runs and follow-up limits work as for reports.
+- **History**: a speech bubble icon for chats (the phone icon still wins for on-device ones) and the Tutte / Report / Chat filter (`GET /v1/ai/analyses?type=`).
+
+### 34.5 Consent
 
 The cloud disclosure (`ConsentVersion` 2) now says that chats always send the transaction list; users who accepted version 1 are asked again before the next analysis or chat. The on-device disclosure doesn't list data and is unchanged.
 
-### 34.5 Tests
+### 34.6 Tests
 
 - Backend (`internal/ai/chat_integration_test.go`): preview and run (system prompt without headings, whole-history ledger, first message = data + tagged question, title and `question`), follow-ups with the chat prompt, CHAT not among the presets, validation (missing, blank or too long question, anonymized titles, ledger cap, report cap unchanged), ledger cut to the budget keeping the newest and the same fingerprint twice, on-device chat (compact prompt, first answer labelled `ANSWER`), history type filter, export; search (older matches attached to the first and later questions, stored and replayed exactly, accents folded, other wallets and other users never searched, export of the attachment), and nothing searched when the ledger is complete. `retrieval_test.go`: search terms and accent folding.
+- App: `ai_chat_screen_test.dart` (an example fills the question and enables sending; the request is a CHAT on `all_time` with the chosen account; the consent sheet comes first when required), the analysis screen in chat mode (first question bubble, no data message, the attachment sheet), the history type filter, the chat request and the new fields' parsing, the chat button on the Reports card.
 - Prompt: matches rendering (found, none, placement before the question), golden files `chat_it`, `chat_en`, `chat_it_compact`; first-question round trip with tags inside the question.
 
 ---

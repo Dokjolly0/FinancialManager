@@ -56,6 +56,7 @@ class AiAnalysisEntryCard extends ConsumerWidget {
             Text(ready ? l10n.aiReportsCardBody : l10n.aiReportsCardSetupBody),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
+              runSpacing: AppSpacing.xs,
               spacing: AppSpacing.sm,
               children: [
                 FilledButton.icon(
@@ -69,6 +70,12 @@ class AiAnalysisEntryCard extends ConsumerWidget {
                     ready ? l10n.aiReportsCardStart : l10n.aiGoToSetup,
                   ),
                 ),
+                if (ready)
+                  OutlinedButton.icon(
+                    onPressed: () => context.push(AppRoutes.aiChat),
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    label: Text(l10n.aiChatTitle),
+                  ),
                 if (settings.setup.hasAnalyses)
                   OutlinedButton(
                     onPressed: () => context.push(AppRoutes.aiHistory),

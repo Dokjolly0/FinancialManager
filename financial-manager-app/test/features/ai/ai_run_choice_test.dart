@@ -256,6 +256,8 @@ void main() {
       );
       expect(find.byType(Card), findsOneWidget);
       expect(find.text('Analizza'), findsOneWidget);
+      // Chats start from the same card.
+      expect(find.text("Chiedi all'assistente"), findsOneWidget);
     });
   });
 }

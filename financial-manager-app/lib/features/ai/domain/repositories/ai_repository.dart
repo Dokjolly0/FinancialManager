@@ -86,7 +86,12 @@ abstract class AiRepository implements AiTurnSource {
     String? localModelId,
   });
 
-  Future<AiHistoryPage> listAnalyses({String? cursor, int limit = 20});
+  /// [type] null lists reports and chats together.
+  Future<AiHistoryPage> listAnalyses({
+    String? cursor,
+    int limit = 20,
+    AiHistoryType? type,
+  });
   Future<AiAnalysisDetail> getAnalysis(String id);
   Future<AiAnalysisDetail> renameAnalysis(String id, String title);
   Future<void> deleteAnalysis(String id);

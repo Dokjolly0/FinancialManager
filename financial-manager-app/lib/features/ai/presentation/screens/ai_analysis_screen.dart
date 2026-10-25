@@ -15,6 +15,7 @@ import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/providers.dart';
 import '../../domain/models/ai_analysis.dart';
+import '../../domain/models/ai_analysis_request.dart';
 import '../../domain/models/ai_settings.dart';
 import '../view_models/ai_conversation_controller.dart';
 import '../view_models/ai_draft_controller.dart';
@@ -24,8 +25,10 @@ import '../widgets/local_context_card.dart';
 import '../widgets/local_model_labels.dart';
 import 'ai_prompt_preview_screen.dart';
 
-/// A report and its follow-up conversation (plan.md section 32.7). With
-/// [analysisId] null it runs the previewed draft first.
+/// A report and its follow-up conversation (plan.md section 32.7), or a
+/// chat (section 34): the same screen, the chat's first question shown as
+/// the first message. With [analysisId] null it runs the previewed draft
+/// first.
 class AiAnalysisScreen extends ConsumerStatefulWidget {
   const AiAnalysisScreen({super.key, this.analysisId});
 
@@ -83,6 +86,16 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
     _question.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  /// A chat's first question: stored on the analysis, or the draft's while
+  /// a new chat runs. Null for reports.
+  String? _chatQuestion(AiConversationState state) {
+    final detail = state.detail;
+    if (detail != null) return detail.summary.isChat ? detail.question : null;
+    if (widget.analysisId != null) return null;
+    final request = ref.read(aiDraftControllerProvider).request;
+    return request?.preset == aiChatPreset ? request?.instructions : null;
   }
 
   bool _onDevice(AiConversationState state) =>
@@ -215,7 +228,10 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            detail?.summary.title ?? l10n.aiAnalysisTitle,
+            detail?.summary.title ??
+                (_chatQuestion(state) != null
+                    ? l10n.aiChatTitle
+                    : l10n.aiAnalysisTitle),
             overflow: TextOverflow.ellipsis,
           ),
           actions: [
@@ -292,15 +308,17 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
     final onDevice =
         state.detail?.summary.isOnDevice ??
         ref.read(aiDraftControllerProvider).preview?.target == AiMode.onDevice;
+    final chatQuestion = _chatQuestion(state);
     return ListView(
       controller: _scroll,
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         if (state.detail != null) _Header(detail: state.detail!),
         if (state.isStreaming && onDevice) const _KeepOpenBanner(),
+        if (chatQuestion != null) _QuestionBubble(text: chatQuestion),
         for (final m in state.messages)
           m.kind == AiMessageKind.question
-              ? _QuestionBubble(text: m.content)
+              ? _QuestionBubble(text: m.content, attachment: m.attachment)
               : _AnswerCard(
                   message: m,
                   isStreaming:
@@ -450,12 +468,60 @@ class _KeepOpenBanner extends StatelessWidget {
 }
 
 class _QuestionBubble extends StatelessWidget {
-  const _QuestionBubble({required this.text});
+  const _QuestionBubble({required this.text, this.attachment});
 
   final String text;
 
+  /// The older transactions sent with a chat question, opened from a chip.
+  final String? attachment;
+
   @override
   Widget build(BuildContext context) {
+    final attachment = this.attachment;
+    if (attachment == null) return _bubble(context);
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _bubble(context),
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: ActionChip(
+            avatar: const Icon(Icons.manage_search, size: 18),
+            label: Text(l10n.aiChatAttachmentChip),
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              showDragHandle: true,
+              builder: (context) => DraggableScrollableSheet(
+                expand: false,
+                initialChildSize: 0.6,
+                builder: (context, scroll) => ListView(
+                  controller: scroll,
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  children: [
+                    Text(
+                      l10n.aiChatAttachmentTitle,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    SelectableText(
+                      attachment,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _bubble(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Align(
       alignment: Alignment.centerRight,

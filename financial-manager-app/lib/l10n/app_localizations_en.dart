@@ -2029,7 +2029,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiAskAction => 'Send question';
 
   @override
-  String get aiHistoryEmpty => 'No analyses yet. Start one from Reports.';
+  String get aiHistoryEmpty =>
+      'No analyses yet. Start one from Reports or ask a question in Ask the assistant.';
 
   @override
   String get aiDeleteAnalysisTitle => 'Delete the analysis?';
@@ -2864,4 +2865,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notifyAnalysisFallbackBody => 'Tap to read it.';
+
+  @override
+  String get aiChatTitle => 'Ask the assistant';
+
+  @override
+  String get aiChatMenuSubtitle =>
+      'Free-form questions about your transactions, as in a chat';
+
+  @override
+  String get aiChatIntro =>
+      'Ask a question about your transactions: when you paid something, how much you spend on an item, which expenses you have every year.';
+
+  @override
+  String get aiChatExamplesTitle => 'For example';
+
+  @override
+  String get aiChatExampleInsurance => 'When did I pay the car insurance?';
+
+  @override
+  String get aiChatExampleFuel =>
+      'How much do I spend on fuel per month on average?';
+
+  @override
+  String get aiChatExampleYearly => 'Which expenses do I pay once a year?';
+
+  @override
+  String get aiChatHint => 'Write your question';
+
+  @override
+  String get aiChatDataNoteCloud =>
+      'To answer, it sends the provider your whole history, with the transaction list and its titles.';
+
+  @override
+  String get aiChatDataNoteOnDevice =>
+      'The model on the phone reads your whole history with the transaction list; if it doesn\'t all fit, each question gets the older transactions that match it.';
+
+  @override
+  String get aiChatAttachmentChip => 'Transactions searched';
+
+  @override
+  String get aiChatAttachmentTitle => 'Transactions added to the question';
+
+  @override
+  String get aiHistoryFilterAll => 'All';
+
+  @override
+  String get aiHistoryFilterReports => 'Reports';
+
+  @override
+  String get aiHistoryFilterChats => 'Chats';
 }

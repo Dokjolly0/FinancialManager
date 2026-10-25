@@ -103,12 +103,14 @@ class AiApi {
     'content': question,
   }, cancelToken: cancelToken);
 
+  /// [type] is 'chat', 'report' or null for both.
   Future<Map<String, dynamic>> listAnalyses({
     String? cursor,
     int limit = 20,
+    String? type,
   }) async => (await _dio.get<Map<String, dynamic>>(
     '/ai/analyses',
-    queryParameters: {'limit': limit, 'cursor': ?cursor},
+    queryParameters: {'limit': limit, 'cursor': ?cursor, 'type': ?type},
   )).data!;
 
   Future<Map<String, dynamic>> getAnalysis(String id) async =>

@@ -186,6 +186,16 @@ class _AssistantBody extends ConsumerWidget {
         const SizedBox(height: AppSpacing.md),
         Card(
           child: ListTile(
+            leading: const Icon(Icons.chat_bubble_outline),
+            title: Text(l10n.aiChatTitle),
+            subtitle: Text(l10n.aiChatMenuSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRoutes.aiChat),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Card(
+          child: ListTile(
             leading: const Icon(Icons.history),
             title: Text(l10n.aiHistoryTitle),
             subtitle: Text(l10n.aiHistoryMenuSubtitle),

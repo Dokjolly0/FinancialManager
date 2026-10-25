@@ -13,6 +13,7 @@ import '../features/ai/presentation/view_models/local_run_plan.dart';
 import '../features/ai/presentation/screens/ai_analysis_screen.dart';
 import '../features/ai/presentation/screens/ai_analysis_setup_screen.dart';
 import '../features/ai/presentation/screens/ai_assistant_screen.dart';
+import '../features/ai/presentation/screens/ai_chat_screen.dart';
 import '../features/ai/presentation/screens/ai_history_screen.dart';
 import '../features/ai/presentation/screens/ai_local_models_screen.dart';
 import '../features/ai/presentation/screens/ai_local_runtime_screen.dart';
@@ -82,6 +83,7 @@ abstract final class AppRoutes {
 
   // AI analysis flow: setup → preview → run, plus the history.
   static const aiNew = '/app/ai/new';
+  static const aiChat = '/app/ai/chat';
   static const aiPreview = '/app/ai/preview';
   static const aiRun = '/app/ai/run';
   static const aiHistory = '/app/ai/analyses';
@@ -296,6 +298,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.aiNew,
         builder: (_, _) => const AdaptivePage(child: AiAnalysisSetupScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.aiChat,
+        builder: (_, _) => const AdaptivePage(child: AiChatScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiPreview,

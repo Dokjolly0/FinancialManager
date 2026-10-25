@@ -38,4 +38,6 @@ Feature-first (`lib/features/<feature>/{data,domain,presentation}`), Riverpod fo
   - Background: `data/local/background_work.dart` runs downloads and generation in an Android foreground service with a progress notification (Pausa / Interrompi), `data/local/ai_notifier.dart` notifies when they finish; the Flutter engine is cached in `FinancialManagerApplication` so work survives a swipe from the recents.
   - Measurements behind the choices: [`../docs/ai-on-device-spike.md`](../docs/ai-on-device-spike.md).
 
+**Chiedi all'assistente** (plan.md section 34) is a chat about the user's own transactions, in both modes: `presentation/screens/ai_chat_screen.dart` asks the question, previews silently (`AiAnalysisRequest.chat`, preset `CHAT`) and hands over to the analysis screen, which shows a chat's first question as a bubble and the transactions the server searched for a question behind a chip. The history filters reports and chats (`AiHistoryType`).
+
 The engines are why release APKs ship `arm64-v8a` only (about 92 MB), `minSdk` is 30 and the iOS target is 15. Tests use fake engines and servers (`test/features/ai/fakes/`); the engines themselves only run on a real Android phone.

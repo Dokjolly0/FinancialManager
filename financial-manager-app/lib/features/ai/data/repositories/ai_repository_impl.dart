@@ -168,12 +168,15 @@ class AiRepositoryImpl implements AiRepository {
       .cast<AiStreamEvent>();
 
   @override
-  Future<AiHistoryPage> listAnalyses({String? cursor, int limit = 20}) =>
-      _guard(
-        () async => AiHistoryPage.fromJson(
-          await _api.listAnalyses(cursor: cursor, limit: limit),
-        ),
-      );
+  Future<AiHistoryPage> listAnalyses({
+    String? cursor,
+    int limit = 20,
+    AiHistoryType? type,
+  }) => _guard(
+    () async => AiHistoryPage.fromJson(
+      await _api.listAnalyses(cursor: cursor, limit: limit, type: type?.wire),
+    ),
+  );
 
   @override
   Future<AiAnalysisDetail> getAnalysis(String id) =>

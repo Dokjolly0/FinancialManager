@@ -25,6 +25,13 @@ const aiMaxTransactions = 500;
 const aiDefaultMaxTransactions = 200;
 const aiInstructionsMaxLength = 4000;
 
+/// Chats, "Chiedi all'assistente" (plan.md section 34): a preset of their
+/// own, the first question as instructions, the whole history and its
+/// transaction list (cut by the server to the budget).
+const aiChatPreset = 'CHAT';
+const aiChatMaxTransactions = 2000;
+const aiChatQuestionMaxLength = 2000;
+
 /// The compact profile's transaction list (plan.md section 33).
 const aiCompactDefaultTransactions = 60;
 const aiCompactMaxTransactions = 100;
@@ -153,6 +160,28 @@ class AiAnalysisRequest {
     this.credentialId,
     this.device,
   });
+
+  /// A chat asking [question]; the server picks the data. On the phone
+  /// [profile] is compact and [budgetTokens] the model's room.
+  factory AiAnalysisRequest.chat(
+    String question, {
+    String? profile,
+    int? budgetTokens,
+    String? target,
+    String? credentialId,
+    AiDeviceParams? device,
+  }) => AiAnalysisRequest(
+    preset: aiChatPreset,
+    periodPreset: 'all_time',
+    includeTransactions: true,
+    maxTransactions: aiChatMaxTransactions,
+    instructions: question.trim(),
+    profile: profile,
+    budgetTokens: budgetTokens,
+    target: target,
+    credentialId: credentialId,
+    device: device,
+  );
 
   final String preset;
   final String periodPreset;

@@ -12,9 +12,11 @@ import 'package:financialmanager/features/ai/domain/models/ai_analysis_request.d
 import 'package:financialmanager/features/ai/domain/models/ai_settings.dart';
 import 'package:financialmanager/features/ai/domain/models/ai_stream_event.dart';
 import 'package:financialmanager/features/ai/domain/repositories/ai_repository.dart';
+import 'package:financialmanager/features/ai/presentation/screens/ai_analysis_screen.dart';
 import 'package:financialmanager/features/ai/presentation/screens/ai_prompt_preview_screen.dart';
 import 'package:financialmanager/features/ai/presentation/view_models/ai_conversation_controller.dart';
 import 'package:financialmanager/features/ai/presentation/view_models/ai_draft_controller.dart';
+import 'package:financialmanager/features/ai/presentation/view_models/ai_history_controller.dart';
 import 'package:financialmanager/l10n/app_localizations.dart';
 
 AiAnalysisDetail _detail({bool canAsk = true, List<AiMessage>? messages}) =>
@@ -52,6 +54,52 @@ AiAnalysisDetail _detail({bool canAsk = true, List<AiMessage>? messages}) =>
       canAskFollowUps: canAsk,
     );
 
+AiAnalysisDetail _chat() => AiAnalysisDetail(
+  summary: AiAnalysisSummary(
+    id: 'a1',
+    title: 'Quando ho pagato?',
+    preset: 'CHAT',
+    periodTo: DateTime(2026, 10, 25),
+    status: AiStatus.completed,
+    provider: AiProviderKind.openai,
+    model: 'gpt-test',
+    inputTokens: 10,
+    outputTokens: 5,
+    createdAt: DateTime(2026, 10, 25),
+  ),
+  systemPrompt: 'sys',
+  question: "Quando ho pagato l'assicurazione?",
+  messages: const [
+    AiMessage(
+      id: 'm1',
+      kind: AiMessageKind.context,
+      content: 'dati e domanda',
+      status: AiStatus.completed,
+    ),
+    AiMessage(
+      id: 'm2',
+      kind: AiMessageKind.report,
+      content: 'Il 1 giugno 2024.',
+      status: AiStatus.completed,
+    ),
+    AiMessage(
+      id: 'm3',
+      kind: AiMessageKind.question,
+      content: 'E il bollo?',
+      status: AiStatus.completed,
+      attachment: 'Bollo auto | 210.00',
+    ),
+    AiMessage(
+      id: 'm4',
+      kind: AiMessageKind.answer,
+      content: 'Il 1 luglio 2024.',
+      status: AiStatus.completed,
+    ),
+  ],
+  followUpsLeft: 19,
+  canAskFollowUps: true,
+);
+
 final _preview = AiPreview.fromJson({
   'provider': 'openai',
   'model': 'gpt-test',
@@ -75,6 +123,7 @@ class _FakeRepo implements AiRepository {
   AppError? refuse;
   AiAnalysisDetail detail = _detail();
   int previewCalls = 0;
+  final historyTypes = <AiHistoryType?>[];
 
   Stream<AiStreamEvent> _open(CancelToken? token) {
     lastToken = token;
@@ -108,6 +157,18 @@ class _FakeRepo implements AiRepository {
 
   @override
   Future<AiAnalysisDetail> getAnalysis(String id) async => detail;
+
+  @override
+  Future<AiHistoryPage> listAnalyses({
+    String? cursor,
+    int limit = 20,
+    AiHistoryType? type,
+  }) async {
+    historyTypes.add(type);
+    return AiHistoryPage(
+      items: [if (type != AiHistoryType.report) _chat().summary],
+    );
+  }
 
   @override
   Future<AiPreview> preview(AiAnalysisRequest request) async {
@@ -359,5 +420,48 @@ void main() {
     await tester.tap(find.text('Ripristina'));
     await tester.pump();
     expect(find.text('Istruzioni predefinite'), findsOneWidget);
+  });
+
+  test('the history lists one type at a time', () async {
+    container.listen(aiHistoryControllerProvider, (_, _) {});
+    await _flush();
+    final controller = container.read(aiHistoryControllerProvider.notifier);
+    expect(repo.historyTypes, [null]);
+    await controller.setType(AiHistoryType.report);
+    expect(container.read(aiHistoryControllerProvider).items, isEmpty);
+    await controller.setType(AiHistoryType.chat);
+    final state = container.read(aiHistoryControllerProvider);
+    expect((state.type, state.items.single.isChat), (AiHistoryType.chat, true));
+    await controller.setType(AiHistoryType.chat);
+    expect(repo.historyTypes, [null, AiHistoryType.report, AiHistoryType.chat]);
+  });
+
+  testWidgets('a chat shows its first question and the searched transactions', (
+    tester,
+  ) async {
+    repo.detail = _chat();
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          locale: Locale('it'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AiAnalysisScreen(analysisId: 'a1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final texts = tester
+        .widgetList<SelectableText>(find.byType(SelectableText))
+        .map((t) => t.data)
+        .toList();
+    expect(texts, ["Quando ho pagato l'assicurazione?", 'E il bollo?']);
+    expect(find.text('dati e domanda'), findsNothing);
+
+    await tester.tap(find.text('Movimenti cercati'));
+    await tester.pumpAndSettle();
+    expect(find.text('Movimenti aggiunti alla domanda'), findsOneWidget);
+    expect(find.text('Bollo auto | 210.00'), findsOneWidget);
   });
 }

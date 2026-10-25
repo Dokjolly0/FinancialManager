@@ -238,6 +238,55 @@ void main() {
     expect(map('something_new', '{}'), isNull);
   });
 
+  test('chats: request, detail question, message attachment', () {
+    final body = AiAnalysisRequest.chat(
+      '  Quando ho pagato?  ',
+      profile: 'compact',
+      budgetTokens: 9000,
+      target: 'on_device',
+    ).toJson();
+    expect(body['preset'], 'CHAT');
+    expect(body['instructions'], 'Quando ho pagato?');
+    expect(body['period'], {'preset': 'all_time'});
+    final options = body['options'] as Map<String, dynamic>;
+    expect(options['sections'], isEmpty, reason: 'the server picks them');
+    expect(options['max_transactions'], aiChatMaxTransactions);
+    expect((options['profile'], options['budget_tokens']), ('compact', 9000));
+
+    final detail = AiAnalysisDetail.fromJson({
+      'id': 'a1',
+      'title': 'Quando ho pagato?',
+      'preset': 'CHAT',
+      'period_from': null,
+      'period_to': '2026-10-25',
+      'status': 'COMPLETED',
+      'provider': 'openai',
+      'model': 'gpt-test',
+      'created_at': '2026-10-25T08:00:00Z',
+      'question': 'Quando ho pagato?',
+      'messages': [
+        {
+          'id': 'q',
+          'kind': 'QUESTION',
+          'content': 'E il bollo?',
+          'status': 'COMPLETED',
+          'attachment': 'MATCHES',
+        },
+        {
+          'id': 'a',
+          'kind': 'ANSWER',
+          'content': 'Il 1 luglio.',
+          'status': 'COMPLETED',
+          'attachment': null,
+        },
+      ],
+    });
+    expect(detail.summary.isChat, isTrue);
+    expect(detail.question, 'Quando ho pagato?');
+    expect(detail.messages.map((m) => m.attachment), ['MATCHES', null]);
+    expect(detail.messages.first.copyWith(content: 'x').attachment, 'MATCHES');
+  });
+
   test('AiUserContext round-trips', () {
     final context = AiUserContext.fromJson({
       'household_size': 3,

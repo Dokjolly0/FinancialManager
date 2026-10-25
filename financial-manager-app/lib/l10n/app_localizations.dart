@@ -3693,7 +3693,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiHistoryEmpty.
   ///
   /// In it, this message translates to:
-  /// **'Nessuna analisi ancora. Avviane una dalla sezione Report.'**
+  /// **'Nessuna analisi ancora. Avviane una dalla sezione Report o fai una domanda in Chiedi all\'assistente.'**
   String get aiHistoryEmpty;
 
   /// No description provided for @aiDeleteAnalysisTitle.
@@ -5069,6 +5069,96 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Tocca per leggerla.'**
   String get notifyAnalysisFallbackBody;
+
+  /// No description provided for @aiChatTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Chiedi all\'assistente'**
+  String get aiChatTitle;
+
+  /// No description provided for @aiChatMenuSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Domande libere sui tuoi movimenti, come in una chat'**
+  String get aiChatMenuSubtitle;
+
+  /// No description provided for @aiChatIntro.
+  ///
+  /// In it, this message translates to:
+  /// **'Fai una domanda sui tuoi movimenti: quando hai pagato qualcosa, quanto spendi per una voce, quali spese hai ogni anno.'**
+  String get aiChatIntro;
+
+  /// No description provided for @aiChatExamplesTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Per esempio'**
+  String get aiChatExamplesTitle;
+
+  /// No description provided for @aiChatExampleInsurance.
+  ///
+  /// In it, this message translates to:
+  /// **'Quando ho pagato l\'assicurazione della macchina?'**
+  String get aiChatExampleInsurance;
+
+  /// No description provided for @aiChatExampleFuel.
+  ///
+  /// In it, this message translates to:
+  /// **'Quanto spendo in media al mese di benzina?'**
+  String get aiChatExampleFuel;
+
+  /// No description provided for @aiChatExampleYearly.
+  ///
+  /// In it, this message translates to:
+  /// **'Quali spese pago una volta all\'anno?'**
+  String get aiChatExampleYearly;
+
+  /// No description provided for @aiChatHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Scrivi la tua domanda'**
+  String get aiChatHint;
+
+  /// No description provided for @aiChatDataNoteCloud.
+  ///
+  /// In it, this message translates to:
+  /// **'Per rispondere invia al fornitore tutta la cronologia, con l\'elenco dei movimenti e i loro titoli.'**
+  String get aiChatDataNoteCloud;
+
+  /// No description provided for @aiChatDataNoteOnDevice.
+  ///
+  /// In it, this message translates to:
+  /// **'Il modello sul telefono legge tutta la cronologia con l\'elenco dei movimenti; se non entra tutta, a ogni domanda si aggiungono i movimenti più vecchi che le corrispondono.'**
+  String get aiChatDataNoteOnDevice;
+
+  /// No description provided for @aiChatAttachmentChip.
+  ///
+  /// In it, this message translates to:
+  /// **'Movimenti cercati'**
+  String get aiChatAttachmentChip;
+
+  /// No description provided for @aiChatAttachmentTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Movimenti aggiunti alla domanda'**
+  String get aiChatAttachmentTitle;
+
+  /// No description provided for @aiHistoryFilterAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Tutte'**
+  String get aiHistoryFilterAll;
+
+  /// No description provided for @aiHistoryFilterReports.
+  ///
+  /// In it, this message translates to:
+  /// **'Report'**
+  String get aiHistoryFilterReports;
+
+  /// No description provided for @aiHistoryFilterChats.
+  ///
+  /// In it, this message translates to:
+  /// **'Chat'**
+  String get aiHistoryFilterChats;
 }
 
 class _AppLocalizationsDelegate
