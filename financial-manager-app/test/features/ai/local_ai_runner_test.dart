@@ -336,6 +336,28 @@ void main() {
     expect(repo.submitted.last.$3.status, 'FAILED');
   });
 
+  test('trimming keeps each message kind for the transcript', () async {
+    engine.tokensPerChar = 1;
+    repo.followUpMessages = [
+      const LocalChatMessage(role: 'user', content: 'dati', kind: 'CONTEXT'),
+      const LocalChatMessage(
+        role: 'assistant',
+        content: 'report',
+        kind: 'REPORT',
+      ),
+      LocalChatMessage(role: 'user', content: 'q1' * 200, kind: 'QUESTION'),
+      LocalChatMessage(role: 'assistant', content: 'a1' * 200, kind: 'ANSWER'),
+      const LocalChatMessage(role: 'user', content: 'nuova', kind: 'QUESTION'),
+    ];
+    final small = FakeModelHost(engine, contextTokens: 600);
+    await runner(h: small).askFollowUp('a1', 'nuova').toList();
+    expect(engine.lastRequest!.messages.map((m) => m.kind), [
+      'CONTEXT',
+      'REPORT',
+      'QUESTION',
+    ]);
+  });
+
   group('in the background', () {
     late FakeBackgroundWork background;
     late FakeAiNotifier notifier;

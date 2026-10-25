@@ -215,6 +215,14 @@ func TestLocal_FollowUpsAndCloudSeparation(t *testing.T) {
 		q.body["kind"] != "ANSWER" || q.body["question_id"] == nil {
 		t.Fatalf("local follow-up = %s", q.raw)
 	}
+	for i, kind := range []string{"CONTEXT", "REPORT", "QUESTION"} {
+		if got := msgs[i].(map[string]any)["kind"]; got != kind {
+			t.Fatalf("message %d kind = %v, want %s", i, got, kind)
+		}
+	}
+	if k := prep.body["messages"].([]any)[0].(map[string]any)["kind"]; k != "CONTEXT" {
+		t.Fatalf("report turn message kind = %v", k)
+	}
 	// The phone runs the answer with the follow-up rules, as the cloud does.
 	if q.body["system_prompt"] != prompt.WithFollowUpRules(prep.body["system_prompt"].(string), prompt.LangIT) {
 		t.Fatalf("local follow-up system prompt = %q", q.body["system_prompt"])

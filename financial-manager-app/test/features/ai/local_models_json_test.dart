@@ -115,13 +115,15 @@ void main() {
       'kind': 'ANSWER',
       'system_prompt': 's',
       'messages': [
-        {'role': 'user', 'content': 'x'},
+        {'role': 'user', 'content': 'x', 'kind': 'CONTEXT'},
+        {'role': 'assistant', 'content': 'y'},
       ],
       'max_output_tokens': 512,
       'deadline_at': '2026-10-20T09:00:00Z',
     });
     expect(turn.isReport, isFalse);
-    expect(turn.messages.single.content, 'x');
+    expect(turn.messages.first.content, 'x');
+    expect(turn.messages.map((m) => m.kind), ['CONTEXT', null]);
     const r = AiLocalResult(
       content: 'c',
       status: 'FAILED',

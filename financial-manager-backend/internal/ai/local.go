@@ -129,6 +129,10 @@ func (s *Service) requireLocalReady(ctx context.Context, userID uuid.UUID) (Sett
 type localMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+	// Kind is the stored message kind (CONTEXT, REPORT, QUESTION, ANSWER):
+	// the phone sends the whole conversation as one user turn and labels
+	// each part with it.
+	Kind string `json:"kind"`
 }
 
 // localTurnResponse is everything the phone needs to generate one answer.
@@ -228,7 +232,7 @@ func (s *Service) PrepareLocalAnalysis(ctx context.Context, userID uuid.UUID, re
 	if err != nil {
 		return localTurnResponse{}, false, err
 	}
-	return s.localTurn(stored, report, stored.SystemPrompt, []localMessage{{Role: "user", Content: userMessage}}), true, nil
+	return s.localTurn(stored, report, stored.SystemPrompt, []localMessage{{Role: "user", Content: userMessage, Kind: KindContext}}), true, nil
 }
 
 // resumeLocalAnalysis answers a repeated prepare: the same turn while the
@@ -253,7 +257,7 @@ func (s *Service) resumeLocalAnalysis(ctx context.Context, a Analysis) (localTur
 	if contextMsg == nil || report == nil || report.Status != StatusStreaming {
 		return localTurnResponse{}, false, ErrAnalysisExists
 	}
-	return s.localTurn(a, *report, a.SystemPrompt, []localMessage{{Role: "user", Content: contextMsg.Content}}), false, nil
+	return s.localTurn(a, *report, a.SystemPrompt, []localMessage{{Role: "user", Content: contextMsg.Content, Kind: KindContext}}), false, nil
 }
 
 // PrepareLocalFollowUp stores a question on an on-device analysis and
@@ -309,9 +313,9 @@ func (s *Service) PrepareLocalFollowUp(ctx context.Context, userID, analysisID u
 	}
 	out := make([]localMessage, 0, len(history)+1)
 	for _, m := range history {
-		out = append(out, localMessage{Role: string(m.Role), Content: m.Content})
+		out = append(out, localMessage{Role: string(m.Role), Content: m.Content, Kind: m.Kind})
 	}
-	out = append(out, localMessage{Role: "user", Content: prompt.FollowUpQuestion(question, lang)})
+	out = append(out, localMessage{Role: "user", Content: prompt.FollowUpQuestion(question, lang), Kind: KindQuestion})
 	resp := s.localTurn(analysis, answer, prompt.WithFollowUpRules(analysis.SystemPrompt, lang), out)
 	qid := q.ID.String()
 	resp.QuestionID = &qid

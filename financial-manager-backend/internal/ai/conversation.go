@@ -238,12 +238,16 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 		return Turn{}, err
 	}
 
-	history = append(history, provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(question, lang)})
+	sent := make([]provider.Message, 0, len(history)+1)
+	for _, m := range history {
+		sent = append(sent, m.Message)
+	}
+	sent = append(sent, provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(question, lang)})
 	return Turn{
 		Analysis: analysis, Message: answer, provider: rp.provider, kind: rp.kind, release: release,
 		request: provider.ChatRequest{
 			Model: rp.model, System: prompt.WithFollowUpRules(analysis.SystemPrompt, lang),
-			MaxTokens: settings.MaxOutputTokens, Messages: history,
+			MaxTokens: settings.MaxOutputTokens, Messages: sent,
 		},
 	}, nil
 }
@@ -261,14 +265,21 @@ func (s *Service) analysisLang(ctx context.Context, a Analysis) (prompt.Lang, er
 	return prompt.LangFor(user.Locale), nil
 }
 
+// replayedMessage is one message of a replayed conversation, with the kind
+// of the stored message it comes from (the phone labels each part).
+type replayedMessage struct {
+	provider.Message
+	Kind string
+}
+
 // replayHistory rebuilds the conversation from stored messages, keeping
 // user/assistant alternation (Anthropic requires it): a question whose
 // answer failed or is empty is left out together with that answer.
 // Questions are sent wrapped by prompt.FollowUpQuestion, as when they were
 // first asked.
-func (s *Service) replayHistory(messages []Message, analysisProvider string, lang prompt.Lang) ([]provider.Message, int, error) {
+func (s *Service) replayHistory(messages []Message, analysisProvider string, lang prompt.Lang) ([]replayedMessage, int, error) {
 	now := s.clock.Now()
-	var history []provider.Message
+	var history []replayedMessage
 	questions := 0
 	var reportOK bool
 	for i := 0; i < len(messages); i++ {
@@ -276,7 +287,7 @@ func (s *Service) replayHistory(messages []Message, analysisProvider string, lan
 		status := s.effectiveStatus(m.Status, m.UpdatedAt, now, analysisProvider)
 		switch m.Kind {
 		case KindContext:
-			history = append(history, provider.Message{Role: provider.RoleUser, Content: m.Content})
+			history = append(history, replayedMessage{provider.Message{Role: provider.RoleUser, Content: m.Content}, KindContext})
 		case KindReport:
 			if status == StatusStreaming {
 				return nil, 0, ErrStreamInProgress
@@ -285,7 +296,7 @@ func (s *Service) replayHistory(messages []Message, analysisProvider string, lan
 				return nil, 0, ErrAnalysisNotReady
 			}
 			reportOK = true
-			history = append(history, provider.Message{Role: provider.RoleAssistant, Content: m.Content})
+			history = append(history, replayedMessage{provider.Message{Role: provider.RoleAssistant, Content: m.Content}, KindReport})
 		case KindQuestion:
 			questions++
 			if i+1 >= len(messages) || messages[i+1].Kind != KindAnswer {
@@ -298,8 +309,8 @@ func (s *Service) replayHistory(messages []Message, analysisProvider string, lan
 			}
 			if answerStatus != StatusFailed && strings.TrimSpace(answer.Content) != "" {
 				history = append(history,
-					provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(m.Content, lang)},
-					provider.Message{Role: provider.RoleAssistant, Content: answer.Content})
+					replayedMessage{provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(m.Content, lang)}, KindQuestion},
+					replayedMessage{provider.Message{Role: provider.RoleAssistant, Content: answer.Content}, KindAnswer})
 			}
 			i++
 		}

@@ -6,19 +6,33 @@ import '../../../domain/models/local_model.dart';
 /// message: chunks added with `addQueryChunk` are joined into it, and the
 /// model's own template wraps it. A conversation rebuilt from the server
 /// (data, report, earlier questions and answers) is therefore written into
-/// that message, each earlier turn tagged with its role, and the latest
-/// question last and untagged.
+/// that message, each earlier part tagged with what it is, and the latest
+/// question (already wrapped by the server) last and untagged. Without
+/// kinds (older servers) earlier turns are tagged with their role only.
 String chatTranscript(List<LocalChatMessage> messages) {
   if (messages.isEmpty) return '';
   if (messages.length == 1) return messages.single.content;
   final b = StringBuffer();
   for (final m in messages.take(messages.length - 1)) {
-    final role = m.role == 'assistant' ? 'assistant' : 'user';
+    final (open, close) = _tags(m);
     b
-      ..write('<previous_turn role="$role">\n')
+      ..write('$open\n')
       ..write(m.content.trim())
-      ..write('\n</previous_turn>\n\n');
+      ..write('\n$close\n\n');
   }
   b.write(messages.last.content);
   return b.toString();
+}
+
+(String, String) _tags(LocalChatMessage m) {
+  final tag = switch (m.kind) {
+    'CONTEXT' => 'initial_request_and_data',
+    'REPORT' => 'report_already_written',
+    'QUESTION' => 'previous_question',
+    'ANSWER' => 'previous_answer',
+    _ => null,
+  };
+  if (tag != null) return ('<$tag>', '</$tag>');
+  final role = m.role == 'assistant' ? 'assistant' : 'user';
+  return ('<previous_turn role="$role">', '</previous_turn>');
 }

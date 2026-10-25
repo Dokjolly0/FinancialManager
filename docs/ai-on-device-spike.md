@@ -163,6 +163,14 @@ Conclusioni:
   lontane tra loro. Se servirà, la soluzione è nel backend: i candidati
   duplicati si calcolano in modo deterministico e si mettono nel blocco dati.
   Non fa parte di questo lavoro.
+- **Domande successive (verificato dopo il rilascio):** `flutter_edge_ai`
+  accetta un solo messaggio utente, quindi una domanda arriva insieme a dati,
+  richiesta del report e report già scritto. Con Gemma 4 E2B, se le parti non
+  sono distinte e il prompt di sistema impone i titoli, il modello riscrive
+  il report a ogni domanda. Correzione (plan.md, sezioni 32.6 e 33): le
+  regole per le domande si aggiungono al prompt di sistema, la domanda è
+  racchiusa in `<follow_up_question>` e ogni parte del transcript ha il suo
+  tag.
 
 ## Pacchetti e build
 

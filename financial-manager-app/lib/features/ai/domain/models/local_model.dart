@@ -180,16 +180,25 @@ class AiLocalRuntime {
 
 /// One message to feed the model.
 class LocalChatMessage {
-  const LocalChatMessage({required this.role, required this.content});
+  const LocalChatMessage({
+    required this.role,
+    required this.content,
+    this.kind,
+  });
 
   /// 'user' or 'assistant'.
   final String role;
   final String content;
 
+  /// The stored message kind (CONTEXT, REPORT, QUESTION, ANSWER); null
+  /// from servers that don't send it.
+  final String? kind;
+
   static LocalChatMessage fromJson(Map<String, dynamic> json) =>
       LocalChatMessage(
         role: json['role'] as String,
         content: json['content'] as String,
+        kind: json['kind'] as String?,
       );
 }
 

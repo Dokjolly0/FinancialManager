@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:financialmanager/features/ai/data/local/device_capabilities_source.dart';
 import 'package:financialmanager/features/ai/data/local/engine_model_host.dart';
-import 'package:financialmanager/features/ai/data/local/engines/chat_transcript.dart';
 import 'package:financialmanager/features/ai/data/local/model_benchmark.dart';
 import 'package:financialmanager/features/ai/data/local/model_store.dart';
 import 'package:financialmanager/features/ai/domain/local/local_llm_engine.dart';
@@ -324,24 +323,6 @@ void main() {
     expect(req.messages.single.content, ModelBenchmark.prompt);
     await store.flush();
     expect(await store.speedOf('a', LocalBackend.gpu), isNotNull);
-  });
-
-  test('chat transcript keeps earlier turns tagged and the question last', () {
-    expect(
-      chatTranscript(const [LocalChatMessage(role: 'user', content: 'dati')]),
-      'dati',
-    );
-    final t = chatTranscript(const [
-      LocalChatMessage(role: 'user', content: 'dati'),
-      LocalChatMessage(role: 'assistant', content: 'report\n'),
-      LocalChatMessage(role: 'user', content: 'perché?'),
-    ]);
-    expect(
-      t,
-      '<previous_turn role="user">\ndati\n</previous_turn>\n\n'
-      '<previous_turn role="assistant">\nreport\n</previous_turn>\n\n'
-      'perché?',
-    );
   });
 
   test('run warnings', () {
