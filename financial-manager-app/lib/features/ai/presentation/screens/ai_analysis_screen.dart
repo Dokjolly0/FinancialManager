@@ -17,6 +17,7 @@ import '../../data/providers.dart';
 import '../../domain/models/ai_analysis.dart';
 import '../../domain/models/ai_analysis_request.dart';
 import '../../domain/models/ai_settings.dart';
+import '../../domain/models/ai_stream_event.dart';
 import '../view_models/ai_conversation_controller.dart';
 import '../view_models/ai_draft_controller.dart';
 import '../view_models/local_models_controller.dart';
@@ -323,6 +324,9 @@ class _AiAnalysisScreenState extends ConsumerState<AiAnalysisScreen> {
                   message: m,
                   isStreaming:
                       state.isStreaming && identical(m, state.messages.last),
+                  liveTool: identical(m, state.messages.last)
+                      ? state.liveTool
+                      : null,
                 ),
         if (state.streamErrorCode != null)
           _ErrorBanner(
@@ -547,11 +551,25 @@ class _QuestionBubble extends StatelessWidget {
   }
 }
 
+/// What a chat tool call looks up, for the status line and the searches.
+String _toolLabel(AppLocalizations l10n, {required bool sum, String? query}) {
+  final q = query?.trim() ?? '';
+  if (sum) return q.isEmpty ? l10n.aiChatToolSumAll : l10n.aiChatToolSum(q);
+  return q.isEmpty ? l10n.aiChatToolSearchAll : l10n.aiChatToolSearch(q);
+}
+
 class _AnswerCard extends StatelessWidget {
-  const _AnswerCard({required this.message, required this.isStreaming});
+  const _AnswerCard({
+    required this.message,
+    required this.isStreaming,
+    this.liveTool,
+  });
 
   final AiMessage message;
   final bool isStreaming;
+
+  /// The search the model is running while this answer streams.
+  final AiStreamTool? liveTool;
 
   @override
   Widget build(BuildContext context) {
@@ -589,10 +607,35 @@ class _AnswerCard extends StatelessWidget {
                   style: theme.textTheme.bodyMedium,
                 ),
               ),
+            if (isStreaming && liveTool != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Icon(
+                    Icons.manage_search,
+                    size: 18,
+                    color: theme.colorScheme.outline,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      _toolLabel(
+                        l10n,
+                        sum: liveTool!.isSum,
+                        query: liveTool!.query,
+                      ),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (isStreaming && !waiting) ...[
               const SizedBox(height: AppSpacing.sm),
               const LinearProgressIndicator(minHeight: 2),
             ],
+            if (!isStreaming && message.toolTrace.isNotEmpty)
+              _Searches(trace: message.toolTrace),
             if (note != null) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -605,6 +648,52 @@ class _AnswerCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The searches a chat answer made (section 34.7), with the data the model
+/// received.
+class _Searches extends StatelessWidget {
+  const _Searches({required this.trace});
+
+  final List<AiToolTraceEntry> trace;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      leading: const Icon(Icons.manage_search),
+      title: Text(
+        l10n.aiChatSearchesTitle(trace.length),
+        style: theme.textTheme.bodyMedium,
+      ),
+      children: [
+        for (final e in trace)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_toolLabel(l10n, sum: e.isSum, query: e.query)} · '
+                  '${l10n.aiChatSearchRows(e.rows)}',
+                  style: theme.textTheme.labelMedium,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                SelectableText(
+                  e.result,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

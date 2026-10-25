@@ -1,3 +1,5 @@
+import { SseEvent, sseJson } from '../../core/api/sse';
+
 /**
  * The AI analysis contract (plan.md section 32, financial-manager-backend
  * openapi/openapi.yaml). The dashboard only runs analyses in the cloud: the
@@ -242,6 +244,16 @@ export interface AiMessage {
   created_at: string;
   /** Chat questions: the older transactions sent with it (plan.md section 34.3). */
   attachment?: string | null;
+  /** Chat answers: the searches the model made (plan.md section 34.7). */
+  tool_trace?: AiToolTraceEntry[] | null;
+}
+
+/** One search of a chat answer: the tool, its arguments, the data returned. */
+export interface AiToolTraceEntry {
+  name: string;
+  args: { query?: string; group_by?: string } & Record<string, unknown>;
+  result: string;
+  rows: number;
 }
 
 export interface AiAnalysisDetail extends AiAnalysisSummary {
@@ -281,13 +293,66 @@ export function chatRequest(question: string, credentialId: string | null): AiAn
   };
 }
 
-/** One event of an analysis or follow-up stream: meta, deltas, usage or error, done. */
+/**
+ * One event of an analysis or follow-up stream: meta, deltas (with tool
+ * events in between when a chat searches the transactions), usage or
+ * error, done.
+ */
 export type AiStreamEvent =
   | { type: 'meta'; analysisId: string; messageId: string; kind: string }
   | { type: 'delta'; text: string }
+  | { type: 'tool'; name: string; query?: string; groupBy?: string }
   | { type: 'usage'; inputTokens: number; outputTokens: number; truncated: boolean }
   | { type: 'error'; code: string; message: string }
   | { type: 'done'; status: AiStatus };
+
+/** Maps a server-sent event; unknown event names give null (a newer backend may add some). */
+export function aiStreamEvent(event: SseEvent): AiStreamEvent | null {
+  const json = sseJson<Record<string, unknown>>(event);
+  const text = (key: string) => (typeof json[key] === 'string' ? (json[key] as string) : undefined);
+  switch (event.event) {
+    case 'meta':
+      return {
+        type: 'meta',
+        analysisId: String(json['analysis_id'] ?? ''),
+        messageId: String(json['message_id'] ?? ''),
+        kind: String(json['kind'] ?? ''),
+      };
+    case 'delta':
+      return { type: 'delta', text: text('text') ?? '' };
+    case 'tool':
+      return {
+        type: 'tool',
+        name: text('name') ?? '',
+        ...(text('query') ? { query: text('query') } : {}),
+        ...(text('group_by') ? { groupBy: text('group_by') } : {}),
+      };
+    case 'usage':
+      return {
+        type: 'usage',
+        inputTokens: Number(json['input_tokens'] ?? 0),
+        outputTokens: Number(json['output_tokens'] ?? 0),
+        truncated: json['truncated'] === true,
+      };
+    case 'error':
+      return {
+        type: 'error',
+        code: text('code') ?? 'AI_PROVIDER_ERROR',
+        message: text('message') ?? '',
+      };
+    case 'done':
+      return { type: 'done', status: (json['status'] as AiStatus) ?? 'COMPLETED' };
+  }
+  return null;
+}
+
+/** The label of a chat search: what it looks for (app _toolLabel). */
+export function toolLabelKey(name: string, query?: string): { key: string; query?: string } {
+  const q = query?.trim();
+  const sum = name === 'sum_transactions';
+  if (q) return { key: sum ? 'aiChatToolSum' : 'aiChatToolSearch', query: q };
+  return { key: sum ? 'aiChatToolSumAll' : 'aiChatToolSearchAll' };
+}
 
 /** A stored provider account that can run an analysis (the app's AiCloudChoice). */
 export function usableCredentials(settings: AiSettings): AiCredential[] {

@@ -1366,5 +1366,39 @@
   "aiChatAttachmentTitle": "Movimenti aggiunti alla domanda",
   "aiHistoryFilterAll": "Tutte",
   "aiHistoryFilterReports": "Report",
-  "aiHistoryFilterChats": "Chat"
+  "aiHistoryFilterChats": "Chat",
+  "aiChatToolSearch": "Cerco tra i movimenti: {query}",
+  "@aiChatToolSearch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "aiChatToolSearchAll": "Cerco tra i movimenti",
+  "aiChatToolSum": "Calcolo i totali: {query}",
+  "@aiChatToolSum": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "aiChatToolSumAll": "Calcolo i totali",
+  "aiChatSearchesTitle": "Ricerche fatte: {count}",
+  "@aiChatSearchesTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiChatSearchRows": "Righe: {count}",
+  "@aiChatSearchRows": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -34,6 +34,7 @@ import {
   AiStatus,
   AiStreamEvent,
   PROVIDER_LABELS,
+  toolLabelKey,
 } from './ai.model';
 import { Markdown } from './markdown';
 
@@ -47,6 +48,8 @@ interface Live {
   inputTokens?: number;
   outputTokens?: number;
   truncated?: boolean;
+  /** What the model is looking up right now (chats, plan.md section 34.7). */
+  tool?: { name: string; query?: string };
 }
 
 /**
@@ -209,6 +212,9 @@ export class AiAnalysisPage implements OnInit, OnDestroy {
       case 'delta':
         this.live.update((live) => (live ? { ...live, content: live.content + event.text } : live));
         break;
+      case 'tool':
+        this.patch({ tool: { name: event.name, query: event.query } });
+        break;
       case 'usage':
         this.patch({
           inputTokens: event.inputTokens,
@@ -320,6 +326,12 @@ export class AiAnalysisPage implements OnInit, OnDestroy {
     return new Intl.NumberFormat(this.locale.intl(), {
       maximumFractionDigits: value < 0.1 ? 4 : 2,
     }).format(value);
+  }
+
+  /** What a chat search looks for, for the status line and the searches list. */
+  protected toolLabel(name: string, query?: string): string {
+    const { key, query: q } = toolLabelKey(name, query);
+    return this.transloco.translate(key, q ? { query: q } : undefined);
   }
 
   /** The note under an assistant message that didn't finish normally. */

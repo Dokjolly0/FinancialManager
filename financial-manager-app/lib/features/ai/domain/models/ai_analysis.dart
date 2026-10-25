@@ -187,6 +187,7 @@ class AiMessage {
     this.createdAt,
     this.durationMs,
     this.attachment,
+    this.toolTrace = const [],
   });
 
   final String id;
@@ -206,6 +207,9 @@ class AiMessage {
   /// The older transactions sent with a chat question (plan.md section
   /// 34.3); null otherwise.
   final String? attachment;
+
+  /// What a chat answer looked up with tools (section 34.7).
+  final List<AiToolTraceEntry> toolTrace;
 
   bool get fromUser =>
       kind == AiMessageKind.question || kind == AiMessageKind.context;
@@ -230,6 +234,7 @@ class AiMessage {
     createdAt: createdAt,
     durationMs: durationMs,
     attachment: attachment,
+    toolTrace: toolTrace,
   );
 
   static AiMessage fromJson(Map<String, dynamic> json) => AiMessage(
@@ -245,7 +250,39 @@ class AiMessage {
     createdAt: _date(json['created_at']),
     durationMs: json['duration_ms'] as int?,
     attachment: json['attachment'] as String?,
+    toolTrace: (json['tool_trace'] as List<dynamic>? ?? const [])
+        .map((e) => AiToolTraceEntry.fromJson(e as Map<String, dynamic>))
+        .toList(),
   );
+}
+
+/// One search a chat answer made: the tool, its arguments, the data the
+/// model got and how many rows it held.
+class AiToolTraceEntry {
+  const AiToolTraceEntry({
+    required this.name,
+    this.args = const {},
+    required this.result,
+    required this.rows,
+  });
+
+  final String name;
+  final Map<String, dynamic> args;
+  final String result;
+  final int rows;
+
+  bool get isSum => name == 'sum_transactions';
+  String? get query => args['query'] as String?;
+
+  static AiToolTraceEntry fromJson(Map<String, dynamic> json) =>
+      AiToolTraceEntry(
+        name: json['name'] as String? ?? '',
+        args: json['args'] is Map<String, dynamic>
+            ? json['args'] as Map<String, dynamic>
+            : const {},
+        result: json['result'] as String? ?? '',
+        rows: json['rows'] as int? ?? 0,
+      );
 }
 
 class AiAnalysisSummary {

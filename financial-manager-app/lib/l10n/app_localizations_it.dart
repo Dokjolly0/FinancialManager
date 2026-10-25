@@ -2930,4 +2930,30 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get aiHistoryFilterChats => 'Chat';
+
+  @override
+  String aiChatToolSearch(String query) {
+    return 'Cerco tra i movimenti: $query';
+  }
+
+  @override
+  String get aiChatToolSearchAll => 'Cerco tra i movimenti';
+
+  @override
+  String aiChatToolSum(String query) {
+    return 'Calcolo i totali: $query';
+  }
+
+  @override
+  String get aiChatToolSumAll => 'Calcolo i totali';
+
+  @override
+  String aiChatSearchesTitle(int count) {
+    return 'Ricerche fatte: $count';
+  }
+
+  @override
+  String aiChatSearchRows(int count) {
+    return 'Righe: $count';
+  }
 }

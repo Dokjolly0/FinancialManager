@@ -3,7 +3,7 @@ import { Injectable, computed, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { api, query } from '../../core/api/api';
-import { SseClient, sseJson } from '../../core/api/sse';
+import { SseClient } from '../../core/api/sse';
 import {
   AiAnalysisDetail,
   AiAnalysisRequest,
@@ -15,7 +15,7 @@ import {
   AiProbeResult,
   AiSettings,
   AiSettingsRequest,
-  AiStatus,
+  aiStreamEvent,
   AiStreamEvent,
   AiUserContext,
   isReady,
@@ -149,38 +149,8 @@ export class AiApi {
     signal: AbortSignal,
   ): AsyncGenerator<AiStreamEvent> {
     for await (const event of this.sse.post(url, body, signal)) {
-      const json = sseJson<Record<string, unknown>>(event);
-      switch (event.event) {
-        case 'meta':
-          yield {
-            type: 'meta',
-            analysisId: String(json['analysis_id'] ?? ''),
-            messageId: String(json['message_id'] ?? ''),
-            kind: String(json['kind'] ?? ''),
-          };
-          break;
-        case 'delta':
-          yield { type: 'delta', text: typeof json['text'] === 'string' ? json['text'] : '' };
-          break;
-        case 'usage':
-          yield {
-            type: 'usage',
-            inputTokens: Number(json['input_tokens'] ?? 0),
-            outputTokens: Number(json['output_tokens'] ?? 0),
-            truncated: json['truncated'] === true,
-          };
-          break;
-        case 'error':
-          yield {
-            type: 'error',
-            code: typeof json['code'] === 'string' ? json['code'] : 'AI_PROVIDER_ERROR',
-            message: typeof json['message'] === 'string' ? json['message'] : '',
-          };
-          break;
-        case 'done':
-          yield { type: 'done', status: (json['status'] as AiStatus) ?? 'COMPLETED' };
-          break;
-      }
+      const mapped = aiStreamEvent(event);
+      if (mapped) yield mapped;
     }
   }
 }

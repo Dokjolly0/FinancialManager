@@ -1202,5 +1202,11 @@
   "aiChatAttachmentTitle": "Transactions added to the question",
   "aiHistoryFilterAll": "All",
   "aiHistoryFilterReports": "Reports",
-  "aiHistoryFilterChats": "Chats"
+  "aiHistoryFilterChats": "Chats",
+  "aiChatToolSearch": "Searching transactions: {query}",
+  "aiChatToolSearchAll": "Searching transactions",
+  "aiChatToolSum": "Adding up totals: {query}",
+  "aiChatToolSumAll": "Adding up totals",
+  "aiChatSearchesTitle": "Searches made: {count}",
+  "aiChatSearchRows": "Rows: {count}"
 }

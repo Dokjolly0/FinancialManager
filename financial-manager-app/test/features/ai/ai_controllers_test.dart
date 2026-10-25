@@ -94,6 +94,14 @@ AiAnalysisDetail _chat() => AiAnalysisDetail(
       kind: AiMessageKind.answer,
       content: 'Il 1 luglio 2024.',
       status: AiStatus.completed,
+      toolTrace: [
+        AiToolTraceEntry(
+          name: 'search_transactions',
+          args: {'query': 'bollo'},
+          result: 'Bollo auto | 210.00',
+          rows: 1,
+        ),
+      ],
     ),
   ],
   followUpsLeft: 19,
@@ -422,6 +430,30 @@ void main() {
     expect(find.text('Istruzioni predefinite'), findsOneWidget);
   });
 
+  test('a tool event shows while the answer streams', () async {
+    watch(aiNewRunKey);
+    container
+        .read(aiConversationControllerProvider(aiNewRunKey).notifier)
+        .startRun(const AiAnalysisRequest(preset: 'CHAT'), 'f' * 64);
+    repo.controller!.add(
+      const AiStreamTool(name: 'search_transactions', query: 'bollo'),
+    );
+    await _flush();
+    expect(
+      container
+          .read(aiConversationControllerProvider(aiNewRunKey))
+          .liveTool
+          ?.query,
+      'bollo',
+    );
+    repo.controller!.add(const AiStreamDone(AiStatus.completed));
+    await _flush();
+    expect(
+      container.read(aiConversationControllerProvider(aiNewRunKey)).liveTool,
+      isNull,
+    );
+  });
+
   test('the history lists one type at a time', () async {
     container.listen(aiHistoryControllerProvider, (_, _) {});
     await _flush();
@@ -463,5 +495,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Movimenti aggiunti alla domanda'), findsOneWidget);
     expect(find.text('Bollo auto | 210.00'), findsOneWidget);
+    await tester.tapAt(const Offset(10, 10)); // close the sheet
+    await tester.pumpAndSettle();
+
+    // The answer's searches, closed until opened.
+    expect(find.text('Ricerche fatte: 1'), findsOneWidget);
+    expect(find.text('Cerco tra i movimenti: bollo · Righe: 1'), findsNothing);
+    await tester.tap(find.text('Ricerche fatte: 1'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Cerco tra i movimenti: bollo · Righe: 1'),
+      findsOneWidget,
+    );
   });
 }

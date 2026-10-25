@@ -235,7 +235,46 @@ void main() {
       map('done', '{"status":"CANCELLED"}'),
       isA<AiStreamDone>().having((e) => e.status, 'status', AiStatus.cancelled),
     );
+    expect(
+      map(
+        'tool',
+        '{"name":"sum_transactions","query":"benzina","group_by":"month"}',
+      ),
+      isA<AiStreamTool>().having((e) => e.isSum, 'isSum', isTrue).having(
+        (e) => (e.query, e.groupBy),
+        'args',
+        ('benzina', 'month'),
+      ),
+    );
     expect(map('something_new', '{}'), isNull);
+  });
+
+  test('a chat answer parses its tool trace', () {
+    final m = AiMessage.fromJson({
+      'id': 'a',
+      'kind': 'ANSWER',
+      'content': 'Il 1 giugno.',
+      'status': 'COMPLETED',
+      'tool_trace': [
+        {
+          'name': 'search_transactions',
+          'args': {'query': 'assicurazione'},
+          'result': '<financial_data>…</financial_data>',
+          'rows': 1,
+        },
+      ],
+    });
+    final e = m.toolTrace.single;
+    expect((e.isSum, e.query, e.rows), (false, 'assicurazione', 1));
+    expect(m.copyWith(content: 'x').toolTrace, hasLength(1));
+    expect(
+      AiMessage.fromJson({
+        'id': 'b',
+        'kind': 'ANSWER',
+        'tool_trace': null,
+      }).toolTrace,
+      isEmpty,
+    );
   });
 
   test('chats: request, detail question, message attachment', () {

@@ -5159,6 +5159,42 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Chat'**
   String get aiHistoryFilterChats;
+
+  /// No description provided for @aiChatToolSearch.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerco tra i movimenti: {query}'**
+  String aiChatToolSearch(String query);
+
+  /// No description provided for @aiChatToolSearchAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerco tra i movimenti'**
+  String get aiChatToolSearchAll;
+
+  /// No description provided for @aiChatToolSum.
+  ///
+  /// In it, this message translates to:
+  /// **'Calcolo i totali: {query}'**
+  String aiChatToolSum(String query);
+
+  /// No description provided for @aiChatToolSumAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Calcolo i totali'**
+  String get aiChatToolSumAll;
+
+  /// No description provided for @aiChatSearchesTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Ricerche fatte: {count}'**
+  String aiChatSearchesTitle(int count);
+
+  /// No description provided for @aiChatSearchRows.
+  ///
+  /// In it, this message translates to:
+  /// **'Righe: {count}'**
+  String aiChatSearchRows(int count);
 }
 
 class _AppLocalizationsDelegate

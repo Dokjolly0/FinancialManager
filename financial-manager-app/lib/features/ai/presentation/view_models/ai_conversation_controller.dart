@@ -29,6 +29,7 @@ class AiConversationState {
     this.streamErrorCode,
     this.streamErrorMessage,
     this.requestError,
+    this.liveTool,
   });
 
   final String? analysisId;
@@ -47,6 +48,9 @@ class AiConversationState {
   /// A refusal before streaming started (consent, data changed, limits).
   final AppError? requestError;
 
+  /// What the model is looking up right now (chats, section 34.7).
+  final AiStreamTool? liveTool;
+
   bool get canAsk => !isStreaming && (detail?.canAskFollowUps ?? false);
 
   AiConversationState copyWith({
@@ -59,7 +63,9 @@ class AiConversationState {
     String? streamErrorCode,
     String? streamErrorMessage,
     AppError? requestError,
+    AiStreamTool? liveTool,
     bool clearErrors = false,
+    bool clearLiveTool = false,
   }) => AiConversationState(
     analysisId: analysisId ?? this.analysisId,
     detail: detail ?? this.detail,
@@ -74,6 +80,7 @@ class AiConversationState {
         ? null
         : (streamErrorMessage ?? this.streamErrorMessage),
     requestError: clearErrors ? null : (requestError ?? this.requestError),
+    liveTool: clearLiveTool ? null : (liveTool ?? this.liveTool),
   );
 }
 
@@ -309,6 +316,8 @@ class AiConversationController extends Notifier<AiConversationState> {
         state = state.copyWith(analysisId: analysisId);
       case AiStreamDelta(:final text):
         _updateLast((m) => m.copyWith(content: m.content + text));
+      case AiStreamTool():
+        state = state.copyWith(liveTool: event);
       case AiStreamUsage(
         :final inputTokens,
         :final outputTokens,
@@ -336,7 +345,7 @@ class AiConversationController extends Notifier<AiConversationState> {
     _updateLast(
       (m) => m.copyWith(status: status, errorCode: state.streamErrorCode),
     );
-    state = state.copyWith(isStreaming: false);
+    state = state.copyWith(isStreaming: false, clearLiveTool: true);
     _subscription = null;
     _cancelToken = null;
     _keepAlive?.close();
