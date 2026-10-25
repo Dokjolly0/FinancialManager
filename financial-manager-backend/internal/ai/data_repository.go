@@ -54,6 +54,48 @@ func (r *Repository) ListTransactions(ctx context.Context, walletIDs []uuid.UUID
 	return out, rows.Err()
 }
 
+// accentFold maps the accented letters of Italian titles to plain ones, on
+// both sides of a chat search (searchTerms folds the terms the same way).
+const accentFrom, accentTo = "àáâäèéêëìíîïòóôöùúûü", "aaaaeeeeiiiioooouuuu"
+
+// SearchTransactions returns the newest transactions before `before` whose
+// title or category contains any of the terms (lowercase, accents folded),
+// at most limit rows, and how many match in all.
+func (r *Repository) SearchTransactions(ctx context.Context, walletIDs []uuid.UUID, kinds []string, from *time.Time, before time.Time, terms []string, limit int) ([]TransactionRow, int, error) {
+	// Terms are letters only (see searchTerms): nothing to escape.
+	patterns := make([]string, len(terms))
+	for i, t := range terms {
+		patterns[i] = "%" + t + "%"
+	}
+	rows, err := r.db.Query(ctx, `
+		SELECT t.occurred_at, w.name, t.direction, t.amount_minor, t.title, c.name, count(*) OVER ()
+		FROM transactions t
+		JOIN wallets w ON w.id = t.wallet_id
+		LEFT JOIN categories c ON c.id = t.category_id
+		WHERE t.wallet_id = ANY($1::uuid[]) AND t.deleted_at IS NULL AND t.kind = ANY($2::text[])
+			AND ($3::timestamptz IS NULL OR t.occurred_at >= $3)
+			AND t.occurred_at < $4
+			AND (translate(t.title_normalized, $6, $7) LIKE ANY($5::text[])
+				OR translate(lower(COALESCE(c.name, '')), $6, $7) LIKE ANY($5::text[]))
+		ORDER BY t.occurred_at DESC, t.id
+		LIMIT $8
+	`, walletIDs, kinds, from, before, patterns, accentFrom, accentTo, limit)
+	if err != nil {
+		return nil, 0, fmt.Errorf("search ai transactions: %w", err)
+	}
+	defer rows.Close()
+	var out []TransactionRow
+	total := 0
+	for rows.Next() {
+		var t TransactionRow
+		if err := rows.Scan(&t.OccurredAt, &t.WalletName, &t.Direction, &t.AmountMinor, &t.Title, &t.Category, &total); err != nil {
+			return nil, 0, fmt.Errorf("scan ai transaction: %w", err)
+		}
+		out = append(out, t)
+	}
+	return out, total, rows.Err()
+}
+
 // TransferFlowRow sums transfers from one wallet to another.
 type TransferFlowRow struct {
 	FromWallet  string

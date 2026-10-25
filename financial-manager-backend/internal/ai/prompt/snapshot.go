@@ -122,6 +122,9 @@ type Transaction struct {
 	AmountMinor int64
 	Title       string
 	Category    string
+	// At is when it happened; not rendered. A chat whose list was cut
+	// searches the transactions before the oldest one kept.
+	At time.Time
 }
 
 type Context struct {

@@ -417,7 +417,7 @@ func TestFollowUps_Limit(t *testing.T) {
 	analysisID := uuid.MustParse(res.events[0].data["analysis_id"].(string))
 
 	for i := 0; i < ai.MaxFollowUps; i++ {
-		_, answer, err := h.repo.AppendQuestion(context.Background(), analysisID, "Domanda", "gpt-test")
+		_, answer, err := h.repo.AppendQuestion(context.Background(), analysisID, "Domanda", "gpt-test", nil)
 		if err != nil {
 			t.Fatal(err)
 		}

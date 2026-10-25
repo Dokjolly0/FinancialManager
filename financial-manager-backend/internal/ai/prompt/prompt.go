@@ -492,15 +492,7 @@ func renderData(l labels, s Snapshot, sections map[string]bool) string {
 		text(l.transactionsHeading)
 		text(l.transactionsColumns)
 		for _, t := range s.Transactions {
-			kind := l.debit
-			if t.Credit {
-				kind = l.credit
-			}
-			category := l.uncategorized
-			if t.Category != "" {
-				category = clean(t.Category)
-			}
-			row(t.Date, clean(t.Wallet), kind, money(t.AmountMinor), clean(t.Title), category)
+			text(transactionRow(l, t))
 		}
 		if s.TransactionsOmitted > 0 {
 			linef(l.transactionsOmitted, s.TransactionsOmitted)
@@ -517,6 +509,42 @@ func renderData(l labels, s Snapshot, sections map[string]bool) string {
 		}
 	}
 	return b.String()
+}
+
+// transactionRow is one row of a transaction table.
+func transactionRow(l labels, t Transaction) string {
+	kind := l.debit
+	if t.Credit {
+		kind = l.credit
+	}
+	category := l.uncategorized
+	if t.Category != "" {
+		category = clean(t.Category)
+	}
+	return strings.Join([]string{t.Date, clean(t.Wallet), kind, money(t.AmountMinor), clean(t.Title), category}, " | ")
+}
+
+// RenderMatches is the data attached to a chat question when the chat's
+// transaction list was cut (plan.md section 34.3): the earlier
+// transactions matching terms, total of them all found, as its own data
+// block so the injection guard covers it.
+func RenderMatches(lang Lang, terms []string, rows []Transaction, total int) string {
+	l := labelsFor(normalizeLang(lang))
+	quoted := make([]string, len(terms))
+	for i, t := range terms {
+		quoted[i] = `"` + clean(t) + `"`
+	}
+	words := strings.Join(quoted, ", ")
+	lines := []string{"<financial_data>", l.matchesHeading}
+	if len(rows) == 0 {
+		lines = append(lines, fmt.Sprintf(l.matchesNone, words))
+	} else {
+		lines = append(lines, fmt.Sprintf(l.matchesFound, words, total, len(rows)), l.transactionsColumns)
+		for _, t := range rows {
+			lines = append(lines, transactionRow(l, t))
+		}
+	}
+	return strings.Join(append(lines, "</financial_data>"), "\n")
 }
 
 func renderContext(l labels, c Context) string {

@@ -46,6 +46,10 @@ type AnalysisOptions struct {
 	// Lang is the prompt language, set by the server; follow-ups use it
 	// for their rules. Empty on analyses stored before it existed.
 	Lang string `json:"lang,omitempty"`
+	// LedgerCutoff, set by the server on a chat whose transaction list was
+	// cut, is the time of the oldest transaction kept (or the period end
+	// when none was): questions search the transactions before it.
+	LedgerCutoff *time.Time `json:"ledger_cutoff,omitempty"`
 }
 
 // Token budget bounds.
@@ -118,13 +122,16 @@ type builtPrompt struct {
 	estimated    int
 	// compactionSteps are the budget steps that were needed, in order.
 	compactionSteps []string
+	// attachment is a chat's first-question attachment, when its list was
+	// cut (plan.md section 34.3).
+	attachment string
 }
 
 // userMessage is the first message sent to the model. A chat's
 // instructions are its first question, which comes after the data.
 func (b builtPrompt) userMessage() string {
 	if b.preset == prompt.PresetChat {
-		return prompt.ChatUserMessage(b.instructions, b.prompt.DataBlock, b.lang)
+		return prompt.ChatUserMessage(b.instructions, b.prompt.DataBlock, b.attachment, b.lang)
 	}
 	return prompt.UserMessage(b.instructions, b.prompt.DataBlock)
 }
@@ -227,6 +234,7 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 		opts.Profile = prompt.ProfileStandard
 	}
 	opts.Lang = string(lang)
+	opts.LedgerCutoff = nil
 	if opts.BudgetTokens != 0 && (opts.BudgetTokens < MinBudgetTokens || opts.BudgetTokens > MaxBudgetTokens) {
 		fieldErrors["options.budget_tokens"] = FieldOutOfRange
 	}
@@ -337,7 +345,7 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 		return builtPrompt{}, err
 	}
 	if chat && bp.estimated > budget {
-		if err := bp.fitLedger(&limits, budget, len(snapshot.Transactions), render); err != nil {
+		if err := s.fitChat(ctx, &bp, &limits, budget, len(snapshot.Transactions), render); err != nil {
 			return builtPrompt{}, err
 		}
 	}
@@ -363,6 +371,48 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 		return builtPrompt{}, ErrPromptTooLarge
 	}
 	return bp, nil
+}
+
+// fitChat fits a chat whose ledger is over budget: it reserves room for the
+// first question's attachment (the matches over the whole period, an upper
+// bound, capped at a third of the budget), cuts the ledger to the rest,
+// then attaches the matches older than
+// the oldest transaction kept, dropping the last ones if they still don't
+// fit. The cut is stored as options.ledger_cutoff for later questions.
+func (s *Service) fitChat(ctx context.Context, bp *builtPrompt, limits *prompt.Limits, budget, total int, render func() error) error {
+	cs := chatSearch{
+		walletIDs: bp.walletIDs, kinds: chatKinds(bp.options), from: bp.period.From, before: bp.period.To,
+		loc: bp.loc, limit: chatMatchLimit(bp.options.Profile),
+	}
+	reserve, err := s.chatAttachment(ctx, cs, bp.instructions, bp.lang)
+	if err != nil {
+		return err
+	}
+	// At most a third of the budget, so a question matching most of the
+	// ledger (a "spesa" among groceries) doesn't leave the list empty.
+	if err := bp.fitLedger(limits, budget-min(prompt.EstimateTokens(reserve), budget/3), total, render); err != nil {
+		return err
+	}
+	if kept := bp.snapshot.Transactions; len(kept) > 0 {
+		cs.before = kept[len(kept)-1].At
+	}
+	cutoff := cs.before
+	bp.options.LedgerCutoff = &cutoff
+	for {
+		bp.attachment = ""
+		if cs.limit > 0 {
+			if bp.attachment, err = s.chatAttachment(ctx, cs, bp.instructions, bp.lang); err != nil {
+				return err
+			}
+		}
+		if err := render(); err != nil {
+			return err
+		}
+		if bp.estimated <= budget || cs.limit == 0 {
+			return nil
+		}
+		cs.limit = cs.limit * 3 / 4
+	}
 }
 
 // fitLedger keeps the most recent transactions that fit the budget,

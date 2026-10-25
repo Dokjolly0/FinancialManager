@@ -155,14 +155,7 @@ func (s *Service) collect(ctx context.Context, in collectInput) (prompt.Snapshot
 			return prompt.Snapshot{}, err
 		}
 		for _, r := range rows {
-			t := prompt.Transaction{
-				Date: r.OccurredAt.In(in.loc).Format("2006-01-02"), Wallet: r.WalletName,
-				Credit: r.Direction == transactions.DirectionCredit, AmountMinor: r.AmountMinor, Title: r.Title,
-			}
-			if r.Category != nil {
-				t.Category = *r.Category
-			}
-			snap.Transactions = append(snap.Transactions, t)
+			snap.Transactions = append(snap.Transactions, toPromptTransaction(r, in.loc))
 		}
 		if omitted := int(totals.Count) - len(rows); omitted > 0 {
 			snap.TransactionsOmitted = omitted

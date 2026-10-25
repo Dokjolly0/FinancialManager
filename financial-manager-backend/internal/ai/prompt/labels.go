@@ -23,6 +23,7 @@ type labels struct {
 	nonMonthlySignals                                    map[string]string
 
 	transactionsHeading, transactionsColumns, transactionsOmitted string
+	matchesHeading, matchesFound, matchesNone                     string
 	credit, debit, uncategorized                                  string
 
 	noData, omittedForBrevity string
@@ -85,6 +86,9 @@ var italian = labels{
 	transactionsHeading: "## Movimenti (dal più recente)",
 	transactionsColumns: "data | portafoglio | tipo | importo | voce | categoria",
 	transactionsOmitted: "Altri %d movimenti meno recenti non sono inclusi.",
+	matchesHeading:      "## Movimenti meno recenti che corrispondono alla domanda",
+	matchesFound:        "L'elenco dei movimenti non è completo: questi sono i movimenti precedenti il cui titolo o la cui categoria contiene %s. Trovati %d, mostrati %d.",
+	matchesNone:         "L'elenco dei movimenti non è completo, e nessun movimento precedente contiene nel titolo o nella categoria %s.",
 	credit:              "entrata",
 	debit:               "uscita",
 	uncategorized:       "-",
@@ -165,6 +169,9 @@ var english = labels{
 	transactionsHeading: "## Transactions (newest first)",
 	transactionsColumns: "date | wallet | type | amount | item | category",
 	transactionsOmitted: "%d older transactions are not included.",
+	matchesHeading:      "## Older transactions matching the question",
+	matchesFound:        "The transaction list is not complete: these are the earlier transactions whose title or category contains %s. Found %d, shown %d.",
+	matchesNone:         "The transaction list is not complete, and no earlier transaction contains %s in its title or category.",
 	credit:              "income",
 	debit:               "expense",
 	uncategorized:       "-",

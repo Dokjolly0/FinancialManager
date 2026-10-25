@@ -49,10 +49,20 @@ func FollowUpQuestion(question string, lang Lang, preset string) string {
 	return "<" + tag + ">\n" + q + "\n</" + tag + ">\n\n" + reminder
 }
 
-// ChatUserMessage is a chat's first message: the data, then the question,
+// ChatUserMessage is a chat's first message: the data, the transactions
+// attached to the question if any (see RenderMatches), then the question,
 // tagged as every later one.
-func ChatUserMessage(question, dataBlock string, lang Lang) string {
-	return dataBlock + "\n\n" + FollowUpQuestion(question, lang, PresetChat)
+func ChatUserMessage(question, dataBlock, attachment string, lang Lang) string {
+	return dataBlock + "\n\n" + WithAttachment(attachment, FollowUpQuestion(question, lang, PresetChat))
+}
+
+// WithAttachment puts a question's attached data before the wrapped
+// question; the question alone when there is none.
+func WithAttachment(attachment, wrappedQuestion string) string {
+	if attachment == "" {
+		return wrappedQuestion
+	}
+	return attachment + "\n\n" + wrappedQuestion
 }
 
 // ChatQuestion returns the question of a chat's first message, as typed;

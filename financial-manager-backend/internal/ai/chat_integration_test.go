@@ -1,6 +1,7 @@
 package ai_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -207,5 +208,96 @@ func TestHistory_TypeFilter(t *testing.T) {
 	}
 	if r := h.do(http.MethodGet, "/v1/ai/analyses?type=other", nil); r.fieldError("type") != ai.FieldInvalidValue {
 		t.Fatalf("bad type = %s", r.raw)
+	}
+}
+
+// A chat whose ledger was cut attaches the older transactions matching
+// each question, stores them with it and replays them as sent.
+func TestChat_SearchesOlderTransactions(t *testing.T) {
+	h := newHarness(t)
+	h.configure("sk-chat-0005")
+	old := time.Date(2024, 6, 1, 9, 0, 0, 0, time.UTC)
+	h.seed(h.walletID, transactions.DirectionDebit, transactions.KindStandard, 48000, "Assicurazione macchina", old)
+	h.seed(h.walletID, transactions.DirectionDebit, transactions.KindStandard, 21000, "Bollo auto", old.AddDate(0, 1, 0))
+	h.seed(h.walletID, transactions.DirectionDebit, transactions.KindStandard, 150, "Caffè al bar", old.AddDate(0, 2, 0))
+	// Not in the chat: another wallet, another user.
+	other := h.secondWallet("Carta", "Spese online")
+	h.seed(other, transactions.DirectionDebit, transactions.KindStandard, 99900, "Assicurazione casa", old)
+	stranger := newHarness(t)
+	stranger.seed(stranger.walletID, transactions.DirectionDebit, transactions.KindStandard, 77700, "Assicurazione moto", old)
+	start := time.Date(2025, 1, 1, 9, 0, 0, 0, time.UTC)
+	for i := 0; i < 300; i++ {
+		h.seed(h.walletID, transactions.DirectionDebit, transactions.KindStandard, int64(500+i),
+			fmt.Sprintf("Spesa numero %d al supermercato", i), start.Add(time.Duration(i)*24*time.Hour))
+	}
+
+	body := chatBody("Quando ho pagato l'assicurazione della macchina?", map[string]any{"budget_tokens": 3000})
+	body["wallet_ids"] = []string{h.walletID.String()}
+	p := h.do(http.MethodPost, "/v1/ai/analyses/preview", body)
+	h.mustStatus(p, http.StatusOK)
+	if est := p.body["estimated_input_tokens"].(float64); est > 3000 {
+		t.Fatalf("estimate %v over budget", est)
+	}
+	h.fake.Deltas = []string{"Il 1 giugno 2024."}
+	res := h.stream("/v1/ai/analyses", h.runBody(body), nil)
+	id := res.events[0].data["analysis_id"].(string)
+	first := h.fake.LastRequest().Messages[0].Content
+	if !strings.Contains(first, "## Movimenti meno recenti che corrispondono alla domanda") ||
+		!strings.Contains(first, "| Assicurazione macchina |") || strings.Contains(first, "Assicurazione casa") ||
+		strings.Contains(first, "Assicurazione moto") ||
+		!strings.HasSuffix(first, prompt.FollowUpQuestion("Quando ho pagato l'assicurazione della macchina?", prompt.LangIT, prompt.PresetChat)) {
+		t.Fatalf("first message:\n%s", first)
+	}
+	detail := h.do(http.MethodGet, "/v1/ai/analyses/"+id, nil)
+	if detail.body["options"].(map[string]any)["ledger_cutoff"] == nil {
+		t.Fatalf("no ledger cutoff stored: %s", detail.raw)
+	}
+
+	// A later question gets its own matches, accents folded ("caffe").
+	h.fake.Deltas = []string{"Il 1 agosto 2024."}
+	h.stream("/v1/ai/analyses/"+id+"/messages", map[string]any{"content": "E il caffe?"}, nil)
+	asked := h.fake.LastRequest().Messages[2].Content
+	if !strings.Contains(asked, "| Caffè al bar |") || strings.Contains(asked, "Assicurazione macchina") ||
+		!strings.HasSuffix(asked, prompt.FollowUpQuestion("E il caffe?", prompt.LangIT, prompt.PresetChat)) {
+		t.Fatalf("follow-up with attachment:\n%s", asked)
+	}
+	detail = h.do(http.MethodGet, "/v1/ai/analyses/"+id, nil)
+	q := detail.body["messages"].([]any)[2].(map[string]any)
+	if q["content"] != "E il caffe?" || q["attachment"] == nil || !strings.Contains(q["attachment"].(string), "Caffè al bar") {
+		t.Fatalf("stored question = %v", q)
+	}
+
+	// Replayed exactly; a question with nothing to search carries nothing.
+	h.fake.Deltas = []string{"Ok."}
+	h.stream("/v1/ai/analyses/"+id+"/messages", map[string]any{"content": "Quanto?"}, nil)
+	sent := h.fake.LastRequest()
+	if sent.Messages[2].Content != asked || sent.Messages[4].Content != prompt.FollowUpQuestion("Quanto?", prompt.LangIT, prompt.PresetChat) {
+		t.Fatalf("replay = %q / %q", sent.Messages[2].Content, sent.Messages[4].Content)
+	}
+
+	// The export keeps the attachment.
+	exported, err := h.repo.ListAnalysesForExport(context.Background(), h.userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if msgs := exported[0].Messages; msgs[2].Attachment == nil || *msgs[2].Attachment != q["attachment"] {
+		t.Fatalf("exported attachment = %v", msgs[2].Attachment)
+	}
+}
+
+// When the whole ledger fits, nothing is searched or attached.
+func TestChat_NoAttachmentWhenTheLedgerIsComplete(t *testing.T) {
+	h := newHarness(t)
+	h.configure("sk-chat-0006")
+	h.seedLedger()
+	h.fake.Deltas = []string{"Ogni mese."}
+	res := h.stream("/v1/ai/analyses", h.runBody(chatBody("Quando pago Netflix?", nil)), nil)
+	id := res.events[0].data["analysis_id"].(string)
+	h.fake.Deltas = []string{"Sì."}
+	h.stream("/v1/ai/analyses/"+id+"/messages", map[string]any{"content": "E l'affitto?"}, nil)
+	d := h.do(http.MethodGet, "/v1/ai/analyses/"+id, nil)
+	if d.body["options"].(map[string]any)["ledger_cutoff"] != nil || d.body["messages"].([]any)[2].(map[string]any)["attachment"] != nil ||
+		strings.Contains(h.fake.LastRequest().Messages[2].Content, "corrispondono alla domanda") {
+		t.Fatalf("unexpected attachment: %s", d.raw)
 	}
 }

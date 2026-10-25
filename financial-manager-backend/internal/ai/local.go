@@ -301,11 +301,15 @@ func (s *Service) PrepareLocalFollowUp(ctx context.Context, userID, analysisID u
 	if err := s.checkRateLimit(ctx, "local-run", userID, s.limits.LocalRunsPerHour, runWindow); err != nil {
 		return localTurnResponse{}, err
 	}
+	attachment, err := s.followUpAttachment(ctx, analysis, question, lang)
+	if err != nil {
+		return localTurnResponse{}, err
+	}
 
 	var q, answer Message
 	err = s.db.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var txErr error
-		q, answer, txErr = s.repo.WithQuerier(tx).AppendQuestion(ctx, analysisID, question, analysis.Model)
+		q, answer, txErr = s.repo.WithQuerier(tx).AppendQuestion(ctx, analysisID, question, analysis.Model, attachment)
 		return txErr
 	})
 	if err != nil {
@@ -315,7 +319,7 @@ func (s *Service) PrepareLocalFollowUp(ctx context.Context, userID, analysisID u
 	for _, m := range history {
 		out = append(out, localMessage{Role: string(m.Role), Content: m.Content, Kind: m.Kind})
 	}
-	out = append(out, localMessage{Role: "user", Content: prompt.FollowUpQuestion(question, lang, analysis.Preset), Kind: KindQuestion})
+	out = append(out, localMessage{Role: "user", Content: questionContent(question, attachment, lang, analysis.Preset), Kind: KindQuestion})
 	resp := s.localTurn(analysis, answer, prompt.WithFollowUpRules(analysis.SystemPrompt, lang, analysis.Preset), out)
 	qid := q.ID.String()
 	resp.QuestionID = &qid
@@ -433,5 +437,6 @@ func toMessageResponse(m Message) messageResponse {
 		ID: m.ID.String(), Seq: m.Seq, Role: m.Role, Kind: m.Kind, Content: m.Content, Status: m.Status,
 		ErrorCode: m.ErrorCode, Model: m.Model, InputTokens: m.InputTokens, OutputTokens: m.OutputTokens,
 		Truncated: m.Truncated, CreatedAt: m.CreatedAt.UTC().Format(timeLayout), DurationMs: m.DurationMs,
+		Attachment: m.Attachment,
 	}
 }

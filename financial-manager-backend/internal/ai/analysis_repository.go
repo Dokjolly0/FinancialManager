@@ -71,6 +71,10 @@ type Message struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	DurationMs   *int
+	// Attachment is data added to a chat QUESTION when it was asked (the
+	// older transactions matching it, plan.md section 34.3); sent before
+	// the question on every replay.
+	Attachment *string
 }
 
 const analysisColumns = `
@@ -96,13 +100,13 @@ func scanAnalysis(row pgx.Row) (Analysis, error) {
 
 const messageColumns = `
 	id, analysis_id, seq, role, kind, content, status, error_code, model, input_tokens, output_tokens,
-	truncated, created_at, updated_at, duration_ms
+	truncated, created_at, updated_at, duration_ms, attachment
 `
 
 func scanMessage(row pgx.Row) (Message, error) {
 	var m Message
 	err := row.Scan(&m.ID, &m.AnalysisID, &m.Seq, &m.Role, &m.Kind, &m.Content, &m.Status, &m.ErrorCode, &m.Model,
-		&m.InputTokens, &m.OutputTokens, &m.Truncated, &m.CreatedAt, &m.UpdatedAt, &m.DurationMs)
+		&m.InputTokens, &m.OutputTokens, &m.Truncated, &m.CreatedAt, &m.UpdatedAt, &m.DurationMs, &m.Attachment)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Message{}, ErrNotFound
 	}
@@ -134,39 +138,40 @@ func (r *Repository) CreateAnalysis(ctx context.Context, a Analysis, userMessage
 	if err != nil {
 		return Analysis{}, Message{}, err
 	}
-	if _, err := r.insertMessage(ctx, created.ID, 1, "user", KindContext, userMessage, StatusCompleted, nil); err != nil {
+	if _, err := r.insertMessage(ctx, created.ID, 1, "user", KindContext, userMessage, StatusCompleted, nil, nil); err != nil {
 		return Analysis{}, Message{}, err
 	}
-	report, err := r.insertMessage(ctx, created.ID, 2, "assistant", KindReport, "", StatusStreaming, &a.Model)
+	report, err := r.insertMessage(ctx, created.ID, 2, "assistant", KindReport, "", StatusStreaming, &a.Model, nil)
 	if err != nil {
 		return Analysis{}, Message{}, err
 	}
 	return created, report, nil
 }
 
-func (r *Repository) insertMessage(ctx context.Context, analysisID uuid.UUID, seq int, role, kind, content, status string, model *string) (Message, error) {
+func (r *Repository) insertMessage(ctx context.Context, analysisID uuid.UUID, seq int, role, kind, content, status string, model, attachment *string) (Message, error) {
 	return scanMessage(r.db.QueryRow(ctx, `
-		INSERT INTO ai_messages (analysis_id, seq, role, kind, content, status, model)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING `+messageColumns, analysisID, seq, role, kind, content, status, model))
+		INSERT INTO ai_messages (analysis_id, seq, role, kind, content, status, model, attachment)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING `+messageColumns, analysisID, seq, role, kind, content, status, model, attachment))
 }
 
 // AppendQuestion adds a follow-up question and an empty, streaming answer
 // after the last message. The (analysis_id, seq) unique key makes two
 // concurrent follow-ups on the same analysis collide instead of interleave.
-func (r *Repository) AppendQuestion(ctx context.Context, analysisID uuid.UUID, question, model string) (Message, Message, error) {
+// attachment, when set, is stored with the question (chats only).
+func (r *Repository) AppendQuestion(ctx context.Context, analysisID uuid.UUID, question, model string, attachment *string) (Message, Message, error) {
 	var last int
 	if err := r.db.QueryRow(ctx, `SELECT COALESCE(MAX(seq), 0) FROM ai_messages WHERE analysis_id = $1`, analysisID).Scan(&last); err != nil {
 		return Message{}, Message{}, fmt.Errorf("last ai message seq: %w", err)
 	}
-	q, err := r.insertMessage(ctx, analysisID, last+1, "user", KindQuestion, question, StatusCompleted, nil)
+	q, err := r.insertMessage(ctx, analysisID, last+1, "user", KindQuestion, question, StatusCompleted, nil, attachment)
 	if isUniqueViolation(err) {
 		return Message{}, Message{}, ErrStreamInProgress
 	}
 	if err != nil {
 		return Message{}, Message{}, err
 	}
-	a, err := r.insertMessage(ctx, analysisID, last+2, "assistant", KindAnswer, "", StatusStreaming, &model)
+	a, err := r.insertMessage(ctx, analysisID, last+2, "assistant", KindAnswer, "", StatusStreaming, &model, nil)
 	if err != nil {
 		return Message{}, Message{}, err
 	}

@@ -427,6 +427,7 @@ type aiMessageJSON struct {
 	OutputTokens *int    `json:"token_output,omitempty"`
 	Truncated    bool    `json:"troncato,omitempty"`
 	DurationMs   *int    `json:"durata_ms,omitempty"`
+	Attachment   *string `json:"allegato,omitempty"` // a chat question's attached data
 	CreatedAt    string  `json:"creato_il"`
 }
 
@@ -459,6 +460,7 @@ func (s *Service) toAIAnalysesJSON(history []ai.AnalysisWithMessages, now time.T
 				Kind: m.Kind, Content: m.Content, Status: ai.EffectiveStatus(m.Status, m.UpdatedAt, now, window),
 				ErrorCode: m.ErrorCode, Model: m.Model, InputTokens: m.InputTokens, OutputTokens: m.OutputTokens,
 				Truncated: m.Truncated, DurationMs: m.DurationMs, CreatedAt: m.CreatedAt.Format(timeLayout),
+				Attachment: m.Attachment,
 			})
 		}
 		out = append(out, aiAnalysisJSON{

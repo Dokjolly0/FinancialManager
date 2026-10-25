@@ -1290,6 +1290,11 @@ components:
         output_tokens: { type: [integer, "null"] }
         truncated: { type: boolean, description: "Stopped at the output token limit." }
         duration_ms: { type: [integer, "null"], description: "On-device only." }
+        attachment:
+          type: [string, "null"]
+          description: >
+            Chat questions only: the older transactions matching the question,
+            sent before it when the chat's list was cut (plan.md section 34.3).
         created_at: { type: string, format: date-time }
 
     AiAnalysisDetail:
@@ -1301,7 +1306,7 @@ components:
             wallet_ids:
               type: array
               items: { type: string, format: uuid }
-            options: { type: object, description: "As requested, plus lang (the prompt language, it or en)." }
+            options: { type: object, description: "As requested, plus lang (the prompt language, it or en) and, on a chat whose transaction list was cut, ledger_cutoff (RFC3339)." }
             prompt_version: { type: string }
             system_prompt: { type: string, description: "As stored; follow-ups on reports are sent with the follow-up rules appended." }
             question: { type: [string, "null"], description: "CHAT only: the first question as typed." }

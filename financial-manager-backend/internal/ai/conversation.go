@@ -228,6 +228,10 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 	if err != nil {
 		return Turn{}, err
 	}
+	attachment, err := s.followUpAttachment(ctx, analysis, question, lang)
+	if err != nil {
+		return Turn{}, err
+	}
 
 	release, err := s.lockStream(ctx, userID)
 	if err != nil {
@@ -236,7 +240,7 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 	var answer Message
 	err = s.db.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var txErr error
-		_, answer, txErr = s.repo.WithQuerier(tx).AppendQuestion(ctx, analysisID, question, rp.model)
+		_, answer, txErr = s.repo.WithQuerier(tx).AppendQuestion(ctx, analysisID, question, rp.model, attachment)
 		return txErr
 	})
 	if err != nil {
@@ -248,7 +252,7 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 	for _, m := range history {
 		sent = append(sent, m.Message)
 	}
-	sent = append(sent, provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(question, lang, analysis.Preset)})
+	sent = append(sent, provider.Message{Role: provider.RoleUser, Content: questionContent(question, attachment, lang, analysis.Preset)})
 	return Turn{
 		Analysis: analysis, Message: answer, provider: rp.provider, kind: rp.kind, release: release,
 		request: provider.ChatRequest{
@@ -256,6 +260,16 @@ func (s *Service) PrepareFollowUp(ctx context.Context, userID, analysisID uuid.U
 			MaxTokens: settings.MaxOutputTokens, Messages: sent,
 		},
 	}, nil
+}
+
+// questionContent is a question as sent: its attachment, if any, then the
+// wrapped question.
+func questionContent(question string, attachment *string, lang prompt.Lang, preset string) string {
+	att := ""
+	if attachment != nil {
+		att = *attachment
+	}
+	return prompt.WithAttachment(att, prompt.FollowUpQuestion(question, lang, preset))
 }
 
 // analysisLang is the language an analysis was written in; analyses stored
@@ -321,7 +335,7 @@ func (s *Service) replayHistory(messages []Message, analysis Analysis, lang prom
 			}
 			if answerStatus != StatusFailed && strings.TrimSpace(answer.Content) != "" {
 				history = append(history,
-					replayedMessage{provider.Message{Role: provider.RoleUser, Content: prompt.FollowUpQuestion(m.Content, lang, analysis.Preset)}, KindQuestion},
+					replayedMessage{provider.Message{Role: provider.RoleUser, Content: questionContent(m.Content, m.Attachment, lang, analysis.Preset)}, KindQuestion},
 					replayedMessage{provider.Message{Role: provider.RoleAssistant, Content: answer.Content}, KindAnswer})
 			}
 			i++
@@ -467,17 +481,19 @@ type messageResponse struct {
 	Truncated    bool    `json:"truncated"`
 	CreatedAt    string  `json:"created_at"`
 	DurationMs   *int    `json:"duration_ms"`
+	// Attachment is the data sent with a chat question (plan.md section 34.3).
+	Attachment *string `json:"attachment"`
 }
 
 type analysisDetail struct {
 	analysisSummary
-	Timezone        string            `json:"timezone"`
-	WalletIDs       []string          `json:"wallet_ids"`
-	Options         AnalysisOptions   `json:"options"`
-	PromptVersion   string            `json:"prompt_version"`
-	SystemPrompt    string            `json:"system_prompt"`
-	FollowUpsLeft   int               `json:"follow_ups_left"`
-	CanAskFollowUps bool              `json:"can_ask_follow_ups"`
+	Timezone        string          `json:"timezone"`
+	WalletIDs       []string        `json:"wallet_ids"`
+	Options         AnalysisOptions `json:"options"`
+	PromptVersion   string          `json:"prompt_version"`
+	SystemPrompt    string          `json:"system_prompt"`
+	FollowUpsLeft   int             `json:"follow_ups_left"`
+	CanAskFollowUps bool            `json:"can_ask_follow_ups"`
 	// Question is a chat's first question as typed (its CONTEXT message
 	// holds it after the data); nil for reports.
 	Question *string           `json:"question"`
@@ -635,6 +651,7 @@ func (s *Service) GetAnalysis(ctx context.Context, userID, id uuid.UUID) (analys
 			ID: m.ID.String(), Seq: m.Seq, Role: m.Role, Kind: m.Kind, Content: m.Content, Status: m.Status,
 			ErrorCode: m.ErrorCode, Model: m.Model, InputTokens: m.InputTokens, OutputTokens: m.OutputTokens,
 			Truncated: m.Truncated, CreatedAt: m.CreatedAt.UTC().Format(timeLayout), DurationMs: m.DurationMs,
+			Attachment: m.Attachment,
 		}
 		if effective := s.effectiveStatus(m.Status, m.UpdatedAt, now, a.Provider); effective != m.Status {
 			mr.Status = effective

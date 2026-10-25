@@ -3507,14 +3507,25 @@ Free-form questions about the user's own data that are not a report: "when did I
 - Data: period `all_time` by default, sections monthly, categories, titles, recurring (with the yearly/one-off table) and personal context, and always the transaction list, newest first, up to `ChatMaxTransactions` (2000). `anonymize_titles` is refused (`options.anonymize_titles`), because the answers search the titles.
 - Budget: the ledger is cut first. With `budget_tokens` (the phone always sends one) or, without it, the server's `AI_MAX_PROMPT_TOKENS`, the list shrinks by a quarter at a time to the most recent transactions that fit (`transactions_<kept>` in `disclosure.compaction_steps`); only then the usual budget steps apply, skipping the transaction ones. Deterministic, so a run reproduces its preview's fingerprint.
 
-### 34.3 Consent
+### 34.3 Searching older transactions
+
+When the ledger had to be cut (long histories, the phone's context), questions about older payments would find nothing. So every question of such a chat carries the older transactions that match it:
+
+- `options.ledger_cutoff` (set by the server) is the time of the oldest transaction kept, or the period end when none was. Its presence marks the chat as searched.
+- Terms (`searchTerms`): lowercase words of letters, accents folded (`àèéìòù…`, the same mapping as SQL `translate()` on the other side), Italian and English stop words and question/payment verbs dropped, words shorter than 3 letters dropped, each cut to a prefix two letters shorter (at least 4) so that endings match ("macchina" → `macchi` finds "macchine"), at most 6. A question with no term carries nothing.
+- Search (`SearchTransactions`): the chat's wallets, kinds and period start, before the cutoff, title or category containing any term, newest first; at most 40 rows on the compact profile, 150 otherwise, plus the total found.
+- Rendered as its own `<financial_data>` block ("Movimenti meno recenti che corrispondono alla domanda", the terms, found and shown counts, the rows with the ledger's columns, or an explicit "none" line) and placed just before the tagged question.
+- First question: part of the `CONTEXT` message, so of the preview and its fingerprint. To make room, the ledger is cut to the budget minus the matches over the whole period (capped at a third of the budget); then the matches older than the oldest transaction kept are attached, fewer if they still don't fit.
+- Later questions: stored with the question (`ai_messages.attachment`, migration `0037_ai_message_attachment`) and replayed as sent; returned as `attachment` on messages and `allegato` in the export. On the phone it is part of the question message and counts against the context like any text.
+
+### 34.4 Consent
 
 The cloud disclosure (`ConsentVersion` 2) now says that chats always send the transaction list; users who accepted version 1 are asked again before the next analysis or chat. The on-device disclosure doesn't list data and is unchanged.
 
-### 34.4 Tests
+### 34.5 Tests
 
-- Backend (`internal/ai/chat_integration_test.go`): preview and run (system prompt without headings, whole-history ledger, first message = data + tagged question, title and `question`), follow-ups with the chat prompt, CHAT not among the presets, validation (missing, blank or too long question, anonymized titles, ledger cap, report cap unchanged), ledger cut to the budget keeping the newest and the same fingerprint twice, on-device chat (compact prompt, first answer labelled `ANSWER`), history type filter, export.
-- Prompt: golden files `chat_it`, `chat_en`, `chat_it_compact`; first-question round trip with tags inside the question.
+- Backend (`internal/ai/chat_integration_test.go`): preview and run (system prompt without headings, whole-history ledger, first message = data + tagged question, title and `question`), follow-ups with the chat prompt, CHAT not among the presets, validation (missing, blank or too long question, anonymized titles, ledger cap, report cap unchanged), ledger cut to the budget keeping the newest and the same fingerprint twice, on-device chat (compact prompt, first answer labelled `ANSWER`), history type filter, export; search (older matches attached to the first and later questions, stored and replayed exactly, accents folded, other wallets and other users never searched, export of the attachment), and nothing searched when the ledger is complete. `retrieval_test.go`: search terms and accent folding.
+- Prompt: matches rendering (found, none, placement before the question), golden files `chat_it`, `chat_en`, `chat_it_compact`; first-question round trip with tags inside the question.
 
 ---
 

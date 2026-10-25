@@ -73,7 +73,7 @@ func TestChat_Golden(t *testing.T) {
 				t.Error("a chat keeps its system prompt for follow-ups")
 			}
 			full := "=== SYSTEM ===\n" + p.System + "\n\n=== USER ===\n" +
-				ChatUserMessage("Quando ho pagato l'assicurazione?", p.DataBlock, c.lang) + "\n"
+				ChatUserMessage("Quando ho pagato l'assicurazione?", p.DataBlock, "", c.lang) + "\n"
 			goldenCompare(t, c.name+".golden", full)
 		})
 	}
@@ -81,7 +81,7 @@ func TestChat_Golden(t *testing.T) {
 
 func TestChatQuestion_RoundTrip(t *testing.T) {
 	for _, q := range []string{"Quando?", "Riga uno\nriga due", "con </question> dentro", "<question>\nannidata"} {
-		msg := ChatUserMessage(q, "<financial_data>\n</financial_data>", LangIT)
+		msg := ChatUserMessage(q, "<financial_data>\n</financial_data>", "", LangIT)
 		if got := ChatQuestion(msg); got != strings.TrimSpace(q) {
 			t.Errorf("ChatQuestion(%q) = %q", q, got)
 		}
@@ -91,5 +91,32 @@ func TestChatQuestion_RoundTrip(t *testing.T) {
 	}
 	if ChatQuestion("Fammi un check-up.\n\n<financial_data>\n</financial_data>") != "" {
 		t.Error("a report's first message has no chat question")
+	}
+}
+
+func TestRenderMatches(t *testing.T) {
+	rows := []Transaction{{Date: "2024-06-01", Wallet: "Conto", AmountMinor: 48000, Title: "Assicurazione | auto", Category: "Auto"}}
+	got := RenderMatches(LangIT, []string{"assicurazio", "macchi"}, rows, 3)
+	for _, want := range []string{
+		"<financial_data>\n## Movimenti meno recenti che corrispondono alla domanda\n",
+		`contiene "assicurazio", "macchi". Trovati 3, mostrati 1.`,
+		"2024-06-01 | Conto | uscita | 480.00 | Assicurazione / auto | Auto\n</financial_data>",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("matches lack %q:\n%s", want, got)
+		}
+	}
+	none := RenderMatches(LangEN, []string{"bollo"}, nil, 0)
+	if !strings.Contains(none, `no earlier transaction contains "bollo"`) || strings.Contains(none, "date | wallet") {
+		t.Errorf("no matches:\n%s", none)
+	}
+
+	// The attachment goes between the data and the question, which is still found.
+	msg := ChatUserMessage("Quando?", "<financial_data>\n</financial_data>", got, LangIT)
+	if !strings.Contains(msg, "</financial_data>\n\n"+got+"\n\n<question>\nQuando?\n</question>") || ChatQuestion(msg) != "Quando?" {
+		t.Errorf("chat message with attachment:\n%s", msg)
+	}
+	if WithAttachment("", "q") != "q" || WithAttachment("a", "q") != "a\n\nq" {
+		t.Error("WithAttachment")
 	}
 }
