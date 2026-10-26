@@ -1,6 +1,7 @@
 package categories
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -26,6 +27,8 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Post("/v1/categories", h.create)
 	r.Patch("/v1/categories/{id}", h.update)
 	r.Delete("/v1/categories/{id}", h.delete)
+	r.Put("/v1/categories/{id}/hidden", h.hide)
+	r.Delete("/v1/categories/{id}/hidden", h.unhide)
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {
@@ -121,6 +124,34 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.Delete(r.Context(), userID, id); err != nil {
+		apierror.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) hide(w http.ResponseWriter, r *http.Request) {
+	h.setHidden(w, r, h.service.Hide)
+}
+
+func (h *Handler) unhide(w http.ResponseWriter, r *http.Request) {
+	h.setHidden(w, r, h.service.Unhide)
+}
+
+func (h *Handler) setHidden(w http.ResponseWriter, r *http.Request, apply func(ctx context.Context, userID, categoryID uuid.UUID) error) {
+	userID, ok := reqctx.UserID(r.Context())
+	if !ok {
+		apierror.Write(w, r, apierror.ErrUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		apierror.Write(w, r, apierror.ErrNotFound)
+		return
+	}
+
+	if err := apply(r.Context(), userID, id); err != nil {
 		apierror.Write(w, r, err)
 		return
 	}

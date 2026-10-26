@@ -494,6 +494,12 @@ abstract class AppLocalizations {
   /// **'Le categorie di sistema non possono essere eliminate.'**
   String get errorCodeSystemCategoryNotDeletable;
 
+  /// No description provided for @errorCodeCategoryNotHideable.
+  ///
+  /// In it, this message translates to:
+  /// **'Solo le categorie di sistema si possono nascondere: le tue puoi eliminarle.'**
+  String get errorCodeCategoryNotHideable;
+
   /// No description provided for @errorCodeTemplateAlreadyExists.
   ///
   /// In it, this message translates to:

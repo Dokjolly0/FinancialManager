@@ -29,6 +29,7 @@ String localizeErrorCode(AppLocalizations l10n, String code) {
     'CATEGORY_ALREADY_EXISTS' => l10n.errorCodeCategoryAlreadyExists,
     'SYSTEM_CATEGORY_NOT_EDITABLE' => l10n.errorCodeSystemCategoryNotEditable,
     'SYSTEM_CATEGORY_NOT_DELETABLE' => l10n.errorCodeSystemCategoryNotDeletable,
+    'CATEGORY_NOT_HIDEABLE' => l10n.errorCodeCategoryNotHideable,
     'TEMPLATE_ALREADY_EXISTS' => l10n.errorCodeTemplateAlreadyExists,
     'EXPORT_NOT_READY' => l10n.errorCodeExportNotReady,
     'UPLOAD_TOO_LARGE' => l10n.errorCodeUploadTooLarge,

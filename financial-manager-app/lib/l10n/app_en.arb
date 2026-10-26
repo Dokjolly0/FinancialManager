@@ -93,6 +93,7 @@
   "errorCodeCategoryAlreadyExists": "A category with this name already exists for this direction.",
   "errorCodeSystemCategoryNotEditable": "System categories can't be edited.",
   "errorCodeSystemCategoryNotDeletable": "System categories can't be deleted.",
+  "errorCodeCategoryNotHideable": "Only system categories can be hidden: delete your own instead.",
   "errorCodeTemplateAlreadyExists": "A template with this title already exists for this direction.",
   "errorCodeExportNotReady": "The export isn't ready yet.",
   "errorCodeUploadTooLarge": "The file exceeds the maximum allowed size.",

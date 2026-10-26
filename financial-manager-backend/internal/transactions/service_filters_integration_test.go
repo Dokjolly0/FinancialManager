@@ -23,7 +23,7 @@ func TestCreateStandard_LinksValidCategoryAndBumpsTemplateUsage(t *testing.T) {
 	h := newHarness(t, 100000)
 	ctx := context.Background()
 
-	categoryService := categories.NewService(h.categories)
+	categoryService := categories.NewService(categories.Deps{Repo: h.categories})
 	category, err := categoryService.Create(ctx, categories.CreateServiceInput{
 		UserID: h.userID, Name: "Trasporti pubblici", DirectionScope: categories.ScopeDebit,
 	})
@@ -85,7 +85,7 @@ func TestCreateStandard_RejectsAnotherUsersCategoryAndTemplate(t *testing.T) {
 	other := newHarness(t, 0)
 	ctx := context.Background()
 
-	categoryService := categories.NewService(other.categories)
+	categoryService := categories.NewService(categories.Deps{Repo: other.categories})
 	foreignCategory, err := categoryService.Create(ctx, categories.CreateServiceInput{
 		UserID: other.userID, Name: "Categoria altrui", DirectionScope: categories.ScopeDebit,
 	})
@@ -118,7 +118,7 @@ func TestList_FiltersByTitleAmountRangeAndCategory(t *testing.T) {
 	h := newHarness(t, 1000000)
 	ctx := context.Background()
 
-	categoryService := categories.NewService(h.categories)
+	categoryService := categories.NewService(categories.Deps{Repo: h.categories})
 	groceries, err := categoryService.Create(ctx, categories.CreateServiceInput{
 		UserID: h.userID, Name: "Spesa quotidiana", DirectionScope: categories.ScopeDebit,
 	})

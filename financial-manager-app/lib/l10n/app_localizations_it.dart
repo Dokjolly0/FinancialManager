@@ -250,6 +250,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Le categorie di sistema non possono essere eliminate.';
 
   @override
+  String get errorCodeCategoryNotHideable =>
+      'Solo le categorie di sistema si possono nascondere: le tue puoi eliminarle.';
+
+  @override
   String get errorCodeTemplateAlreadyExists =>
       'Esiste già un modello con questo titolo per questa direzione.';
 

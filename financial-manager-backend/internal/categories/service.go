@@ -6,17 +6,35 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"financial-manager-backend/internal/platform/apierror"
+	"financial-manager-backend/internal/platform/database"
 )
 
-type Service struct {
-	repo *Repository
+// ReportVersionBumper invalidates a wallet's cached reports (plan.md
+// section 18.9) — the same contract as transactions.ReportVersionBumper,
+// satisfied by reportcache.Store. Optional: nil in tests that don't
+// exercise report caching.
+type ReportVersionBumper interface {
+	Bump(ctx context.Context, walletID uuid.UUID) error
 }
 
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+type Service struct {
+	db             *database.Pool
+	repo           *Repository
+	reportVersions ReportVersionBumper
+}
+
+type Deps struct {
+	DB             *database.Pool
+	Repo           *Repository
+	ReportVersions ReportVersionBumper
+}
+
+func NewService(d Deps) *Service {
+	return &Service{db: d.DB, repo: d.Repo, reportVersions: d.ReportVersions}
 }
 
 type categoryResponse struct {
@@ -26,6 +44,8 @@ type categoryResponse struct {
 	Color          *string `json:"color,omitempty"`
 	IsSystem       bool    `json:"is_system"`
 	SortOrder      int     `json:"sort_order"`
+	UsageCount     int64   `json:"usage_count"`
+	Hidden         bool    `json:"hidden"`
 }
 
 func toCategoryResponse(c Category) categoryResponse {
@@ -36,6 +56,8 @@ func toCategoryResponse(c Category) categoryResponse {
 		Color:          c.Color,
 		IsSystem:       c.IsSystem,
 		SortOrder:      c.SortOrder,
+		UsageCount:     c.UsageCount,
+		Hidden:         c.Hidden,
 	}
 }
 
@@ -131,11 +153,11 @@ func (s *Service) Update(ctx context.Context, in UpdateServiceInput) (categoryRe
 }
 
 // Delete soft-deletes a user-owned category (plan.md section 14.7:
-// "System categories are not deletable"). Per-user hiding of system
-// categories isn't modeled — plan.md section 11 doesn't define a per-user
-// visibility table, so a system category can only be hidden by a future,
-// explicitly designed extension, not silently archived here (which would
-// hide it for every user sharing it).
+// "System categories are not deletable" — they can only be hidden, see
+// Hide). The user's transactions and templates filed under it are left
+// without a category, in the same DB transaction, so nothing keeps
+// pointing at an archived category; the clients warn about this before
+// calling it, using the category's usage_count.
 func (s *Service) Delete(ctx context.Context, userID, categoryID uuid.UUID) error {
 	existing, err := s.repo.GetByIDAndVisibility(ctx, categoryID, userID)
 	if errors.Is(err, ErrNotFound) {
@@ -148,11 +170,62 @@ func (s *Service) Delete(ctx context.Context, userID, categoryID uuid.UUID) erro
 		return apierror.New(403, "SYSTEM_CATEGORY_NOT_DELETABLE", "System categories cannot be deleted.")
 	}
 
-	if err := s.repo.Archive(ctx, categoryID, userID); err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return apierror.ErrNotFound
+	var walletIDs []uuid.UUID
+	err = s.db.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		repo := s.repo.WithQuerier(tx)
+		var err error
+		if walletIDs, err = repo.DetachFromTransactions(ctx, categoryID, userID); err != nil {
+			return err
 		}
+		if err := repo.DetachFromTemplates(ctx, categoryID, userID); err != nil {
+			return err
+		}
+		return repo.Archive(ctx, categoryID, userID)
+	})
+	if errors.Is(err, ErrNotFound) {
+		return apierror.ErrNotFound
+	}
+	if err != nil {
 		return err
+	}
+
+	// After the commit, like transactions.Service: a failed bump only
+	// leaves category breakdowns stale until the cache TTL expires.
+	if s.reportVersions != nil {
+		for _, walletID := range walletIDs {
+			_ = s.reportVersions.Bump(ctx, walletID)
+		}
+	}
+	return nil
+}
+
+// Hide hides a system category from the user's pickers; Unhide shows it
+// again. Per user, unlike archiving, which would hide it for everyone
+// sharing it. A custom category can't be hidden — the user deletes it.
+func (s *Service) Hide(ctx context.Context, userID, categoryID uuid.UUID) error {
+	if err := s.checkHideable(ctx, userID, categoryID); err != nil {
+		return err
+	}
+	return s.repo.Hide(ctx, categoryID, userID)
+}
+
+func (s *Service) Unhide(ctx context.Context, userID, categoryID uuid.UUID) error {
+	if err := s.checkHideable(ctx, userID, categoryID); err != nil {
+		return err
+	}
+	return s.repo.Unhide(ctx, categoryID, userID)
+}
+
+func (s *Service) checkHideable(ctx context.Context, userID, categoryID uuid.UUID) error {
+	existing, err := s.repo.GetByIDAndVisibility(ctx, categoryID, userID)
+	if errors.Is(err, ErrNotFound) {
+		return apierror.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if !existing.IsSystem {
+		return apierror.New(422, "CATEGORY_NOT_HIDEABLE", "Only system categories can be hidden; delete a custom category instead.")
 	}
 	return nil
 }

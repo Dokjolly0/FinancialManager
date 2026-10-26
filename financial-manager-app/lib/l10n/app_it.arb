@@ -75,6 +75,7 @@
   "errorCodeCategoryAlreadyExists": "Esiste già una categoria con questo nome per questa direzione.",
   "errorCodeSystemCategoryNotEditable": "Le categorie di sistema non possono essere modificate.",
   "errorCodeSystemCategoryNotDeletable": "Le categorie di sistema non possono essere eliminate.",
+  "errorCodeCategoryNotHideable": "Solo le categorie di sistema si possono nascondere: le tue puoi eliminarle.",
   "errorCodeTemplateAlreadyExists": "Esiste già un modello con questo titolo per questa direzione.",
   "errorCodeExportNotReady": "L'esportazione non è ancora pronta.",
   "errorCodeUploadTooLarge": "Il file supera la dimensione massima consentita.",

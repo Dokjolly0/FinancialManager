@@ -29,6 +29,10 @@ type Category struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	ArchivedAt     *time.Time
+
+	// Per-user values, only filled by Repository.ListForUser.
+	UsageCount int64
+	Hidden     bool
 }
 
 // NormalizeName mirrors plan.md section 4.4's title normalization: trim,

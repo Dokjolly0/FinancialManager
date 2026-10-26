@@ -46,14 +46,22 @@ func scanCategory(row pgx.Row) (Category, error) {
 }
 
 // ListForUser returns every category visible to the user: shared system
-// categories plus their own custom ones (plan.md section 14.7), ordered so
-// system categories keep their curated sort_order first.
+// categories plus their own custom ones (plan.md section 14.7), each with
+// how many of the user's live transactions use it (for the "most used"
+// ordering and the delete warning) and whether the user hid it. Hidden
+// categories are still returned: history, exports and the restore action
+// need their names; pickers leave them out. Ordered alphabetically, which
+// is also the clients' default ordering.
 func (r *Repository) ListForUser(ctx context.Context, userID uuid.UUID) ([]Category, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT `+categoryColumns+`
+		SELECT `+categoryColumns+`,
+			(SELECT COUNT(*) FROM transactions t
+				WHERE t.user_id = $1 AND t.category_id = categories.id AND t.deleted_at IS NULL) AS usage_count,
+			EXISTS (SELECT 1 FROM user_hidden_categories h
+				WHERE h.user_id = $1 AND h.category_id = categories.id) AS hidden
 		FROM categories
 		WHERE archived_at IS NULL AND (owner_user_id IS NULL OR owner_user_id = $1)
-		ORDER BY is_system DESC, sort_order ASC, name ASC
+		ORDER BY name_normalized ASC, direction_scope ASC
 	`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list categories: %w", err)
@@ -62,9 +70,13 @@ func (r *Repository) ListForUser(ctx context.Context, userID uuid.UUID) ([]Categ
 
 	var out []Category
 	for rows.Next() {
-		c, err := scanCategory(rows)
-		if err != nil {
-			return nil, err
+		var c Category
+		if err := rows.Scan(
+			&c.ID, &c.OwnerUserID, &c.Name, &c.NameNormalized, &c.DirectionScope,
+			&c.IconMediaID, &c.Color, &c.IsSystem, &c.SortOrder, &c.CreatedAt, &c.UpdatedAt, &c.ArchivedAt,
+			&c.UsageCount, &c.Hidden,
+		); err != nil {
+			return nil, fmt.Errorf("scan category: %w", err)
 		}
 		out = append(out, c)
 	}
@@ -131,8 +143,9 @@ func (r *Repository) ClearIconMediaForOwner(ctx context.Context, userID uuid.UUI
 	return nil
 }
 
-// Archive soft-deletes a user-owned category. Existing transactions keep
-// their category_id reference; only future selection lists exclude it.
+// Archive soft-deletes a user-owned category. Service.Delete detaches it
+// from the user's transactions and templates first, in the same DB
+// transaction.
 func (r *Repository) Archive(ctx context.Context, id, userID uuid.UUID) error {
 	tag, err := r.db.Exec(ctx, `
 		UPDATE categories SET archived_at = now(), updated_at = now()
@@ -143,6 +156,71 @@ func (r *Repository) Archive(ctx context.Context, id, userID uuid.UUID) error {
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
+	}
+	return nil
+}
+
+// DetachFromTransactions clears category_id on every transaction of userID
+// filed under the category — soft-deleted ones included, so nothing keeps
+// pointing at an archived category — and returns the wallets touched, whose
+// cached reports must be invalidated. version is bumped like any other
+// edit, so an edit form opened before the delete can't save the old
+// category back (it gets a stale-version conflict instead).
+func (r *Repository) DetachFromTransactions(ctx context.Context, id, userID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := r.db.Query(ctx, `
+		WITH detached AS (
+			UPDATE transactions SET category_id = NULL, version = version + 1, updated_at = now()
+			WHERE user_id = $2 AND category_id = $1
+			RETURNING wallet_id
+		)
+		SELECT DISTINCT wallet_id FROM detached
+	`, id, userID)
+	if err != nil {
+		return nil, fmt.Errorf("detach category from transactions: %w", err)
+	}
+	defer rows.Close()
+
+	var walletIDs []uuid.UUID
+	for rows.Next() {
+		var walletID uuid.UUID
+		if err := rows.Scan(&walletID); err != nil {
+			return nil, fmt.Errorf("scan detached wallet: %w", err)
+		}
+		walletIDs = append(walletIDs, walletID)
+	}
+	return walletIDs, rows.Err()
+}
+
+// DetachFromTemplates clears the category as the default of userID's
+// transaction templates, so a template doesn't keep suggesting it.
+func (r *Repository) DetachFromTemplates(ctx context.Context, id, userID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE transaction_templates SET default_category_id = NULL, updated_at = now()
+		WHERE user_id = $2 AND default_category_id = $1
+	`, id, userID)
+	if err != nil {
+		return fmt.Errorf("detach category from templates: %w", err)
+	}
+	return nil
+}
+
+// Hide hides a category from userID's pickers. Idempotent.
+func (r *Repository) Hide(ctx context.Context, id, userID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `
+		INSERT INTO user_hidden_categories (user_id, category_id) VALUES ($1, $2)
+		ON CONFLICT DO NOTHING
+	`, userID, id)
+	if err != nil {
+		return fmt.Errorf("hide category: %w", err)
+	}
+	return nil
+}
+
+// Unhide shows a hidden category in userID's pickers again. Idempotent.
+func (r *Repository) Unhide(ctx context.Context, id, userID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM user_hidden_categories WHERE user_id = $1 AND category_id = $2`, userID, id)
+	if err != nil {
+		return fmt.Errorf("unhide category: %w", err)
 	}
 	return nil
 }

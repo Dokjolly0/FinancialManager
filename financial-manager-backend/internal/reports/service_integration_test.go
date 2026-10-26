@@ -107,7 +107,7 @@ func newHarness(t *testing.T, openingBalanceMinor int64, now time.Time) harness 
 
 	return harness{
 		reports: reportsService, transactions: transactionsService,
-		categories: categories.NewService(categoriesRepo), templates: templates.NewService(templatesRepo),
+		categories: categories.NewService(categories.Deps{DB: dbPool, Repo: categoriesRepo}), templates: templates.NewService(templatesRepo),
 		userID: user.ID, walletID: wallet.ID, secondWalletID: secondWallet.ID,
 	}
 }

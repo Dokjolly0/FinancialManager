@@ -248,6 +248,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'System categories can\'t be deleted.';
 
   @override
+  String get errorCodeCategoryNotHideable =>
+      'Only system categories can be hidden: delete your own instead.';
+
+  @override
   String get errorCodeTemplateAlreadyExists =>
       'A template with this title already exists for this direction.';
 

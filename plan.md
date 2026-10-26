@@ -1412,6 +1412,22 @@ Suggested initial categories:
 Expenses: Home, Groceries, Dining, Transport, Fuel, Subscriptions, Health, Leisure, Shopping, Taxes, Other.  
 Income: Salary, Reimbursement, Gift, Sale, Interest, Other.
 
+`sort_order` only orders the seeded system rows among themselves; the clients don't use it. They sort alphabetically by default (case-insensitive, with the system "Other" last) or by use, with a toggle remembered on the device (section 7.6).
+
+System categories are shared by every user, so a user can't edit or archive them, but can hide the ones they never use from their own pickers (migration 0039):
+
+```text
+user_hidden_categories
+user_id UUID NOT NULL FK users ON DELETE CASCADE
+category_id UUID NOT NULL FK categories ON DELETE CASCADE
+created_at TIMESTAMPTZ NOT NULL
+PRIMARY KEY (user_id, category_id)
+```
+
+Hiding only affects the pickers for new or edited transactions: transactions already filed under a hidden category keep it, show its name and can still be filtered by it.
+
+Deleting a custom category archives it (`archived_at`) and, in the same DB transaction, sets `category_id = NULL` on every transaction of the owner filed under it (soft-deleted ones included, bumping `version` as for any edit) and `default_category_id = NULL` on their templates. So no transaction ever points at an archived category, and those transactions simply become uncategorized.
+
 ### 11.8 `media_assets` table
 
 ```text
@@ -1856,13 +1872,22 @@ Alternatively, keep the contract simpler and manage the template with a separate
 ### 14.7 Categories
 
 ```http
-GET  /v1/categories
-POST /v1/categories
-PATCH /v1/categories/{id}
+GET    /v1/categories
+POST   /v1/categories
+PATCH  /v1/categories/{id}
 DELETE /v1/categories/{id}
+PUT    /v1/categories/{id}/hidden
+DELETE /v1/categories/{id}/hidden
 ```
 
-System categories are not deletable; they can be hidden.
+`GET` returns every category visible to the user (system + their own), alphabetical by normalized name, hidden ones included. Each one carries, besides `id`, `name`, `direction_scope`, `color`, `is_system` and `sort_order`:
+
+- `usage_count`: how many of the user's non-deleted transactions use it, over the whole history. The clients use it for the "most used" ordering and for the delete warning.
+- `hidden`: whether the user hid it (section 11.7). Pickers leave hidden categories out; history and filters still resolve their names.
+
+`PATCH` and `DELETE` only work on the user's own categories: on a system category they answer `403 SYSTEM_CATEGORY_NOT_EDITABLE` / `SYSTEM_CATEGORY_NOT_DELETABLE`. `DELETE` archives the category and leaves its transactions and templates without a category (section 11.7), then invalidates the cached reports of the wallets it touched (section 18.9). Before calling it, the clients show how many transactions will be left without a category when `usage_count > 0`.
+
+System categories are not deletable, but they can be hidden per user: `PUT .../hidden` hides one, `DELETE .../hidden` shows it again. Both are idempotent and answer `204`. On a custom category they answer `422 CATEGORY_NOT_HIDEABLE` (it's deleted instead).
 
 ### 14.8 Media
 

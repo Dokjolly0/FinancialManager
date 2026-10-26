@@ -216,8 +216,12 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 	usersHandler := users.NewHandler(users.NewService(usersRepo))
 	walletsHandler := wallets.NewHandler(walletsRepo)
 
+	reportCache := reportcache.New(redisClient)
+
 	categoriesRepo := categories.NewRepository(dbPool)
-	categoriesHandler := categories.NewHandler(categories.NewService(categoriesRepo))
+	categoriesHandler := categories.NewHandler(categories.NewService(categories.Deps{
+		DB: dbPool, Repo: categoriesRepo, ReportVersions: reportCache,
+	}))
 
 	templatesRepo := templates.NewRepository(dbPool)
 	templatesHandler := templates.NewHandler(templates.NewService(templatesRepo))
@@ -233,8 +237,6 @@ func mountRoutes(router chi.Router, dbPool *database.Pool, redisClient *redis.Cl
 		RateLimiter: rateLimiter,
 	})
 	mediaHandler := media.NewHandler(mediaService, cfg.MaxUploadBytes)
-
-	reportCache := reportcache.New(redisClient)
 
 	transactionsService := transactions.NewService(transactions.Deps{
 		DB:             dbPool,
