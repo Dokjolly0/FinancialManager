@@ -380,6 +380,7 @@
   "endDateLabel": "End date",
   "anyLabel": "Any",
   "allCategoriesLabel": "All categories",
+  "uncategorizedFilterLabel": "No category",
   "resetAction": "Reset",
   "applyAction": "Apply",
   "typeFilterAll": "All",

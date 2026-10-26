@@ -8,6 +8,7 @@ import '../../../../core/widgets/first_day_of_week_scope.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../account/presentation/view_models/account_providers.dart';
 import '../../../categories/data/providers.dart';
+import '../../../categories/domain/models/category.dart';
 import '../../../categories/presentation/widgets/category_picker_sheet.dart';
 import '../../../transactions/domain/repositories/transaction_repository.dart';
 import '../../../wallets/data/providers.dart';
@@ -267,15 +268,19 @@ class _HistoryFiltersSheetState extends ConsumerState<HistoryFiltersSheet> {
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.label_outline),
                       title: Text(
-                        selectedCategory?.name ?? l10n.allCategoriesLabel,
+                        _categoryId == uncategorizedFilterId
+                            ? l10n.uncategorizedFilterLabel
+                            : selectedCategory?.name ?? l10n.allCategoriesLabel,
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () async {
-                        final selected = await CategoryPickerSheet.show(
+                        // Dismissing the sheet keeps the current choice.
+                        final selected = await CategoryPickerSheet.showFilter(
                           context,
-                          allowCreate: false,
                         );
-                        setState(() => _categoryId = selected?.id);
+                        if (selected != null) {
+                          setState(() => _categoryId = selected.categoryId);
+                        }
                       },
                     ),
                     ListTile(

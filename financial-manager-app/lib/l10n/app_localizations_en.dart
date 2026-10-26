@@ -1028,6 +1028,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allCategoriesLabel => 'All categories';
 
   @override
+  String get uncategorizedFilterLabel => 'No category';
+
+  @override
   String get resetAction => 'Reset';
 
   @override

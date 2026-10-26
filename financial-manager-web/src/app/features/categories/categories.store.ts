@@ -30,6 +30,12 @@ export interface CategoryInput {
   color: string | null;
 }
 
+/**
+ * The filter value for the operations without a category (category_id=none,
+ * plan.md section 17.1), wherever a filter takes a category id.
+ */
+export const UNCATEGORIZED_FILTER = 'none';
+
 /** Offered for an operation of this direction (section 7.6). */
 export const categoryMatches = (category: Category, direction: Direction) =>
   category.direction_scope === 'BOTH' || category.direction_scope === direction;

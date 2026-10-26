@@ -1034,6 +1034,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get allCategoriesLabel => 'Tutte le categorie';
 
   @override
+  String get uncategorizedFilterLabel => 'Senza categoria';
+
+  @override
   String get resetAction => 'Azzera';
 
   @override

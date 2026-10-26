@@ -12,13 +12,18 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { Ban, Check, ChevronsUpDown, EllipsisVertical, Plus, Search } from 'lucide';
+import { Ban, Check, ChevronsUpDown, EllipsisVertical, Plus, Search, Tags } from 'lucide';
 
 import { ErrorText } from '../../core/errors/error-text';
 import { Icon } from '../../shared/ui/icon';
 import { Spinner } from '../../shared/ui/states';
 import { Direction } from '../transactions/transaction.model';
-import { CategoriesStore, Category, categoryMatches } from './categories.store';
+import {
+  CategoriesStore,
+  Category,
+  UNCATEGORIZED_FILTER,
+  categoryMatches,
+} from './categories.store';
 import { CategoryActions } from './category-actions';
 import { CategorySortToggle } from './category-sort-toggle';
 
@@ -28,6 +33,10 @@ import { CategorySortToggle } from './category-sort-toggle';
  * shared A–Z / most used order, hidden ones left out, "no category", and
  * creating the typed name as a new category for that direction. Each row's
  * menu button opens the category's actions. The value is the category id.
+ *
+ * With `filterMode` (the history filters) the value null means every
+ * category, UNCATEGORIZED_FILTER the operations without one, hidden
+ * categories are listed too and nothing can be created.
  */
 @Component({
   selector: 'app-category-select',
@@ -63,7 +72,7 @@ import { CategorySortToggle } from './category-sort-toggle';
         ></span>
         <span class="flex-1 truncate">{{ category.name }}</span>
       } @else {
-        <span class="flex-1 truncate text-fg-muted">{{ 'noCategoryLabel' | transloco }}</span>
+        <span class="flex-1 truncate text-fg-muted">{{ emptyLabelKey() | transloco }}</span>
       }
       <app-icon [icon]="icons.ChevronsUpDown" [size]="16" class="text-fg-muted" />
     </button>
@@ -106,13 +115,36 @@ import { CategorySortToggle } from './category-sort-toggle';
                 [attr.aria-selected]="!value()"
                 (click)="choose(null)"
               >
-                <app-icon [icon]="icons.Ban" [size]="16" class="text-fg-muted" />
-                <span class="flex-1">{{ 'noCategoryLabel' | transloco }}</span>
+                <app-icon
+                  [icon]="filterMode() ? icons.Tags : icons.Ban"
+                  [size]="16"
+                  class="text-fg-muted"
+                />
+                <span class="flex-1">{{
+                  (filterMode() ? 'allCategoriesLabel' : 'noCategoryLabel') | transloco
+                }}</span>
                 @if (!value()) {
                   <app-icon [icon]="icons.Check" [size]="16" class="text-primary" />
                 }
               </button>
             </li>
+            @if (filterMode()) {
+              <li>
+                <button
+                  type="button"
+                  role="option"
+                  class="option"
+                  [attr.aria-selected]="value() === uncategorized"
+                  (click)="setValue(uncategorized)"
+                >
+                  <app-icon [icon]="icons.Ban" [size]="16" class="text-fg-muted" />
+                  <span class="flex-1">{{ 'uncategorizedFilterLabel' | transloco }}</span>
+                  @if (value() === uncategorized) {
+                    <app-icon [icon]="icons.Check" [size]="16" class="text-primary" />
+                  }
+                </button>
+              </li>
+            }
           }
           @for (category of visible(); track category.id) {
             <li class="group flex items-center">
@@ -148,7 +180,7 @@ import { CategorySortToggle } from './category-sort-toggle';
               </li>
             }
           }
-          @if (allowCreate() && query().trim() && !exactMatch()) {
+          @if (canCreate() && query().trim() && !exactMatch()) {
             <li class="mt-1 border-t border-border pt-1">
               <button
                 type="button"
@@ -197,13 +229,16 @@ export class CategorySelect implements ControlValueAccessor {
   /** Only categories for this direction; null shows them all (history filters). */
   readonly direction = input<Direction | null>(null);
   readonly allowCreate = input(true);
+  /** History filters: "every category" and "no category" choices, hidden ones listed. */
+  readonly filterMode = input(false);
   readonly inputId = input<string>();
 
   private readonly store = inject(CategoriesStore);
   private readonly errors = inject(ErrorText);
   private readonly actions = inject(CategoryActions);
 
-  protected readonly icons = { Ban, Check, ChevronsUpDown, EllipsisVertical, Plus, Search };
+  protected readonly icons = { Ban, Check, ChevronsUpDown, EllipsisVertical, Plus, Search, Tags };
+  protected readonly uncategorized = UNCATEGORIZED_FILTER;
   protected readonly positions: ConnectedPosition[] = [
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 6 },
     { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
@@ -219,12 +254,22 @@ export class CategorySelect implements ControlValueAccessor {
   private onTouched: () => void = () => undefined;
 
   protected readonly selected = computed(() => this.store.byId(this.value()));
+  protected readonly canCreate = computed(() => this.allowCreate() && !this.filterMode());
+  protected readonly emptyLabelKey = computed(() =>
+    !this.filterMode()
+      ? 'noCategoryLabel'
+      : this.value() === UNCATEGORIZED_FILTER
+        ? 'uncategorizedFilterLabel'
+        : 'allCategoriesLabel',
+  );
   protected readonly visible = computed(() => {
     const q = this.query().trim().toLowerCase();
     const direction = this.direction();
     return this.store
       .categories()
-      .filter((c) => !c.hidden && (!direction || categoryMatches(c, direction)))
+      .filter(
+        (c) => (this.filterMode() || !c.hidden) && (!direction || categoryMatches(c, direction)),
+      )
       .filter((c) => c.name.toLowerCase().includes(q));
   });
   protected readonly exactMatch = computed(() => {
@@ -245,7 +290,7 @@ export class CategorySelect implements ControlValueAccessor {
   protected enter(): void {
     const first = this.visible()[0];
     if (first) this.choose(first);
-    else if (this.allowCreate() && this.query().trim()) void this.create();
+    else if (this.canCreate() && this.query().trim()) void this.create();
   }
 
   /** Closes the dropdown, then shows the category's actions. */
@@ -255,8 +300,12 @@ export class CategorySelect implements ControlValueAccessor {
   }
 
   protected choose(category: Category | null): void {
-    this.value.set(category?.id ?? null);
-    this.onChange(category?.id ?? null);
+    this.setValue(category?.id ?? null);
+  }
+
+  protected setValue(value: string | null): void {
+    this.value.set(value);
+    this.onChange(value);
     this.onTouched();
     this.open.set(false);
   }

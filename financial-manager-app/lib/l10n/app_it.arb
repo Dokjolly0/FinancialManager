@@ -362,6 +362,7 @@
   "endDateLabel": "Data finale",
   "anyLabel": "Qualsiasi",
   "allCategoriesLabel": "Tutte le categorie",
+  "uncategorizedFilterLabel": "Senza categoria",
   "resetAction": "Azzera",
   "applyAction": "Applica",
   "typeFilterAll": "Tutte",

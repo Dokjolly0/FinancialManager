@@ -22,6 +22,11 @@ enum CategoryDirectionScope {
   };
 }
 
+/// The history filter value for the transactions without a category
+/// (`category_id=none`, plan.md section 17.1), passed wherever a filter
+/// takes a category id.
+const uncategorizedFilterId = 'none';
+
 /// Economic classification of a transaction (plan.md section 4.1, 11.7):
 /// shared system categories (Casa, Stipendio, ...) plus each user's own
 /// custom ones.

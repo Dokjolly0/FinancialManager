@@ -15,36 +15,60 @@ import 'category_sort_toggle.dart';
 
 /// Bottom sheet listing every category visible to the user, filtered to
 /// those valid for [direction] (plan.md section 7.6) — or every category
-/// regardless of direction when [direction] is `null` (used by the history
-/// filters, which aren't tied to a single direction). Hidden categories are
-/// left out; the order follows the shared A–Z / most used toggle, and a
-/// long press opens the category's actions (edit, delete, hide). Returns
-/// the selected [Category], or `null` if dismissed / "Nessuna categoria"
-/// was chosen.
+/// regardless of direction when [direction] is `null`. The order follows
+/// the shared A–Z / most used toggle, and a long press opens the
+/// category's actions (edit, delete, hide).
+///
+/// Two modes:
+/// - [show], for a transaction: hidden categories are left out, a new one
+///   can be created. Returns the selected [Category], or `null` if
+///   dismissed / "Nessuna categoria" was chosen.
+/// - [showFilter], for the history filters: "Tutte le categorie", "Senza
+///   categoria" ([uncategorizedFilterId]) and every category, hidden ones
+///   included (old transactions may use them); no creation.
 class CategoryPickerSheet extends ConsumerStatefulWidget {
   const CategoryPickerSheet({
     super.key,
     this.direction,
-    this.allowCreate = true,
+    this.filterMode = false,
   });
 
   final TransactionDirection? direction;
-  final bool allowCreate;
+  final bool filterMode;
 
   static Future<Category?> show(
     BuildContext context, {
     TransactionDirection? direction,
-    bool allowCreate = true,
-  }) {
-    return showModalBottomSheet<Category?>(
+  }) async {
+    final result = await _showSheet(
+      context,
+      CategoryPickerSheet(direction: direction),
+    );
+    return result is Category ? result : null;
+  }
+
+  /// The chosen filter: `null` if dismissed, otherwise a record whose
+  /// `categoryId` is a category id, [uncategorizedFilterId], or `null` for
+  /// every category.
+  static Future<({String? categoryId})?> showFilter(
+    BuildContext context,
+  ) async {
+    final result = await _showSheet(
+      context,
+      const CategoryPickerSheet(filterMode: true),
+    );
+    return result is ({String? categoryId}) ? result : null;
+  }
+
+  static Future<Object?> _showSheet(BuildContext context, Widget sheet) {
+    return showModalBottomSheet<Object?>(
       context: context,
       // See ConfirmationSheet's useRootNavigator comment — otherwise
       // AppShell's centerDocked FAB sits above this sheet's own buttons.
       useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) =>
-          CategoryPickerSheet(direction: direction, allowCreate: allowCreate),
+      builder: (context) => sheet,
     );
   }
 
@@ -66,6 +90,13 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
     _nameController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Closes with [category] (null: no category) in the shape of the mode.
+  void _pick(Category? category) {
+    Navigator.of(
+      context,
+    ).pop(widget.filterMode ? (categoryId: category?.id) : category);
   }
 
   Future<void> _createCategory() async {
@@ -168,7 +199,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                       final visible = sortCategories(
                         categories.where(
                           (c) =>
-                              !c.hidden &&
+                              (widget.filterMode || !c.hidden) &&
                               (direction == null || c.matches(direction)) &&
                               c.name.toLowerCase().contains(_query),
                         ),
@@ -176,11 +207,24 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                       );
                       return ListView(
                         children: [
-                          if (_query.isEmpty)
+                          if (_query.isEmpty && widget.filterMode) ...[
+                            ListTile(
+                              leading: const Icon(Icons.label_outline),
+                              title: Text(l10n.allCategoriesLabel),
+                              onTap: () => _pick(null),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.block_outlined),
+                              title: Text(l10n.uncategorizedFilterLabel),
+                              onTap: () => Navigator.of(
+                                context,
+                              ).pop((categoryId: uncategorizedFilterId)),
+                            ),
+                          ] else if (_query.isEmpty)
                             ListTile(
                               leading: const Icon(Icons.block_outlined),
                               title: Text(l10n.noCategoryLabel),
-                              onTap: () => Navigator.of(context).pop(null),
+                              onTap: () => _pick(null),
                             )
                           else if (visible.isEmpty)
                             Padding(
@@ -194,7 +238,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                             ListTile(
                               leading: CategoryAvatar(category: category),
                               title: Text(category.name),
-                              onTap: () => Navigator.of(context).pop(category),
+                              onTap: () => _pick(category),
                               onLongPress: () =>
                                   CategoryActionsSheet.show(context, category),
                             ),
@@ -204,7 +248,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                   ),
                 ),
                 const Divider(height: AppSpacing.md),
-                if (!widget.allowCreate)
+                if (widget.filterMode)
                   const SizedBox(height: AppSpacing.md)
                 else if (_showCreateForm)
                   Padding(

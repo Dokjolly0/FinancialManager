@@ -701,7 +701,7 @@ Every image must show selection state, possible source, and a preview action.
 - Start date.
 - End date.
 - Type: all, expenses, income, adjustments.
-- Category.
+- Category: "All categories", "No category" (`category_id=none`: the transactions saved without one or whose category was deleted, section 17.1) or one category, hidden system categories included. Dismissing the category picker keeps the current choice. The "No category" choice shows as a "Senza categoria" chip and carries over to an AI analysis started from History.
 - With/without image, optional.
 - Sort by date or amount.
 

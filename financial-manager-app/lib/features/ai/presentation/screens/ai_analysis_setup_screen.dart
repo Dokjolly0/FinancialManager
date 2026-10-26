@@ -14,6 +14,7 @@ import '../../../../core/widgets/inline_error.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/formatting/money.dart';
 import '../../../categories/data/providers.dart';
+import '../../../categories/domain/models/category.dart';
 import '../../../reports/presentation/view_models/report_controller.dart';
 import '../../../wallets/data/providers.dart';
 import '../../data/providers.dart';
@@ -716,7 +717,11 @@ class _FiltersCard extends ConsumerWidget {
         ),
       if (filters.categoryId != null)
         InputChip(
-          label: Text(l10n.aiFilterCategory(categoryName ?? '…')),
+          label: Text(
+            filters.categoryId == uncategorizedFilterId
+                ? l10n.uncategorizedFilterLabel
+                : l10n.aiFilterCategory(categoryName ?? '…'),
+          ),
           onDeleted: () => onChanged(filters.without(categoryId: true)),
         ),
       if (filters.title != null && filters.title!.isNotEmpty)

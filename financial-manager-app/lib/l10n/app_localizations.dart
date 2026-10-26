@@ -1915,6 +1915,12 @@ abstract class AppLocalizations {
   /// **'Tutte le categorie'**
   String get allCategoriesLabel;
 
+  /// No description provided for @uncategorizedFilterLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Senza categoria'**
+  String get uncategorizedFilterLabel;
+
   /// No description provided for @resetAction.
   ///
   /// In it, this message translates to:

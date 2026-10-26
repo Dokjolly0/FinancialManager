@@ -54,7 +54,7 @@ export const TYPE_FILTER_KEYS: Record<TypeFilter, string> = {
           <app-category-select
             inputId="hf-category"
             formControlName="categoryId"
-            [allowCreate]="false"
+            [filterMode]="true"
           />
         </div>
         <div>

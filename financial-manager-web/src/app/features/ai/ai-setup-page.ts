@@ -23,7 +23,7 @@ import { Icon } from '../../shared/ui/icon';
 import { Overlay } from '../../shared/ui/overlay';
 import { PageHeader } from '../../shared/ui/page-header';
 import { EmptyState, InlineError, Spinner } from '../../shared/ui/states';
-import { CategoriesStore } from '../categories/categories.store';
+import { CategoriesStore, UNCATEGORIZED_FILTER } from '../categories/categories.store';
 import { WalletsStore } from '../wallets/wallets.store';
 import { AiDraft } from './ai-draft';
 import {
@@ -131,7 +131,10 @@ export class AiSetupPage {
     if (f.category_id)
       chips.push({
         key: 'category_id',
-        label: t('aiFilterCategory', { name: this.categories.name(f.category_id) ?? '…' }),
+        label:
+          f.category_id === UNCATEGORIZED_FILTER
+            ? t('uncategorizedFilterLabel')
+            : t('aiFilterCategory', { name: this.categories.name(f.category_id) ?? '…' }),
       });
     if (f.title) chips.push({ key: 'title', label: t('aiFilterTitle', { text: f.title }) });
     if (f.amount_min_minor !== undefined)

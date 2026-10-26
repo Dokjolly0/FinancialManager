@@ -25,7 +25,7 @@ import { Overlay } from '../../shared/ui/overlay';
 import { PageHeader } from '../../shared/ui/page-header';
 import { EmptyState, InlineError, SkeletonList, Spinner } from '../../shared/ui/states';
 import { Toasts } from '../../shared/ui/toast';
-import { CategoriesStore } from '../categories/categories.store';
+import { CategoriesStore, UNCATEGORIZED_FILTER } from '../categories/categories.store';
 import { TransactionRow } from '../transactions/transaction-row';
 import { Transaction } from '../transactions/transaction.model';
 import { TransactionsApi } from '../transactions/transactions.api';
@@ -98,7 +98,13 @@ export class HistoryPage {
     if (f.walletId)
       chips.push({ key: 'walletId', label: this.wallets.byId(f.walletId)?.name ?? '…' });
     if (f.categoryId)
-      chips.push({ key: 'categoryId', label: this.categories.name(f.categoryId) ?? '…' });
+      chips.push({
+        key: 'categoryId',
+        label:
+          f.categoryId === UNCATEGORIZED_FILTER
+            ? this.transloco.translate('uncategorizedFilterLabel')
+            : (this.categories.name(f.categoryId) ?? '…'),
+      });
     if (f.amountMin !== null)
       chips.push({ key: 'amountMin', label: `≥ ${this.money(f.amountMin)}` });
     if (f.amountMax !== null)

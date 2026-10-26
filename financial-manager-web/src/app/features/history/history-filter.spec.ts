@@ -32,6 +32,16 @@ describe('history filter', () => {
     expect(filterFromParams({ type: 'weird' }).type).toBe('all');
   });
 
+  it('keeps the "no category" filter through the URL, the query and the AI prefill', () => {
+    const filter = filterFromParams({ category: 'none' });
+    expect(filter.categoryId).toBe('none');
+    expect(filterFromParams(filterToParams(filter))).toEqual(filter);
+    expect(filterToQuery(filter).category_id).toBe('none');
+    expect(activeCount(filter)).toBe(1);
+    const prefill = aiPrefill(filter);
+    expect('params' in prefill && prefill.params['category']).toBe('none');
+  });
+
   it('counts active filters like the app', () => {
     expect(activeCount(EMPTY_FILTER)).toBe(0);
     expect(activeCount({ ...EMPTY_FILTER, type: 'debit', title: ' x ', from: '2026-01-01' })).toBe(
