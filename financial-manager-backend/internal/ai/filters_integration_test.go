@@ -92,6 +92,13 @@ func TestPreview_CategoryFilter(t *testing.T) {
 		t.Fatalf("category filter:\n%s", data)
 	}
 
+	r = h.do(http.MethodPost, "/v1/ai/analyses/preview", filteredBody(map[string]any{"category_id": "none"}, nil))
+	h.mustStatus(r, http.StatusOK)
+	data = r.body["data_block"].(string)
+	if !strings.Contains(data, "- Solo movimenti senza categoria") || strings.Contains(data, "Cinema") || !strings.Contains(data, "Bolletta") {
+		t.Fatalf("uncategorized filter:\n%s", data)
+	}
+
 	other := newHarness(t)
 	otherCat, _ := categories.NewRepository(other.db).Create(context.Background(), categories.CreateInput{
 		OwnerUserID: other.userID, Name: "Altrui " + uuid.NewString()[:6], DirectionScope: categories.ScopeDebit,

@@ -165,6 +165,14 @@ func TestList_FiltersByTitleAmountRangeAndCategory(t *testing.T) {
 	if len(byCategory.Transactions) != 1 || byCategory.Transactions[0].Title != "Supermercato Conad" {
 		t.Fatalf("List(category_id=groceries) = %+v, want exactly \"Supermercato Conad\"", byCategory.Transactions)
 	}
+
+	uncategorized, err := h.service.List(ctx, transactions.ListFilter{UserID: h.userID, Kind: transactions.KindStandard, Uncategorized: true, Limit: 10})
+	if err != nil {
+		t.Fatalf("List(uncategorized) error = %v", err)
+	}
+	if len(uncategorized.Transactions) != 1 || uncategorized.Transactions[0].Title != "Bar Centrale" {
+		t.Fatalf("List(category_id=none) = %+v, want exactly \"Bar Centrale\"", uncategorized.Transactions)
+	}
 }
 
 func TestList_FiltersByOccurredAtRange(t *testing.T) {

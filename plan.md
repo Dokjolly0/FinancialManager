@@ -1848,6 +1848,8 @@ occurred_to
 sort
 ```
 
+`category_id` is a category id, or `none` for the transactions without a category (section 17.1).
+
 Use cursor pagination based on `occurred_at` and `id`.
 
 ### 14.6 Suggestions and templates
@@ -1920,6 +1922,8 @@ timezone
 group_by=title|template|category
 include_adjustments=false
 ```
+
+`group_by` defaults to `category`, the only grouping the app and the dashboard show. `title` is still accepted by the API, but no client offers it any more: most titles are typed by hand and differ, so the grouping made a long list of 1–2% entries (section 18.4).
 
 A single aggregated `/v1/reports/dashboard` endpoint could also be created; separate endpoints, however, allow progressive loading and targeted caching.
 
@@ -2142,6 +2146,7 @@ FROM transactions
 WHERE user_id = $authenticated_user
   AND deleted_at IS NULL
   AND ($direction IS NULL OR direction = $direction)
+  AND ($category IS NULL OR category_id = $category)  -- or category_id IS NULL for category_id=none
   AND ($title IS NULL OR title_normalized LIKE $prefix)
   AND ($min IS NULL OR amount_minor >= $min)
   AND ($max IS NULL OR amount_minor <= $max)
@@ -2150,6 +2155,8 @@ WHERE user_id = $authenticated_user
 ORDER BY occurred_at DESC, id DESC
 LIMIT $limit_plus_one;
 ```
+
+`category_id=none` keeps only the transactions without a category: those saved without one, and those whose category was deleted (section 11.7). The same value works in the AI analysis filters started from History (`options.filters.category_id`), where the data block then lists "Solo movimenti senza categoria" among the applied filters.
 
 ### 17.2 Pagination
 

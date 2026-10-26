@@ -114,7 +114,7 @@ func (h *Handler) breakdown(w http.ResponseWriter, r *http.Request) {
 	}
 	groupBy := r.URL.Query().Get("group_by")
 	if groupBy == "" {
-		groupBy = GroupByTitle
+		groupBy = GroupByCategory
 	}
 	result, err := h.service.Breakdown(r.Context(), BreakdownInput{
 		contextInput: ctxIn, IncludeAdjustments: includeAdjustments, GroupBy: groupBy,

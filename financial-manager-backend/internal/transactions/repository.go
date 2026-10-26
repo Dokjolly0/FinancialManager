@@ -264,6 +264,7 @@ type ListFilter struct {
 	Direction      string    // "" = any
 	Kind           string    // "" = any
 	CategoryID     uuid.UUID
+	Uncategorized  bool   // only transactions without a category; excludes CategoryID
 	Title          string // prefix match against title_normalized, or a contains match against description (plan.md section 17.3)
 	AmountMinMinor int64  // 0 = no lower bound
 	AmountMaxMinor int64  // 0 = no upper bound
@@ -328,7 +329,9 @@ func (r *Repository) List(ctx context.Context, filter ListFilter) (Page, error) 
 		args = append(args, filter.Kind)
 		conditions = append(conditions, "kind = $"+strconv.Itoa(len(args)))
 	}
-	if filter.CategoryID != uuid.Nil {
+	if filter.Uncategorized {
+		conditions = append(conditions, "category_id IS NULL")
+	} else if filter.CategoryID != uuid.Nil {
 		args = append(args, filter.CategoryID)
 		conditions = append(conditions, "category_id = $"+strconv.Itoa(len(args)))
 	}

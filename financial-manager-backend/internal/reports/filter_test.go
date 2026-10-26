@@ -36,3 +36,14 @@ func TestFilterSQL(t *testing.T) {
 		t.Fatalf("title pattern must be escaped and unanchored: %q", pattern)
 	}
 }
+
+func TestFilterSQL_Uncategorized(t *testing.T) {
+	if (Filter{Uncategorized: true}).IsZero() {
+		t.Fatal("uncategorized is a filter")
+	}
+	cat := uuid.New()
+	sql, args := Filter{Uncategorized: true, CategoryID: &cat}.SQL("t.", 6)
+	if sql != " AND t.category_id IS NULL" || len(args) != 0 {
+		t.Fatalf("uncategorized = %q %v, want only the IS NULL condition", sql, args)
+	}
+}

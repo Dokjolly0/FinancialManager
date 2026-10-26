@@ -229,8 +229,11 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// category_id=none lists the transactions without a category (plan.md
+	// section 17.1); any other value must be a category id.
 	var categoryID uuid.UUID
-	if raw := query.Get("category_id"); raw != "" {
+	uncategorized := query.Get("category_id") == UncategorizedFilter
+	if raw := query.Get("category_id"); raw != "" && !uncategorized {
 		parsed, err := uuid.Parse(raw)
 		if err != nil {
 			apierror.Write(w, r, apierror.NewValidation(map[string]string{"category_id": apierror.FieldInvalidUUID}))
@@ -301,6 +304,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		Direction:      direction,
 		Kind:           query.Get("kind"),
 		CategoryID:     categoryID,
+		Uncategorized:  uncategorized,
 		Title:          query.Get("title"),
 		AmountMinMinor: amountMin,
 		AmountMaxMinor: amountMax,

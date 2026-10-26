@@ -334,7 +334,9 @@ func renderData(l labels, s Snapshot, sections map[string]bool) string {
 		case "CREDIT":
 			text("- " + l.filterCredit)
 		}
-		if f.Category != "" {
+		if f.Uncategorized {
+			text("- " + l.filterUncategorized)
+		} else if f.Category != "" {
 			linef("- "+l.filterCategory, clean(f.Category))
 		}
 		if f.Title != "" {

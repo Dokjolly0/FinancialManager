@@ -235,6 +235,15 @@ func TestBuild_FilteredSnapshot(t *testing.T) {
 		t.Error("balances and transfer flows must be left out when filtered")
 	}
 
+	s.Filters = &Filters{Uncategorized: true}
+	p, err = Build(BuildInput{Lang: LangIT, Preset: PresetCustom, Sections: AllSections, Snapshot: s})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(p.DataBlock, "- Solo movimenti senza categoria") {
+		t.Error("filtered block lacks the uncategorized filter")
+	}
+
 	unfiltered, _ := Build(BuildInput{Lang: LangIT, Preset: PresetCustom, Sections: AllSections, Snapshot: fixtureSnapshot()})
 	if unfiltered.Fingerprint == p.Fingerprint {
 		t.Error("filters must change the fingerprint")

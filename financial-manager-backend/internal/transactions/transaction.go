@@ -21,6 +21,11 @@ const (
 	KindTransfer          = "TRANSFER"
 )
 
+// UncategorizedFilter is the category_id value that filters for the
+// transactions without a category, in the history list and in the AI
+// analysis filters (plan.md section 17.1).
+const UncategorizedFilter = "none"
+
 type Transaction struct {
 	ID                 uuid.UUID
 	WalletID           uuid.UUID

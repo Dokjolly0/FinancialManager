@@ -16,6 +16,7 @@ import (
 type Filter struct {
 	Direction      string     // DEBIT, CREDIT or "" for both
 	CategoryID     *uuid.UUID // nil: any category
+	Uncategorized  bool       // only transactions without a category; excludes CategoryID
 	Title          string     // substring of title or description
 	AmountMinMinor int64      // 0: no lower bound
 	AmountMaxMinor int64      // 0: no upper bound
@@ -23,7 +24,7 @@ type Filter struct {
 
 // IsZero reports whether the filter matches every transaction.
 func (f Filter) IsZero() bool {
-	return f.Direction == "" && f.CategoryID == nil && strings.TrimSpace(f.Title) == "" &&
+	return f.Direction == "" && f.CategoryID == nil && !f.Uncategorized && strings.TrimSpace(f.Title) == "" &&
 		f.AmountMinMinor == 0 && f.AmountMaxMinor == 0
 }
 
@@ -40,7 +41,9 @@ func (f Filter) SQL(alias string, firstArg int) (string, []any) {
 	if f.Direction != "" {
 		b.WriteString(" AND " + alias + "direction = " + next(f.Direction))
 	}
-	if f.CategoryID != nil {
+	if f.Uncategorized {
+		b.WriteString(" AND " + alias + "category_id IS NULL")
+	} else if f.CategoryID != nil {
 		b.WriteString(" AND " + alias + "category_id = " + next(*f.CategoryID))
 	}
 	if title := strings.TrimSpace(f.Title); title != "" {

@@ -482,7 +482,10 @@ func (s *Service) resolveFilters(ctx context.Context, userID uuid.UUID, f *Analy
 	} else if f.AmountMaxMinor > 0 && f.AmountMinMinor > f.AmountMaxMinor {
 		fieldErrors["options.filters.amount_max_minor"] = FieldOutOfRange
 	}
-	if f.CategoryID != "" {
+	if f.CategoryID == transactions.UncategorizedFilter {
+		filter.Uncategorized = true
+		info.Uncategorized = true
+	} else if f.CategoryID != "" {
 		id, err := uuid.Parse(f.CategoryID)
 		if err != nil {
 			fieldErrors["options.filters.category_id"] = "CATEGORY_NOT_FOUND"

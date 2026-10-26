@@ -48,6 +48,7 @@ type Snapshot struct {
 type Filters struct {
 	Direction      string // DEBIT, CREDIT or ""
 	Category       string // category name, "" for any
+	Uncategorized  bool   // only transactions without a category
 	Title          string // text searched in title and description
 	AmountMinMinor int64  // 0: no bound
 	AmountMaxMinor int64  // 0: no bound
