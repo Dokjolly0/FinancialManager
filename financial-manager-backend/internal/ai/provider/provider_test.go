@@ -386,11 +386,16 @@ func TestListModels(t *testing.T) {
 			t.Fatalf("models = %v err = %v", models, err)
 		}
 	})
-	t.Run("gemini keeps generateContent models", func(t *testing.T) {
-		srv := sseServer(t, 200, `{"models":[{"name":"models/gemini-x","displayName":"Gemini X","supportedGenerationMethods":["generateContent","countTokens"]},{"name":"models/embedding-001","supportedGenerationMethods":["embedContent"]}]}`, nil)
+	t.Run("gemini keeps text generateContent models", func(t *testing.T) {
+		srv := sseServer(t, 200, `{"models":[{"name":"models/gemini-x","displayName":"Gemini X","supportedGenerationMethods":["generateContent","countTokens"]},`+
+			`{"name":"models/embedding-001","supportedGenerationMethods":["embedContent"]},`+
+			`{"name":"models/gemini-x-lite-tts","supportedGenerationMethods":["generateContent"]},`+
+			`{"name":"models/gemini-x-flash-image","supportedGenerationMethods":["generateContent"]},`+
+			`{"name":"models/gemini-x-native-audio","supportedGenerationMethods":["generateContent"]},`+
+			`{"name":"models/gemini-x-lite","displayName":"Gemini X Lite","supportedGenerationMethods":["generateContent"]}]}`, nil)
 		p, _ := testFactory(KindGemini, srv.URL).New(Config{Kind: KindGemini, APIKey: "k"})
 		models, err := p.ListModels(context.Background())
-		if err != nil || len(models) != 1 || models[0].ID != "gemini-x" {
+		if err != nil || len(models) != 2 || models[0].ID != "gemini-x" || models[1].ID != "gemini-x-lite" {
 			t.Fatalf("models = %v err = %v", models, err)
 		}
 	})

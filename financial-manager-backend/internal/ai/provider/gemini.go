@@ -205,6 +205,13 @@ func geminiContents(messages []Message) []geminiContent {
 	return out
 }
 
+// nonTextGeminiMarkers excludes the Gemini models that declare
+// generateContent but answer only with audio or images, or need a
+// special setup: they reject a text chat with a 400.
+var nonTextGeminiMarkers = []string{
+	"tts", "image", "audio", "live", "embedding", "aqa", "robotics", "computer-use",
+}
+
 func (p *geminiProvider) ListModels(ctx context.Context) ([]ModelInfo, error) {
 	var resp struct {
 		Models []struct {
@@ -218,10 +225,12 @@ func (p *geminiProvider) ListModels(ctx context.Context) ([]ModelInfo, error) {
 	}
 	models := make([]ModelInfo, 0, len(resp.Models))
 	for _, m := range resp.Models {
-		if !slices.Contains(m.SupportedGenerationMethods, "generateContent") {
+		id := strings.TrimPrefix(m.Name, "models/")
+		if !slices.Contains(m.SupportedGenerationMethods, "generateContent") ||
+			containsAny(strings.ToLower(id), nonTextGeminiMarkers...) {
 			continue
 		}
-		models = append(models, ModelInfo{ID: strings.TrimPrefix(m.Name, "models/"), DisplayName: m.DisplayName})
+		models = append(models, ModelInfo{ID: id, DisplayName: m.DisplayName})
 	}
 	return models, nil
 }
