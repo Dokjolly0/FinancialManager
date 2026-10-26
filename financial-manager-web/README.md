@@ -47,6 +47,8 @@ src/app/
 
 Routes (`src/app/app.routes.ts`) keep the app's paths (`lib/app/router.dart`), so bookmarks, email links and Android App Links keep working; each feature page is a lazy chunk. Only two are new: `/app/account/wallets/:id/denominations` and `/app/account/wallets/:id/voucher-lots`, which the app opens without a URL.
 
+Categories (`features/categories/`): `CategoriesStore` loads `/v1/categories` once for every picker and list, reloads on each ledger change (so `usage_count` stays current) and keeps the A–Z / most used order (`category-sort.ts`, the app's `sortCategories`), remembered in `localStorage` (`fm.categories.sort`). `/app/account/categories` (`categories-page.ts`) lists expense, income and hidden categories; `CategoryActions` opens a category's actions from there and from each picker row's menu button: edit (`category-edit-dialog.ts`) or delete the user's own (the confirmation says how many operations lose the category), hide or show again a system one.
+
 Session: the access token lives in memory, the refresh token in `localStorage` (`fm.refresh_token`). A refresh runs inside a Web Lock (`fm.refresh`) and re-reads the stored token first, so two tabs never present the same rotated token (the backend treats a replay as theft and revokes every session). A network failure during refresh keeps the session; an invalid refresh token signs out.
 
 ## Scripts

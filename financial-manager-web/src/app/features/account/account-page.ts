@@ -7,6 +7,7 @@ import {
   Database,
   KeyRound,
   Link,
+  Tags,
   LogOut,
   MonitorSmartphone,
   Settings2,
@@ -127,6 +128,12 @@ export class AccountPage {
       titleKey: 'accountWalletsMenuTitle',
       subtitleKey: 'accountWalletsMenuSubtitle',
       icon: Wallet,
+    },
+    {
+      path: 'categories',
+      titleKey: 'categoriesScreenTitle',
+      subtitleKey: 'categoriesMenuSubtitle',
+      icon: Tags,
     },
     {
       path: 'data',

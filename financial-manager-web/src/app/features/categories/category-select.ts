@@ -12,24 +12,34 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { Ban, Check, ChevronsUpDown, Plus, Search } from 'lucide';
+import { Ban, Check, ChevronsUpDown, EllipsisVertical, Plus, Search } from 'lucide';
 
 import { ErrorText } from '../../core/errors/error-text';
 import { Icon } from '../../shared/ui/icon';
 import { Spinner } from '../../shared/ui/states';
 import { Direction } from '../transactions/transaction.model';
 import { CategoriesStore, Category, categoryMatches } from './categories.store';
+import { CategoryActions } from './category-actions';
+import { CategorySortToggle } from './category-sort-toggle';
 
 /**
  * Category picker (the app's CategoryPickerSheet) as a searchable dropdown:
- * categories valid for the direction (all of them without one), "no
- * category", and creating the typed name as a new category for that
- * direction. The value is the category id.
+ * categories valid for the direction (all of them without one) in the
+ * shared A–Z / most used order, hidden ones left out, "no category", and
+ * creating the typed name as a new category for that direction. Each row's
+ * menu button opens the category's actions. The value is the category id.
  */
 @Component({
   selector: 'app-category-select',
   host: { class: 'block' },
-  imports: [CdkConnectedOverlay, CdkOverlayOrigin, Icon, Spinner, TranslocoPipe],
+  imports: [
+    CategorySortToggle,
+    CdkConnectedOverlay,
+    CdkOverlayOrigin,
+    Icon,
+    Spinner,
+    TranslocoPipe,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => CategorySelect), multi: true },
@@ -85,6 +95,7 @@ import { CategoriesStore, Category, categoryMatches } from './categories.store';
             (keydown.enter)="$event.preventDefault(); enter()"
           />
         </label>
+        <app-category-sort-toggle class="border-b border-border px-1.5 py-1.5" />
         <ul class="max-h-72 overflow-y-auto p-1.5" role="listbox">
           @if (!query().trim()) {
             <li>
@@ -104,7 +115,7 @@ import { CategoriesStore, Category, categoryMatches } from './categories.store';
             </li>
           }
           @for (category of visible(); track category.id) {
-            <li>
+            <li class="group flex items-center">
               <button
                 type="button"
                 role="option"
@@ -120,6 +131,14 @@ import { CategoriesStore, Category, categoryMatches } from './categories.store';
                 @if (value() === category.id) {
                   <app-icon [icon]="icons.Check" [size]="16" class="text-primary" />
                 }
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost btn-icon btn-sm shrink-0 text-fg-muted opacity-0 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100"
+                [attr.aria-label]="'editCategoryAction' | transloco"
+                (click)="openActions(category)"
+              >
+                <app-icon [icon]="icons.EllipsisVertical" [size]="16" />
               </button>
             </li>
           } @empty {
@@ -182,8 +201,9 @@ export class CategorySelect implements ControlValueAccessor {
 
   private readonly store = inject(CategoriesStore);
   private readonly errors = inject(ErrorText);
+  private readonly actions = inject(CategoryActions);
 
-  protected readonly icons = { Ban, Check, ChevronsUpDown, Plus, Search };
+  protected readonly icons = { Ban, Check, ChevronsUpDown, EllipsisVertical, Plus, Search };
   protected readonly positions: ConnectedPosition[] = [
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 6 },
     { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
@@ -204,7 +224,7 @@ export class CategorySelect implements ControlValueAccessor {
     const direction = this.direction();
     return this.store
       .categories()
-      .filter((c) => !direction || categoryMatches(c, direction))
+      .filter((c) => !c.hidden && (!direction || categoryMatches(c, direction)))
       .filter((c) => c.name.toLowerCase().includes(q));
   });
   protected readonly exactMatch = computed(() => {
@@ -226,6 +246,12 @@ export class CategorySelect implements ControlValueAccessor {
     const first = this.visible()[0];
     if (first) this.choose(first);
     else if (this.allowCreate() && this.query().trim()) void this.create();
+  }
+
+  /** Closes the dropdown, then shows the category's actions. */
+  protected openActions(category: Category): void {
+    this.open.set(false);
+    void this.actions.open(category);
   }
 
   protected choose(category: Category | null): void {

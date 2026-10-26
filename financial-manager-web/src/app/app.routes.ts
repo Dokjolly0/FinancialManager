@@ -121,6 +121,11 @@ export const routes: Routes = [
         path: 'account/data',
         loadComponent: () => import('./features/account/data-page').then((m) => m.DataPage),
       },
+      {
+        path: 'account/categories',
+        loadComponent: () =>
+          import('./features/categories/categories-page').then((m) => m.CategoriesPage),
+      },
       // AI analysis (plan.md section 32): gone when the AI features are off.
       {
         path: 'account/ai',
