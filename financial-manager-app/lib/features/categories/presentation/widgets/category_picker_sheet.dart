@@ -8,12 +8,19 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../transactions/domain/models/transaction_direction.dart';
 import '../../data/providers.dart';
 import '../../domain/models/category.dart';
+import '../../domain/models/category_sort.dart';
+import 'category_actions_sheet.dart';
+import 'category_avatar.dart';
+import 'category_sort_toggle.dart';
 
 /// Bottom sheet listing every category visible to the user, filtered to
 /// those valid for [direction] (plan.md section 7.6) — or every category
 /// regardless of direction when [direction] is `null` (used by the history
-/// filters, which aren't tied to a single direction). Returns the selected
-/// [Category], or `null` if dismissed / "Nessuna categoria" was chosen.
+/// filters, which aren't tied to a single direction). Hidden categories are
+/// left out; the order follows the shared A–Z / most used toggle, and a
+/// long press opens the category's actions (edit, delete, hide). Returns
+/// the selected [Category], or `null` if dismissed / "Nessuna categoria"
+/// was chosen.
 class CategoryPickerSheet extends ConsumerStatefulWidget {
   const CategoryPickerSheet({
     super.key,
@@ -142,6 +149,10 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                         setState(() => _query = value.trim().toLowerCase()),
                   ),
                 ),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.xs),
+                  child: CategorySortToggle(),
+                ),
                 Expanded(
                   child: categoriesAsync.when(
                     loading: () => const Padding(
@@ -154,18 +165,15 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                     ),
                     data: (categories) {
                       final direction = widget.direction;
-                      final visible =
-                          categories
-                              .where(
-                                (c) =>
-                                    (direction == null ||
-                                        c.matches(direction)) &&
-                                    c.name.toLowerCase().contains(_query),
-                              )
-                              .toList()
-                            ..sort(
-                              (a, b) => a.sortOrder.compareTo(b.sortOrder),
-                            );
+                      final visible = sortCategories(
+                        categories.where(
+                          (c) =>
+                              !c.hidden &&
+                              (direction == null || c.matches(direction)) &&
+                              c.name.toLowerCase().contains(_query),
+                        ),
+                        ref.watch(categorySortProvider),
+                      );
                       return ListView(
                         children: [
                           if (_query.isEmpty)
@@ -184,16 +192,11 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
                             ),
                           for (final category in visible)
                             ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: _colorFor(context, category),
-                                child: Text(
-                                  category.name.isEmpty
-                                      ? '?'
-                                      : category.name[0].toUpperCase(),
-                                ),
-                              ),
+                              leading: CategoryAvatar(category: category),
                               title: Text(category.name),
                               onTap: () => Navigator.of(context).pop(category),
+                              onLongPress: () =>
+                                  CategoryActionsSheet.show(context, category),
                             ),
                         ],
                       );
@@ -254,13 +257,5 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet> {
         ),
       ),
     );
-  }
-
-  Color _colorFor(BuildContext context, Category category) {
-    if (category.color == null) {
-      return Theme.of(context).colorScheme.secondaryContainer;
-    }
-    final hex = category.color!.replaceFirst('#', '');
-    return Color(int.parse('FF$hex', radix: 16));
   }
 }

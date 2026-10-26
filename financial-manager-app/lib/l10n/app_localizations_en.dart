@@ -1070,6 +1070,99 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categorySearchNoResults => 'No categories found.';
 
   @override
+  String get categorySortAlphabetical => 'A–Z';
+
+  @override
+  String get categorySortMostUsed => 'Most used';
+
+  @override
+  String get categoriesScreenTitle => 'Categories';
+
+  @override
+  String get categoriesMenuSubtitle => 'Sort, edit, delete or hide';
+
+  @override
+  String get categoriesHiddenSection => 'Hidden';
+
+  @override
+  String get categoriesHiddenHint =>
+      'They don\'t show up when you pick a category, but stay on the transactions already recorded.';
+
+  @override
+  String categoryUsageCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions',
+      one: '1 transaction',
+      zero: 'No transactions',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get categorySystemLabel => 'Built-in';
+
+  @override
+  String get editCategoryTitle => 'Edit category';
+
+  @override
+  String get categoryNameLabel => 'Name';
+
+  @override
+  String get categoryScopeLabel => 'Used for';
+
+  @override
+  String get categoryScopeDebit => 'Expenses';
+
+  @override
+  String get categoryScopeCredit => 'Income';
+
+  @override
+  String get categoryScopeBoth => 'Both';
+
+  @override
+  String get categoryColorLabel => 'Color';
+
+  @override
+  String get categoryNoColor => 'No color';
+
+  @override
+  String get editCategoryAction => 'Edit';
+
+  @override
+  String get hideCategoryAction => 'Hide';
+
+  @override
+  String get unhideCategoryAction => 'Show again';
+
+  @override
+  String get systemCategoryActionsHint =>
+      'Built-in categories can\'t be edited or deleted, but you can hide them.';
+
+  @override
+  String deleteCategoryConfirmTitle(String name) {
+    return 'Delete “$name”?';
+  }
+
+  @override
+  String deleteCategoryInUseMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count transactions use this category: they will be left without a category.',
+      one:
+          '1 transaction uses this category: it will be left without a category.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deleteCategoryUnusedMessage =>
+      'No transaction uses this category.';
+
+  @override
   String get descriptionOptionalLabel => 'Description (optional)';
 
   @override

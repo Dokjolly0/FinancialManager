@@ -1076,6 +1076,98 @@ class AppLocalizationsIt extends AppLocalizations {
   String get categorySearchNoResults => 'Nessuna categoria trovata.';
 
   @override
+  String get categorySortAlphabetical => 'A–Z';
+
+  @override
+  String get categorySortMostUsed => 'Più usate';
+
+  @override
+  String get categoriesScreenTitle => 'Categorie';
+
+  @override
+  String get categoriesMenuSubtitle => 'Ordina, modifica, elimina o nascondi';
+
+  @override
+  String get categoriesHiddenSection => 'Nascoste';
+
+  @override
+  String get categoriesHiddenHint =>
+      'Non compaiono quando scegli una categoria, ma restano sulle transazioni già registrate.';
+
+  @override
+  String categoryUsageCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transazioni',
+      one: '1 transazione',
+      zero: 'Nessuna transazione',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get categorySystemLabel => 'Predefinita';
+
+  @override
+  String get editCategoryTitle => 'Modifica categoria';
+
+  @override
+  String get categoryNameLabel => 'Nome';
+
+  @override
+  String get categoryScopeLabel => 'Usata per';
+
+  @override
+  String get categoryScopeDebit => 'Uscite';
+
+  @override
+  String get categoryScopeCredit => 'Entrate';
+
+  @override
+  String get categoryScopeBoth => 'Entrambe';
+
+  @override
+  String get categoryColorLabel => 'Colore';
+
+  @override
+  String get categoryNoColor => 'Nessun colore';
+
+  @override
+  String get editCategoryAction => 'Modifica';
+
+  @override
+  String get hideCategoryAction => 'Nascondi';
+
+  @override
+  String get unhideCategoryAction => 'Mostra di nuovo';
+
+  @override
+  String get systemCategoryActionsHint =>
+      'Le categorie predefinite non si possono modificare né eliminare, ma puoi nasconderle.';
+
+  @override
+  String deleteCategoryConfirmTitle(String name) {
+    return 'Eliminare «$name»?';
+  }
+
+  @override
+  String deleteCategoryInUseMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count transazioni usano questa categoria: resteranno senza categoria.',
+      one: '1 transazione usa questa categoria: resterà senza categoria.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deleteCategoryUnusedMessage =>
+      'Nessuna transazione usa questa categoria.';
+
+  @override
   String get descriptionOptionalLabel => 'Descrizione (facoltativa)';
 
   @override

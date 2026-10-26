@@ -40,4 +40,41 @@ class CategoryRepositoryImpl implements CategoryRepository {
       throw ErrorMapper.fromException(e);
     }
   }
+
+  @override
+  Future<Category> updateCategory({
+    required String id,
+    required String name,
+    required CategoryDirectionScope directionScope,
+    String? color,
+  }) async {
+    try {
+      final response = await _api.update(id, {
+        'name': name,
+        'direction_scope': directionScope.toApi(),
+        'color': color,
+      });
+      return Category.fromJson(response);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<void> deleteCategory(String id) async {
+    try {
+      await _api.delete(id);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<void> setCategoryHidden(String id, {required bool hidden}) async {
+    try {
+      await _api.setHidden(id, hidden: hidden);
+    } on DioException catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
 }

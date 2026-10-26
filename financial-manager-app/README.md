@@ -26,6 +26,10 @@ Release and debug builds are signed with one upload key, the same on every PC, r
 
 Feature-first (`lib/features/<feature>/{data,domain,presentation}`), Riverpod for state, go_router for navigation (`lib/app/router.dart`), localized strings in `lib/l10n/app_{it,en}.arb` (shared with the web dashboard).
 
+## Categories
+
+`lib/features/categories/` holds the picker (`presentation/widgets/category_picker_sheet.dart`) and Account → Categorie (`presentation/screens/categories_screen.dart`, plan.md section 7.6 and 7.13). Both sort with `domain/models/category_sort.dart` (A–Z with the system "Altro" last, or most used by `usage_count`); the choice is stored on the device by `data/local/category_sort_store.dart` and shared through `categorySortProvider`. `CategoryActionsSheet` edits or deletes the user's own categories (deleting warns when transactions use it, then bumps the ledger revision so history and reports refetch) and hides or shows again system ones; `CategoryEditSheet` creates and edits.
+
 ## AI analysis
 
 `lib/features/ai/` implements the AI analysis (plan.md section 32) in two modes:

@@ -33,6 +33,8 @@ class Category {
     this.color,
     required this.isSystem,
     required this.sortOrder,
+    this.usageCount = 0,
+    this.hidden = false,
   });
 
   final String id;
@@ -41,6 +43,14 @@ class Category {
   final String? color;
   final bool isSystem;
   final int sortOrder;
+
+  /// How many of the user's transactions use it, over the whole history:
+  /// drives the "most used" ordering and the delete warning.
+  final int usageCount;
+
+  /// A system category the user hid from the pickers (plan.md section
+  /// 11.7). Still listed, so history keeps resolving its name.
+  final bool hidden;
 
   /// Whether this category should be offered for an operation of the
   /// given [direction] (plan.md section 7.6: "modelli di uscita per
@@ -64,6 +74,8 @@ class Category {
       color: json['color'] as String?,
       isSystem: json['is_system'] as bool,
       sortOrder: json['sort_order'] as int,
+      usageCount: json['usage_count'] as int? ?? 0,
+      hidden: json['hidden'] as bool? ?? false,
     );
   }
 }

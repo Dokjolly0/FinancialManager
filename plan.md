@@ -620,6 +620,13 @@ The local password can be optional only if the product accepts exclusively feder
 - Suggestions are filtered by direction: expense templates for expenses, income templates for income.
 - The user can still change every field.
 
+### Category
+
+- The picker lists the categories valid for the direction (`BOTH` ones always), leaving out the system categories the user hid (section 11.7).
+- Order: alphabetical by default (case-insensitive, the system "Other"/"Altro" last), or "Più usate" (most transactions over the whole history first, ties alphabetical). The A–Z / Più usate toggle sits under the search field, is shared with Account → Categorie and is remembered on the device (app: `SharedPreferences`, dashboard: `localStorage`).
+- Search filters by name; "Nuova categoria" creates one for the current direction, prefilled with the search text, and selects it.
+- A long press on a category (on the dashboard, its menu button) opens its actions: edit or delete for the user's own, hide for a system one (see section 7.13).
+
 ### Amount
 
 - Numeric keypad.
@@ -804,6 +811,13 @@ Sections:
 - Currency.
 - Balance adjustment.
 - Future account management.
+
+### Categories
+
+- Reached from the Account hub ("Categorie"): expense categories, then income ones (`BOTH` in both lists), in the same A–Z / Più usate order as the picker, each with its number of transactions; then the hidden system categories, with a note that they stay on the transactions already recorded.
+- "Nuova categoria" (FAB): name, "Usata per" (Uscite / Entrate / Entrambe), color (the wallet palette or none).
+- The user's own categories: edit (same form) or delete. Deleting asks for confirmation; when the category is in use, the sheet says how many transactions will be left without a category (section 11.7), and history and reports refresh afterwards.
+- System categories can't be edited or deleted: their only action is "Nascondi", and once hidden, "Mostra di nuovo".
 
 ### Security
 

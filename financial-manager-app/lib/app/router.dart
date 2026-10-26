@@ -9,6 +9,7 @@ import '../features/account/presentation/screens/account_profile_screen.dart';
 import '../features/account/presentation/screens/account_screen.dart';
 import '../features/account/presentation/screens/account_security_screen.dart';
 import '../features/account/presentation/view_models/account_providers.dart';
+import '../features/categories/presentation/screens/categories_screen.dart';
 import '../features/ai/presentation/view_models/local_run_plan.dart';
 import '../features/ai/presentation/screens/ai_analysis_screen.dart';
 import '../features/ai/presentation/screens/ai_analysis_setup_screen.dart';
@@ -68,6 +69,7 @@ abstract final class AppRoutes {
   static const accountLinkedAccounts = '/app/account/linked-accounts';
   static const accountPreferences = '/app/account/preferences';
   static const accountData = '/app/account/data';
+  static const categories = '/app/account/categories';
   static const wallets = '/app/account/wallets';
   static const walletsNew = '/app/account/wallets/new';
 
@@ -269,6 +271,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.wallets,
         builder: (_, _) => const AdaptivePage(child: WalletsScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.categories,
+        builder: (_, _) => const AdaptivePage(child: CategoriesScreen()),
       ),
       GoRoute(
         path: AppRoutes.aiAssistant,

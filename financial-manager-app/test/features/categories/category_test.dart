@@ -44,5 +44,21 @@ void main() {
     expect(category.name, 'Alimentari');
     expect(category.directionScope, CategoryDirectionScope.debit);
     expect(category.isSystem, isTrue);
+    expect(category.usageCount, 0);
+    expect(category.hidden, isFalse);
+  });
+
+  test('fromJson parses usage_count and hidden', () {
+    final category = Category.fromJson({
+      'id': 'abc',
+      'name': 'Svago',
+      'direction_scope': 'DEBIT',
+      'is_system': true,
+      'sort_order': 7,
+      'usage_count': 12,
+      'hidden': true,
+    });
+    expect(category.usageCount, 12);
+    expect(category.hidden, isTrue);
   });
 }

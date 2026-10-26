@@ -1999,6 +1999,144 @@ abstract class AppLocalizations {
   /// **'Nessuna categoria trovata.'**
   String get categorySearchNoResults;
 
+  /// No description provided for @categorySortAlphabetical.
+  ///
+  /// In it, this message translates to:
+  /// **'A–Z'**
+  String get categorySortAlphabetical;
+
+  /// No description provided for @categorySortMostUsed.
+  ///
+  /// In it, this message translates to:
+  /// **'Più usate'**
+  String get categorySortMostUsed;
+
+  /// No description provided for @categoriesScreenTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Categorie'**
+  String get categoriesScreenTitle;
+
+  /// No description provided for @categoriesMenuSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Ordina, modifica, elimina o nascondi'**
+  String get categoriesMenuSubtitle;
+
+  /// No description provided for @categoriesHiddenSection.
+  ///
+  /// In it, this message translates to:
+  /// **'Nascoste'**
+  String get categoriesHiddenSection;
+
+  /// No description provided for @categoriesHiddenHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Non compaiono quando scegli una categoria, ma restano sulle transazioni già registrate.'**
+  String get categoriesHiddenHint;
+
+  /// No description provided for @categoryUsageCount.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Nessuna transazione} =1{1 transazione} other{{count} transazioni}}'**
+  String categoryUsageCount(int count);
+
+  /// No description provided for @categorySystemLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Predefinita'**
+  String get categorySystemLabel;
+
+  /// No description provided for @editCategoryTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica categoria'**
+  String get editCategoryTitle;
+
+  /// No description provided for @categoryNameLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Nome'**
+  String get categoryNameLabel;
+
+  /// No description provided for @categoryScopeLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Usata per'**
+  String get categoryScopeLabel;
+
+  /// No description provided for @categoryScopeDebit.
+  ///
+  /// In it, this message translates to:
+  /// **'Uscite'**
+  String get categoryScopeDebit;
+
+  /// No description provided for @categoryScopeCredit.
+  ///
+  /// In it, this message translates to:
+  /// **'Entrate'**
+  String get categoryScopeCredit;
+
+  /// No description provided for @categoryScopeBoth.
+  ///
+  /// In it, this message translates to:
+  /// **'Entrambe'**
+  String get categoryScopeBoth;
+
+  /// No description provided for @categoryColorLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Colore'**
+  String get categoryColorLabel;
+
+  /// No description provided for @categoryNoColor.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun colore'**
+  String get categoryNoColor;
+
+  /// No description provided for @editCategoryAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica'**
+  String get editCategoryAction;
+
+  /// No description provided for @hideCategoryAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Nascondi'**
+  String get hideCategoryAction;
+
+  /// No description provided for @unhideCategoryAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra di nuovo'**
+  String get unhideCategoryAction;
+
+  /// No description provided for @systemCategoryActionsHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Le categorie predefinite non si possono modificare né eliminare, ma puoi nasconderle.'**
+  String get systemCategoryActionsHint;
+
+  /// No description provided for @deleteCategoryConfirmTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Eliminare «{name}»?'**
+  String deleteCategoryConfirmTitle(String name);
+
+  /// No description provided for @deleteCategoryInUseMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 transazione usa questa categoria: resterà senza categoria.} other{{count} transazioni usano questa categoria: resteranno senza categoria.}}'**
+  String deleteCategoryInUseMessage(int count);
+
+  /// No description provided for @deleteCategoryUnusedMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna transazione usa questa categoria.'**
+  String get deleteCategoryUnusedMessage;
+
   /// No description provided for @descriptionOptionalLabel.
   ///
   /// In it, this message translates to:
