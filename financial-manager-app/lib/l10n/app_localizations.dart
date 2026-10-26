@@ -1796,18 +1796,6 @@ abstract class AppLocalizations {
   /// **'Ripartizione'**
   String get reportBreakdownTitle;
 
-  /// No description provided for @groupByTitleOption.
-  ///
-  /// In it, this message translates to:
-  /// **'Per titolo'**
-  String get groupByTitleOption;
-
-  /// No description provided for @groupByCategoryOption.
-  ///
-  /// In it, this message translates to:
-  /// **'Per categoria'**
-  String get groupByCategoryOption;
-
   /// No description provided for @noTransactionsForView.
   ///
   /// In it, this message translates to:

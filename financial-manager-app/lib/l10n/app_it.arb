@@ -331,8 +331,6 @@
   "debitsColumnLabel": "Uscite",
   "balanceColumnLabel": "Saldo",
   "reportBreakdownTitle": "Ripartizione",
-  "groupByTitleOption": "Per titolo",
-  "groupByCategoryOption": "Per categoria",
   "noTransactionsForView": "Nessuna operazione per questa vista.",
   "transactionCountLabel": "{count} operazioni",
   "@transactionCountLabel": {

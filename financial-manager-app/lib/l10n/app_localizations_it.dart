@@ -968,12 +968,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get reportBreakdownTitle => 'Ripartizione';
 
   @override
-  String get groupByTitleOption => 'Per titolo';
-
-  @override
-  String get groupByCategoryOption => 'Per categoria';
-
-  @override
   String get noTransactionsForView => 'Nessuna operazione per questa vista.';
 
   @override

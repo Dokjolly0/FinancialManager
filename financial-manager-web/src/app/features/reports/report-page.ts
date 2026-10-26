@@ -101,13 +101,13 @@ export class ReportPage {
     },
   });
 
-  /** Reloaded alone when only the grouping changes. */
+  /** By category only: the API's title grouping isn't offered (plan.md section 18.4). */
   protected readonly breakdown = resource({
     params: () => {
       const params = this.params();
       return params
         ? {
-            params: { ...params, group_by: this.filter().groupBy },
+            params: { ...params, group_by: 'category' as const },
             revision: this.ledger.revision(),
           }
         : undefined;

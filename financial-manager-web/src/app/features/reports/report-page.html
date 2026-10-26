@@ -185,29 +185,7 @@
 
     <!-- Breakdown -->
     <section class="card card-pad xl:col-span-2">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 class="text-sm font-semibold text-fg">{{ 'reportBreakdownTitle' | transloco }}</h2>
-        <div class="inline-flex rounded-lg bg-surface-2 p-0.5 text-xs font-medium">
-          @for (
-            option of [
-              { v: 'category', k: 'groupByCategoryOption' },
-              { v: 'title', k: 'groupByTitleOption' },
-            ];
-            track option.v
-          ) {
-            <button
-              type="button"
-              class="rounded-md px-2.5 py-1"
-              [class]="
-                filter().groupBy === option.v ? 'bg-surface text-fg shadow-sm' : 'text-fg-muted'
-              "
-              (click)="update({ groupBy: $any(option.v) })"
-            >
-              {{ option.k | transloco }}
-            </button>
-          }
-        </div>
-      </div>
+      <h2 class="mb-4 text-sm font-semibold text-fg">{{ 'reportBreakdownTitle' | transloco }}</h2>
       <div class="mb-4 flex gap-2">
         <button
           type="button"

@@ -29,7 +29,6 @@ export interface ReportFilter {
   to: string | null;
   walletId: string | null;
   includeAdjustments: boolean;
-  groupBy: 'category' | 'title';
 }
 
 export function reportFilterFromParams(params: Params): ReportFilter {
@@ -44,7 +43,6 @@ export function reportFilterFromParams(params: Params): ReportFilter {
     to: day(params['to']),
     walletId: typeof params['wallet'] === 'string' ? params['wallet'] : null,
     includeAdjustments: params['adj'] === '1' || params['adj'] === 1,
-    groupBy: params['group'] === 'title' ? 'title' : 'category',
   };
 }
 
@@ -56,7 +54,8 @@ export function reportFilterToParams(filter: ReportFilter): Params {
     to: custom ? filter.to : null,
     wallet: filter.walletId,
     adj: filter.includeAdjustments ? 1 : null,
-    group: filter.groupBy === 'title' ? 'title' : null,
+    // Clears the "group" param of links saved when the title grouping existed.
+    group: null,
   };
 }
 

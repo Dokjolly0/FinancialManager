@@ -9,10 +9,8 @@ class ReportState {
   const ReportState({
     this.period = const ReportPeriodSelection(),
     this.includeAdjustments = false,
-    this.groupBy = ReportGroupBy.title,
     this.walletId,
     this.isLoading = false,
-    this.isBreakdownLoading = false,
     this.error,
     this.summary,
     this.timeseries,
@@ -22,14 +20,12 @@ class ReportState {
 
   final ReportPeriodSelection period;
   final bool includeAdjustments;
-  final String groupBy;
 
   /// `null` means the reports wallet selector is set to "all wallets"
   /// (plan.md's explicit requirement for a selector, not just an
   /// aggregate-only view).
   final String? walletId;
   final bool isLoading;
-  final bool isBreakdownLoading;
   final AppError? error;
   final ReportSummary? summary;
   final ReportTimeseries? timeseries;
@@ -41,11 +37,9 @@ class ReportState {
   ReportState copyWith({
     ReportPeriodSelection? period,
     bool? includeAdjustments,
-    String? groupBy,
     String? walletId,
     bool clearWalletId = false,
     bool? isLoading,
-    bool? isBreakdownLoading,
     AppError? error,
     bool clearError = false,
     ReportSummary? summary,
@@ -56,10 +50,8 @@ class ReportState {
     return ReportState(
       period: period ?? this.period,
       includeAdjustments: includeAdjustments ?? this.includeAdjustments,
-      groupBy: groupBy ?? this.groupBy,
       walletId: clearWalletId ? null : (walletId ?? this.walletId),
       isLoading: isLoading ?? this.isLoading,
-      isBreakdownLoading: isBreakdownLoading ?? this.isBreakdownLoading,
       error: clearError ? null : (error ?? this.error),
       summary: summary ?? this.summary,
       timeseries: timeseries ?? this.timeseries,
@@ -69,8 +61,9 @@ class ReportState {
   }
 }
 
-/// Mirrors the backend's group_by values (plan.md section 18.4/18.5).
+/// The backend's group_by the reports use (plan.md section 18.5). The API
+/// also groups by title, but the screen doesn't offer it: most titles are
+/// typed by hand and differ, so it made a long list of 1–2% entries.
 abstract final class ReportGroupBy {
-  static const title = 'title';
   static const category = 'category';
 }

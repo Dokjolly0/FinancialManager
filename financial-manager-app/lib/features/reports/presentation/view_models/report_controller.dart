@@ -35,7 +35,10 @@ class ReportController extends Notifier<ReportState> {
       // endpoints load in parallel without a heterogeneous Future.wait.
       final summaryFuture = repo.summary(query);
       final timeseriesFuture = repo.timeseries(query);
-      final breakdownFuture = repo.breakdown(query, groupBy: state.groupBy);
+      final breakdownFuture = repo.breakdown(
+        query,
+        groupBy: ReportGroupBy.category,
+      );
       final monthlyFuture = repo.monthlyComparison(query);
 
       final summary = await summaryFuture;
@@ -52,20 +55,6 @@ class ReportController extends Notifier<ReportState> {
       );
     } on AppError catch (e) {
       state = state.copyWith(isLoading: false, error: e);
-    }
-  }
-
-  Future<void> _refreshBreakdown() async {
-    state = state.copyWith(isBreakdownLoading: true);
-    try {
-      final breakdown = await ref
-          .read(reportRepositoryProvider)
-          .breakdown(_query, groupBy: state.groupBy);
-      state = state.copyWith(isBreakdownLoading: false, breakdown: breakdown);
-    } on AppError catch (_) {
-      // Keep whatever breakdown was already showing rather than blanking
-      // the whole screen for a tab-switch failure.
-      state = state.copyWith(isBreakdownLoading: false);
     }
   }
 
@@ -92,12 +81,6 @@ class ReportController extends Notifier<ReportState> {
   void toggleIncludeAdjustments(bool value) {
     state = state.copyWith(includeAdjustments: value);
     refresh();
-  }
-
-  void setGroupBy(String groupBy) {
-    if (groupBy == state.groupBy) return;
-    state = state.copyWith(groupBy: groupBy);
-    _refreshBreakdown();
   }
 
   /// `null` selects "all wallets" (aggregate across every wallet).

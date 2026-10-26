@@ -349,8 +349,6 @@
   "debitsColumnLabel": "Expenses",
   "balanceColumnLabel": "Balance",
   "reportBreakdownTitle": "Breakdown",
-  "groupByTitleOption": "By title",
-  "groupByCategoryOption": "By category",
   "noTransactionsForView": "No transactions for this view.",
   "transactionCountLabel": "{count} transactions",
   "@transactionCountLabel": {

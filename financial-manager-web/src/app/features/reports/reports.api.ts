@@ -85,7 +85,7 @@ export class ReportsApi {
     return this.get('/reports/timeseries', params);
   }
 
-  breakdown(params: ReportParams & { group_by: 'category' | 'title' }): Promise<Breakdown> {
+  breakdown(params: ReportParams & { group_by: 'category' }): Promise<Breakdown> {
     return this.get('/reports/breakdown', params);
   }
 

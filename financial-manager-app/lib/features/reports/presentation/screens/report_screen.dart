@@ -103,12 +103,7 @@ class ReportScreen extends ConsumerWidget {
                         if (state.timeseries != null)
                           ReportTrendChart(timeseries: state.timeseries!),
                         const SizedBox(height: AppSpacing.md),
-                        ReportBreakdownSection(
-                          breakdown: state.breakdown,
-                          groupBy: state.groupBy,
-                          isLoading: state.isBreakdownLoading,
-                          onGroupByChanged: controller.setGroupBy,
-                        ),
+                        ReportBreakdownSection(breakdown: state.breakdown),
                         if (state.monthlyComparison != null &&
                             state.monthlyComparison!.spansMultipleMonths) ...[
                           const SizedBox(height: AppSpacing.md),

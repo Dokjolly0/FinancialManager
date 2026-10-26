@@ -777,10 +777,7 @@ Optionally add "Current month" and "Current year," with unambiguous names.
 
 ### Breakdown
 
-Two tabs:
-
-- By title/template.
-- By category.
+By category only (section 18.5), with an Expenses / Income switch. A "by title/template" tab existed at first and was removed from the app and the dashboard: most titles are typed by hand and differ, so it produced a long list of 1–2% entries that said nothing. The grouping is still available through the API (section 18.4).
 
 For expenses, show a donut or sorted bars with percentages. For income, use a separate view, avoiding mixing the two denominators.
 
@@ -2264,6 +2261,8 @@ starting balance + impact of all transactions in the period, including adjustmen
 ```
 
 ### 18.4 Percentages by title
+
+API only (`group_by=title`): the app and the dashboard no longer offer it (section 7.12), and the default `group_by` is `category` (section 14.9). The AI chat's `sum_transactions` tool has its own title grouping (section 34).
 
 Required rule:
 

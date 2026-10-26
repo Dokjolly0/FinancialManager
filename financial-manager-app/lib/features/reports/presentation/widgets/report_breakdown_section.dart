@@ -3,24 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models/report_breakdown.dart';
-import '../state/report_state.dart';
 
-/// Ripartizione (plan.md section 7.12, 18.4, 18.5): two tabs (titolo/
-/// modello, categoria); within each, uscite and entrate use separate
-/// denominators and are never mixed into one chart (section 18.4).
+/// Ripartizione per categoria (plan.md section 7.12, 18.5): uscite and
+/// entrate use separate denominators and are never mixed into one chart
+/// (section 18.4).
 class ReportBreakdownSection extends StatefulWidget {
-  const ReportBreakdownSection({
-    super.key,
-    required this.breakdown,
-    required this.groupBy,
-    required this.isLoading,
-    required this.onGroupByChanged,
-  });
+  const ReportBreakdownSection({super.key, required this.breakdown});
 
   final ReportBreakdown? breakdown;
-  final String groupBy;
-  final bool isLoading;
-  final ValueChanged<String> onGroupByChanged;
 
   @override
   State<ReportBreakdownSection> createState() => _ReportBreakdownSectionState();
@@ -47,21 +37,6 @@ class _ReportBreakdownSectionState extends State<ReportBreakdownSection> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: AppSpacing.sm),
-            SegmentedButton<String>(
-              segments: [
-                ButtonSegment(
-                  value: ReportGroupBy.title,
-                  label: Text(l10n.groupByTitleOption),
-                ),
-                ButtonSegment(
-                  value: ReportGroupBy.category,
-                  label: Text(l10n.groupByCategoryOption),
-                ),
-              ],
-              selected: {widget.groupBy},
-              onSelectionChanged: (s) => widget.onGroupByChanged(s.first),
-            ),
-            const SizedBox(height: AppSpacing.sm),
             SegmentedButton<bool>(
               segments: [
                 ButtonSegment(value: true, label: Text(l10n.debitsColumnLabel)),
@@ -74,12 +49,7 @@ class _ReportBreakdownSectionState extends State<ReportBreakdownSection> {
               onSelectionChanged: (s) => setState(() => _showDebits = s.first),
             ),
             const SizedBox(height: AppSpacing.md),
-            if (widget.isLoading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (items.isEmpty)
+            if (items.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                 child: Text(l10n.noTransactionsForView),

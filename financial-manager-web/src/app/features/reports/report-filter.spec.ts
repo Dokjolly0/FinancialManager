@@ -5,7 +5,6 @@ describe('report filter', () => {
     const filter = reportFilterFromParams({});
     expect(filter).toMatchObject({
       preset: 'last_30_days',
-      groupBy: 'category',
       includeAdjustments: false,
     });
     const custom = reportFilterFromParams({
