@@ -493,7 +493,7 @@ void main() {
 
     await tester.tap(find.text('Movimenti cercati'));
     await tester.pumpAndSettle();
-    expect(find.text('Movimenti aggiunti alla domanda'), findsOneWidget);
+    expect(find.text('Dati aggiunti alla domanda'), findsOneWidget);
     expect(find.text('Bollo auto | 210.00'), findsOneWidget);
     await tester.tapAt(const Offset(10, 10)); // close the sheet
     await tester.pumpAndSettle();

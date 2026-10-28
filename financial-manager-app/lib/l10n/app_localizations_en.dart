@@ -2999,7 +2999,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiChatAttachmentChip => 'Transactions searched';
 
   @override
-  String get aiChatAttachmentTitle => 'Transactions added to the question';
+  String get aiChatAttachmentTitle => 'Data added to the question';
 
   @override
   String get aiHistoryFilterAll => 'All';

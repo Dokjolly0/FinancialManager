@@ -5277,7 +5277,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiChatAttachmentTitle.
   ///
   /// In it, this message translates to:
-  /// **'Movimenti aggiunti alla domanda'**
+  /// **'Dati aggiunti alla domanda'**
   String get aiChatAttachmentTitle;
 
   /// No description provided for @aiHistoryFilterAll.

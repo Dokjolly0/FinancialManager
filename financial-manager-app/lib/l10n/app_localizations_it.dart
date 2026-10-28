@@ -3013,7 +3013,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get aiChatAttachmentChip => 'Movimenti cercati';
 
   @override
-  String get aiChatAttachmentTitle => 'Movimenti aggiunti alla domanda';
+  String get aiChatAttachmentTitle => 'Dati aggiunti alla domanda';
 
   @override
   String get aiHistoryFilterAll => 'Tutte';

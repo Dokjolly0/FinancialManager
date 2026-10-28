@@ -122,8 +122,9 @@ type builtPrompt struct {
 	estimated    int
 	// compactionSteps are the budget steps that were needed, in order.
 	compactionSteps []string
-	// attachment is a chat's first-question attachment, when its list was
-	// cut (plan.md section 34.3).
+	// attachment is a chat's first-question attachment: the question's
+	// totals, plus the earlier matches when its list was cut (plan.md
+	// section 34.3).
 	attachment string
 }
 
@@ -341,6 +342,12 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 		bp.estimated = prompt.EstimateTokens(built.System, bp.userMessage())
 		return nil
 	}
+	if chat {
+		bp.attachment, err = s.chatAttachment(ctx, bp.chatSearch(), bp.instructions, bp.lang)
+		if err != nil {
+			return builtPrompt{}, err
+		}
+	}
 	if err := render(); err != nil {
 		return builtPrompt{}, err
 	}
@@ -380,10 +387,8 @@ func (s *Service) buildPrompt(ctx context.Context, userID uuid.UUID, req Analysi
 // the oldest transaction kept, dropping the last ones if they still don't
 // fit. The cut is stored as options.ledger_cutoff for later questions.
 func (s *Service) fitChat(ctx context.Context, bp *builtPrompt, limits *prompt.Limits, budget, total int, render func() error) error {
-	cs := chatSearch{
-		walletIDs: bp.walletIDs, kinds: chatKinds(bp.options), from: bp.period.From, before: bp.period.To,
-		loc: bp.loc, limit: chatMatchLimit(bp.options.Profile),
-	}
+	cs := bp.chatSearch()
+	cs.matches = true
 	reserve, err := s.chatAttachment(ctx, cs, bp.instructions, bp.lang)
 	if err != nil {
 		return err
@@ -399,11 +404,8 @@ func (s *Service) fitChat(ctx context.Context, bp *builtPrompt, limits *prompt.L
 	cutoff := cs.before
 	bp.options.LedgerCutoff = &cutoff
 	for {
-		bp.attachment = ""
-		if cs.limit > 0 {
-			if bp.attachment, err = s.chatAttachment(ctx, cs, bp.instructions, bp.lang); err != nil {
-				return err
-			}
+		if bp.attachment, err = s.chatAttachment(ctx, cs, bp.instructions, bp.lang); err != nil {
+			return err
 		}
 		if err := render(); err != nil {
 			return err
@@ -412,6 +414,15 @@ func (s *Service) fitChat(ctx context.Context, bp *builtPrompt, limits *prompt.L
 			return nil
 		}
 		cs.limit = cs.limit * 3 / 4
+	}
+}
+
+// chatSearch is where the chat's first question is searched: its whole
+// period, without the earlier matches until fitChat cuts the list.
+func (bp *builtPrompt) chatSearch() chatSearch {
+	return chatSearch{
+		walletIDs: bp.walletIDs, kinds: chatKinds(bp.options), from: bp.period.From, to: bp.period.To,
+		before: bp.period.To, loc: bp.loc, limit: chatMatchLimit(bp.options.Profile),
 	}
 }
 

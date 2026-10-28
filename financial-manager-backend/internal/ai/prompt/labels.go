@@ -22,10 +22,13 @@ type labels struct {
 	nonMonthlyHeading, nonMonthlyColumns, nonMonthlyNote string
 	nonMonthlySignals                                    map[string]string
 
-	transactionsHeading, transactionsColumns, transactionsOmitted string
-	matchesHeading, matchesFound, matchesNone                     string
-	toolFound, toolNone, toolError, sumColumns, sumNoLabel        string
-	credit, debit, uncategorized                                  string
+	transactionsHeading, transactionsColumns, transactionsOmitted                     string
+	matchesHeading, matchesFound, matchesNone                                         string
+	questionTotalsHeading, questionTotalsNote, questionTotalsWord, questionTotalsNone string
+	questionTotalsLastMonths, questionTotalsColumns, questionTotalsSum                string
+	questionTotalsDebitAverage, questionTotalsCreditAverage, questionTotalsPartial    string
+	toolFound, toolNone, toolError, sumColumns, sumNoLabel                            string
+	credit, debit, uncategorized                                                      string
 
 	noData, omittedForBrevity string
 
@@ -84,20 +87,30 @@ var italian = labels{
 		SignalOneOff:     "spesa una tantum rilevante",
 	},
 
-	transactionsHeading: "## Movimenti (dal più recente)",
-	transactionsColumns: "data | portafoglio | tipo | importo | voce | categoria",
-	transactionsOmitted: "Altri %d movimenti meno recenti non sono inclusi.",
-	matchesHeading:      "## Movimenti meno recenti che corrispondono alla domanda",
-	matchesFound:        "L'elenco dei movimenti non è completo: questi sono i movimenti precedenti il cui titolo o la cui categoria contiene %s. Trovati %d, mostrati %d.",
-	matchesNone:         "L'elenco dei movimenti non è completo, e nessun movimento precedente contiene nel titolo o nella categoria %s.",
-	toolFound:           "Trovati %d movimenti, mostrati %d (dal più recente).",
-	toolNone:            "Nessun movimento corrisponde alla ricerca.",
-	toolError:           "Ricerca non eseguita: %s.",
-	sumColumns:          "gruppo | uscite | entrate | movimenti",
-	sumNoLabel:          "(senza nome)",
-	credit:              "entrata",
-	debit:               "uscita",
-	uncategorized:       "-",
+	transactionsHeading:         "## Movimenti (dal più recente)",
+	transactionsColumns:         "data | portafoglio | tipo | importo | voce | categoria",
+	transactionsOmitted:         "Altri %d movimenti meno recenti non sono inclusi.",
+	matchesHeading:              "## Movimenti meno recenti che corrispondono alla domanda",
+	matchesFound:                "L'elenco dei movimenti non è completo: questi sono i movimenti precedenti il cui titolo o la cui categoria contiene %s. Trovati %d, mostrati %d.",
+	matchesNone:                 "L'elenco dei movimenti non è completo, e nessun movimento precedente contiene nel titolo o nella categoria %s.",
+	questionTotalsHeading:       "## Totali calcolati per la domanda",
+	questionTotalsNote:          "Calcolati dall'app su tutti i movimenti del periodo il cui titolo o la cui categoria contiene la parola indicata (trasferimenti esclusi). Sono esatti: per totali e medie riporta queste cifre così come sono, senza rifare i conti.",
+	questionTotalsWord:          "### Parola %s",
+	questionTotalsNone:          "Nessun movimento del periodo contiene %s nel titolo o nella categoria.",
+	questionTotalsLastMonths:    "Ultimi %d mesi:",
+	questionTotalsColumns:       "mese | uscite | entrate | movimenti",
+	questionTotalsSum:           "Totale: uscite %s, entrate %s, %d movimenti.",
+	questionTotalsDebitAverage:  "Media mensile delle uscite: %s su %d mesi (dal %s al %s, compresi i mesi senza movimenti). Contando solo i mesi con almeno un'uscita (%d): %s.",
+	questionTotalsCreditAverage: "Media mensile delle entrate: %s su %d mesi (dal %s al %s, compresi i mesi senza movimenti). Contando solo i mesi con almeno un'entrata (%d): %s.",
+	questionTotalsPartial:       "Il mese %s è ancora in corso: i dati arrivano al %s.",
+	toolFound:                   "Trovati %d movimenti, mostrati %d (dal più recente).",
+	toolNone:                    "Nessun movimento corrisponde alla ricerca.",
+	toolError:                   "Ricerca non eseguita: %s.",
+	sumColumns:                  "gruppo | uscite | entrate | movimenti",
+	sumNoLabel:                  "(senza nome)",
+	credit:                      "entrata",
+	debit:                       "uscita",
+	uncategorized:               "-",
 
 	noData:            "Nessun dato.",
 	omittedForBrevity: "Omesso per brevità.",
@@ -173,20 +186,30 @@ var english = labels{
 		SignalOneOff:     "large one-off expense",
 	},
 
-	transactionsHeading: "## Transactions (newest first)",
-	transactionsColumns: "date | wallet | type | amount | item | category",
-	transactionsOmitted: "%d older transactions are not included.",
-	matchesHeading:      "## Older transactions matching the question",
-	matchesFound:        "The transaction list is not complete: these are the earlier transactions whose title or category contains %s. Found %d, shown %d.",
-	matchesNone:         "The transaction list is not complete, and no earlier transaction contains %s in its title or category.",
-	toolFound:           "Found %d transactions, shown %d (newest first).",
-	toolNone:            "No transaction matches the search.",
-	toolError:           "Search not run: %s.",
-	sumColumns:          "group | expenses | income | transactions",
-	sumNoLabel:          "(no name)",
-	credit:              "income",
-	debit:               "expense",
-	uncategorized:       "-",
+	transactionsHeading:         "## Transactions (newest first)",
+	transactionsColumns:         "date | wallet | type | amount | item | category",
+	transactionsOmitted:         "%d older transactions are not included.",
+	matchesHeading:              "## Older transactions matching the question",
+	matchesFound:                "The transaction list is not complete: these are the earlier transactions whose title or category contains %s. Found %d, shown %d.",
+	matchesNone:                 "The transaction list is not complete, and no earlier transaction contains %s in its title or category.",
+	questionTotalsHeading:       "## Totals computed for the question",
+	questionTotalsNote:          "Computed by the app over every transaction of the period whose title or category contains the word shown (transfers excluded). They are exact: for totals and averages quote these figures as they are, without redoing the math.",
+	questionTotalsWord:          "### Word %s",
+	questionTotalsNone:          "No transaction of the period contains %s in its title or category.",
+	questionTotalsLastMonths:    "Last %d months:",
+	questionTotalsColumns:       "month | expenses | income | transactions",
+	questionTotalsSum:           "Total: expenses %s, income %s, %d transactions.",
+	questionTotalsDebitAverage:  "Monthly average of expenses: %s over %d months (from %s to %s, months without transactions included). Counting only the months with at least one expense (%d): %s.",
+	questionTotalsCreditAverage: "Monthly average of income: %s over %d months (from %s to %s, months without transactions included). Counting only the months with at least one income (%d): %s.",
+	questionTotalsPartial:       "The month %s is still running: the data goes up to %s.",
+	toolFound:                   "Found %d transactions, shown %d (newest first).",
+	toolNone:                    "No transaction matches the search.",
+	toolError:                   "Search not run: %s.",
+	sumColumns:                  "group | expenses | income | transactions",
+	sumNoLabel:                  "(no name)",
+	credit:                      "income",
+	debit:                       "expense",
+	uncategorized:               "-",
 
 	noData:            "No data.",
 	omittedForBrevity: "Left out for brevity.",

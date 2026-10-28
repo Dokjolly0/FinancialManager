@@ -51,8 +51,12 @@ func TestChat_PreviewRunAndFollowUp(t *testing.T) {
 	}
 	analysisID := res.events[0].data["analysis_id"].(string)
 	first := h.fake.LastRequest()
+	// The data, the totals of the question's word, then the question.
 	if first.System != system || len(first.Messages) != 1 ||
-		first.Messages[0].Content != data+"\n\n"+prompt.FollowUpQuestion(question, prompt.LangIT, prompt.PresetChat) {
+		!strings.HasPrefix(first.Messages[0].Content, data+"\n\n<financial_data>\n## Totali calcolati per la domanda\n") ||
+		!strings.Contains(first.Messages[0].Content, "### Parola \"affit\"\nmese | uscite | entrate | movimenti\n2026-06 | 800.00 | 0.00 | 1\n") ||
+		!strings.Contains(first.Messages[0].Content, "Totale: uscite 3200.00, entrate 0.00, 4 movimenti.\nMedia mensile delle uscite: 640.00 su 5 mesi") ||
+		!strings.HasSuffix(first.Messages[0].Content, "</financial_data>\n\n"+prompt.FollowUpQuestion(question, prompt.LangIT, prompt.PresetChat)) {
 		t.Fatalf("first chat request = %+v", first)
 	}
 
@@ -285,8 +289,9 @@ func TestChat_SearchesOlderTransactions(t *testing.T) {
 	}
 }
 
-// When the whole ledger fits, nothing is searched or attached.
-func TestChat_NoAttachmentWhenTheLedgerIsComplete(t *testing.T) {
+// When the whole ledger fits, a question carries its totals but no list of
+// earlier transactions.
+func TestChat_OnlyTotalsWhenTheLedgerIsComplete(t *testing.T) {
 	h := newHarness(t)
 	h.configure("sk-chat-0006")
 	h.seedLedger()
@@ -296,8 +301,9 @@ func TestChat_NoAttachmentWhenTheLedgerIsComplete(t *testing.T) {
 	h.fake.Deltas = []string{"Sì."}
 	h.stream("/v1/ai/analyses/"+id+"/messages", map[string]any{"content": "E l'affitto?"}, nil)
 	d := h.do(http.MethodGet, "/v1/ai/analyses/"+id, nil)
-	if d.body["options"].(map[string]any)["ledger_cutoff"] != nil || d.body["messages"].([]any)[2].(map[string]any)["attachment"] != nil ||
-		strings.Contains(h.fake.LastRequest().Messages[2].Content, "corrispondono alla domanda") {
+	att, _ := d.body["messages"].([]any)[2].(map[string]any)["attachment"].(string)
+	if d.body["options"].(map[string]any)["ledger_cutoff"] != nil || !strings.Contains(att, "### Parola \"affit\"") ||
+		!strings.Contains(att, "Totale: uscite 3200.00") || strings.Contains(h.fake.LastRequest().Messages[2].Content, "corrispondono alla domanda") {
 		t.Fatalf("unexpected attachment: %s", d.raw)
 	}
 }

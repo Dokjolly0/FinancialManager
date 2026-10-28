@@ -13,9 +13,11 @@ import (
 	"financial-manager-backend/internal/transactions"
 )
 
-// Chat search (plan.md section 34.3): when a chat's transaction list had to
-// be cut, each question gets the earlier transactions whose title or
-// category contains one of its words. Deliberately simple and
+// Chat search (plan.md section 34.3): each question gets, for each of its
+// words, the transactions of the chat's period whose title or category
+// contains it, totalled by month with the averages worked out (small models
+// get sums wrong); when the chat's transaction list had to be cut, also the
+// earlier matching transactions themselves. Deliberately simple and
 // deterministic: words, minus common ones, folded and cut to a prefix so
 // that plurals and other endings match ("macchina" finds "macchine").
 const (
@@ -42,10 +44,12 @@ func init() {
 		pagato pagata pagati pagate pagare pago paghiamo speso spendo spendere comprato comprata
 		acquistato acquistata volta volte ultima ultimo ultimi ultime anno anni mese mesi giorno
 		giorni settimana settimane tutto tutti tutte totale circa elenco lista
+		media medio medie medi mediamente mensile mensili mensilmente annuale annuo settimanale
 		the and for with but that what when how much many where which who whom whose did does
 		was were have has had are you your yours mine paid pay pays spent spend spends bought buy
 		last first year years month months week weeks day days all total remind tell list about
-		from into this these those there their them they our ours can could would should`) {
+		from into this these those there their them they our ours can could would should
+		average monthly yearly weekly`) {
 		stopWords[w] = true
 	}
 }
@@ -93,11 +97,14 @@ func searchTerms(question string) []string {
 }
 
 // chatSearch is where a chat's question is searched: the chat's wallets,
-// kinds and period start, before the oldest transaction of its list.
+// kinds and period, and with matches the transactions listed are those
+// before before (the oldest transaction of its list).
 type chatSearch struct {
 	walletIDs []uuid.UUID
 	kinds     []string
 	from      *time.Time
+	to        time.Time
+	matches   bool
 	before    time.Time
 	loc       *time.Location
 	limit     int
@@ -120,12 +127,17 @@ func chatKinds(opts AnalysisOptions) []string {
 	return kinds
 }
 
-// chatAttachment searches the question's terms and renders what is found;
-// "" when the question has no searchable word.
+// chatAttachment searches the question's terms and renders what is found:
+// the totals, then with cs.matches the earlier transactions; "" when the
+// question has no searchable word.
 func (s *Service) chatAttachment(ctx context.Context, cs chatSearch, question string, lang prompt.Lang) (string, error) {
 	terms := searchTerms(question)
 	if len(terms) == 0 {
 		return "", nil
+	}
+	totals, err := s.questionTotals(ctx, cs, terms, lang)
+	if err != nil || !cs.matches || cs.limit <= 0 {
+		return totals, err
 	}
 	rows, total, err := s.repo.SearchTransactions(ctx, TransactionSearch{
 		WalletIDs: cs.walletIDs, Kinds: cs.kinds, From: cs.from, Before: cs.before, Terms: terms,
@@ -137,7 +149,26 @@ func (s *Service) chatAttachment(ctx context.Context, cs chatSearch, question st
 	for i, r := range rows {
 		matches[i] = toPromptTransaction(r, cs.loc)
 	}
-	return prompt.RenderMatches(lang, terms, matches, total), nil
+	return totals + "\n\n" + prompt.RenderMatches(lang, terms, matches, total), nil
+}
+
+// questionTotals totals each term's matches over the chat's whole period,
+// by month in the chat's time zone.
+func (s *Service) questionTotals(ctx context.Context, cs chatSearch, terms []string, lang prompt.Lang) (string, error) {
+	out := make([]prompt.TermTotals, len(terms))
+	for i, term := range terms {
+		rows, err := s.repo.SumTransactions(ctx, TransactionSearch{
+			WalletIDs: cs.walletIDs, Kinds: cs.kinds, From: cs.from, Before: cs.to, Terms: []string{term},
+		}, GroupMonth, cs.loc.String())
+		if err != nil {
+			return "", err
+		}
+		out[i] = prompt.TermTotals{Term: term, Months: make([]prompt.MonthTotal, len(rows))}
+		for j, r := range rows {
+			out[i].Months[j] = prompt.MonthTotal{Month: r.Label, DebitsMinor: r.DebitsMinor, CreditsMinor: r.CreditsMinor, Count: r.Count}
+		}
+	}
+	return prompt.RenderQuestionTotals(lang, out, prompt.TotalsPeriod{LastDay: cs.to.In(cs.loc).Add(-time.Nanosecond)}), nil
 }
 
 // toPromptTransaction is a listed transaction as the data block shows it.
@@ -152,20 +183,24 @@ func toPromptTransaction(r TransactionRow, loc *time.Location) prompt.Transactio
 	return t
 }
 
-// followUpAttachment is the attachment of a new question on a chat whose
-// list was cut; nil otherwise.
+// followUpAttachment is the attachment of a new chat question, with the
+// earlier matches when the chat's list was cut; nil for other analyses.
 func (s *Service) followUpAttachment(ctx context.Context, a Analysis, question string, lang prompt.Lang) (*string, error) {
-	if a.Preset != prompt.PresetChat || a.Options.LedgerCutoff == nil {
+	if a.Preset != prompt.PresetChat {
 		return nil, nil
 	}
 	loc, err := time.LoadLocation(a.Timezone)
 	if err != nil {
 		loc = time.UTC
 	}
-	att, err := s.chatAttachment(ctx, chatSearch{
-		walletIDs: a.WalletIDs, kinds: chatKinds(a.Options), from: a.PeriodFrom, before: *a.Options.LedgerCutoff,
+	cs := chatSearch{
+		walletIDs: a.WalletIDs, kinds: chatKinds(a.Options), from: a.PeriodFrom, to: a.PeriodTo,
 		loc: loc, limit: chatMatchLimit(a.Options.Profile),
-	}, question, lang)
+	}
+	if a.Options.LedgerCutoff != nil {
+		cs.matches, cs.before = true, *a.Options.LedgerCutoff
+	}
+	att, err := s.chatAttachment(ctx, cs, question, lang)
 	if err != nil || att == "" {
 		return nil, err
 	}
