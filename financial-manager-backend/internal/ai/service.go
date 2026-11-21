@@ -838,7 +838,7 @@ func (s *Service) TestConnection(ctx context.Context, in ProbeInput) (testRespon
 	start := s.clock.Now()
 	if rp.model != "" {
 		_, err = rp.provider.Stream(ctx, provider.ChatRequest{
-			Model: rp.model, MaxTokens: probeMaxTokens,
+			Model: rp.model, MaxTokens: probeMaxTokens, MinimalReasoning: true,
 			Messages: []provider.Message{{Role: provider.RoleUser, Content: "Reply with OK."}},
 		}, func(string) error { return nil })
 	} else {
@@ -849,12 +849,16 @@ func (s *Service) TestConnection(ctx context.Context, in ProbeInput) (testRespon
 		m := rp.model
 		resp.Model = &m
 	}
+	logAttrs := []any{slog.String("provider", string(rp.kind)), slog.String("model", rp.model),
+		slog.Bool("ok", resp.OK), slog.Int64("latency_ms", resp.LatencyMS)}
 	if err != nil {
 		apiErr := providerAPIError(err)
 		resp.ErrorCode, resp.ErrorMessage = &apiErr.Code, &apiErr.Message
+		// The message is the provider's own text, already truncated and
+		// with anything key-shaped redacted.
+		logAttrs = append(logAttrs, slog.String("error_code", apiErr.Code), slog.String("error_message", apiErr.Message))
 	}
-	s.logger.Info("ai_probe", slog.String("provider", string(rp.kind)), slog.Bool("ok", resp.OK),
-		slog.Int64("latency_ms", resp.LatencyMS))
+	s.logger.Info("ai_probe", logAttrs...)
 
 	// Only a test of the stored key, unchanged, says anything about it.
 	if rp.credential != nil && rp.keyFromDB {

@@ -3,9 +3,13 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -56,8 +60,39 @@ type geminiContent struct {
 }
 
 type geminiGenerationConfig struct {
-	MaxOutputTokens int      `json:"maxOutputTokens,omitempty"`
-	Temperature     *float64 `json:"temperature,omitempty"`
+	MaxOutputTokens int                   `json:"maxOutputTokens,omitempty"`
+	Temperature     *float64              `json:"temperature,omitempty"`
+	ThinkingConfig  *geminiThinkingConfig `json:"thinkingConfig,omitempty"`
+}
+
+// geminiThinkingConfig limits reasoning: Gemini 2.5 takes a token budget,
+// Gemini 3 and later a level (sending both is refused).
+type geminiThinkingConfig struct {
+	ThinkingBudget *int   `json:"thinkingBudget,omitempty"`
+	ThinkingLevel  string `json:"thinkingLevel,omitempty"`
+}
+
+var geminiMajorVersion = regexp.MustCompile(`^gemini-(\d+)`)
+
+// minimalGeminiThinking is the least reasoning the model accepts, nil for
+// models without thinking or whose family is unknown.
+func minimalGeminiThinking(model string) *geminiThinkingConfig {
+	id := strings.ToLower(model)
+	if strings.HasPrefix(id, "gemini-2.5") {
+		// Pro cannot turn thinking off: 128 is its minimum budget.
+		budget := 0
+		if strings.Contains(id, "pro") {
+			budget = 128
+		}
+		return &geminiThinkingConfig{ThinkingBudget: &budget}
+	}
+	if m := geminiMajorVersion.FindStringSubmatch(id); m != nil {
+		if major, err := strconv.Atoi(m[1]); err == nil && major >= 3 {
+			// "low" is accepted by every Gemini 3 model ("minimal" only by Flash).
+			return &geminiThinkingConfig{ThinkingLevel: "low"}
+		}
+	}
+	return nil
 }
 
 type geminiRequest struct {
@@ -127,6 +162,28 @@ func (p *geminiProvider) Stream(ctx context.Context, req ChatRequest, onDelta fu
 	model := strings.TrimPrefix(req.Model, "models/")
 	endpoint := p.baseURL + "/v1beta/models/" + url.PathEscape(model) + ":streamGenerateContent?alt=sse"
 
+	if req.MinimalReasoning {
+		if tc := minimalGeminiThinking(model); tc != nil {
+			body.GenerationConfig.ThinkingConfig = tc
+			// The budget counts towards maxOutputTokens: leave room for text.
+			if tc.ThinkingBudget != nil && body.GenerationConfig.MaxOutputTokens > 0 {
+				body.GenerationConfig.MaxOutputTokens += *tc.ThinkingBudget
+			}
+			result, err := p.stream(ctx, endpoint, body, onDelta)
+			var pe *Error
+			if !errors.As(err, &pe) || pe.Status != http.StatusBadRequest || pe.Kind != ErrBadResponse {
+				return result, err
+			}
+			// A model that refuses the thinking setting (a family guessed
+			// wrong): ask again with the provider defaults.
+			body.GenerationConfig.ThinkingConfig = nil
+			body.GenerationConfig.MaxOutputTokens = req.MaxTokens
+		}
+	}
+	return p.stream(ctx, endpoint, body, onDelta)
+}
+
+func (p *geminiProvider) stream(ctx context.Context, endpoint string, body geminiRequest, onDelta func(string) error) (StreamResult, error) {
 	var result StreamResult
 	err := p.postStream(ctx, endpoint, p.headers(), body, func(ev sseEvent) error {
 		var chunk geminiChunk

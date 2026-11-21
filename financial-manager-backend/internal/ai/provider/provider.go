@@ -105,6 +105,10 @@ type ChatRequest struct {
 	// NoMoreToolCalls keeps Tools declared (the history holds calls) but
 	// tells the model to answer with text: the last allowed round.
 	NoMoreToolCalls bool
+	// MinimalReasoning asks a thinking model to reason as little as it
+	// allows (the connection test). Only Gemini reads it: its thinking
+	// models stream nothing until they are done thinking.
+	MinimalReasoning bool
 }
 
 // StreamResult is what a finished stream reports. Token counts are the

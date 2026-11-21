@@ -170,7 +170,7 @@ func TestTestConnection_UsesStoredKeyAndRecordsResult(t *testing.T) {
 	if last.APIKey != "sk-stored-key-0001" || last.Kind != provider.KindOpenAI {
 		t.Fatalf("factory config = %+v", last)
 	}
-	if req := h.fake.LastRequest(); req.Model != "gpt-test" || req.MaxTokens > 16 {
+	if req := h.fake.LastRequest(); req.Model != "gpt-test" || req.MaxTokens > 16 || !req.MinimalReasoning {
 		t.Fatalf("probe request = %+v", req)
 	}
 	settings := h.do(http.MethodGet, "/v1/ai/settings", nil)

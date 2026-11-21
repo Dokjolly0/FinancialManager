@@ -433,3 +433,101 @@ func TestReadSSE_MultiLineDataAndComments(t *testing.T) {
 		t.Fatalf("events = %+v err = %v", got, err)
 	}
 }
+
+func TestGemini_MinimalReasoning(t *testing.T) {
+	ok := `data: {"candidates":[{"content":{"parts":[{"text":"OK"}]},"finishReason":"STOP"}]}` + "\n\n"
+	cases := []struct {
+		model      string
+		wantBudget any // float64 when set
+		wantLevel  any
+		wantMax    float64
+	}{
+		{"gemini-2.5-flash", float64(0), nil, 16},
+		{"gemini-2.5-pro", float64(128), nil, 144},
+		{"models/gemini-3.8-flash", nil, "low", 16},
+		{"gemini-2.0-flash", nil, nil, 16},
+		{"gemma-3-27b-it", nil, nil, 16},
+	}
+	for _, tc := range cases {
+		t.Run(tc.model, func(t *testing.T) {
+			var rec recorded
+			srv := sseServer(t, http.StatusOK, ok, &rec)
+			p, _ := testFactory(KindGemini, srv.URL).New(Config{Kind: KindGemini, APIKey: "k"})
+			req := ChatRequest{Model: tc.model, MaxTokens: 16, MinimalReasoning: true,
+				Messages: []Message{{Role: RoleUser, Content: "Reply with OK."}}}
+			if text, _, err := collect(t, p, req); err != nil || text != "OK" {
+				t.Fatalf("text = %q err = %v", text, err)
+			}
+			gc := rec.body["generationConfig"].(map[string]any)
+			if gc["maxOutputTokens"] != tc.wantMax {
+				t.Fatalf("maxOutputTokens = %v, want %v", gc["maxOutputTokens"], tc.wantMax)
+			}
+			thinking, _ := gc["thinkingConfig"].(map[string]any)
+			if tc.wantBudget == nil && tc.wantLevel == nil {
+				if gc["thinkingConfig"] != nil {
+					t.Fatalf("unexpected thinkingConfig %v", gc["thinkingConfig"])
+				}
+				return
+			}
+			if thinking["thinkingBudget"] != tc.wantBudget || thinking["thinkingLevel"] != tc.wantLevel {
+				t.Fatalf("thinkingConfig = %v", thinking)
+			}
+		})
+	}
+
+	t.Run("not sent without the flag", func(t *testing.T) {
+		var rec recorded
+		srv := sseServer(t, http.StatusOK, ok, &rec)
+		p, _ := testFactory(KindGemini, srv.URL).New(Config{Kind: KindGemini, APIKey: "k"})
+		req := ChatRequest{Model: "gemini-2.5-flash", MaxTokens: 16, Messages: []Message{{Role: RoleUser, Content: "x"}}}
+		if _, _, err := collect(t, p, req); err != nil {
+			t.Fatal(err)
+		}
+		if gc := rec.body["generationConfig"].(map[string]any); gc["thinkingConfig"] != nil {
+			t.Fatalf("thinkingConfig sent: %v", gc)
+		}
+	})
+}
+
+func TestGemini_MinimalReasoningRefusedFallsBack(t *testing.T) {
+	var bodies []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		body := map[string]any{}
+		_ = json.Unmarshal(raw, &body)
+		bodies = append(bodies, body)
+		if gc := body["generationConfig"].(map[string]any); gc["thinkingConfig"] != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = io.WriteString(w, `{"error":{"message":"Thinking level is not supported for this model.","status":"INVALID_ARGUMENT"}}`)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, `data: {"candidates":[{"content":{"parts":[{"text":"OK"}]},"finishReason":"STOP"}]}`+"\n\n")
+	}))
+	t.Cleanup(srv.Close)
+	p, _ := testFactory(KindGemini, srv.URL).New(Config{Kind: KindGemini, APIKey: "k"})
+	req := ChatRequest{Model: "gemini-4-nano", MaxTokens: 16, MinimalReasoning: true,
+		Messages: []Message{{Role: RoleUser, Content: "Reply with OK."}}}
+	if text, _, err := collect(t, p, req); err != nil || text != "OK" || len(bodies) != 2 {
+		t.Fatalf("text = %q err = %v requests = %d", text, err, len(bodies))
+	}
+}
+
+func TestGemini_MinimalReasoningKeepsKeyErrors(t *testing.T) {
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = io.WriteString(w, `{"error":{"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT"}}`)
+	}))
+	t.Cleanup(srv.Close)
+	p, _ := testFactory(KindGemini, srv.URL).New(Config{Kind: KindGemini, APIKey: "k"})
+	req := ChatRequest{Model: "gemini-2.5-flash", MaxTokens: 16, MinimalReasoning: true,
+		Messages: []Message{{Role: RoleUser, Content: "x"}}}
+	_, _, err := collect(t, p, req)
+	var pe *Error
+	if !errors.As(err, &pe) || pe.Kind != ErrInvalidKey || calls != 1 {
+		t.Fatalf("err = %v calls = %d", err, calls)
+	}
+}
